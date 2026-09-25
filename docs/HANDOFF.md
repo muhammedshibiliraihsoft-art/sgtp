@@ -2,11 +2,11 @@
 
 ## Current phase
 
-Phase 0 — SGTP starter verification and inspection complete. No implementation has started.
+Phase 0 — SGTP target product definition and starter alignment. No implementation has started.
 
 ## Current task
 
-Make the existing cloned SGTP repository the project root without creating a replacement or nested repository, then stop before Phase 1.
+Add the approved Target Final Product / Definition of Done to the operating instructions and persistent documentation, compare it with the starter, and stop before implementation.
 
 ## Repository and workspace
 
@@ -19,6 +19,16 @@ Make the existing cloned SGTP repository the project root without creating a rep
 - Starter source files preserved.
 - Existing SGTP `.git` metadata and history preserved.
 - No second repository initialized and no push performed.
+
+## Target final product
+
+SGTP is now defined as the Supplier-Centric Garment & Tailor Platform, with Tailor Management as the core V1 module. The hierarchy is Supplier/Main Admin → Supplier Back Office → isolated Shop workspaces → Clients, Designs, Measurements, Fabric/Materials, Work, Billing, and Reports.
+
+The required persisted flow is:
+
+`Client Request → Design → Measurement → Fabric/Material → Cutting → Stitching → Check → Finishing → QC → Completed → Billing → Reports/History`
+
+The full product definition and Definition of Done are in `docs/PRODUCT_DEFINITION.md`.
 
 ## Inspection summary
 
@@ -40,6 +50,9 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 - JWT logout calls `blacklist()` without installing the SimpleJWT blacklist app.
 - Settings do not define `ALLOWED_HOSTS` or CORS policy; container environment variable names do not match settings expectations.
 - The host lacks installed Django/pytest/psycopg dependencies, so runtime checks remain pending.
+- The starter is not yet the target product: supplier back office, isolated shop workspaces, clients, related persons, designs, measurements, materials, production stages, billing, reports/PDFs, frontend, storage, jobs, audit, CI, monitoring, and end-to-end validation are not implemented.
+- The target requires React/Vite/Tailwind, but the starter has only an empty `frontend/` placeholder.
+- The current generic tenant foundation does not yet provide the shop membership, active-shop context, tenant isolation, or object-level permissions required by the target.
 
 ## Tests and checks
 
@@ -57,6 +70,12 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 - The starter repository remains clean; the moved continuity files appear as local uncommitted additions in the SGTP repository.
 - `backend/` and `frontend/` exist as empty layout placeholders only; no business modules were created.
 
+## Target contradiction record
+
+- Previous planning treated the repository as an uninitialized generic Django foundation and deferred V1 requirements.
+- The target is now explicit and broader: an integrated supplier/shop Tailor Management product with an end-to-end production-to-billing workflow and operational capabilities.
+- The development plan has been realigned to this target, but the starter implementation remains unchanged. These contradictions must be resolved in foundation design before Phase 1 implementation.
+
 ## Decisions and constraints
 
 - Do not create a replacement Django project.
@@ -64,11 +83,13 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 - Do not modify business architecture during this inspection.
 - Do not push to GitHub.
 - Keep all work local.
+- Preserve the approved supplier → back office → isolated shop hierarchy and V1 workflow.
+- Treat `docs/PRODUCT_DEFINITION.md` as the target product reference.
 
 ## Phase 1 decision
 
-Phase 1 should **not begin yet**. First add or locate the authoritative V1 requirements/architecture, resolve the tenant/auth/configuration foundation decisions, install dependencies in an isolated environment, and run the starter checks.
+Phase 1 should **not begin yet**. The target is now documented, but the tenant/shop model, object-level authorization, frontend boundary, service layer, storage, jobs, audit, CI, monitoring, and environment foundations must be resolved against the target before implementation.
 
 ## Recommended next action
 
-Provide the V1 requirements and target architecture in repository documentation or `AGENTS.md`. Then review the proposed foundation changes with the actual requirements before making code changes.
+Next, review and approve the foundation design against `docs/PRODUCT_DEFINITION.md`, then install dependencies and run starter checks before any business module implementation.

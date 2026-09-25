@@ -2,13 +2,14 @@
 
 ## Status
 
-- Phase: 0 — starter verification and inspection complete
-- Current task: verify and inspect the original SGTP starter before development
+- Phase: 0 — target product definition and starter alignment
+- Current task: document the approved SGTP V1 target and compare it with the existing starter
 - Project root: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp`
 - Remote: `https://github.com/muhammedshibiliraihsoft-art/sgtp.git`
 - Starter commit: `0a78d8fd32013c729c7f17dde8c218a8d8900c17` (`Initial commit`)
 - Starter branch: `main`, clean and tracking `origin/main`
-- Phase 1: **not yet safe to begin** until the V1 requirements and target architecture are made explicit and the foundation gaps below are resolved or accepted
+- Target status: SGTP V1 is now explicitly defined in `docs/PRODUCT_DEFINITION.md`
+- Phase 1: **not yet safe to begin**; the target is defined, but foundation contradictions and missing requirements-to-code decisions remain
 
 ## Repository verification
 
@@ -49,9 +50,17 @@
 - API schema/Swagger routes and DRF pagination/filter/search/order configuration.
 - PostgreSQL/Docker/devcontainer setup and production Gunicorn entrypoint.
 
+## Target alignment and contradictions
+
+- The project target is now a complete Supplier-Centric Garment & Tailor Platform, not merely a generic Django/DRF starter.
+- Tailor Management is the core V1 business module, with isolated shop workspaces under a supplier back office.
+- The required end-to-end workflow is documented, but no production-domain modules for clients, designs, measurements, materials, production stages, billing, or reports exist yet.
+- The target requires React/Vite/Tailwind, but the starter contains no frontend implementation; `frontend/` is only an empty placeholder.
+- The target requires a service layer, object-level permissions, persistent object storage, background jobs, audit logging, CI, monitoring, and automatic documentation; the starter does not implement these as complete capabilities.
+- Existing tenant support is insufficient for isolated shop workspaces: user membership, active-shop context, queryset isolation, and object-level authorization are missing.
+
 ## Missing or incomplete foundation
 
-- No V1 requirements or SGTP-specific architecture are present in the outer `AGENTS.md`; it currently contains only continuity and engineering rules. A trustworthy requirements comparison is therefore not possible yet.
 - User-to-tenant membership/ownership is not modeled: `User` has no tenant relation, while `Tenant.user_count` calls `user_set`.
 - Tenant isolation is not enforced. The README references `TenantFilterMixin` and `apps.common.views.base_model_view`, but those files do not exist.
 - Tenant-aware base model permits `tenant = NULL`, and no request/context policy establishes the active tenant.
@@ -63,12 +72,14 @@
 
 ## Recommended foundation changes before Phase 1
 
-1. Obtain or add the authoritative SGTP V1 requirements and architecture to repository documentation, then reconcile them with this inspection.
-2. Define the tenant membership model and isolation policy before adding domain modules.
-3. Align environment variable names, database configuration, `DEBUG`, allowed hosts, CORS, and production security settings.
+1. Translate the approved product definition into an entity/relationship and authorization design for suppliers, shops, users, and shop-scoped records.
+2. Define the tenant membership model, active-shop context, and object-level isolation policy before adding business modules.
+3. Align environment variables, database configuration, `DEBUG`, allowed hosts, CORS, and production security settings.
 4. Add the required SimpleJWT blacklist app or remove blacklist behavior, based on the approved auth contract.
-5. Establish a dependency environment and run migrations, checks, linting, and tests before extending the starter.
-6. Replace README claims for missing mixins/components with verified implementation or corrected documentation.
+5. Establish the frontend foundation and backend service/API boundaries without changing the approved business hierarchy.
+6. Establish storage, background job, audit, CI, monitoring, and documentation foundations.
+7. Establish a dependency environment and run migrations, checks, linting, and tests before extending the starter.
+8. Replace README claims for missing mixins/components with verified implementation or corrected documentation.
 
 ## Verification results
 

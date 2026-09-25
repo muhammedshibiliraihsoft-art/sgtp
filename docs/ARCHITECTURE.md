@@ -1,5 +1,27 @@
 # Architecture
 
+## Target product architecture
+
+SGTP V1 is a supplier-centric, multi-shop business system. The supplier/main admin operates the supplier back office, which manages isolated shop workspaces. Each shop owns or accesses only its permitted clients, designs, measurements, materials, production work, billing, reports, and history.
+
+```text
+Supplier / Main Admin
+        ↓
+Supplier Back Office
+        ↓
+Isolated Shop Workspace(s)
+        ↓
+Client → Design → Measurement → Fabric/Material → Production Workflow
+                                                   ↓
+                                      Completion → Billing → Reports/History
+```
+
+The target production workflow is:
+
+`Client Request → Design → Measurement → Fabric/Material → Cutting → Stitching → Check → Finishing → QC → Completed → Billing → Reports/History`
+
+The final system is intended to have a React/Vite/Tailwind frontend, Django/DRF backend, PostgreSQL/Django ORM persistence, secure token authentication, tenant isolation, object-level permissions, service-layer business logic, persistent object storage, background jobs, audit logging, tests, CI, monitoring, and automatic API/documentation updates. AI and external integrations must remain isolated from core business workflows.
+
 ## Verified starter architecture
 
 The cloned starter is a conventional Django monolith:
@@ -14,13 +36,15 @@ PostgreSQL    -> configured default database
 Docker        -> development container and production web/db services
 ```
 
-## Project and application boundaries
+## Current versus target boundaries
 
 - `core` owns global configuration and URL entry points.
 - `accounts` owns authentication identity and user-facing auth endpoints.
 - `tenants` owns organization records and tenant administration endpoints.
 - `common` owns shared model abstractions.
 - No service layer, domain modules, background worker, event bus, or external integration layer exists.
+- Target modules for V1 are not yet implemented: supplier/back office, shop workspace, clients, related persons, designs, measurements, materials, production workflow, billing, reports/PDFs, storage, jobs, and monitoring.
+- `backend/` and `frontend/` are currently empty placeholders; the existing Django code remains at the repository root under `core/` and `apps/`.
 
 ## Authentication
 
@@ -61,7 +85,8 @@ Docker        -> development container and production web/db services
 4. The README references missing `apps.common.views.base_model_view` and `apps.tenants.mixins` components.
 5. Settings and infrastructure disagree: settings read `DJANGO_DEBUG` and `DB_*`, while devcontainer configuration supplies `DEBUG` and `DATABASE_URL`.
 6. Production settings do not define `ALLOWED_HOSTS` or a CORS allowlist.
-7. The stated architecture is generic starter architecture, not yet verified against SGTP V1 because V1 requirements are absent from `AGENTS.md`.
+7. The starter is a generic foundation and does not yet implement the approved SGTP V1 business hierarchy or end-to-end workflow.
+8. The target requires a frontend and supporting infrastructure that are absent from the starter.
 
 ## Recommended foundation changes
 
@@ -72,7 +97,11 @@ Docker        -> development container and production web/db services
 - Align settings with container environment variables and explicitly configure allowed hosts/CORS.
 - Enable and test JWT refresh-token blacklist support if logout requires revocation.
 - Add the missing shared view/mixin abstractions only if the approved architecture needs them.
+- Design domain entities and relationships around the supplier → shop → client/work hierarchy before implementing modules.
+- Make the complete production workflow a persisted state machine with transition authorization and audit history.
+- Define a service layer so billing, reports, jobs, and integrations cannot bypass core business rules.
+- Define secure object storage, asynchronous job boundaries, monitoring, CI, and end-to-end acceptance tests.
 
 ## Phase 1 readiness
 
-Not ready. The repository is cloned and understood at starter level, but the authoritative V1 requirements are not present and several security/data-boundary foundations are incomplete.
+Not ready. The target is now documented, but the starter lacks the business modules and several required security, tenancy, infrastructure, and frontend foundations.
