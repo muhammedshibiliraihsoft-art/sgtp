@@ -6,7 +6,7 @@ Phase 0 — SGTP target product definition and starter alignment. No implementat
 
 ## Current task
 
-Task F1-01 (Repository and dependency baseline) is completed. We have established the local virtual environment and ensured manage.py check, pip check, and linting rules pass. Waiting for confirmation of task F1-02.
+Task F1-01 (Repository and dependency baseline) is completed. We established the dependency baseline and manage.py check passes. Lint tools can run but existing starter lint violations remain, and pytest is blocked by unavailable PostgreSQL. No application source cleanup was performed. Waiting for confirmation of task F1-02.
 
 ## Repository and workspace
 
@@ -114,10 +114,10 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 - Deployment phases explicitly use Cloudflare Pages, Render, Render PostgreSQL, and Cloudflare R2/S3-compatible storage; worker selection remains Django-Q or Celery + Redis.
 - Refresh-token planning explicitly requires an HttpOnly/Secure cookie, rotation, and reuse detection.
 
-## Phase 1 decision
+## Phase 1 status
 
-Phase 1 implementation has not started, but its plan is independently audited and ready to begin after explicit `CONFIRM PHASE 1` and then a separate task confirmation. No Phase 1 task is currently confirmed. Tenant context and Related Person billing ownership are approved for Phases 3 and 5 respectively; CSRF mechanism selection/validation remains in Phase 2.
+Phase 1 implementation has started and Task F1-01 is complete. We established the local virtual environment and dependencies. `manage.py check` passed, but lint failures and `pytest` blockers were accurately documented. No application source code was modified.
 
 ## Recommended next action
 
-Next, review and approve the foundation design against `docs/PRODUCT_DEFINITION.md`, then install dependencies and run starter checks before any business module implementation.
+Next, await explicit confirmation `CONFIRM TASK F1-02` to proceed with Environment management and settings split.

@@ -118,8 +118,9 @@
 
 - Phase 1 is active.
 - F1-01 is complete.
-- Python virtual environment .venv created, local dependencies installed, and lint errors fixed.
-- No business application source, models, APIs, frontend screens, deployment, or infrastructure implementation was performed in F1-01.
+- Python virtual environment `.venv` created, and dependency baseline established. `manage.py check` passed.
+- Lint tools can run, but existing starter lint violations remain. `pytest` is blocked by unavailable PostgreSQL.
+- No application source cleanup was performed. F1-01 is complete with documented validation limitations.
 
 ## Canonicalization audit
 
