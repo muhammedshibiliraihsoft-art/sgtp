@@ -6,7 +6,7 @@ Phase 0 — SGTP target product definition and starter alignment. No implementat
 
 ## Current task
 
-Maintain the verified SGTP documentation. Phase 1 has a clear, independently audited implementation plan but is not activated and has no confirmed task. Tenant-context resolution and Related Person billing ownership remain later-phase decisions.
+Maintain the verified SGTP documentation. Phase 1 has a clear, independently audited implementation plan but is not activated and has no confirmed task. Tenant context and Related Person billing ownership are approved for their later phases; CSRF mechanism selection/validation remains in Phase 2.
 
 ## Repository and workspace
 
@@ -53,8 +53,8 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 - The starter is not yet the target product: supplier back office, isolated shop workspaces, clients, related persons, designs, measurements, materials, production stages, billing, reports/PDFs, frontend, storage, jobs, audit, CI, monitoring, and end-to-end validation are not implemented.
 - The target requires React/Vite/Tailwind, but the starter has only an empty `frontend/` placeholder.
 - The current generic tenant foundation does not yet provide the shop membership, active-shop context, tenant isolation, or object-level permissions required by the target.
-- Tenant-context resolution is an explicit unresolved architecture decision. It must be approved and recorded before T3-03 implementation; no mechanism may be invented silently.
-- Related Person billing ownership is an explicit unresolved business decision. It must be approved before R5-01 billing implementation; no primary-Client or Related-Person ownership may be inferred.
+- Tenant context is approved as URL-path based (`/shops/{shop_id}/...`) and must be implemented/tested in T3-03.
+- Related Person billing ownership is approved as Primary Client ownership and must be implemented/tested in R5-01.
 - Cookie-authenticated state-changing requests require an approved CSRF strategy; HttpOnly/Secure cookies alone are not sufficient.
 
 ## Tests and checks
@@ -116,7 +116,7 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 
 ## Phase 1 decision
 
-Phase 1 implementation has not started, but its plan is independently audited and ready to begin after explicit `CONFIRM PHASE 1` and then a separate task confirmation. No Phase 1 task is currently confirmed. Tenant-context resolution and Related Person billing ownership remain unresolved for Phases 3 and 5 respectively and do not by themselves block Phase 1.
+Phase 1 implementation has not started, but its plan is independently audited and ready to begin after explicit `CONFIRM PHASE 1` and then a separate task confirmation. No Phase 1 task is currently confirmed. Tenant context and Related Person billing ownership are approved for Phases 3 and 5 respectively; CSRF mechanism selection/validation remains in Phase 2.
 
 ## Recommended next action
 

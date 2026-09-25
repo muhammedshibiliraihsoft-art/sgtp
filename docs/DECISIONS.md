@@ -14,8 +14,8 @@ SGTP V1 is the Supplier-Centric Garment & Tailor Platform, with Tailor Managemen
 
 This decision expands the prior generic-starter planning context into an integrated product definition. It does not authorize implementation in this task and does not change the technology stack. The target and Definition of Done are maintained in `docs/PRODUCT_DEFINITION.md`.
 
-## Explicitly unresolved decisions — must be approved before implementation
+## 2026-09-25 — Approve tenant context, billing ownership, and CSRF phase gate
 
-- Tenant-context resolution mechanism: no header, URL path, subdomain, session, or alternative is approved yet. T3-03 must not invent or silently select one.
-- Related Person billing ownership: the system must explicitly decide whether work for a Related Person is invoiced to the primary Client, the Related Person, or another approved model before R5-01.
-- CSRF mechanism for refresh-cookie flows: the requirement for CSRF protection is approved, but the implementation mechanism remains open until explicitly selected and tested.
+- Tenant context resolution: use URL-path context in the form `/shops/{shop_id}/...`. T3-03 must implement and test this approved mechanism; it must not substitute another context mechanism.
+- Related Person billing ownership: the Primary Client owns billing for work belonging to a Related Person. R5-01 must enforce and test this rule.
+- CSRF: protection is a fixed requirement for refresh-cookie flows. Phase 2 owns selection, implementation, and validation of the concrete CSRF mechanism; the mechanism must be explicitly documented and tested before Phase 2 is complete.

@@ -83,13 +83,14 @@ Docker        -> development container and production web/db services
 - `BaseModel` provides UUID IDs, created/updated timestamps, created/updated user references, and `SOFT_DELETE_CASCADE`.
 - `BaseModelWithTenant` adds an optional foreign key to `tenants.Tenant`.
 - `Tenant` is an organization record with profile/contact/address fields and a user limit.
-- `User` has no tenant foreign key or membership model. Consequently, tenant ownership and isolation are not implemented.
+- `User` has no tenant foreign key or membership model. Consequently, tenant ownership and isolation are not implemented in the starter. The approved target tenant-context mechanism is URL-path based: `/shops/{shop_id}/...`.
 
 ## API surface
 
 - `/admin/`
 - `/api/v1/auth/users/`, `/login/`, `/logout/`, `/token/refresh/`
 - `/api/v1/tenants/` and tenant actions `activate`, `deactivate`, `stats`
+- Target shop-scoped API paths use `/shops/{shop_id}/...` for tenant context.
 - `/api/schema/` and `/api/docs/`
 - `/` serves a static API test/reference page.
 

@@ -15,7 +15,7 @@
 - Phase 1 activation: not active.
 - Confirmation status: no phase or task is currently confirmed.
 - Detailed phase playbooks: 01–10 present; planning only, no phase activated
-- Later-phase decisions: tenant-context resolution and Related Person billing ownership remain unresolved and must be handled in their respective phases; they do not by themselves block Phase 1.
+- Later-phase decisions: tenant context is approved as URL-path based (`/shops/{shop_id}/...`), Related Person billing is owned by the Primary Client, and CSRF mechanism selection/validation remains a Phase 2 task.
 
 ## Repository verification
 
@@ -70,8 +70,8 @@
 - User-to-tenant membership/ownership is not modeled: `User` has no tenant relation, while `Tenant.user_count` calls `user_set`.
 - Tenant isolation is not enforced. The README references `TenantFilterMixin` and `apps.common.views.base_model_view`, but those files do not exist.
 - Tenant-aware base model permits `tenant = NULL`, and no request/context policy establishes the active tenant.
-- Tenant-context resolution mechanism is intentionally undecided; no header, URL path, subdomain, session, or alternative may be selected silently.
-- Billing ownership for work belonging to a Related Person is intentionally undecided; billing must not infer primary-Client versus Related-Person ownership.
+- Tenant-context resolution is approved as URL-path based (`/shops/{shop_id}/...`) and must be enforced in Phase 3.
+- Billing ownership for work belonging to a Related Person is approved as Primary Client ownership and must be enforced in Phase 5.
 - JWT token blacklisting is configured in code, but `rest_framework_simplejwt.token_blacklist` is absent from `INSTALLED_APPS`.
 - `ALLOWED_HOSTS` and `CORS_ALLOWED_ORIGINS` are not configured despite production/CORS claims.
 - Devcontainer sets `DEBUG` and `DATABASE_URL`, while settings read `DJANGO_DEBUG` and discrete `DB_*` variables; those paths do not align.

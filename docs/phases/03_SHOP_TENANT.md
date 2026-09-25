@@ -31,7 +31,7 @@ Objective: define supplier/shop data model and ownership. Why: current Tenant is
 Objective: connect users to shops and supplier roles. Dependencies: T3-01. Files: membership model, role constants/permissions, serializers/tests. Steps: model membership/status/role; prevent duplicate membership; define supplier cross-shop role; enforce inactive shop/user. DB: FK/index/unique constraints. API: membership management. Security: least privilege. Tests: role matrix. DoD: explicit role policy.
 
 ### T3-03 Tenant context
-Objective: resolve active shop safely per request. Dependencies: T3-02 and approval of the tenant-context strategy. Files: context middleware/service/request helpers/tests. Steps: record and implement only the explicitly approved tenant-context resolution mechanism; validate membership; avoid ambient mutable globals; support supplier-selected shop with authorization. Do not invent or silently choose a header, URL path, subdomain, session, or other mechanism. Tenant context resolution mechanism is a required architecture decision. The approved mechanism must be recorded before T3-03 implementation. API: context errors. Security: spoofing resistance. Tests: missing/invalid/inactive/cross-shop context and the approved mechanism's CSRF/spoofing boundaries where applicable. DoD: approved, deterministic context.
+Objective: resolve active shop safely per request. Dependencies: T3-02. Files: context middleware/service/request helpers/tests. Steps: implement the approved URL-path tenant context `/shops/{shop_id}/...`; validate membership; avoid ambient mutable globals; support supplier-selected shop with authorization. API: context errors and shop-scoped URL contracts. Security: path spoofing resistance and object-level authorization. Tests: missing/invalid/inactive/cross-shop paths and URL-context spoofing. DoD: deterministic, authorized URL-path context.
 
 ### T3-04 Scoped querysets and object permissions
 Objective: enforce isolation at backend boundaries. Dependencies: T3-03. Files: managers/querysets, permissions, base viewsets, tests. Steps: filter all shop-scoped reads/writes; deny foreign IDs; define supplier reporting visibility; require explicit unscoped access for platform-only records. DB: indexes. API: 403/404 policy. Tests: Shop A never sees Shop B. DoD: isolation proven.
@@ -40,7 +40,7 @@ Objective: enforce isolation at backend boundaries. Dependencies: T3-03. Files: 
 Objective: expose only approved supplier/shop management. Dependencies: T3-01–04. Files: views/serializers/URLs/admin/tests/docs. Steps: implement CRUD, membership actions, activation/deactivation, audit. DB: migrations already defined. API: contracts/schema. DoD: API and isolation tests pass.
 
 ## 13. Task Dependency Graph
-`T3-01 → T3-02 → [approve tenant-context strategy] → T3-03 → T3-04 → T3-05`.
+`T3-01 → T3-02 → T3-03 → T3-04 → T3-05`.
 ## 14. Expected Files / Folders
 Target `backend/apps/shops/`, `backend/apps/accounts/`, `backend/core/{tenancy,permissions,services}/`, migrations/tests; current `apps/tenants/` and `apps/accounts/` are starter transition inputs only.
 ## 15. Expected New Files
