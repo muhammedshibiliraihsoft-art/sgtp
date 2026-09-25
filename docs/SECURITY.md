@@ -2,9 +2,9 @@
 
 ## Current starter state
 
-The cloned starter contains partial security scaffolding: a custom email-based User, Django/DRF authentication, SimpleJWT access/refresh endpoints, session middleware, CSRF middleware, security middleware, CORS middleware, soft-delete/audit base-model fields, and production security settings in `core/settings.py`. These controls are incomplete and have not established the full SGTP V1 security architecture.
+The cloned starter contains partial security scaffolding: a custom email-based User, Django/DRF authentication, SimpleJWT access/refresh endpoints, session middleware, CSRF middleware, security middleware, CORS middleware, soft-delete/audit base-model fields, and production security settings. These controls are incomplete and have not established the full SGTP V1 security architecture.
 
-Known starter gaps include incomplete tenant membership/isolation, missing object-level authorization, an uninstalled SimpleJWT blacklist app despite blacklist behavior, incomplete host/CORS configuration, and environment-setting mismatches. A control must not be treated as complete merely because a related dependency or middleware is present.
+Known starter gaps included incomplete tenant membership/isolation, missing object-level authorization, an uninstalled SimpleJWT blacklist app, and incomplete host/CORS configuration. The host/CORS configuration and JWT blacklist app have been resolved in Phase 1 (F1-02). A control must not be treated as complete merely because a related dependency or middleware is present.
 
 ## Target V1 security architecture
 

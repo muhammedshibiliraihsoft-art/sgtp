@@ -28,8 +28,16 @@ services:
     depends_on:
       - db
     environment:
-      - DEBUG=1
-      - DATABASE_URL=postgresql://devuser:devpasS@1234@db:5432/devdb
+      - DJANGO_ENV=development
+      - DJANGO_DEBUG=True
+      - DB_NAME=devdb
+      - DB_USER=devuser
+      - DB_PASSWORD=devpasS@1234
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DJANGO_SECRET_KEY=devsecretkey
+      - DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,*
+      - DJANGO_CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 
 volumes:
   pgdata:

@@ -6,7 +6,7 @@ Phase 0 — SGTP target product definition and starter alignment. No implementat
 
 ## Current task
 
-Task F1-01 (Repository and dependency baseline) is completed. We established the dependency baseline and manage.py check passes. Lint tools can run but existing starter lint violations remain, and pytest is blocked by unavailable PostgreSQL. No application source cleanup was performed. Waiting for confirmation of task F1-02.
+Task F1-02 (Environment management and settings split) is completed. We split settings into base, dev, test, and prod, enforcing fail-safe behavior for missing secrets. Waiting for confirmation of task F1-03 (PostgreSQL and migration strategy).
 
 ## Repository and workspace
 
@@ -116,8 +116,8 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 
 ## Phase 1 status
 
-Phase 1 implementation has started and Task F1-01 is complete. We established the local virtual environment and dependencies. `manage.py check` passed, but lint failures and `pytest` blockers were accurately documented. No application source code was modified.
+Phase 1 implementation has started. Task F1-01 (Repository and dependency baseline) and Task F1-02 (Environment management and settings split) are complete. We established the local virtual environment, dependencies, and split settings into base, dev, test, and prod, enforcing fail-safe behavior and fixing security warnings. `manage.py check` passed, including deployment checks. No business logic was modified.
 
 ## Recommended next action
 
-Next, await explicit confirmation `CONFIRM TASK F1-02` to proceed with Environment management and settings split.
+Next, await explicit confirmation `CONFIRM TASK F1-03` to proceed with Identity and shared model foundation.

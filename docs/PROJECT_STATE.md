@@ -3,7 +3,7 @@
 ## Status
 
 - Phase: 0 — target product definition and starter alignment
-- Current task: F1-02 Environment management and settings split (Awaiting Confirmation)
+- Current task: F1-03 PostgreSQL and migration strategy (Awaiting Confirmation)
 - Project root: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp`
 - Remote: `https://github.com/muhammedshibiliraihsoft-art/sgtp.git`
 - Starter commit: `0a78d8fd32013c729c7f17dde8c218a8d8900c17` (`Initial commit`)
@@ -72,10 +72,6 @@
 - Tenant-aware base model permits `tenant = NULL`, and no request/context policy establishes the active tenant.
 - Tenant-context resolution is approved as URL-path based (`/shops/{shop_id}/...`) and must be enforced in Phase 3.
 - Billing ownership for work belonging to a Related Person is approved as Primary Client ownership and must be enforced in Phase 5.
-- JWT token blacklisting is configured in code, but `rest_framework_simplejwt.token_blacklist` is absent from `INSTALLED_APPS`.
-- `ALLOWED_HOSTS` and `CORS_ALLOWED_ORIGINS` are not configured despite production/CORS claims.
-- Devcontainer sets `DEBUG` and `DATABASE_URL`, while settings read `DJANGO_DEBUG` and discrete `DB_*` variables; those paths do not align.
-- Local dependencies are not installed in the current host, so `manage.py check` and tests could not run (`ModuleNotFoundError: django`).
 - No domain/business modules beyond accounts and generic tenants exist.
 
 ## Recommended foundation changes before Phase 1
@@ -117,10 +113,10 @@
 ## Implementation Status
 
 - Phase 1 is active.
-- F1-01 is complete.
+- F1-01 and F1-02 are complete.
 - Python virtual environment `.venv` created, and dependency baseline established. `manage.py check` passed.
 - Lint tools can run, but existing starter lint violations remain. `pytest` is blocked by unavailable PostgreSQL.
-- No application source cleanup was performed. F1-01 is complete with documented validation limitations.
+- Environment settings are now split into base, dev, test, and prod. core/settings.py acts as a backward-compatible router. Missing secrets fail safely.
 
 ## Canonicalization audit
 
