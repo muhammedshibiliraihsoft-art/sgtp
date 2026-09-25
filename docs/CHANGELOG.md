@@ -10,3 +10,4 @@
 - Added the missing Phase 7–10 Antigravity implementation playbooks without changing the approved architecture, scope, order, or implementation decisions.
 - Canonicalized target implementation paths, domain boundaries, deployment direction, and refresh-token handling across the phase plan while preserving current-starter descriptions.
 - Documented the required but unresolved CSRF strategy for cookie-based refresh, tenant-context resolution, and Related Person billing ownership; no mechanism or business rule was invented.
+- Corrected project state to distinguish the existing starter foundation from unimplemented Phase 1 work; recorded Phase 1 as independently audited and ready, but inactive and unconfirmed.

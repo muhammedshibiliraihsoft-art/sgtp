@@ -6,7 +6,7 @@ Phase 0 — SGTP target product definition and starter alignment. No implementat
 
 ## Current task
 
-Maintain the verified SGTP documentation and keep the two unresolved implementation blockers visible: tenant-context resolution and Related Person billing ownership.
+Maintain the verified SGTP documentation. Phase 1 has a clear, independently audited implementation plan but is not activated and has no confirmed task. Tenant-context resolution and Related Person billing ownership remain later-phase decisions.
 
 ## Repository and workspace
 
@@ -77,7 +77,7 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 
 - Previous planning treated the repository as an uninitialized generic Django foundation and deferred V1 requirements.
 - The target is now explicit and broader: an integrated supplier/shop Tailor Management product with an end-to-end production-to-billing workflow and operational capabilities.
-- The development plan has been realigned to this target, but the starter implementation remains unchanged. These contradictions must be resolved in foundation design before Phase 1 implementation.
+- The development plan has been realigned to this target, but the starter implementation remains unchanged. Phase 1 foundation gaps belong to Phase 1; later-phase decisions remain scoped to their respective phases.
 
 ## Decisions and constraints
 
@@ -116,7 +116,7 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 
 ## Phase 1 decision
 
-Phase 1 should **not begin yet**. The target is now documented, but the tenant/shop model, object-level authorization, frontend boundary, service layer, storage, jobs, audit, CI, monitoring, and environment foundations must be resolved against the target before implementation.
+Phase 1 implementation has not started, but its plan is independently audited and ready to begin after explicit `CONFIRM PHASE 1` and then a separate task confirmation. No Phase 1 task is currently confirmed. Tenant-context resolution and Related Person billing ownership remain unresolved for Phases 3 and 5 respectively and do not by themselves block Phase 1.
 
 ## Recommended next action
 
