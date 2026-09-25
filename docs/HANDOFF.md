@@ -6,7 +6,7 @@ Phase 0 — SGTP target product definition and starter alignment. No implementat
 
 ## Current task
 
-Maintain the verified SGTP documentation. Phase 1 has a clear, independently audited implementation plan but is not activated and has no confirmed task. Tenant context and Related Person billing ownership are approved for their later phases; CSRF mechanism selection/validation remains in Phase 2.
+Task F1-01 (Repository and dependency baseline) is completed. We have established the local virtual environment and ensured manage.py check, pip check, and linting rules pass. Waiting for confirmation of task F1-02.
 
 ## Repository and workspace
 

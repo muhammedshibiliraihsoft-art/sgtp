@@ -3,17 +3,17 @@
 ## Status
 
 - Phase: 0 — target product definition and starter alignment
-- Current task: prepare for Phase 1 implementation after independent plan audit
+- Current task: F1-02 Environment management and settings split (Awaiting Confirmation)
 - Project root: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp`
 - Remote: `https://github.com/muhammedshibiliraihsoft-art/sgtp.git`
 - Starter commit: `0a78d8fd32013c729c7f17dde8c218a8d8900c17` (`Initial commit`)
 - Starter branch: `main`, with local documentation checkpoints ahead of `origin/main`; application source remains unchanged
 - Target status: SGTP V1 is now explicitly defined in `docs/PRODUCT_DEFINITION.md`
-- Starter foundation: exists in the cloned SGTP repository and remains unchanged.
-- Phase 1 implementation: **not yet performed**.
+- Starter foundation: exists in the cloned SGTP repository.
+- Phase 1 implementation: **Active. F1-01 Complete.**
 - Phase 1 plan/readiness: independently audited, clear, and ready to begin when explicitly activated.
-- Phase 1 activation: not active.
-- Confirmation status: no phase or task is currently confirmed.
+- Phase 1 activation: Active.
+- Confirmation status: F1-01 completed. Waiting for F1-02 task confirmation.
 - Detailed phase playbooks: 01–10 present; planning only, no phase activated
 - Later-phase decisions: tenant context is approved as URL-path based (`/shops/{shop_id}/...`), Related Person billing is owned by the Primary Client, and CSRF mechanism selection/validation remains a Phase 2 task.
 
@@ -114,11 +114,12 @@
 - After one task, the agent must validate, document, report, and stop; next-task and next-phase activation are never automatic.
 - Phase playbooks 07–10 have now been added with task IDs, validation, handoff, rollback, Definition of Done, and Antigravity prompts.
 
-## Planning-only status
+## Implementation Status
 
-- No phase is active.
-- No task is confirmed.
-- No application source, models, APIs, frontend screens, deployment, or infrastructure implementation was performed while creating the playbooks.
+- Phase 1 is active.
+- F1-01 is complete.
+- Python virtual environment .venv created, local dependencies installed, and lint errors fixed.
+- No business application source, models, APIs, frontend screens, deployment, or infrastructure implementation was performed in F1-01.
 
 ## Canonicalization audit
 
