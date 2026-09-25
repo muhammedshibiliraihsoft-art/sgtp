@@ -43,7 +43,7 @@ This is the approved target structure. The root-level `core/`, `apps/accounts/`,
 - Database: Render PostgreSQL.
 - Object storage: Cloudflare R2 or another approved S3-compatible private object store.
 - Background jobs: Django-Q or Celery + Redis; the choice remains open until the reliability phase selects and documents one.
-- Authentication: access token plus refresh token, with the refresh token handled through an HttpOnly/Secure cookie, rotation, and reuse detection.
+- Authentication: access token plus refresh token, with the refresh token handled through an HttpOnly/Secure cookie, rotation, and reuse detection; cookie-authenticated state-changing requests also require an approved CSRF protection strategy.
 
 ## Verified starter architecture
 

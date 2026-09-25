@@ -13,3 +13,9 @@ Because the repository has no application code or requirements, the initial docu
 SGTP V1 is the Supplier-Centric Garment & Tailor Platform, with Tailor Management as the core business module. The approved hierarchy is Supplier/Main Admin → Supplier Back Office → isolated Shop workspaces. The approved workflow runs from Client Request through Design, Measurement, Fabric/Material, Cutting, Stitching, Check, Finishing, QC, Completed, Billing, and Reports/History.
 
 This decision expands the prior generic-starter planning context into an integrated product definition. It does not authorize implementation in this task and does not change the technology stack. The target and Definition of Done are maintained in `docs/PRODUCT_DEFINITION.md`.
+
+## Explicitly unresolved decisions — must be approved before implementation
+
+- Tenant-context resolution mechanism: no header, URL path, subdomain, session, or alternative is approved yet. T3-03 must not invent or silently select one.
+- Related Person billing ownership: the system must explicitly decide whether work for a Related Person is invoiced to the primary Client, the Related Person, or another approved model before R5-01.
+- CSRF mechanism for refresh-cookie flows: the requirement for CSRF protection is approved, but the implementation mechanism remains open until explicitly selected and tested.

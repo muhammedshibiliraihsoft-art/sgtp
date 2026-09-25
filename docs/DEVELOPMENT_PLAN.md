@@ -24,7 +24,7 @@ Phase confirmation activates only the named phase. It does not authorize all tas
 
 ## Phase 3 — shop / tenant
 
-- Implement Supplier/Main Admin, Supplier Back Office, Shop, User-Shop membership, roles, tenant context, scoped queries, supplier cross-shop visibility, shop isolation, and object-level access tests.
+- Approve the tenant-context resolution mechanism before implementation; then implement Supplier/Main Admin, Supplier Back Office, Shop, User-Shop membership, roles, tenant context, scoped queries, supplier cross-shop visibility, shop isolation, and object-level access tests.
 
 ## Phase 4 — core tailor business
 
@@ -32,7 +32,7 @@ Phase confirmation activates only the named phase. It does not authorize all tas
 
 ## Phase 5 — billing + reports + reliability
 
-- Implement Billing, Accounts, Transactions, Outstanding, billing idempotency, audit logging, soft delete, PDF generation, Reports, object storage, background jobs, backup strategy, restore verification, and financial safety.
+- Approve Related Person billing ownership before implementation; then implement Billing, Accounts, Transactions, Outstanding, billing idempotency, audit logging, soft delete, PDF generation, Reports, object storage, background jobs, backup strategy, restore verification, and financial safety.
 
 ## Phase 6 — AI + integrations
 

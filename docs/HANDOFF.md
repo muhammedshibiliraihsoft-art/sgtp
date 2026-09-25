@@ -6,7 +6,7 @@ Phase 0 — SGTP target product definition and starter alignment. No implementat
 
 ## Current task
 
-Add the approved Target Final Product / Definition of Done to the operating instructions and persistent documentation, compare it with the starter, and stop before implementation.
+Maintain the verified SGTP documentation and keep the two unresolved implementation blockers visible: tenant-context resolution and Related Person billing ownership.
 
 ## Repository and workspace
 
@@ -44,7 +44,7 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 
 ## Missing or conflicting items
 
-- `AGENTS.md` contains continuity rules but no V1 requirements or target SGTP architecture, so the requested requirements comparison is currently limited to the documented starter intent and cannot be treated as final.
+- `AGENTS.md` and `docs/PRODUCT_DEFINITION.md` now contain the approved V1 target; the starter remains incomplete against that target.
 - Tenant membership and isolation are incomplete: users are not related to tenants; `user_set` is not backed by a relation; no tenant filtering mixin exists despite README references.
 - `BaseModelWithTenant.tenant` is nullable and no active-tenant/request authorization mechanism exists.
 - JWT logout calls `blacklist()` without installing the SimpleJWT blacklist app.
@@ -53,6 +53,9 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 - The starter is not yet the target product: supplier back office, isolated shop workspaces, clients, related persons, designs, measurements, materials, production stages, billing, reports/PDFs, frontend, storage, jobs, audit, CI, monitoring, and end-to-end validation are not implemented.
 - The target requires React/Vite/Tailwind, but the starter has only an empty `frontend/` placeholder.
 - The current generic tenant foundation does not yet provide the shop membership, active-shop context, tenant isolation, or object-level permissions required by the target.
+- Tenant-context resolution is an explicit unresolved architecture decision. It must be approved and recorded before T3-03 implementation; no mechanism may be invented silently.
+- Related Person billing ownership is an explicit unresolved business decision. It must be approved before R5-01 billing implementation; no primary-Client or Related-Person ownership may be inferred.
+- Cookie-authenticated state-changing requests require an approved CSRF strategy; HttpOnly/Secure cookies alone are not sufficient.
 
 ## Tests and checks
 
@@ -67,7 +70,7 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 - `git rev-parse --show-toplevel` returns `C:/Users/Admin/Documents/ChatGPT/django 2/sgtp`.
 - `git remote -v` still points to `https://github.com/muhammedshibiliraihsoft-art/sgtp.git`.
 - `AGENTS.md` and `docs/` exist inside the SGTP root.
-- The starter repository remains clean; the moved continuity files appear as local uncommitted additions in the SGTP repository.
+- The starter source remains preserved; documentation is maintained in the SGTP repository.
 - `backend/` and `frontend/` exist as empty layout placeholders only; no business modules were created.
 
 ## Target contradiction record
@@ -91,8 +94,8 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 
 ## Phase playbook audit status
 
-- Confirmation-flow wording was surgically aligned in the existing Phase 1–6 playbooks, `AGENTS.md`, `docs/DEVELOPMENT_PLAN.md`, and this handoff.
-- Phase playbooks 07–10 are currently missing from `docs/phases/`; therefore, a complete ten-phase wording audit cannot be certified until those files exist.
+- Confirmation-flow wording was aligned across all ten phase playbooks, `AGENTS.md`, `docs/DEVELOPMENT_PLAN.md`, and this handoff.
+- The ten phase playbooks exist and require separate task confirmation after phase activation.
 - No application source, architecture, scope, task ID, dependency, or implementation-order changes were made.
 
 ## Phase playbook completion

@@ -3,14 +3,15 @@
 ## Status
 
 - Phase: 0 — target product definition and starter alignment
-- Current task: document the approved SGTP V1 target and compare it with the existing starter
+- Current task: maintain targeted security, API, tenancy-decision, and billing-decision documentation corrections
 - Project root: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp`
 - Remote: `https://github.com/muhammedshibiliraihsoft-art/sgtp.git`
 - Starter commit: `0a78d8fd32013c729c7f17dde8c218a8d8900c17` (`Initial commit`)
-- Starter branch: `main`, clean and tracking `origin/main`
+- Starter branch: `main`, with local documentation checkpoints ahead of `origin/main`; application source remains unchanged
 - Target status: SGTP V1 is now explicitly defined in `docs/PRODUCT_DEFINITION.md`
 - Phase 1: **not yet safe to begin**; the target is defined, but foundation contradictions and missing requirements-to-code decisions remain
 - Detailed phase playbooks: 01–10 present; planning only, no phase activated
+- Explicit blockers: tenant-context resolution strategy and Related Person billing ownership remain unapproved decisions
 
 ## Repository verification
 
@@ -65,6 +66,8 @@
 - User-to-tenant membership/ownership is not modeled: `User` has no tenant relation, while `Tenant.user_count` calls `user_set`.
 - Tenant isolation is not enforced. The README references `TenantFilterMixin` and `apps.common.views.base_model_view`, but those files do not exist.
 - Tenant-aware base model permits `tenant = NULL`, and no request/context policy establishes the active tenant.
+- Tenant-context resolution mechanism is intentionally undecided; no header, URL path, subdomain, session, or alternative may be selected silently.
+- Billing ownership for work belonging to a Related Person is intentionally undecided; billing must not infer primary-Client versus Related-Person ownership.
 - JWT token blacklisting is configured in code, but `rest_framework_simplejwt.token_blacklist` is absent from `INSTALLED_APPS`.
 - `ALLOWED_HOSTS` and `CORS_ALLOWED_ORIGINS` are not configured despite production/CORS claims.
 - Devcontainer sets `DEBUG` and `DATABASE_URL`, while settings read `DJANGO_DEBUG` and discrete `DB_*` variables; those paths do not align.
@@ -101,7 +104,7 @@
 
 ## Phase playbook confirmation audit
 
-- The existing Phase 1–6 implementation prompts now use the mandatory phase-level activation plus task-level confirmation model.
+- All ten phase implementation prompts use the mandatory phase-level activation plus task-level confirmation model.
 - Phase confirmation activates scope only; it does not authorize all tasks.
 - Each task requires a separate task brief and explicit `CONFIRM TASK <TASK-ID>` before implementation.
 - After one task, the agent must validate, document, report, and stop; next-task and next-phase activation are never automatic.
@@ -119,3 +122,4 @@
 - Current root-level `core/`, `apps/accounts/`, `apps/tenants/`, and `apps/common/` references are explicitly labeled as starter transition inputs, not target implementation boundaries.
 - Infrastructure direction is documented as Cloudflare Pages, Render, Render PostgreSQL, Cloudflare R2/S3-compatible storage, and an open Django-Q or Celery+Redis worker choice.
 - Auth planning now explicitly includes an HttpOnly/Secure refresh cookie, rotation, and reuse detection.
+- Cookie-authenticated state-changing requests require an approved CSRF defense; HttpOnly/Secure cookies alone are insufficient.
