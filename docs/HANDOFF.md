@@ -85,6 +85,15 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 - Keep all work local.
 - Preserve the approved supplier → back office → isolated shop hierarchy and V1 workflow.
 - Treat `docs/PRODUCT_DEFINITION.md` as the target product reference.
+- Phase confirmation activates only the named phase; it does not authorize all tasks in that phase.
+- Every task requires a separate `CONFIRM TASK <TASK-ID>` after the task brief is presented.
+- After one task is validated and documented, stop. Do not start the next task or phase automatically.
+
+## Phase playbook audit status
+
+- Confirmation-flow wording was surgically aligned in the existing Phase 1–6 playbooks, `AGENTS.md`, `docs/DEVELOPMENT_PLAN.md`, and this handoff.
+- Phase playbooks 07–10 are currently missing from `docs/phases/`; therefore, a complete ten-phase wording audit cannot be certified until those files exist.
+- No application source, architecture, scope, task ID, dependency, or implementation-order changes were made.
 
 ## Phase 1 decision
 

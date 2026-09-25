@@ -97,3 +97,11 @@
 - Documentation: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp\docs\`
 - Remote: `https://github.com/muhammedshibiliraihsoft-art/sgtp.git`
 - `backend/` and `frontend/` now exist as empty layout placeholders only; no business modules were created.
+
+## Phase playbook confirmation audit
+
+- The existing Phase 1–6 implementation prompts now use the mandatory phase-level activation plus task-level confirmation model.
+- Phase confirmation activates scope only; it does not authorize all tasks.
+- Each task requires a separate task brief and explicit `CONFIRM TASK <TASK-ID>` before implementation.
+- After one task, the agent must validate, document, report, and stop; next-task and next-phase activation are never automatic.
+- Phase playbooks 07–10 are not present in the repository and were not fabricated during this surgical consistency fix.

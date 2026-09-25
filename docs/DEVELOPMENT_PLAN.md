@@ -2,6 +2,10 @@
 
 This plan is subordinate to `docs/PRODUCT_DEFINITION.md`. It must preserve the supplier → back office → isolated shop hierarchy and the complete persisted production-to-billing workflow.
 
+## Execution gate
+
+Phase confirmation activates only the named phase. It does not authorize all tasks listed under that phase. Before every task, the implementing agent must present the task objective, affected files/areas, dependencies/preconditions, and validation/tests, then wait for `CONFIRM TASK <TASK-ID>`. It may implement only that task, must validate and document it, and must stop. The next task and next phase each require a new explicit confirmation.
+
 ## Phase 0 — repository and product definition
 
 - Preserve and inspect the original SGTP starter repository.

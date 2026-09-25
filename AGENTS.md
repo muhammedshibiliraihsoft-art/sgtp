@@ -37,6 +37,15 @@ V1 is not complete merely because the backend, frontend, individual APIs, pages,
 
 When implementation changes affect this target, update `docs/PRODUCT_DEFINITION.md`, `docs/PROJECT_STATE.md`, `docs/ARCHITECTURE.md`, `docs/DEVELOPMENT_PLAN.md`, and `docs/HANDOFF.md` as applicable. Do not silently change the approved hierarchy or V1 boundaries.
 
+## Phase and task confirmation gate
+
+- A phase confirmation activates the phase only; it does not authorize every task in that phase.
+- Before each individual task, present the task objective, expected files/areas, dependencies/preconditions, and validation/tests, then wait for explicit `CONFIRM TASK <TASK-ID>`.
+- Implement only the explicitly confirmed task.
+- After that task, run its validation, update the relevant documentation, report what was completed, and stop.
+- Never begin the next task or next phase automatically. Each requires a new explicit confirmation.
+- Casual conversation is not confirmation. Valid examples are `CONFIRM PHASE 1` to activate a phase and `CONFIRM TASK F1-01` to authorize one task.
+
 ## Current repository status
 
 This repository is the SGTP starter project. It contains a Django/DRF application with accounts, tenants, common base models, PostgreSQL configuration, Docker/devcontainer infrastructure, migrations, and tests. The authoritative inspection, target product, and current gaps are recorded in `docs/PRODUCT_DEFINITION.md`, `docs/PROJECT_STATE.md`, `docs/ARCHITECTURE.md`, and `docs/HANDOFF.md`. Do not begin implementation phases until the current foundation contradictions are reviewed against the target, and do not invent business behavior outside the documented V1 boundaries.
