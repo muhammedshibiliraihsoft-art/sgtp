@@ -95,6 +95,14 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 - Phase playbooks 07–10 are currently missing from `docs/phases/`; therefore, a complete ten-phase wording audit cannot be certified until those files exist.
 - No application source, architecture, scope, task ID, dependency, or implementation-order changes were made.
 
+## Phase playbook completion
+
+- `docs/phases/07_FRONTEND.md` created with tasks F7-01 through F7-05.
+- `docs/phases/08_TESTING_HARDENING.md` created with tasks H8-01 through H8-04.
+- `docs/phases/09_STAGING.md` created with tasks S9-01 through S9-04.
+- `docs/phases/10_PRODUCTION.md` created with tasks P10-01 through P10-04.
+- All ten playbooks use phase activation followed by separate task confirmation, validation, documentation, report, and stop boundaries.
+
 ## Phase 1 decision
 
 Phase 1 should **not begin yet**. The target is now documented, but the tenant/shop model, object-level authorization, frontend boundary, service layer, storage, jobs, audit, CI, monitoring, and environment foundations must be resolved against the target before implementation.

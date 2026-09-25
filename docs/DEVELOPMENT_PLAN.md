@@ -1,6 +1,6 @@
 # Development Plan
 
-This plan is subordinate to `docs/PRODUCT_DEFINITION.md`. It must preserve the supplier → back office → isolated shop hierarchy and the complete persisted production-to-billing workflow.
+This plan is subordinate to `docs/PRODUCT_DEFINITION.md`. It preserves the approved SGTP supplier → back office → isolated shop hierarchy and the complete persisted production-to-billing workflow.
 
 ## Execution gate
 
@@ -12,45 +12,54 @@ Phase confirmation activates only the named phase. It does not authorize all tas
 - Define the target final product, V1 boundaries, business hierarchy, workflow, and Definition of Done.
 - Record starter reuse, contradictions, risks, and unresolved decisions.
 
-## Phase 1 — foundation alignment and technical baseline
+## Phase 1 — foundation
 
-- Confirm the authoritative V1 requirements and entity/relationship model.
-- Define supplier, shop, user membership, active-shop context, tenant isolation, and object-level authorization.
-- Align Django settings, environment variables, PostgreSQL configuration, CORS, allowed hosts, token revocation, and production security.
-- Establish dependency management, local/staging/production configuration, CI, baseline tests, API schema generation, and documentation maintenance.
-- Establish the React + Vite + Tailwind frontend shell and its authenticated API boundary.
-- Define service-layer, audit, persistent storage, background-job, monitoring, and error-handling boundaries.
+- Verify repository/dependency/virtual-environment baseline.
+- Establish environment management, django-environ or approved equivalent, settings split, custom User/core/shared model interfaces, PostgreSQL, migrations, secure defaults, and baseline documentation.
+- Do not create business modules.
 
-Phase 1 is not implementation-ready until these decisions are reviewed against the target and the starter checks run successfully.
+## Phase 2 — backend core + security
 
-## Phase 2 — identity, supplier back office, and shop workspaces
+- Establish DRF/API versioning, CORS, JWT access/refresh lifecycle, rotation/reuse detection, object-permission and tenant-scoping interfaces, rate limiting, exceptions, API documentation, health, and security validation.
 
-- Complete authentication and authorization.
-- Implement supplier/main-admin back-office capabilities.
-- Implement shop creation, membership, active-shop selection, workspace isolation, and shop-level permissions.
-- Prove cross-shop access denial with security and integration tests.
+## Phase 3 — shop / tenant
 
-## Phase 3 — Tailor Management core workflow
+- Implement Supplier/Main Admin, Supplier Back Office, Shop, User-Shop membership, roles, tenant context, scoped queries, supplier cross-shop visibility, shop isolation, and object-level access tests.
 
-- Implement clients and V1-related persons rules.
-- Implement designs, measurements, fabric/material records, and their relationships.
-- Implement persisted production work and authorized transitions:
-  `Client Request → Design → Measurement → Fabric/Material → Cutting → Stitching → Check → Finishing → QC → Completed`.
-- Add audit history and workflow transition tests.
+## Phase 4 — core tailor business
 
-## Phase 4 — billing, reports, files, and operations
+- Implement Clients, Family/Related Persons, Catalog, Designs, Measurements, Materials, Works/Orders, the approved production workflow, service layer, business rules, indexes, constraints, and concurrency safeguards.
 
-- Connect billing to completed work.
-- Implement reports/history and PDF generation.
-- Add secure persistent object storage and asynchronous jobs where appropriate.
-- Add monitoring, operational error handling, staging/production validation, and recovery checks.
+## Phase 5 — billing + reports + reliability
 
-## Phase 5 — integrated V1 validation
+- Implement Billing, Accounts, Transactions, Outstanding, billing idempotency, audit logging, soft delete, PDF generation, Reports, object storage, background jobs, backup strategy, restore verification, and financial safety.
 
-- Validate the complete journey end-to-end:
-  `Supplier → Back Office → Shop → Client → Work → Design → Measurement → Fabric → Production → Completion → Billing → Reports`.
-- Verify tenant isolation, object-level permissions, secure files, background jobs, AI/integration isolation, critical tests, CI, monitoring, staging, production, and documentation accuracy.
-- Declare V1 complete only when the integrated business workflows operate together; module-level completion is insufficient.
+## Phase 6 — AI + integrations
+
+- Implement isolated `ai_agents`, controlled tools, service interfaces, AI permissions/tenant awareness, timeout/fallback/output validation, integration adapters, webhook validation, retries, idempotency, and failure isolation.
+
+## Phase 7 — frontend
+
+- Implement React + Vite + Tailwind foundation, authentication/API client, role-aware routing, tenant context, Supplier Back Office, Shop workspace, Clients, Designs, Measurements, Materials, Works, Billing, Reports, and approved AI interfaces.
+
+## Phase 8 — testing + hardening
+
+- Complete unit/API/integration/authentication/permission/tenant-isolation/workflow/billing/file/failure/regression/security/performance validation.
+- Prove the critical invariant: Shop A must never access Shop B data.
+
+## Phase 9 — staging
+
+- Establish staging environment/database/configuration/deployment, migrations, object storage, workers, monitoring, smoke/E2E testing, backup restore drill, and production readiness evidence.
+
+## Phase 10 — production
+
+- Complete production configuration/secrets, PostgreSQL/object storage/workers, migrations, monitoring, backups, deployment validation, final security review, acceptance, documentation, and handoff.
+
+## Phase boundaries
+
+- Future phase files may be read for context but must not be implemented early.
+- A phase is not complete merely because its code runs; its own validation checklist, documentation, and handoff must pass.
+- V1 is complete only after the integrated end-to-end journey and Definition of Done in `docs/PRODUCT_DEFINITION.md` pass.
 
 ## Out of scope for V1 unless explicitly added
 

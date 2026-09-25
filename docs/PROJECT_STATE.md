@@ -10,6 +10,7 @@
 - Starter branch: `main`, clean and tracking `origin/main`
 - Target status: SGTP V1 is now explicitly defined in `docs/PRODUCT_DEFINITION.md`
 - Phase 1: **not yet safe to begin**; the target is defined, but foundation contradictions and missing requirements-to-code decisions remain
+- Detailed phase playbooks: 01–10 present; planning only, no phase activated
 
 ## Repository verification
 
@@ -104,4 +105,10 @@
 - Phase confirmation activates scope only; it does not authorize all tasks.
 - Each task requires a separate task brief and explicit `CONFIRM TASK <TASK-ID>` before implementation.
 - After one task, the agent must validate, document, report, and stop; next-task and next-phase activation are never automatic.
-- Phase playbooks 07–10 are not present in the repository and were not fabricated during this surgical consistency fix.
+- Phase playbooks 07–10 have now been added with task IDs, validation, handoff, rollback, Definition of Done, and Antigravity prompts.
+
+## Planning-only status
+
+- No phase is active.
+- No task is confirmed.
+- No application source, models, APIs, frontend screens, deployment, or infrastructure implementation was performed while creating the playbooks.
