@@ -22,6 +22,29 @@ The target production workflow is:
 
 The final system is intended to have a React/Vite/Tailwind frontend, Django/DRF backend, PostgreSQL/Django ORM persistence, secure token authentication, tenant isolation, object-level permissions, service-layer business logic, persistent object storage, background jobs, audit logging, tests, CI, monitoring, and automatic API/documentation updates. AI and external integrations must remain isolated from core business workflows.
 
+## Canonical target repository structure
+
+The target implementation path is:
+
+```text
+backend/
+├── config/settings/{base.py,dev.py,prod.py}
+├── apps/{accounts,shops,clients,catalog,works,billing,reports,ai_agents,integrations}/
+├── core/{models,tenancy,permissions,exceptions,services}/
+└── manage.py
+```
+
+This is the approved target structure. The root-level `core/`, `apps/accounts/`, `apps/tenants/`, and `apps/common/` paths described below are current starter-repository paths only; they must not be mistaken for target module boundaries.
+
+## Approved infrastructure direction
+
+- Frontend: React + Vite + Tailwind, hosted on Cloudflare Pages for staging/production delivery.
+- Backend: Django + DRF, hosted on Render.
+- Database: Render PostgreSQL.
+- Object storage: Cloudflare R2 or another approved S3-compatible private object store.
+- Background jobs: Django-Q or Celery + Redis; the choice remains open until the reliability phase selects and documents one.
+- Authentication: access token plus refresh token, with the refresh token handled through an HttpOnly/Secure cookie, rotation, and reuse detection.
+
 ## Verified starter architecture
 
 The cloned starter is a conventional Django monolith:
@@ -45,6 +68,7 @@ Docker        -> development container and production web/db services
 - No service layer, domain modules, background worker, event bus, or external integration layer exists.
 - Target modules for V1 are not yet implemented: supplier/back office, shop workspace, clients, related persons, designs, measurements, materials, production workflow, billing, reports/PDFs, storage, jobs, and monitoring.
 - `backend/` and `frontend/` are currently empty placeholders; the existing Django code remains at the repository root under `core/` and `apps/`.
+- Target boundaries are `accounts` for identity/auth, `shops` for supplier/shop/membership/workspace tenancy, `clients` for clients/related persons, `catalog` for designs/measurements/materials, `works` for orders and production workflow, `billing` for invoices/payments/accounts, `reports` for reports/history/PDFs, `ai_agents` for controlled AI services, `integrations` for external adapters/webhooks, and `core` for shared primitives only.
 
 ## Authentication
 

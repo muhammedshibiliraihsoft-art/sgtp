@@ -25,13 +25,13 @@ Money model → invoice/payment services → idempotency/audit → reports/PDF �
 ## 12. Detailed Task List
 
 ### R5-01 Billing and account model
-Objective: define invoice, line item, payment, balance, and outstanding semantics. Dependencies: Phase 4. Files: billing app/models/migrations/tests. Steps: use Decimal, immutable issued records, statuses, tax/discount rules only if approved, shop scope. DB: constraints/indexes. API: draft/issue/read. Security: financial permissions. Tests: totals/rounding/authorization. DoD: model safe.
+Objective: define invoice, line item, payment, balance, and outstanding semantics. Dependencies: Phase 4. Files: `backend/apps/billing/{models,migrations,serializers,views,tests}`. Steps: use Decimal, immutable issued records, statuses, tax/discount rules only if approved, shop scope. DB: constraints/indexes. API: draft/issue/read. Security: financial permissions. Tests: totals/rounding/authorization. DoD: model safe.
 
 ### R5-02 Financial service and idempotency
 Objective: connect billing to Completed work and make writes retry-safe. Dependencies: R5-01. Steps: transactional issue/payment/refund policy, idempotency keys, uniqueness, concurrency locks, audit events. DB: keys/constraints. API: idempotent responses. Tests: retries/races/partial failure. DoD: no duplicate charge/record.
 
 ### R5-03 Reports, history, and PDFs
-Objective: expose shop/supplier reports and generated PDFs. Dependencies: R5-02. Steps: define permitted aggregates, query indexes, templates, deterministic rendering, report history. DB: report metadata if needed. API: async job/status/download. Security: no cross-shop aggregates. Tests: totals/permissions/rendering. DoD: verified reports.
+Objective: expose shop/supplier reports and generated PDFs. Dependencies: R5-02. Files: `backend/apps/reports/{models,migrations,serializers,views,tests}` and approved report/PDF services. Steps: define permitted aggregates, query indexes, templates, deterministic rendering, report history. DB: report metadata if needed. API: async job/status/download. Security: no cross-shop aggregates. Tests: totals/permissions/rendering. DoD: verified reports.
 
 ### R5-04 Storage and background jobs
 Objective: securely persist files and move heavy work off requests. Dependencies: R5-03. Steps: object storage abstraction, private paths, signed access, content validation, worker queue, retries/dead letters, tenant metadata. Tests: file traversal/type/authorization/job retry. DoD: durable safe files/jobs.
@@ -42,7 +42,7 @@ Objective: document and exercise recovery. Dependencies: R5-01–04. Steps: back
 ## 13. Task Dependency Graph
 `R5-01 → R5-02 → R5-03 → R5-04 → R5-05`.
 ## 14. Expected Files / Folders
-Billing/report/storage/job/audit modules, migrations, worker config, templates, tests, runbooks.
+`backend/apps/billing/`, `backend/apps/reports/`, `backend/core/services/`, storage/job/audit modules, migrations, worker config, templates, tests, runbooks.
 ## 15. Expected New Files
 Financial models/services, report/PDF services, storage/job adapters, backup/restore scripts/docs.
 ## 16. Expected Modified Files

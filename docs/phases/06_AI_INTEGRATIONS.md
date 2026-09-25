@@ -25,7 +25,7 @@ Interfaces → tool allowlist → agent orchestration → fallback/validation �
 ## 12. Detailed Task List
 
 ### I6-01 Service and tool interfaces
-Objective: define narrow typed interfaces for core actions. Dependencies: Phases 3–5. Files: `ai_agents/`, integration contracts, tests. Steps: allowlist operations, tenant context, actor identity, dry-run/approval semantics. DoD: no direct ORM access.
+Objective: define narrow typed interfaces for core actions. Dependencies: Phases 3–5. Files: `backend/apps/ai_agents/`, `backend/apps/integrations/`, `backend/core/services/`, integration contracts, tests. Steps: allowlist operations, tenant context, actor identity, dry-run/approval semantics. DoD: no direct ORM access.
 
 ### I6-02 AI execution controls
 Objective: implement timeout, budget, cancellation, fallback, output schema validation, and audit. Dependencies: I6-01. DB: job/audit metadata if approved. API: async status. Security: prompt/data boundaries, least privilege. Tests: timeout, malformed output, denial, retry.
@@ -39,7 +39,7 @@ Objective: prove failures cannot break core operations. Dependencies: I6-02/03. 
 ## 13. Task Dependency Graph
 `I6-01 → I6-02 → I6-03 → I6-04`.
 ## 14. Expected Files / Folders
-`ai_agents/`, `integrations/`, adapters, schemas, jobs, tests, security docs.
+`backend/apps/ai_agents/`, `backend/apps/integrations/`, `backend/core/services/`, adapters, schemas, jobs, tests, security docs.
 ## 15. Expected New Files
 Interfaces, tool registry, agent services, adapters, webhook handlers, tests.
 ## 16. Expected Modified Files

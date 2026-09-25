@@ -112,3 +112,10 @@
 - No phase is active.
 - No task is confirmed.
 - No application source, models, APIs, frontend screens, deployment, or infrastructure implementation was performed while creating the playbooks.
+
+## Canonicalization audit
+
+- The approved target Django structure is documented separately from the current starter paths: `backend/config/settings`, `backend/apps/{accounts,shops,clients,catalog,works,billing,reports,ai_agents,integrations}`, and `backend/core/{models,tenancy,permissions,exceptions,services}`.
+- Current root-level `core/`, `apps/accounts/`, `apps/tenants/`, and `apps/common/` references are explicitly labeled as starter transition inputs, not target implementation boundaries.
+- Infrastructure direction is documented as Cloudflare Pages, Render, Render PostgreSQL, Cloudflare R2/S3-compatible storage, and an open Django-Q or Celery+Redis worker choice.
+- Auth planning now explicitly includes an HttpOnly/Secure refresh cookie, rotation, and reuse detection.

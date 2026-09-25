@@ -25,7 +25,7 @@ Entity model → membership/roles → context → query/permission enforcement �
 ## 12. Detailed Task List
 
 ### T3-01 Supplier and Shop entities
-Objective: define supplier/shop data model and ownership. Why: current Tenant is not the approved hierarchy. Dependencies: Phase 2. Files: tenant app models/migrations/admin/tests. Steps: decide Tenant rename/compatibility, add Supplier/Shop identities, unique constraints, active status, audit fields. DB: models/indexes/constraints. API: internal/admin contract. Security: ownership. Tests: constraints/soft delete. Docs: database/architecture. DoD: approved model.
+Objective: define supplier/shop data model and ownership. Why: current Tenant is not the approved hierarchy. Dependencies: Phase 2. Files: target `backend/apps/shops/{models,migrations,admin,tests}` and transition adapters for current `apps/tenants/`. Steps: decide Tenant rename/compatibility, add Supplier/Shop identities, unique constraints, active status, audit fields. DB: models/indexes/constraints. API: internal/admin contract. Security: ownership. Tests: constraints/soft delete. Docs: database/architecture. DoD: approved model.
 
 ### T3-02 User-Shop membership and roles
 Objective: connect users to shops and supplier roles. Dependencies: T3-01. Files: membership model, role constants/permissions, serializers/tests. Steps: model membership/status/role; prevent duplicate membership; define supplier cross-shop role; enforce inactive shop/user. DB: FK/index/unique constraints. API: membership management. Security: least privilege. Tests: role matrix. DoD: explicit role policy.
@@ -42,7 +42,7 @@ Objective: expose only approved supplier/shop management. Dependencies: T3-01–
 ## 13. Task Dependency Graph
 `T3-01 → T3-02 → T3-03 → T3-04 → T3-05`.
 ## 14. Expected Files / Folders
-`apps/tenants/`, `apps/accounts/`, shared permissions/context, migrations/tests.
+Target `backend/apps/shops/`, `backend/apps/accounts/`, `backend/core/{tenancy,permissions,services}/`, migrations/tests; current `apps/tenants/` and `apps/accounts/` are starter transition inputs only.
 ## 15. Expected New Files
 Shop/membership models, role policy, context/scoping modules, tests.
 ## 16. Expected Modified Files

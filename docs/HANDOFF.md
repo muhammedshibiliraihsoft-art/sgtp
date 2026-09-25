@@ -103,6 +103,14 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 - `docs/phases/10_PRODUCTION.md` created with tasks P10-01 through P10-04.
 - All ten playbooks use phase activation followed by separate task confirmation, validation, documentation, report, and stop boundaries.
 
+## Canonicalization audit status
+
+- Target implementation paths are explicit in `docs/ARCHITECTURE.md` and the affected phase playbooks.
+- Current starter paths remain documented only as transition inputs.
+- Domain responsibilities map to `accounts`, `shops`, `clients`, `catalog`, `works`, `billing`, `reports`, `ai_agents`, `integrations`, and shared `core` primitives.
+- Deployment phases explicitly use Cloudflare Pages, Render, Render PostgreSQL, and Cloudflare R2/S3-compatible storage; worker selection remains Django-Q or Celery + Redis.
+- Refresh-token planning explicitly requires an HttpOnly/Secure cookie, rotation, and reuse detection.
+
 ## Phase 1 decision
 
 Phase 1 should **not begin yet**. The target is now documented, but the tenant/shop model, object-level authorization, frontend boundary, service layer, storage, jobs, audit, CI, monitoring, and environment foundations must be resolved against the target before implementation.

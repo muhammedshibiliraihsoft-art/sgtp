@@ -54,7 +54,7 @@ Repository baseline → dependency environment → environment/settings split �
 - Objective: make local and container dependency installation reproducible.
 - Why: later tests must run from a known baseline.
 - Dependencies: none beyond activation.
-- Files to create: optional `.python-version`, `backend/`/`frontend/` scaffolding only if architecture approves; no business code.
+- Files to create: optional `.python-version`, `backend/config/settings/{base.py,dev.py,prod.py}`, `backend/core/` shared-foundation interfaces, and `backend/manage.py` only if the approved migration to the target structure is activated; no business code.
 - Files to modify: `requirements*.txt`, `pyproject.toml`, `Makefile`, README only where verified.
 - Steps: inspect versions; create ignored virtual environment; install dev requirements; pin/add only necessary packages; record commands; run `pip check`.
 - Database/API/security impact: none directly; do not change contracts.
@@ -69,7 +69,7 @@ Repository baseline → dependency environment → environment/settings split �
 - Why: unsafe defaults and mismatched Docker variables currently exist.
 - Dependencies: F1-01.
 - Files to create: settings package/modules and typed environment configuration only as needed.
-- Files to modify: `core/settings.py`, `.env.example`, Docker/devcontainer files, `.gitignore`.
+- Files to modify: current starter `core/settings.py` during transition, target `backend/config/settings/*`, `.env.example`, Docker/devcontainer files, `.gitignore`.
 - Steps: define required/optional variables; remove hard-coded production secrets; align `DEBUG`, database URL/DB fields, hosts, CORS placeholders, static/media paths; preserve import compatibility.
 - Database/API/security impact: configuration only; do not change business endpoints.
 - Tests: settings-load tests for development/test/production and missing-secret behavior.
@@ -83,7 +83,7 @@ Repository baseline → dependency environment → environment/settings split �
 - Why: every later record depends on IDs, audit timestamps, deletion, and authentication identity.
 - Dependencies: F1-02.
 - Files to create: only approved `core` interfaces/tests.
-- Files to modify: `apps/accounts/models/*`, `apps/common/models/*`, admin/tests as necessary.
+- Files to modify: current starter `apps/accounts/models/*` during transition, target `backend/apps/accounts/*`, target `backend/core/models/*`, admin/tests as necessary.
 - Steps: preserve email login; verify manager/password behavior; document audit-user semantics; decide whether soft delete is appropriate for identity records; expose stable imports.
 - Database impact: only approved foundational migration changes.
 - API/security impact: preserve existing auth contract; no new endpoints.
@@ -124,7 +124,7 @@ Repository baseline → dependency environment → environment/settings split �
 
 ## 14. Expected Files / Folders
 
-`core/`, `apps/accounts/`, `apps/common/`, `requirements*.txt`, `.env.example`, Docker/devcontainer files, `tests/` if approved, and `docs/`.
+Current starter paths `core/`, `apps/accounts/`, and `apps/common/` may be modified during transition; target foundation paths are `backend/config/`, `backend/apps/accounts/`, `backend/core/`, `requirements*.txt`, `.env.example`, Docker/devcontainer files, `tests/` if approved, and `docs/`.
 
 ## 15. Expected New Files
 

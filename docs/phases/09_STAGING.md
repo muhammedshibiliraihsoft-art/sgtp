@@ -52,7 +52,7 @@ Environment definition → isolated infrastructure → deploy/migrate → storag
 - Why it exists: local success does not prove deployability.
 - Dependencies: Phase 8 DoD, explicit task confirmation.
 - Files to create/modify: deployment manifests, environment templates, CI workflow, runbooks; never secrets.
-- Steps: define services, domains, network, resource limits, secret references, CORS/hosts, logging, data policy, and access roles.
+- Steps: define Cloudflare Pages frontend staging, Render backend staging, Render PostgreSQL staging, private Cloudflare R2/S3-compatible storage, worker choice (Django-Q or Celery + Redis), domains, network, resource limits, secret references, CORS/hosts, logging, data policy, and access roles.
 - Database/API/security impact: staging-only configuration and isolation.
 - Tests: configuration validation and secret reference checks.
 - Validation: dry-run/deployment plan.
@@ -106,7 +106,7 @@ Environment definition → isolated infrastructure → deploy/migrate → storag
 
 ## 14. Expected Files / Folders
 
-Deployment manifests/workflows, environment templates, staging runbooks, smoke/E2E configuration, backup scripts.
+Cloudflare Pages and Render deployment manifests/workflows, environment templates, staging runbooks, smoke/E2E configuration, backup scripts.
 
 ## 15. Expected New Files
 

@@ -52,7 +52,7 @@ Release approval → secrets/configuration → infrastructure readiness → back
 - Why it exists: incorrect configuration can expose data or prevent safe startup.
 - Dependencies: Phase 9 accepted; explicit task confirmation.
 - Files/areas: production manifests, secret references, runbooks, CI/CD environment protections.
-- Steps: validate immutable artifact, secret manager references, hosts/CORS, database/storage credentials, service accounts, resource limits, logging/privacy, rollback plan.
+- Steps: validate immutable Cloudflare Pages frontend and Render backend artifacts, Render PostgreSQL and private Cloudflare R2/S3-compatible storage references, secret manager references, hosts/CORS, service accounts, resource limits, logging/privacy, rollback plan.
 - Database/API/security impact: production access policy only; no business changes.
 - Tests: configuration/deploy checks and secret presence without printing values.
 - Validation: review checklist and dry-run.
@@ -110,7 +110,7 @@ Production manifests/workflows, secret templates, runbooks, monitoring/backup co
 
 ## 15. Expected New Files
 
-Only approved deployment, operations, monitoring, backup, release, and acceptance documentation/configuration.
+Only approved Cloudflare Pages/Render deployment, operations, monitoring, backup, release, and acceptance documentation/configuration.
 
 ## 16. Expected Modified Files
 

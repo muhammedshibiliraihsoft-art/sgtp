@@ -25,10 +25,10 @@ API baseline → JWT → permission/tenant interfaces → errors/throttling → 
 ## 12. Detailed Task List
 
 ### B2-01 DRF API baseline
-Objective: establish versioned API settings and response conventions. Why: later clients need stable contracts. Dependencies: Phase 1. Create/modify: `core/urls.py`, DRF settings, API modules. Steps: define `/api/v1/`, pagination, filtering, request IDs, schema conventions; preserve compatibility deliberately. DB: none. API: versioning/error envelope decision. Security: deny-by-default. Tests: routing, auth defaults, pagination. Validation: schema and checks. Docs: API/state/handoff. DoD: stable baseline.
+Objective: establish versioned API settings and response conventions. Why: later clients need stable contracts. Dependencies: Phase 1. Create/modify: target `backend/config/urls.py`/API modules and current starter `core/urls.py` only during transition. Steps: define `/api/v1/`, pagination, filtering, request IDs, schema conventions; preserve compatibility deliberately. DB: none. API: versioning/error envelope decision. Security: deny-by-default. Tests: routing, auth defaults, pagination. Validation: schema and checks. Docs: API/state/handoff. DoD: stable baseline.
 
 ### B2-02 JWT lifecycle
-Objective: secure access/refresh, rotation, reuse detection, logout/revocation. Why: identity must be reliable. Dependencies: B2-01. Create/modify: auth settings/services/models/migrations/tests. Steps: choose token family/revocation storage, configure lifetimes, rotation, blacklist, replay handling, logout; never log tokens. DB: token/revocation tables if approved. API: login/refresh/logout contract. Security: replay, brute force, disabled users. Tests: happy/expired/rotated/reused/revoked tokens. Validation: migration and API tests. Docs: security/API. DoD: documented lifecycle passes.
+Objective: secure access/refresh, rotation, reuse detection, logout/revocation. Why: identity must be reliable. Dependencies: B2-01. Create/modify: target `backend/apps/accounts/`, `backend/core/services/`, auth settings/models/migrations/tests. Steps: choose token family/revocation storage, configure access-token lifetimes, rotation, refresh-token reuse detection, HttpOnly/Secure refresh-cookie handling, blacklist, replay handling, logout; never log tokens. DB: token/revocation tables if approved. API: login/refresh/logout contract. Security: replay, brute force, disabled users. Tests: happy/expired/rotated/reused/revoked tokens and cookie flags. Validation: migration and API tests. Docs: security/API. DoD: documented lifecycle passes.
 
 ### B2-03 Permission and tenant-scope interfaces
 Objective: provide reusable object-permission and queryset hooks without implementing shops. Dependencies: B2-01. Create/modify: permissions/services/base viewsets/tests. Steps: define policy interfaces, deny-by-default behavior, owner/object checks, future tenant context contract. DB: none. API: 403/404 policy. Security: no IDOR. Tests: anonymous/authenticated/forbidden/object cases. DoD: reusable primitives documented.
@@ -42,7 +42,7 @@ Objective: publish accurate OpenAPI and run security regression checks. Dependen
 ## 13. Task Dependency Graph
 `B2-01 → B2-02 → B2-03 → B2-04 → B2-05`.
 ## 14. Expected Files / Folders
-`core/`, `apps/accounts/`, shared API/security modules, tests, docs.
+Target `backend/config/`, `backend/apps/accounts/`, `backend/core/{permissions,exceptions,services}/`, shared API/security modules, tests, docs; current root-level starter paths are transition inputs only.
 ## 15. Expected New Files
 Permission, exception, throttle, health, token/revocation modules and tests as required.
 ## 16. Expected Modified Files
