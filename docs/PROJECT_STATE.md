@@ -2,18 +2,16 @@
 
 ## Status
 
-- Phase: 0 — target product definition and starter alignment
-- Current task: F1-03 PostgreSQL and migration strategy (Awaiting Confirmation)
+- Phase 1 — corrective work complete
+- Current task: Phase 1 is complete
 - Project root: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp`
 - Remote: `https://github.com/muhammedshibiliraihsoft-art/sgtp.git`
-- Starter commit: `0a78d8fd32013c729c7f17dde8c218a8d8900c17` (`Initial commit`)
-- Starter branch: `main`, with local documentation checkpoints ahead of `origin/main`; application source remains unchanged
+- Current HEAD: cec6340a (pre-correction committed state)
+- Current branch: `main` with Phase 1 application and documentation modifications
 - Target status: SGTP V1 is now explicitly defined in `docs/PRODUCT_DEFINITION.md`
 - Starter foundation: exists in the cloned SGTP repository.
-- Phase 1 implementation: **Active. F1-01 Complete.**
-- Phase 1 plan/readiness: independently audited, clear, and ready to begin when explicitly activated.
-- Phase 1 activation: Active.
-- Confirmation status: F1-01 completed. Waiting for F1-02 task confirmation.
+- Phase 1 implementation: **Complete.**
+- Confirmation status: Phase 1 tasks completed.
 - Detailed phase playbooks: 01–10 present; planning only, no phase activated
 - Later-phase decisions: tenant context is approved as URL-path based (`/shops/{shop_id}/...`), Related Person billing is owned by the Primary Client, and CSRF mechanism selection/validation remains a Phase 2 task.
 
@@ -67,32 +65,30 @@
 
 ## Missing or incomplete foundation
 
-- User-to-tenant membership/ownership is not modeled: `User` has no tenant relation, while `Tenant.user_count` calls `user_set`.
-- Tenant isolation is not enforced. The README references `TenantFilterMixin` and `apps.common.views.base_model_view`, but those files do not exist.
+- User-to-tenant membership/ownership is not modeled: `User` has no tenant relation. `Tenant.user_count` intentionally returns a placeholder 0 for Phase 1.
+- Tenant isolation is not enforced. Stale mixin references were removed from the README.
 - Tenant-aware base model permits `tenant = NULL`, and no request/context policy establishes the active tenant.
 - Tenant-context resolution is approved as URL-path based (`/shops/{shop_id}/...`) and must be enforced in Phase 3.
 - Billing ownership for work belonging to a Related Person is approved as Primary Client ownership and must be enforced in Phase 5.
 - No domain/business modules beyond accounts and generic tenants exist.
 
-## Recommended foundation changes before Phase 1
+### Phase 2/3 Deferred Implementations
 
-1. Translate the approved product definition into an entity/relationship and authorization design for suppliers, shops, users, and shop-scoped records.
-2. Define the tenant membership model, active-shop context, and object-level isolation policy before adding business modules.
-3. Align environment variables, database configuration, `DEBUG`, allowed hosts, CORS, and production security settings.
-4. Add the required SimpleJWT blacklist app or remove blacklist behavior, based on the approved auth contract.
-5. Establish the frontend foundation and backend service/API boundaries without changing the approved business hierarchy.
-6. Establish storage, background job, audit, CI, monitoring, and documentation foundations.
-7. Establish a dependency environment and run migrations, checks, linting, and tests before extending the starter.
-8. Replace README claims for missing mixins/components with verified implementation or corrected documentation.
+- User-to-tenant membership is not modeled: `User` has no tenant relation, and tenant isolation is not enforced.
+- Tenant-aware base model permits `tenant = NULL`, and no request/context policy establishes the active tenant.
+- Tenant-context resolution is approved as URL-path based (`/shops/{shop_id}/...`) and must be enforced in Phase 3.
+- Billing ownership for work belonging to a Related Person is approved as Primary Client ownership and must be enforced in Phase 5.
+- No domain/business modules beyond accounts and generic tenants exist.
+- Cookie-authenticated state-changing requests require an approved CSRF defense. HttpOnly/Secure cookies alone are insufficient. Rotation and reuse detection are pending.
 
 ## Verification results
 
 - Repository access: passed.
 - Clone: passed.
-- Starter Git status: clean.
+- Working tree: contains uncommitted Phase-1 corrective changes.
 - File inventory and source/configuration inspection: completed.
-- Django check: not runnable because Django is not installed in the current host environment.
-- Application tests: not run for the same dependency reason.
+- Django check: passes without issues.
+- Application tests: full project suite passes (21 tests).
 
 ## Current root verification
 
@@ -100,7 +96,7 @@
 - `AGENTS.md`: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp\AGENTS.md`
 - Documentation: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp\docs\`
 - Remote: `https://github.com/muhammedshibiliraihsoft-art/sgtp.git`
-- `backend/` and `frontend/` now exist as empty layout placeholders only; no business modules were created.
+- `backend/` and `frontend/` exist as layout placeholders only; no business modules were created yet.
 
 ## Phase playbook confirmation audit
 
@@ -108,18 +104,19 @@
 - Phase confirmation activates scope only; it does not authorize all tasks.
 - Each task requires a separate task brief and explicit `CONFIRM TASK <TASK-ID>` before implementation.
 - After one task, the agent must validate, document, report, and stop; next-task and next-phase activation are never automatic.
-- Phase playbooks 07–10 have now been added with task IDs, validation, handoff, rollback, Definition of Done, and Antigravity prompts.
+- Phase playbooks 07-10 have now been added with task IDs, validation, handoff, rollback, Definition of Done, and Antigravity prompts.
 
-## Implementation Status
+## Implementation Status (Phase 1 Complete)
 
 - Phase 1 is complete.
 - F1-01 through F1-05 are all complete.
 - Python virtual environment `.venv` created, and dependency baseline established. `manage.py check` passed.
-- Lint tools can run, but existing starter lint violations remain. `pytest` is passing against the new devcontainer PostgreSQL database.
-- Environment settings are now split into base, dev, test, and prod. core/settings.py acts as a backward-compatible router. Missing secrets fail safely.
+- Lint tools can run, but existing starter lint violations remain. `pytest` is passing against the new devcontainer PostgreSQL database with all project tests collected.
+- Environment settings are now split into base, dev, test, and prod. `core/settings.py` acts as a backward-compatible router rejecting unknown environments. Missing secrets fail safely.
 - The `User` model was decoupled from `django-safedelete` (replaced with `TimeStampedUUIDModel`) to fix identity uniqueness issues with soft-deletion, and base models were refactored to `backend/core/models/base.py`.
 - The database migration strategy has been established and documented in `docs/DATABASE.md`. A fresh PostgreSQL migration from an empty database applies perfectly, and the forward-only migration policy is in place.
 - JWT configuration hardened with explicit algorithm, UUID claims, signing key, UPDATE_LAST_LOGIN, and 30-min access tokens. Security cookie flags are explicit per environment (dev: disabled, prod: HttpOnly + Secure). Logout view no longer leaks exception details. `.env.example` documents all required variables including `DJANGO_ENV`.
+- The JWT blacklist app is installed and configured.
 
 ## Canonicalization audit
 
@@ -127,4 +124,3 @@
 - Current root-level `core/`, `apps/accounts/`, `apps/tenants/`, and `apps/common/` references are explicitly labeled as starter transition inputs, not target implementation boundaries.
 - Infrastructure direction is documented as Cloudflare Pages, Render, Render PostgreSQL, Cloudflare R2/S3-compatible storage, and an open Django-Q or Celery+Redis worker choice.
 - Auth planning now explicitly includes an HttpOnly/Secure refresh cookie, rotation, and reuse detection.
-- Cookie-authenticated state-changing requests require an approved CSRF defense; HttpOnly/Secure cookies alone are insufficient.

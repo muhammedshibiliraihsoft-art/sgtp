@@ -61,6 +61,9 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         return response
 
 
+from drf_spectacular.utils import extend_schema
+
+@extend_schema(request=None, responses={200: dict, 400: dict})
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout_view(request):

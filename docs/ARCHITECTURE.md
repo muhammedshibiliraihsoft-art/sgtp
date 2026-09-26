@@ -75,8 +75,8 @@ Docker        -> development container and production web/db services
 - `AUTH_USER_MODEL = accounts.User`.
 - Email is the login identifier.
 - DRF uses JWT authentication first and session authentication second.
-- Login and refresh routes use SimpleJWT; logout attempts to blacklist refresh tokens.
-- The blacklist application is not installed, so logout behavior requires verification/fix before being considered complete.
+- Login and refresh routes use SimpleJWT.
+- The JWT blacklist application is installed and configured.
 
 ## Data architecture
 
@@ -120,7 +120,7 @@ Docker        -> development container and production web/db services
 - Implement tenant isolation at queryset and permission boundaries, with tests proving cross-tenant access is denied.
 - Decide whether tenant-scoped foreign keys are mandatory and enforce that decision in models/serializers.
 - Align settings with container environment variables and explicitly configure allowed hosts/CORS.
-- Enable and test JWT refresh-token blacklist support if logout requires revocation.
+- Ensure all JWT revocation checks are tested explicitly.
 - Add the missing shared view/mixin abstractions only if the approved architecture needs them.
 - Design domain entities and relationships around the supplier → shop → client/work hierarchy before implementing modules.
 - Make the complete production workflow a persisted state machine with transition authorization and audit history.

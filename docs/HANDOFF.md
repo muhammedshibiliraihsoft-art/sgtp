@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Phase 0 — SGTP target product definition and starter alignment. No implementation has started.
+Phase 1 corrective work is complete.
 
 ## Current task
 
@@ -14,9 +14,9 @@ Task F1-05 (Secure defaults and baseline documentation) is completed. We hardene
 - `AGENTS.md`: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp\AGENTS.md`
 - `docs/`: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp\docs\`
 - Remote: `https://github.com/muhammedshibiliraihsoft-art/sgtp.git`
-- HEAD: `0a78d8f` (`Initial commit`)
+- Current HEAD: cec6340a (pre-correction committed state)
 - Branch: `main` tracking `origin/main`
-- Starter source files preserved.
+- Starter source files were modified for Phase 1.
 - Existing SGTP `.git` metadata and history preserved.
 - No second repository initialized and no push performed.
 
@@ -42,17 +42,12 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 - UUID, timestamps, audit fields, and soft-delete base model.
 - PostgreSQL, Docker, devcontainer, Gunicorn, WhiteNoise, Makefile, and tooling setup.
 
-## Missing or conflicting items
+## Phase 2/3 Deferred Implementations
 
-- `AGENTS.md` and `docs/PRODUCT_DEFINITION.md` now contain the approved V1 target; the starter remains incomplete against that target.
-- Tenant membership and isolation are incomplete: users are not related to tenants; `user_set` is not backed by a relation; no tenant filtering mixin exists despite README references.
+- Tenant membership and isolation are incomplete: users are not related to tenants.
 - `BaseModelWithTenant.tenant` is nullable and no active-tenant/request authorization mechanism exists.
-- JWT logout calls `blacklist()` without installing the SimpleJWT blacklist app.
-- Settings do not define `ALLOWED_HOSTS` or CORS policy; container environment variable names do not match settings expectations.
-- The host lacks installed Django/pytest/psycopg dependencies, so runtime checks remain pending.
 - The starter is not yet the target product: supplier back office, isolated shop workspaces, clients, related persons, designs, measurements, materials, production stages, billing, reports/PDFs, frontend, storage, jobs, audit, CI, monitoring, and end-to-end validation are not implemented.
 - The target requires React/Vite/Tailwind, but the starter has only an empty `frontend/` placeholder.
-- The current generic tenant foundation does not yet provide the shop membership, active-shop context, tenant isolation, or object-level permissions required by the target.
 - Tenant context is approved as URL-path based (`/shops/{shop_id}/...`) and must be implemented/tested in T3-03.
 - Related Person billing ownership is approved as Primary Client ownership and must be implemented/tested in R5-01.
 - Cookie-authenticated state-changing requests require an approved CSRF strategy; HttpOnly/Secure cookies alone are not sufficient.
@@ -61,9 +56,9 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 
 - Repository access: passed with `git ls-remote`.
 - Clone: passed.
-- Starter Git status: clean.
-- `python sgtp/manage.py check`: blocked by `ModuleNotFoundError: No module named 'django'`.
-- Tests: not run because dependencies are not installed.
+- Working tree: contains uncommitted Phase-1 corrective changes.
+- `python manage.py check`: passed with 0 issues.
+- Tests: `pytest` passes with all 21 project tests collected and green.
 
 ## Reorganization verification
 

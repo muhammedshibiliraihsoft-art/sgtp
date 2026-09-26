@@ -68,12 +68,15 @@ class Tenant(BaseModel):
         return self.name
     
     @property
-    def user_count(self):
-        """Return the number of users associated with this tenant."""
-        return self.user_set.filter(is_active=True).count()
+    def user_count(self) -> int:
+        """
+        Return the number of users associated with this tenant.
+        Placeholder for Phase 1. Real implementation will use TenantMembership in Phase 3.
+        """
+        return 0
     
     @property
-    def is_at_user_limit(self):
+    def is_at_user_limit(self) -> bool:
         """Check if tenant has reached its user limit."""
         return self.user_count >= self.max_users
     

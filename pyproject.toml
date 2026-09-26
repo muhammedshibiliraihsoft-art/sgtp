@@ -12,3 +12,5 @@ extend-exclude = '''
 DJANGO_SETTINGS_MODULE = "core.settings"
 python_files = ["test_*.py", "*_test.py"]
 addopts = "-v --tb=short --cov=apps --cov-report=term-missing"
+testpaths = ["apps", "backend", "core"]
+norecursedirs = [".*", "pgsql15*", "pgdata", "node_modules", "staticfiles", "media"]

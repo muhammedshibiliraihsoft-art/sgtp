@@ -9,7 +9,7 @@ A production-ready Django REST Framework project template with Docker, PostgreSQ
 - 🐳 **Docker** development and production setup
 - 🔧 **VS Code Dev Container** for consistent development environment
 - 👥 **Custom User Model** with email authentication
-- 🏢 **Multi-Tenant Support** with tenant isolation
+- 🏢 **Multi-Tenant Support** foundation (isolation planned)
 - 🔐 **JWT Authentication** with DRF SimpleJWT
 - 🌐 **CORS** configured for frontend integration
 - 📊 **API Documentation** with drf-spectacular (Swagger/OpenAPI)
@@ -209,25 +209,18 @@ class YourModel(BaseModelWithTenant):
     # Automatically includes: id, created_at, updated_at, created_by, updated_by, tenant
 ```
 
-### Using Base ViewSets
-```python
-from apps.common.views.base_model_view import BaseModelViewSet
 
-class YourViewSet(BaseModelViewSet):
-    # Automatically includes: tenant filtering, permissions, CRUD operations
-    pass
-```
 
-## 🏢 Multi-Tenant Architecture
+## 🏢 Multi-Tenant Foundation
 
-This template includes a complete multi-tenant system:
+This template includes a foundation for multi-tenancy (isolation and membership will be implemented in Phase 2/3):
 
 ### Tenant Features
-- **Tenant Model**: Complete organization management with contact info and settings
+- **Tenant Model**: Organization management with contact info and settings
 - **User Limits**: Configurable maximum users per tenant
 - **Tenant Admin**: Full Django admin interface for tenant management
 - **API Endpoints**: REST API for tenant CRUD operations
-- **Tenant Isolation**: Models can inherit `BaseModelWithTenant` for automatic tenant filtering
+- **Tenant Base Model**: Models can inherit `BaseModelWithTenant` to associate data with a tenant (filtering/isolation planned for Phase 3)
 
 ### Tenant API Endpoints
 - `GET /api/v1/tenants/` - List all tenants
@@ -247,14 +240,7 @@ class YourModel(BaseModelWithTenant):
     # Automatically includes tenant relationship and audit fields
 ```
 
-### Tenant Filtering in Views
-```python
-from apps.tenants.mixins import TenantFilterMixin
 
-class YourViewSet(TenantFilterMixin, ModelViewSet):
-    # Automatically filters by user's tenant
-    pass
-```
 
 ## 📚 API Documentation
 
