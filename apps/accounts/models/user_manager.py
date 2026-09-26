@@ -1,8 +1,7 @@
 from django.contrib.auth.models import BaseUserManager
-from safedelete.models import SafeDeleteManager
 
 
-class UserManager(BaseUserManager, SafeDeleteManager):
+class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         if not email:
             raise ValueError('The Email field must be set')

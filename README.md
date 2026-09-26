@@ -202,7 +202,7 @@ python manage.py startapp your_app_name apps/your_app_name
 
 ### Using Base Models
 ```python
-from apps.common.models.base import BaseModel, BaseModelWithTenant
+from backend.core.models import BaseModel, BaseModelWithTenant
 
 class YourModel(BaseModelWithTenant):
     name = models.CharField(max_length=100)
@@ -240,7 +240,7 @@ This template includes a complete multi-tenant system:
 
 ### Using Tenant Models
 ```python
-from apps.common.models import BaseModelWithTenant
+from backend.core.models import BaseModelWithTenant
 
 class YourModel(BaseModelWithTenant):
     name = models.CharField(max_length=100)

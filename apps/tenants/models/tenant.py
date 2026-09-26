@@ -1,6 +1,6 @@
 from django.db import models
 from django.core.validators import RegexValidator
-from apps.common.models import BaseModel
+from backend.core.models import BaseModel
 
 
 class Tenant(BaseModel):

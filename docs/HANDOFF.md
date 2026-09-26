@@ -6,7 +6,7 @@ Phase 0 — SGTP target product definition and starter alignment. No implementat
 
 ## Current task
 
-Task F1-02 (Environment management and settings split) is completed. We split settings into base, dev, test, and prod, enforcing fail-safe behavior for missing secrets. Waiting for confirmation of task F1-03 (PostgreSQL and migration strategy).
+Task F1-03 (Identity and shared model foundation) is completed. We decoupled the custom User model from the overly complex `django-safedelete` package to ensure a standard authentication identity, refactored the base models into `backend/core/models/`, and confirmed the test suite passes successfully. Waiting for confirmation of task F1-04 (PostgreSQL and migration strategy).
 
 ## Repository and workspace
 

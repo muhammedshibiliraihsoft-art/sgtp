@@ -4,13 +4,11 @@ from safedelete.models import SOFT_DELETE_CASCADE, SafeDeleteModel
 import uuid
 
 
-class BaseModel(SafeDeleteModel):
+class TimeStampedUUIDModel(models.Model):
     """
-    Base model with soft delete functionality and audit fields.
-    All models should inherit from this or BaseModelWithTenant.
+    Base model with UUID and audit fields.
+    Does NOT include soft delete.
     """
-    _safedelete_policy = SOFT_DELETE_CASCADE
-    
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     created_at = models.DateTimeField(db_index=True, auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -28,6 +26,18 @@ class BaseModel(SafeDeleteModel):
         related_name="updated_%(class)s_objects",
         on_delete=models.DO_NOTHING,
     )
+
+    class Meta:
+        abstract = True
+        ordering = ["-created_at"]
+
+
+class BaseModel(SafeDeleteModel, TimeStampedUUIDModel):
+    """
+    Base model with soft delete functionality and audit fields.
+    All models should inherit from this or BaseModelWithTenant.
+    """
+    _safedelete_policy = SOFT_DELETE_CASCADE
 
     class Meta:
         abstract = True

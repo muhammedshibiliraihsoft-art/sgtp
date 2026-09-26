@@ -4,11 +4,11 @@ from django.contrib.auth.models import (
 )
 from django.db import models
 from django.utils import timezone
-from apps.common.models import BaseModel
+from backend.core.models import TimeStampedUUIDModel
 from .user_manager import UserManager
 
 
-class User(BaseModel, AbstractBaseUser, PermissionsMixin):
+class User(TimeStampedUUIDModel, AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     first_name = models.CharField(max_length=30, blank=True)
     last_name = models.CharField(max_length=30, blank=True)
