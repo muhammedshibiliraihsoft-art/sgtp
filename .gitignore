@@ -54,3 +54,11 @@ media/
 ehthumbs.db
 Thumbs.db
 .venv/
+
+# Local PostgreSQL artifacts
+logfile
+pgdata/
+pgsql.zip
+pgsql15.zip
+pgsql15/
+pgsql15_fast/
