@@ -112,13 +112,14 @@
 
 ## Implementation Status
 
-- Phase 1 is active.
-- F1-01, F1-02, F1-03, and F1-04 are complete.
+- Phase 1 is complete.
+- F1-01 through F1-05 are all complete.
 - Python virtual environment `.venv` created, and dependency baseline established. `manage.py check` passed.
 - Lint tools can run, but existing starter lint violations remain. `pytest` is passing against the new devcontainer PostgreSQL database.
 - Environment settings are now split into base, dev, test, and prod. core/settings.py acts as a backward-compatible router. Missing secrets fail safely.
 - The `User` model was decoupled from `django-safedelete` (replaced with `TimeStampedUUIDModel`) to fix identity uniqueness issues with soft-deletion, and base models were refactored to `backend/core/models/base.py`.
 - The database migration strategy has been established and documented in `docs/DATABASE.md`. A fresh PostgreSQL migration from an empty database applies perfectly, and the forward-only migration policy is in place.
+- JWT configuration hardened with explicit algorithm, UUID claims, signing key, UPDATE_LAST_LOGIN, and 30-min access tokens. Security cookie flags are explicit per environment (dev: disabled, prod: HttpOnly + Secure). Logout view no longer leaks exception details. `.env.example` documents all required variables including `DJANGO_ENV`.
 
 ## Canonicalization audit
 

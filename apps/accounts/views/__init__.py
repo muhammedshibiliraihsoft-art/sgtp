@@ -72,5 +72,8 @@ def logout_view(request):
             token.blacklist()
         logout(request)
         return Response({"message": "Logout successful"}, status=status.HTTP_200_OK)
-    except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception:
+        return Response(
+            {"error": "Invalid or expired refresh token."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )

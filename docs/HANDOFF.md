@@ -6,7 +6,7 @@ Phase 0 — SGTP target product definition and starter alignment. No implementat
 
 ## Current task
 
-Task F1-04 (PostgreSQL and migration strategy) is completed. We validated that the database configuration correctly applies migrations on a fresh PostgreSQL instance, tests run cleanly against a separate test database, and the forward-only migration policy is documented in `docs/DATABASE.md`. Waiting for confirmation of task F1-05 (Authentication foundation and simplejwt).
+Task F1-05 (Secure defaults and baseline documentation) is completed. We hardened JWT configuration (explicit algorithm, UUID claims, signing key, shorter access token lifetime, UPDATE_LAST_LOGIN), added explicit security cookie flags per environment, fixed an exception-leaking logout view, updated the API schema branding to SGTP, and documented secret handling in `.env.example`. Phase 1 is now complete.
 
 ## Repository and workspace
 
@@ -116,8 +116,8 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 
 ## Phase 1 status
 
-Phase 1 implementation has started. Tasks F1-01 through F1-04 are complete. We established the virtual environment, split settings into base/dev/test/prod, refactored the User model away from soft-deletes, established base models, and documented the PostgreSQL forward-only migration strategy after verifying clean execution on a fresh database. `manage.py check` and tests pass cleanly. No business logic was modified.
+Phase 1 is complete. All tasks F1-01 through F1-05 are done. The repository has a reproducible dependency baseline, split settings per environment, refactored identity models, documented PostgreSQL migration strategy, hardened JWT/security configuration, and explicit secure defaults. `manage.py check`, `makemigrations --check`, and all tests pass cleanly.
 
 ## Recommended next action
 
-Next, await explicit confirmation `CONFIRM TASK F1-05` to proceed with Authentication foundation and simplejwt.
+Next, await explicit `CONFIRM PHASE 2` to activate Phase 2 (API & Service Layer), followed by `CONFIRM TASK <TASK-ID>` for individual tasks.
