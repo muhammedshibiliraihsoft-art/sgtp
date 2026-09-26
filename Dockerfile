@@ -22,7 +22,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Create non-root user
-RUN useradd -m appuser && chown -R appuser:appuser /app
+RUN mkdir -p /app/staticfiles /app/assets && \
+    useradd -m appuser && chown -R appuser:appuser /app
 USER appuser
 
 # Copy entrypoint

@@ -1,0 +1,14 @@
+﻿.venv/
+.venv
+pgdata/
+pgdata
+__pycache__/
+*.pyc
+.git/
+.env
+.env.prod
+.env.test
+pgsql15_fast/
+pgsql15/
+*.zip
+logfile
