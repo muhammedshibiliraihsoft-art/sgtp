@@ -6,7 +6,7 @@ Phase 0 — SGTP target product definition and starter alignment. No implementat
 
 ## Current task
 
-Task F1-03 (Identity and shared model foundation) is completed. We decoupled the custom User model from the overly complex `django-safedelete` package to ensure a standard authentication identity, refactored the base models into `backend/core/models/`, and confirmed the test suite passes successfully. Waiting for confirmation of task F1-04 (PostgreSQL and migration strategy).
+Task F1-04 (PostgreSQL and migration strategy) is completed. We validated that the database configuration correctly applies migrations on a fresh PostgreSQL instance, tests run cleanly against a separate test database, and the forward-only migration policy is documented in `docs/DATABASE.md`. Waiting for confirmation of task F1-05 (Authentication foundation and simplejwt).
 
 ## Repository and workspace
 
@@ -116,8 +116,8 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 
 ## Phase 1 status
 
-Phase 1 implementation has started. Task F1-01 (Repository and dependency baseline) and Task F1-02 (Environment management and settings split) are complete. We established the local virtual environment, dependencies, and split settings into base, dev, test, and prod, enforcing fail-safe behavior and fixing security warnings. `manage.py check` passed, including deployment checks. No business logic was modified.
+Phase 1 implementation has started. Tasks F1-01 through F1-04 are complete. We established the virtual environment, split settings into base/dev/test/prod, refactored the User model away from soft-deletes, established base models, and documented the PostgreSQL forward-only migration strategy after verifying clean execution on a fresh database. `manage.py check` and tests pass cleanly. No business logic was modified.
 
 ## Recommended next action
 
-Next, await explicit confirmation `CONFIRM TASK F1-03` to proceed with Identity and shared model foundation.
+Next, await explicit confirmation `CONFIRM TASK F1-05` to proceed with Authentication foundation and simplejwt.
