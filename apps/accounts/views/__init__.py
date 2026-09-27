@@ -1,3 +1,5 @@
+from drf_spectacular.utils import extend_schema, inline_serializer, OpenApiParameter, OpenApiTypes
+from rest_framework import serializers
 from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
@@ -72,6 +74,17 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     """Custom login view that returns user data, issues CSRF token, and sets HttpOnly refresh cookie"""
     throttle_classes = [AuthRateThrottle]
 
+    @extend_schema(
+        responses={
+            200: inline_serializer(
+                name='LoginResponse',
+                fields={
+                    'access': serializers.CharField(),
+                    'user': UserSerializer()
+                }
+            )
+        }
+    )
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
         if response.status_code == 200:
@@ -94,6 +107,26 @@ class CustomTokenRefreshView(TokenRefreshView):
     """Refresh view that reads refresh token from HttpOnly cookie and requires CSRF"""
     throttle_classes = [AuthRateThrottle]
 
+    @extend_schema(
+        request=None,
+        parameters=[
+            OpenApiParameter(
+                name='refresh',
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.COOKIE,
+                description='Refresh token in HttpOnly cookie',
+                required=True,
+            )
+        ],
+        responses={
+            200: inline_serializer(
+                name='RefreshResponse',
+                fields={
+                    'access': serializers.CharField(),
+                }
+            )
+        }
+    )
     def post(self, request, *args, **kwargs):
         refresh_token = request.COOKIES.get('refresh')
         if not refresh_token:
@@ -118,7 +151,6 @@ class CustomTokenRefreshView(TokenRefreshView):
 
         return response
 
-from drf_spectacular.utils import extend_schema
 
 @extend_schema(request=None, responses={200: dict, 400: dict})
 @api_view(['POST'])

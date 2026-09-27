@@ -9,9 +9,9 @@ Phase 2 (Backend Core Security) is active.
 Task B2-04 (Exceptions, throttling, CORS, health) is completed and audit-cleared with deferred items.
 - **Changed areas:** `core/exceptions.py`, `core/health.py`, `core/urls.py`, `backend/config/settings/base.py`, `apps/accounts/views/__init__.py`, and new tests in `core/tests/test_b2_04_health_errors.py`.
 - **Validation performed:** 45 tests pass (including throttles, error normalization, and health checks), `manage.py check` passes cleanly.
-- **Next authorized task:** B2-05 has not started. The next task requires separate explicit confirmation. Phase 2 remains active (not complete).
-- **Current blockers/deferred items:** C-01, C-02, C-03, and the OpenAPI mismatch (F-01) remain explicitly deferred to B2-05.
-- **Repository state:** B2-04 is audited and cleared. The latest repository correction commit is `11de4d8f99f209ad91a2df6a6bb2886c4582c228`.
+- **Next authorized task:** B2-05 is complete. Phase 2 is now complete. The next task is to CONFIRM PHASE 3.
+- **Current blockers/deferred items:** None. C-01, C-02, C-03, and F-01 were resolved in B2-05.
+- **Repository state:** B2-05 is complete. The latest repository state includes the OpenAPI and security validation fixes.
 
 ## Repository and workspace
 
@@ -116,4 +116,4 @@ Phase 1 is complete. All tasks F1-01 through F1-05 are done. The repository has 
 
 ## Recommended next action
 
-Next, await explicit `CONFIRM IMPLEMENTATION B2-05` or `CONFIRM TASK B2-05` to authorize OpenAPI schema correction.
+Next, await explicit `CONFIRM PHASE 3` to authorize Phase 3.

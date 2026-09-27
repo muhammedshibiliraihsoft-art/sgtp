@@ -4,6 +4,9 @@ from rest_framework.test import APIClient
 from rest_framework import status
 from unittest.mock import patch
 from django.db import DatabaseError
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 class HealthCheckTests(TestCase):
     def setUp(self):
@@ -102,9 +105,79 @@ class ThrottlingTests(TestCase):
         self.assertIn("Request was throttled", data["errors"]["detail"])
 
 
+
+    @patch('django.middleware.csrf.CsrfViewMiddleware.process_view')
+    @patch('rest_framework.throttling.SimpleRateThrottle.wait')
+    @patch('rest_framework.throttling.ScopedRateThrottle.allow_request')
+    def test_refresh_endpoint_is_throttled(self, mock_allow_request, mock_wait, mock_csrf):
+        """Refresh endpoint should return 429 after exceeding the auth scope limit."""
+        mock_csrf.return_value = None
+        mock_allow_request.side_effect = [True, True, False]
+        mock_wait.return_value = 60
+        
+        # Request 1
+        response1 = self.client.post('/api/v1/auth/token/refresh/', {}, REMOTE_ADDR='127.0.0.1')
+        
+        # Request 2
+        response2 = self.client.post('/api/v1/auth/token/refresh/', {}, REMOTE_ADDR='127.0.0.1')
+        
+        # Request 3 should be throttled
+        response3 = self.client.post('/api/v1/auth/token/refresh/', {}, REMOTE_ADDR='127.0.0.1')
+        self.assertEqual(response3.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+        data = response3.json()
+        self.assertIn("Request was throttled", data["errors"]["detail"])
+
+    @patch('rest_framework.throttling.SimpleRateThrottle.wait')
+    @patch('rest_framework.throttling.ScopedRateThrottle.allow_request')
+    def test_logout_endpoint_is_throttled(self, mock_allow_request, mock_wait):
+        """Logout endpoint should return 429 after exceeding the auth scope limit."""
+        user = User.objects.create_user(email='throttle_logout@example.com', password='password123')
+        self.client.force_authenticate(user=user)
+        
+        mock_allow_request.side_effect = [True, True, False]
+        mock_wait.return_value = 60
+        
+        # Request 1
+        response1 = self.client.post('/api/v1/auth/logout/', {}, REMOTE_ADDR='127.0.0.1')
+        
+        # Request 2
+        response2 = self.client.post('/api/v1/auth/logout/', {}, REMOTE_ADDR='127.0.0.1')
+        
+        # Request 3 should be throttled
+        response3 = self.client.post('/api/v1/auth/logout/', {}, REMOTE_ADDR='127.0.0.1')
+        self.assertEqual(response3.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+        data = response3.json()
+        self.assertIn("Request was throttled", data["errors"]["detail"])
+
 class CORSTests(TestCase):
     def setUp(self):
         self.client = APIClient()
+
+    @override_settings(CORS_ALLOWED_ORIGINS=['https://allowed.com'])
+    def test_cors_allowed_origin(self):
+        """Requests from allowed origins should receive CORS headers."""
+        response = self.client.options(
+            '/api/v1/auth/login/',
+            HTTP_ORIGIN='https://allowed.com',
+            HTTP_ACCESS_CONTROL_REQUEST_METHOD='POST',
+            HTTP_ACCESS_CONTROL_REQUEST_HEADERS='content-type, authorization'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.headers.get('Access-Control-Allow-Origin'), 'https://allowed.com')
+        self.assertEqual(response.headers.get('Access-Control-Allow-Credentials'), 'true')
+        self.assertIn('POST', response.headers.get('Access-Control-Allow-Methods', ''))
+        self.assertIn('content-type', response.headers.get('Access-Control-Allow-Headers', '').lower())
+
+    @override_settings(CORS_ALLOWED_ORIGINS=['https://allowed.com'])
+    def test_cors_disallowed_origin(self):
+        """Requests from disallowed origins should NOT receive CORS headers."""
+        response = self.client.options(
+            '/api/v1/auth/login/',
+            HTTP_ORIGIN='https://disallowed.com',
+            HTTP_ACCESS_CONTROL_REQUEST_METHOD='POST'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsNone(response.headers.get('Access-Control-Allow-Origin'))
 
     @override_settings(CORS_ALLOWED_ORIGINS=['https://allowed.com'])
     def test_cors_allowed_origin(self):
