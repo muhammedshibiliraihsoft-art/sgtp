@@ -26,6 +26,15 @@ Entity model → membership/roles → context → query/permission enforcement �
 
 ### T3-01 Supplier and Shop entities
 Objective: define supplier/shop data model and ownership. Why: current Tenant is not the approved hierarchy. Dependencies: Phase 2. Files: target `backend/apps/shops/{models,migrations,admin,tests}` and transition adapters for current `apps/tenants/`. Steps: decide Tenant rename/compatibility, add Supplier/Shop identities, unique constraints, active status, audit fields. DB: models/indexes/constraints. API: internal/admin contract. Security: ownership. Tests: constraints/soft delete. Docs: database/architecture. DoD: approved model.
+Validation:
+- existing Tenant data preservation/mapping strategy
+- migration impact
+- forward migration verification
+- rollback/recovery considerations
+- unique constraints
+- active/inactive behavior
+- audit fields
+- soft-delete behavior
 
 ### T3-02 User-Shop membership and roles
 Objective: connect users to shops and supplier roles. Dependencies: T3-01. Files: membership model, role constants/permissions, serializers/tests. Steps: model membership/status/role; prevent duplicate membership; define supplier cross-shop role; enforce inactive shop/user. DB: FK/index/unique constraints. API: membership management. Security: least privilege. Tests: role matrix. DoD: explicit role policy.
