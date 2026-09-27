@@ -28,7 +28,7 @@ The following business model is locked for V1:
 - External Supplier records are not global or shared between Shops. Shop A and Shop B may each have separate records with the same real-world supplier name.
 - Backend enforcement must prevent cross-Shop discovery or access through direct IDs, list/detail endpoints, search, filters, ordering, pagination, counts, aggregates, autocomplete, nested relations, foreign-key traversal, or manipulated URL paths.
 - Main Supplier cross-Shop visibility is an explicitly authorized operational capability; it does not make Shop data globally visible to Shop users.
-- The starter `Tenant` model is a legacy technical input only. It must not automatically be mapped to Supplier, External Supplier, Shop, or a multi-supplier tenant. T3-01 must inspect and document its compatibility strategy before changing its business meaning.
+- The starter `Tenant` model is the V1 technical implementation for `Shop`. T3-01 confirmed it is safe to map Tenant = Shop structurally, while a new `Main Supplier` singleton model enforces exactly one top-level platform owner.
 
 The target production workflow is:
 

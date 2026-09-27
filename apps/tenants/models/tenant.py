@@ -5,9 +5,15 @@ from backend.core.models import BaseModel
 
 class Tenant(BaseModel):
     """
-    Tenant model for multi-tenancy support.
-    Each tenant represents a separate organization or customer.
+    Tenant model acting as the technical representation for a 'Shop'.
+    V1 Business Rule: A Shop is the business workspace and belongs to the single Main Supplier.
     """
+    supplier = models.ForeignKey(
+        'tenants.Supplier',
+        on_delete=models.CASCADE,
+        related_name='shops',
+        help_text="The Main Supplier that owns this Shop"
+    )
     name = models.CharField(
         max_length=100,
         help_text="Display name of the tenant organization"

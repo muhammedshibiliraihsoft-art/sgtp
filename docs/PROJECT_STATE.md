@@ -1,10 +1,10 @@
-﻿# Project State
+# Project State
 
 ## Status
 
-- Phase 2 is complete.
-- Current task: PRE-P3-02 V1 Supplier / Shop / External Supplier tenancy model lock (Completed).
-- Current verified application test count: 47 tests passing.
+- Phase 2 is complete. Phase 3 implementation is active.
+- Current task: T3-01 Supplier and Shop Entities (Completed).
+- Current verified application test count: 55 tests passing.
 - Project root: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp`
 - Remote: `https://github.com/muhammedshibiliraihsoft-art/sgtp.git`
 - Phase 1 corrective implementation was completed and published to `origin/main`.
@@ -12,18 +12,18 @@
 - Target status: SGTP V1 is explicitly defined in `docs/PRODUCT_DEFINITION.md`
 - Starter foundation: exists in the cloned SGTP repository.
 - Phase 1 implementation: **Historical - Complete.**
-- Confirmation status: Phase 2 is complete. Phase 3 is activated for planning/governance only; no Phase 3 implementation task is authorized. T3-01 is NOT YET AUTHORIZED and requires separate explicit task confirmation.
+- Confirmation status: T3-01 is complete. T3-02 is NOT YET AUTHORIZED and requires separate explicit task confirmation.
 - Detailed phase playbooks: 01-10 present.
 - Later-phase decisions: Tenant context is approved as URL-path based (`/shops/{shop_id}/...`), and Related Person billing is owned by the Primary Client.
 
 ## Locked V1 business tenancy model
 
-- Exactly one top-level Supplier / Main Admin exists in V1; there is no multi-supplier SaaS model.
+- Exactly one top-level Supplier / Main Admin exists in V1; there is no multi-supplier SaaS model. Enforced via `Supplier` singleton model.
 - The hierarchy is one Main Supplier / Main Admin → Supplier Back Office → multiple Shops.
 - Shop is the actual business workspace and tenant/isolation boundary.
 - External Supplier records belong to exactly one Shop and are non-user, non-tenant business records with no login or system permissions.
 - External Supplier data is never global/shared and is isolated by Shop.
-- The legacy starter `Tenant` model remains a technical input pending T3-01 assessment; no automatic Tenant-to-Supplier, Tenant-to-Shop, or Tenant-to-External-Supplier mapping has been approved.
+- **Tenant mapping:** The legacy starter `Tenant` model has been retained and structurally mapped as the implementation of the `Shop` entity. T3-01 verified this structural safety and created the `Supplier` owning entity.
 
 ## Repository verification
 

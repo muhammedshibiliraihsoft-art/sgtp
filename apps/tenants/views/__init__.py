@@ -46,8 +46,11 @@ class TenantViewSet(viewsets.ModelViewSet):
         return [permission() for permission in permission_classes]
     
     def perform_create(self, serializer):
-        """Set the creator when creating a tenant."""
-        serializer.save(created_by=self.request.user)
+        """Set the creator and auto-assign the Main Supplier when creating a tenant/shop."""
+        from ..models import Supplier
+        # The Main Supplier is guaranteed to exist by migration
+        supplier = Supplier.objects.get(singleton_lock=True)
+        serializer.save(created_by=self.request.user, supplier=supplier)
     
     def perform_update(self, serializer):
         """Set the updater when updating a tenant."""

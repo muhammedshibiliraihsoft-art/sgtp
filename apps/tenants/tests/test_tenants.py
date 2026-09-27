@@ -3,7 +3,7 @@ from django.test import TestCase
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from rest_framework import status
-from ..models import Tenant
+from ..models import Tenant, Supplier
 
 User = get_user_model()
 
@@ -14,6 +14,7 @@ class TenantModelTest(TestCase):
             email='test@example.com',
             password='testpass123'
         )
+        self.supplier = Supplier.objects.get(singleton_lock=True)
     
     def test_create_tenant(self):
         """Test creating a tenant"""
@@ -22,7 +23,8 @@ class TenantModelTest(TestCase):
             slug="test-tenant",
             contact_email="admin@test-tenant.com",
             max_users=10,
-            created_by=self.user
+            created_by=self.user,
+            supplier=self.supplier
         )
         
         self.assertEqual(tenant.name, "Test Tenant")
@@ -37,7 +39,8 @@ class TenantModelTest(TestCase):
         tenant = Tenant.objects.create(
             name="Test Tenant",
             slug="test-tenant",
-            created_by=self.user
+            created_by=self.user,
+            supplier=self.supplier
         )
         self.assertEqual(str(tenant), "Test Tenant")
     
@@ -46,7 +49,8 @@ class TenantModelTest(TestCase):
         tenant = Tenant.objects.create(
             name="Test Tenant",
             slug="test-tenant",
-            created_by=self.user
+            created_by=self.user,
+            supplier=self.supplier
         )
         
         # Initially 0 users
@@ -67,6 +71,7 @@ class TenantAPITest(TestCase):
             email='admin@example.com',
             password='adminpass123'
         )
+        self.supplier = Supplier.objects.get(singleton_lock=True)
         self.tenant_data = {
             'name': 'Test Tenant',
             'slug': 'test-tenant',
@@ -80,7 +85,8 @@ class TenantAPITest(TestCase):
         Tenant.objects.create(
             name="Test Tenant",
             slug="test-tenant",
-            created_by=self.user
+            created_by=self.user,
+            supplier=self.supplier
         )
         
         response = self.client.get('/api/v1/tenants/')
@@ -114,7 +120,8 @@ class TenantAPITest(TestCase):
             name="Test Tenant",
             slug="test-tenant",
             max_users=10,
-            created_by=self.user
+            created_by=self.user,
+            supplier=self.supplier
         )
         
         response = self.client.get(f'/api/v1/tenants/{tenant.id}/stats/')
@@ -130,7 +137,8 @@ class TenantAPITest(TestCase):
             name="Test Tenant",
             slug="test-tenant",
             is_active=False,
-            created_by=self.user
+            created_by=self.user,
+            supplier=self.supplier
         )
         
         response = self.client.post(f'/api/v1/tenants/{tenant.id}/activate/')

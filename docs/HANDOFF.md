@@ -2,16 +2,15 @@
 
 ## Current phase
 
-Phase 2 (Backend Core Security) is complete. Phase 3 is activated for planning/governance only; no Phase 3 implementation task is authorized.
+Phase 3 (Shop / Tenant) implementation is active.
 ## Current task
 
-Task PRE-P3-02 (Lock V1 Business Tenancy Model and Close Supplier/Shop Interpretation Gaps) is complete.
-The last completed implementation task was B2-05 (API documentation and security validation), which is complete and audit-cleared.
+Task T3-01 (Supplier and Shop Entities) is complete and verified.
 
-- **Changed areas:** `scripts/verify_project_state.py`, `scripts/tests/test_verify_project_state.py`, `.github/workflows/project-state.yml`, `AGENTS.md`, `docs/PROJECT_STATE.md`, `docs/HANDOFF.md`, and `docs/CHANGELOG.md`.
-- **Validation performed:** validator passes, validator tests pass (11), application tests pass (47), `manage.py check` passes, `makemigrations --check --dry-run` reports no changes, production-like `check --deploy` passes, and Black/Flake8 pass for the new scripts.
-- **Next authorized task:** T3-01 is not yet authorized. It requires a separate explicit `CONFIRM TASK T3-01` after presenting its task plan. Do not infer authorization from PRE-P3-02.
-- **Current blockers/deferred items:** None. F-01, C-01, C-02, and C-03 were resolved in B2-05.
+- **Changed areas:** `apps/tenants/models/supplier.py`, `apps/tenants/models/tenant.py`, `apps/tenants/models/__init__.py`, `apps/tenants/admin.py`, `apps/tenants/views/__init__.py`, `apps/tenants/migrations/0002_supplier_tenant_supplier.py`, `apps/tenants/tests/test_supplier.py`, `apps/tenants/tests/test_tenants.py`, `docs/ARCHITECTURE.md`, `docs/DATABASE.md`, `docs/PROJECT_STATE.md`, and `docs/HANDOFF.md`.
+- **Validation performed:** The inspected local development database contains zero Tenant records. (Staging: not yet created. Production: not yet created.) `manage.py makemigrations`, `manage.py migrate`, and `pytest` successful (55 tests pass). `makemigrations --check --dry-run` reports no changes.
+- **Next authorized task:** T3-02 is NOT YET AUTHORIZED. It requires a separate explicit `CONFIRM TASK T3-02` after presenting its task plan. Do not infer authorization.
+- **Current blockers/deferred items:** None.
 ## Repository state evidence
 - Verify current HEAD with `git rev-parse HEAD`
 - Verify remote parity with `git status -sb`
@@ -45,7 +44,7 @@ The full product definition and Definition of Done are in `docs/PRODUCT_DEFINITI
 - Shop is the tenant/workspace boundary.
 - External Supplier records are owned by exactly one Shop and are not users, tenants, members, roles, or authentication participants. They do not log in.
 - External Supplier records are not global/shared; Shop isolation applies to all access and discovery paths.
-- The starter `Tenant` model is legacy technical input only. T3-01 must inspect its meaning, references, migrations, APIs, tests, preservation/mapping, and recovery impact before selecting a compatibility strategy. A business-meaning change requires `BUSINESS DECISION REQUIRED`.
+- The starter `Tenant` model has been retained and structurally mapped as the V1 technical implementation for `Shop`. T3-01 verified this structural mapping was safe. A `Supplier` singleton model was created to enforce exactly one top-level platform owner.
 
 ## Inspection summary
 

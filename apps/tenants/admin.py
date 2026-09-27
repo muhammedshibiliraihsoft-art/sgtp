@@ -1,22 +1,28 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Tenant
+from .models import Tenant, Supplier
+
+
+@admin.register(Supplier)
+class SupplierAdmin(admin.ModelAdmin):
+    list_display = ['name', 'is_active', 'created_at']
+    readonly_fields = ['id', 'singleton_lock', 'created_at', 'updated_at']
 
 
 @admin.register(Tenant)
 class TenantAdmin(admin.ModelAdmin):
     list_display = [
-        'name', 'slug', 'domain', 'is_active_display', 
+        'name', 'slug', 'supplier', 'domain', 'is_active_display',
         'user_count_display', 'max_users', 'created_at'
     ]
-    list_filter = ['is_active', 'created_at', 'max_users']
+    list_filter = ['supplier', 'is_active', 'created_at', 'max_users']
     search_fields = ['name', 'slug', 'domain', 'contact_email']
     prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ['id', 'created_at', 'updated_at', 'user_count_display']
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('name', 'slug', 'domain', 'is_active')
+            'fields': ('supplier', 'name', 'slug', 'domain', 'is_active')
         }),
         ('Limits & Settings', {
             'fields': ('max_users',)
