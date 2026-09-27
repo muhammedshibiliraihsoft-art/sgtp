@@ -11,7 +11,7 @@ Task B2-04 (Exceptions, throttling, CORS, health) is completed and awaiting clos
 - **Validation performed:** 45 tests pass (including throttles, error normalization, and health checks), `manage.py check` passes cleanly.
 - **Next authorized task:** B2-05 has not started. The next task requires separate explicit confirmation. Phase 2 remains active (not complete).
 - **Current blockers/deferred items:** OpenAPI mismatch (F-01) intentionally deferred to B2-05.
-- **Repository state:** B2-04 is committed at `9ce8f655e3489c9111088e4bfce53860bee94e64`. F-01 is explicitly deferred to B2-05.
+- **Repository state:** B2-04 implementation is committed at `9ce8f655e3489c9111088e4bfce53860bee94e64` and the audit correction commit is `2d68662119517f00e188ea611467a8da04f7205b`. F-01 is explicitly deferred to B2-05.
 
 ## Repository and workspace
 
@@ -26,11 +26,11 @@ Task B2-04 (Exceptions, throttling, CORS, health) is completed and awaiting clos
 
 ## Target final product
 
-SGTP is now defined as the Supplier-Centric Garment & Tailor Platform, with Tailor Management as the core V1 module. The hierarchy is Supplier/Main Admin → Supplier Back Office → isolated Shop workspaces → Clients, Designs, Measurements, Fabric/Materials, Work, Billing, and Reports.
+SGTP is now defined as the Supplier-Centric Garment & Tailor Platform, with Tailor Management as the core V1 module. The hierarchy is Supplier/Main Admin â†’ Supplier Back Office â†’ isolated Shop workspaces â†’ Clients, Designs, Measurements, Fabric/Materials, Work, Billing, and Reports.
 
 The required persisted flow is:
 
-`Client Request → Design → Measurement → Fabric/Material → Cutting → Stitching → Check → Finishing → QC → Completed → Billing → Reports/History`
+`Client Request â†’ Design â†’ Measurement â†’ Fabric/Material â†’ Cutting â†’ Stitching â†’ Check â†’ Finishing â†’ QC â†’ Completed â†’ Billing â†’ Reports/History`
 
 The full product definition and Definition of Done are in `docs/PRODUCT_DEFINITION.md`.
 
@@ -50,13 +50,16 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 
 - Tenant membership and isolation are incomplete: users are not related to tenants.
 - `BaseModelWithTenant.tenant` is nullable and no active-tenant/request authorization mechanism exists.
+## Phase 3+ Deferred Implementations
+
+- Tenant membership and isolation are incomplete: users are not related to tenants.
+- `BaseModelWithTenant.tenant` is nullable and no active-tenant/request authorization mechanism exists.
 - The starter is not yet the target product: supplier back office, isolated shop workspaces, clients, related persons, designs, measurements, materials, production stages, billing, reports/PDFs, frontend, storage, jobs, audit, CI, monitoring, and end-to-end validation are not implemented.
 - The target requires React/Vite/Tailwind, but the starter has only an empty `frontend/` placeholder.
-- Tenant context is approved as URL-path based (`/shops/{shop_id}/...`) and must be implemented/tested in T3-03.
-- Related Person billing ownership is approved as Primary Client ownership and must be implemented/tested in R5-01.
-- Cookie-authenticated state-changing requests require an approved CSRF strategy; HttpOnly/Secure cookies alone are not sufficient.
+- Tenant context is approved as URL-path based (`/shops/{shop_id}/...`) and must be implemented/tested in Phase 3.
+- Related Person billing ownership is approved as Primary Client ownership and must be implemented/tested in Phase 5.
 
-## Tests and checks
+## Historical Phase 1 Tests and checks
 
 - Repository access: passed with `git ls-remote`.
 - Clone: passed.
@@ -64,10 +67,10 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 - `python manage.py check`: passed with 0 issues.
 - Tests: `pytest` passes with all 21 project tests collected and green.
 
-## Reorganization verification
+## Current Tests and checks
 
-- `git rev-parse --show-toplevel` returns `C:/Users/Admin/Documents/ChatGPT/django 2/sgtp`.
-- `git remote -v` still points to `https://github.com/muhammedshibiliraihsoft-art/sgtp.git`.
+- `python manage.py check`: passed with 0 issues.
+- Tests: `pytest` passes with all 45 project tests collected and green.
 - `AGENTS.md` and `docs/` exist inside the SGTP root.
 - The starter source remains preserved; documentation is maintained in the SGTP repository.
 - `backend/` and `frontend/` exist as empty layout placeholders only; no business modules were created.
@@ -83,7 +86,7 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 - Do not create a replacement Django project.
 - Do not create new business modules.
 - Phase 1 work was completed and published to `origin/main`.
-- Preserve the approved supplier → back office → isolated shop hierarchy and V1 workflow.
+- Preserve the approved supplier â†’ back office â†’ isolated shop hierarchy and V1 workflow.
 - Treat `docs/PRODUCT_DEFINITION.md` as the target product reference.
 - Phase confirmation activates only the named phase; it does not authorize all tasks in that phase.
 - Every task requires a separate `CONFIRM TASK <TASK-ID>` after the task brief is presented.
@@ -117,4 +120,4 @@ Phase 1 is complete. All tasks F1-01 through F1-05 are done. The repository has 
 
 ## Recommended next action
 
-Next, await explicit `CONFIRM PHASE 2` to activate Phase 2 (API & Service Layer), followed by `CONFIRM TASK <TASK-ID>` for individual tasks.
+Next, await explicit `CONFIRM IMPLEMENTATION B2-05` or `CONFIRM TASK B2-05` to authorize OpenAPI schema correction.

@@ -1,19 +1,19 @@
-# Project State
+﻿# Project State
 
 ## Status
 
-- Phase 1 — corrective work complete
-- Current task: Phase 1 is complete
+- Phase 2 is active.
+- Current task: B2-04 is complete/audited. B2-05 is next.
 - Project root: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp`
 - Remote: `https://github.com/muhammedshibiliraihsoft-art/sgtp.git`
 - Phase 1 corrective implementation was completed and published to `origin/main`.
 - Current branch: `main`
-- Target status: SGTP V1 is now explicitly defined in `docs/PRODUCT_DEFINITION.md`
+- Target status: SGTP V1 is explicitly defined in `docs/PRODUCT_DEFINITION.md`
 - Starter foundation: exists in the cloned SGTP repository.
-- Phase 1 implementation: **Complete.**
-- Confirmation status: Phase 1 tasks completed.
-- Detailed phase playbooks: 01–10 present; planning only, no phase activated
-- Later-phase decisions: tenant context is approved as URL-path based (`/shops/{shop_id}/...`), Related Person billing is owned by the Primary Client, and CSRF mechanism selection/validation remains a Phase 2 task.
+- Phase 1 implementation: **Historical - Complete.**
+- Confirmation status: B2-05 has NOT started. F-01 OpenAPI mismatch is deferred to B2-05.
+- Detailed phase playbooks: 01-10 present.
+- Later-phase decisions: Tenant context is approved as URL-path based (`/shops/{shop_id}/...`), and Related Person billing is owned by the Primary Client.
 
 ## Repository verification
 
@@ -61,27 +61,27 @@
 - The required end-to-end workflow is documented, but no production-domain modules for clients, designs, measurements, materials, production stages, billing, or reports exist yet.
 - The target requires React/Vite/Tailwind, but the starter contains no frontend implementation; `frontend/` is only an empty placeholder.
 - The target requires a service layer, object-level permissions, persistent object storage, background jobs, audit logging, CI, monitoring, and automatic documentation; the starter does not implement these as complete capabilities.
-- Existing tenant support is insufficient for isolated shop workspaces: user membership, active-shop context, queryset isolation, and object-level authorization are missing.
+- The target requires a service layer, persistent object storage, background jobs, audit logging, CI, monitoring, and automatic documentation; the starter does not implement these as complete capabilities.
+- Existing tenant support is insufficient for isolated shop workspaces: user membership and active-shop context are missing.
 
-## Missing or incomplete foundation
+## Phase 3+ Missing or incomplete business logic
 
-- User-to-tenant membership/ownership is not modeled: `User` has no tenant relation. `Tenant.user_count` intentionally returns a placeholder 0 for Phase 1.
-- Tenant isolation is not enforced. Stale mixin references were removed from the README.
+- User-to-tenant membership/ownership is not modeled: `User` has no tenant relation.
+- Actual business tenant isolation is not enforced (although technical scoping primitives were added in B2-03).
 - Tenant-aware base model permits `tenant = NULL`, and no request/context policy establishes the active tenant.
 - Tenant-context resolution is approved as URL-path based (`/shops/{shop_id}/...`) and must be enforced in Phase 3.
 - Billing ownership for work belonging to a Related Person is approved as Primary Client ownership and must be enforced in Phase 5.
 - No domain/business modules beyond accounts and generic tenants exist.
 
-### Phase 2/3 Deferred Implementations
+### Phase 3+ Deferred Implementations
 
-- User-to-tenant membership is not modeled: `User` has no tenant relation, and tenant isolation is not enforced.
+- User-to-tenant membership is not modeled: `User` has no tenant relation, and business tenant isolation is not enforced.
 - Tenant-aware base model permits `tenant = NULL`, and no request/context policy establishes the active tenant.
 - Tenant-context resolution is approved as URL-path based (`/shops/{shop_id}/...`) and must be enforced in Phase 3.
 - Billing ownership for work belonging to a Related Person is approved as Primary Client ownership and must be enforced in Phase 5.
 - No domain/business modules beyond accounts and generic tenants exist.
-- Cookie-authenticated state-changing requests require an approved CSRF defense. HttpOnly/Secure cookies alone are insufficient. Rotation and reuse detection are pending.
 
-## Verification results
+## Historical Phase 1 Verification results
 
 - Repository access: passed.
 - Clone: passed.
@@ -90,6 +90,10 @@
 - Django check: passes without issues.
 - Application tests: full project suite passes (21 tests).
 
+## Current Verification Results
+
+- Application tests: 45 tests verified passing.
+- Django check: passes without issues.
 ## Current root verification
 
 - Repository root: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp`
