@@ -121,12 +121,12 @@
   - `IsTenantMember` is intentionally a deny-by-default Phase 3 contract.
   - Actual Shop/User membership and business tenant isolation remain Phase 3; B2-03 does not implement the Phase 3 Shop/Tenant business model.
   - 403/404 boundaries strictly enforced and validated (36 total tests passing).
-- B2-04 Exceptions, throttling, CORS, and health implementation is completed and verified.
+- B2-04 implementation is complete, subject to audit closure.
   - Custom API exception handler normalizes errors into a safe `{"errors": ...}` envelope and scrubs 500 details.
   - Throttling configured for auth scopes using `AuthRateThrottle` to prevent brute force attacks.
   - `CORS_ALLOWED_ORIGINS` explicitly restricted and configured via environment variables.
   - Lightweight `/api/health/live/` and DB-connected `/api/health/ready/` probes are operational.
-- B2-05 remains pending for OpenAPI schema correction. F-01 OpenAPI mismatch is explicitly recorded as a deferred item targeting B2-05.
+- B2-05 is the next task. It remains pending for OpenAPI schema correction. F-01 OpenAPI mismatch is explicitly recorded as a deferred item targeting B2-05.
 - Python virtual environment `.venv` created, and dependency baseline established. `manage.py check` passed.
 - Lint tools can run, but existing starter lint violations remain. `pytest` is passing against the new devcontainer PostgreSQL database with all project tests collected.
 - Environment settings are now split into base, dev, test, and prod. `core/settings.py` acts as a backward-compatible router rejecting unknown environments. Missing secrets fail safely.

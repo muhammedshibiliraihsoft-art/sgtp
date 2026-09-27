@@ -96,6 +96,16 @@ Docker        -> development container and production web/db services
 - Reusable tenant queryset scoping is provided by `TenantScopedMixin`, which enforces the `/shops/{shop_id}/...` path contract by filtering querysets and preventing cross-tenant IDOR access.
 - Actual User-Shop membership logic and business tenant isolation implementation remain pending for Phase 3.
 
+## API Security and Reliability
+
+- Centralized custom exception handling enforces a predictable `{"errors": ...}` envelope for all API errors.
+- Unhandled 500 exceptions are trapped and returned as a generic dictionary to prevent leaking stack traces or sensitive internal details.
+- Scoped authentication throttling (`AuthRateThrottle`) protects login, refresh, and logout endpoints from brute-force attacks.
+- An environment-driven CORS allowlist strictly controls cross-origin access.
+- Credentialed CORS is enabled, providing compatibility with the existing B2-02 `HttpOnly` token-refresh and CSRF cookie flow.
+- A lightweight `/api/health/live/` probe returns unconditionally.
+- A `/api/health/ready/` probe verifies database connectivity and returns 503 on dependency failure.
+
 ## Data architecture
 
 - `BaseModel` provides UUID IDs, created/updated timestamps, created/updated user references, and `SOFT_DELETE_CASCADE`.
@@ -127,7 +137,7 @@ Docker        -> development container and production web/db services
 3. The tenant field is nullable, so tenant-scoped records can be unscoped by default.
 4. The README references missing `apps.common.views.base_model_view` and `apps.tenants.mixins` components.
 5. Settings and infrastructure disagree: settings read `DJANGO_DEBUG` and `DB_*`, while devcontainer configuration supplies `DEBUG` and `DATABASE_URL`.
-6. Production settings do not define `ALLOWED_HOSTS` or a CORS allowlist.
+6. Production settings do not define `ALLOWED_HOSTS`.
 7. The starter is a generic foundation and does not yet implement the approved SGTP V1 business hierarchy or end-to-end workflow.
 8. The target requires a frontend and supporting infrastructure that are absent from the starter.
 

@@ -11,7 +11,7 @@ Task B2-04 (Exceptions, throttling, CORS, health) is completed and awaiting clos
 - **Validation performed:** 45 tests pass (including throttles, error normalization, and health checks), `manage.py check` passes cleanly.
 - **Next authorized task:** B2-05 has not started. The next task requires separate explicit confirmation. Phase 2 remains active (not complete).
 - **Current blockers/deferred items:** OpenAPI mismatch (F-01) intentionally deferred to B2-05.
-- **Repository state:** The repository is currently in an uncommitted working-tree state reflecting B2-03 and B2-04 work. No commit/push was performed by this task.
+- **Repository state:** B2-04 is committed at `9ce8f655e3489c9111088e4bfce53860bee94e64`. F-01 is explicitly deferred to B2-05.
 
 ## Repository and workspace
 
