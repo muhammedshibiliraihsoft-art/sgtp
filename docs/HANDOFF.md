@@ -66,7 +66,7 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 ## Current Tests and checks
 
 - `python manage.py check`: passed with 0 issues.
-- Tests: `pytest` passes with all 45 project tests collected and green.
+- Tests: `pytest` passes with all 47 project tests collected and green.
 - `AGENTS.md` and `docs/` exist inside the SGTP root.
 - The starter source remains preserved; documentation is maintained in the SGTP repository.
 - `backend/` and `frontend/` exist as empty layout placeholders only; no business modules were created.
