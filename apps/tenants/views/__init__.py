@@ -84,3 +84,4 @@ class TenantViewSet(viewsets.ModelViewSet):
             'is_at_user_limit': tenant.is_at_user_limit,
             'is_active': tenant.is_active,
         })
+from .membership import TenantMemberViewSet

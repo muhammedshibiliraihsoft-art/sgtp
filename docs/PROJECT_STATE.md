@@ -3,8 +3,8 @@
 ## Status
 
 - Phase 2 is complete. Phase 3 implementation is active.
-- Current task: T3-01 Supplier and Shop Entities (Completed).
-- Current verified application test count: 55 tests passing.
+- Current task: T3-02 User-Shop membership and roles (Completed).
+- Current verified application test count: 66 tests passing.
 - Project root: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp`
 - Remote: `https://github.com/muhammedshibiliraihsoft-art/sgtp.git`
 - Phase 1 corrective implementation was completed and published to `origin/main`.
@@ -12,7 +12,7 @@
 - Target status: SGTP V1 is explicitly defined in `docs/PRODUCT_DEFINITION.md`
 - Starter foundation: exists in the cloned SGTP repository.
 - Phase 1 implementation: **Historical - Complete.**
-- Confirmation status: T3-01 is complete. T3-02 is NOT YET AUTHORIZED and requires separate explicit task confirmation.
+- Confirmation status: T3-02 is complete. T3-03 is NOT YET AUTHORIZED and requires separate explicit task confirmation.
 - Detailed phase playbooks: 01-10 present.
 - Later-phase decisions: Tenant context is approved as URL-path based (`/shops/{shop_id}/...`), and Related Person billing is owned by the Primary Client.
 

@@ -12,14 +12,37 @@ class IsOwner(BasePermission):
 class IsTenantMember(BasePermission):
     """
     Contract interface for Phase 3 tenant membership validation.
-    Must be implemented to validate user-shop membership.
-    Currently returns False (secure-by-default) until Phase 3 implementation.
+    Validates user-shop membership using the explicit ShopRolePolicy.
     """
     def has_permission(self, request, view):
-        return False
+        # The view must establish the tenant context first (T3-03)
+        # For now, if there's no tenant context attached, we fail securely unless they are a main admin.
+        from apps.tenants.policy import ShopRolePolicy
+        user = getattr(request, 'user', None)
+        if ShopRolePolicy.is_main_supplier_admin(user):
+            return True
+        tenant_id = getattr(request, 'tenant_id', None)
+        if not tenant_id:
+            return False
+        return ShopRolePolicy.is_shop_member(user, tenant_id)
         
     def has_object_permission(self, request, view, obj):
-        return False
+        from apps.tenants.policy import ShopRolePolicy
+        user = getattr(request, 'user', None)
+        if ShopRolePolicy.is_main_supplier_admin(user):
+            return True
+        
+        # If the object is a tenant, check membership against its ID
+        tenant_id = getattr(obj, 'tenant_id', None)
+        if tenant_id is None:
+            # Maybe the object IS the tenant itself
+            if hasattr(obj, 'supplier') and hasattr(obj, 'domain'):
+                tenant_id = obj.id
+                
+        if not tenant_id:
+            return False
+            
+        return ShopRolePolicy.is_shop_member(user, tenant_id)
 
 class DenyAll(BasePermission):
     """

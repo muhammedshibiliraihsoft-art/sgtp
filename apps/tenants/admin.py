@@ -65,4 +65,22 @@ class TenantAdmin(admin.ModelAdmin):
     user_count_display.short_description = 'Users'
     
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related()
+        return super().get_queryset(request).select_related('supplier')
+
+from .models import TenantMember
+
+class TenantMemberInline(admin.TabularInline):
+    model = TenantMember
+    extra = 1
+    autocomplete_fields = ['user']
+
+# Add the inline to TenantAdmin
+TenantAdmin.inlines = [TenantMemberInline]
+
+@admin.register(TenantMember)
+class TenantMemberAdmin(admin.ModelAdmin):
+    list_display = ['user', 'tenant', 'role', 'is_active', 'created_at']
+    list_filter = ['role', 'is_active', 'tenant']
+    search_fields = ['user__email', 'user__first_name', 'user__last_name', 'tenant__name']
+    autocomplete_fields = ['tenant', 'user']
+    readonly_fields = ['id', 'created_at', 'updated_at']

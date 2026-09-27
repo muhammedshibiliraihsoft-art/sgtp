@@ -60,72 +60,19 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 
 ## Phase 3+ Deferred Implementations
 
-- Tenant membership and isolation are incomplete: users are not related to tenants.
 - `BaseModelWithTenant.tenant` is nullable and no active-tenant/request authorization mechanism exists.
 - The starter is not yet the target product: supplier back office, isolated shop workspaces, clients, related persons, designs, measurements, materials, production stages, billing, reports/PDFs, frontend, storage, jobs, audit, CI, monitoring, and end-to-end validation are not implemented.
 - The target requires React/Vite/Tailwind, but the starter has only an empty `frontend/` placeholder.
 - Tenant context is approved as URL-path based (`/shops/{shop_id}/...`) and must be implemented/tested in Phase 3.
 - Related Person billing ownership is approved as Primary Client ownership and must be implemented/tested in Phase 5.
 
-## Historical Phase 1 Tests and checks
+## Historical Status
 
-- Repository access: passed with `git ls-remote`.
-- Clone: passed.
-- Phase 1 corrective changes were committed and published to `origin/main`.
-- `python manage.py check`: passed with 0 issues.
-- Tests: `pytest` passes with all 21 project tests collected and green.
-
-## Current Tests and checks
-
-- `python manage.py check`: passed with 0 issues.
-- Tests: `pytest` passes with all 47 project tests collected and green.
-- `AGENTS.md` and `docs/` exist inside the SGTP root.
-- The starter source remains preserved; documentation is maintained in the SGTP repository.
-- `backend/` and `frontend/` exist as empty layout placeholders only; no business modules were created.
-
-## Target contradiction record
-
-- Previous planning treated the repository as an uninitialized generic Django foundation and deferred V1 requirements.
-- The target is now explicit and broader: an integrated single-Main-Supplier/multiple-Shop Tailor Management product with an end-to-end production-to-billing workflow and operational capabilities.
-- The development plan has been realigned to this target. Phase 1 and Phase 2 implementation work is complete; Phase 3 business work remains not started and later-phase decisions remain scoped to their respective phases.
-
-## Decisions and constraints
-
-- Do not create a replacement Django project.
-- Do not create new business modules.
-- Phase 1 work was completed and published to `origin/main`.
-- Preserve the approved one Main Supplier / Main Admin -> back office -> isolated Shop hierarchy and V1 workflow. Keep External Suppliers as Shop-owned non-user records.
-- Treat `docs/PRODUCT_DEFINITION.md` as the target product reference.
-- Phase confirmation activates only the named phase; it does not authorize all tasks in that phase.
-- Every task requires a separate `CONFIRM TASK <TASK-ID>` after the task brief is presented.
-- After one task is validated and documented, stop. Do not start the next task or phase automatically.
-
-## Phase playbook audit status
-
-- Confirmation-flow wording was aligned across all ten phase playbooks, `AGENTS.md`, `docs/DEVELOPMENT_PLAN.md`, and this handoff.
-- The ten phase playbooks exist and require separate task confirmation after phase activation.
-- No application source, architecture, scope, task ID, dependency, or implementation-order changes were made.
-
-## Phase playbook completion
-
-- `docs/phases/07_FRONTEND.md` created with tasks F7-01 through F7-05.
-- `docs/phases/08_TESTING_HARDENING.md` created with tasks H8-01 through H8-04.
-- `docs/phases/09_STAGING.md` created with tasks S9-01 through S9-04.
-- `docs/phases/10_PRODUCTION.md` created with tasks P10-01 through P10-04.
-- All ten playbooks use phase activation followed by separate task confirmation, validation, documentation, report, and stop boundaries.
-
-## Canonicalization audit status
-
-- Target implementation paths are explicit in `docs/ARCHITECTURE.md` and the affected phase playbooks.
-- Current starter paths remain documented only as transition inputs.
-- Domain responsibilities map to `accounts`, `shops`, `clients`, `catalog`, `works`, `billing`, `reports`, `ai_agents`, `integrations`, and shared `core` primitives.
-- Deployment phases explicitly use Cloudflare Pages, Render, Render PostgreSQL, and Cloudflare R2/S3-compatible storage; worker selection remains Django-Q or Celery + Redis.
-- Refresh-token planning explicitly requires an HttpOnly/Secure cookie, rotation, and reuse detection.
-
-## Phase 1 status
-
-Phase 1 is complete. All tasks F1-01 through F1-05 are done. The repository has a reproducible dependency baseline, split settings per environment, refactored identity models, documented PostgreSQL migration strategy, hardened JWT/security configuration, and explicit secure defaults. `manage.py check`, `makemigrations --check`, and all tests pass cleanly.
+Phase 1 and Phase 2 are complete. 
+Phase 3 is active:
+- **T3-01 Supplier and Shop Entities**: Complete. The repository has a reproducible database baseline, Shop mapping, and Supplier singleton constraint.
+- **T3-02 User-Shop membership and roles**: Complete. `TenantMember` and `ShopRolePolicy` firmly establish user roles and Main Supplier cross-shop authority.
 
 ## Recommended next action
 
-Next, present the T3-01 task plan and await explicit `CONFIRM TASK T3-01`. Phase 3 activation does not authorize T3-01 or any other Phase 3 task.
+Next, present the T3-03 task plan and await explicit `CONFIRM TASK T3-03`. Phase 3 activation does not authorize T3-03 or any other Phase 3 task automatically.

@@ -42,3 +42,4 @@ class TenantSummarySerializer(serializers.ModelSerializer):
     class Meta:
         model = Tenant
         fields = ['id', 'name', 'slug', 'is_active', 'user_count']
+from .membership import TenantMemberSerializer
