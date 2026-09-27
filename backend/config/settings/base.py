@@ -139,6 +139,13 @@ REST_FRAMEWORK = {
     "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.NamespaceVersioning",
     "DEFAULT_VERSION": "v1",
     "ALLOWED_VERSIONS": ["v1"],
+    "EXCEPTION_HANDLER": "core.exceptions.custom_exception_handler",
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.ScopedRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "auth": get_env_var("THROTTLE_RATE_AUTH", "10/minute"),
+    },
 }
 
 # JWT Configuration
@@ -169,3 +176,4 @@ SPECTACULAR_SETTINGS = {
 _cors = get_env_var("DJANGO_CORS_ALLOWED_ORIGINS", "")
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors.split(",")] if _cors else []
+CORS_ALLOW_CREDENTIALS = True

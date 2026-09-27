@@ -6,12 +6,12 @@ Phase 2 (Backend Core Security) is active.
 
 ## Current task
 
-Task B2-03 (Permission and tenant-scope interfaces) is completed and awaiting closure.
-- **Changed areas:** `core/permissions.py`, `apps/common/views.py`, and `core/tests/test_permissions.py`.
-- **Validation performed:** 36 tests pass (including 6 new test cases verifying exact 403/404 matrix and scoping behavior), `manage.py check` passes cleanly.
-- **Next authorized task:** B2-04 has not started. The next task requires separate explicit confirmation. Phase 2 remains active (not complete).
+Task B2-04 (Exceptions, throttling, CORS, health) is completed and awaiting closure.
+- **Changed areas:** `core/exceptions.py`, `core/health.py`, `core/urls.py`, `backend/config/settings/base.py`, `apps/accounts/views/__init__.py`, and new tests in `core/tests/test_b2_04_health_errors.py`.
+- **Validation performed:** 45 tests pass (including throttles, error normalization, and health checks), `manage.py check` passes cleanly.
+- **Next authorized task:** B2-05 has not started. The next task requires separate explicit confirmation. Phase 2 remains active (not complete).
 - **Current blockers/deferred items:** OpenAPI mismatch (F-01) intentionally deferred to B2-05.
-- **Repository state:** The repository is currently in an uncommitted working-tree state reflecting B2-03 work, built upon the pushed B2-02 baseline. No commit/push was performed by this task.
+- **Repository state:** The repository is currently in an uncommitted working-tree state reflecting B2-03 and B2-04 work. No commit/push was performed by this task.
 
 ## Repository and workspace
 

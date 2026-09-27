@@ -13,6 +13,8 @@ api_v1_patterns = [
     path('', include('apps.tenants.urls')),
 ]
 
+from core.health import health_live, health_ready
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', TemplateView.as_view(template_name='api_test.html'), name='api_test'),
@@ -20,6 +22,10 @@ urlpatterns = [
 
     # Versioned API routes
     path('api/v1/', include((api_v1_patterns, 'v1'))),
+
+    # Health Probes
+    path('api/health/live/', health_live, name='health_live'),
+    path('api/health/ready/', health_ready, name='health_ready'),
 
     # API Documentation
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),

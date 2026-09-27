@@ -9,6 +9,12 @@ from django.views.decorators.csrf import csrf_protect
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from rest_framework.throttling import ScopedRateThrottle
+from rest_framework.decorators import throttle_classes
+
+class AuthRateThrottle(ScopedRateThrottle):
+    scope = 'auth'
+
 from django.contrib.auth import logout
 from ..models import User
 from ..serializers import UserSerializer, UserCreateSerializer, LoginSerializer
@@ -64,6 +70,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     """Custom login view that returns user data, issues CSRF token, and sets HttpOnly refresh cookie"""
+    throttle_classes = [AuthRateThrottle]
 
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
@@ -85,6 +92,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 @method_decorator(csrf_protect, name='dispatch')
 class CustomTokenRefreshView(TokenRefreshView):
     """Refresh view that reads refresh token from HttpOnly cookie and requires CSRF"""
+    throttle_classes = [AuthRateThrottle]
 
     def post(self, request, *args, **kwargs):
         refresh_token = request.COOKIES.get('refresh')
@@ -114,6 +122,7 @@ from drf_spectacular.utils import extend_schema
 
 @extend_schema(request=None, responses={200: dict, 400: dict})
 @api_view(['POST'])
+@throttle_classes([AuthRateThrottle])
 @permission_classes([IsAuthenticated])
 @csrf_protect
 def logout_view(request):

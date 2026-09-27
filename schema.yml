@@ -1,0 +1,1211 @@
+openapi: 3.0.3
+info:
+  title: SGTP API
+  version: 1.0.0
+  description: Supplier-Centric Garment & Tailor Platform API
+paths:
+  /api/health/live/:
+    get:
+      operationId: health_live_retrieve
+      description: |-
+        Liveness probe. Lightweight check that the process is alive.
+        Returns 200 OK unconditionally.
+      tags:
+      - health
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/health/ready/:
+    get:
+      operationId: health_ready_retrieve
+      description: |-
+        Readiness probe. Verifies database connectivity.
+        Returns 200 OK if ready, 503 Service Unavailable on dependency failure.
+        Does not expose internal DB details.
+      tags:
+      - health
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/login/:
+    post:
+      operationId: v1_auth_login_create
+      description: Custom login view that returns user data, issues CSRF token, and
+        sets HttpOnly refresh cookie
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenObtainPair'
+          description: ''
+  /api/v1/auth/logout/:
+    post:
+      operationId: v1_auth_logout_create
+      description: Logout view that blacklists the refresh token and clears cookies
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/auth/token/refresh/:
+    post:
+      operationId: v1_auth_token_refresh_create
+      description: Refresh view that reads refresh token from HttpOnly cookie and
+        requires CSRF
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /api/v1/auth/users/:
+    get:
+      operationId: v1_auth_users_list
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUserList'
+          description: ''
+    post:
+      operationId: v1_auth_users_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserCreate'
+          description: ''
+  /api/v1/auth/users/{id}/:
+    get:
+      operationId: v1_auth_users_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this user.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    put:
+      operationId: v1_auth_users_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this user.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    patch:
+      operationId: v1_auth_users_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this user.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    delete:
+      operationId: v1_auth_users_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this user.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/auth/users/me/:
+    get:
+      operationId: v1_auth_users_me_retrieve
+      description: Get current user's profile
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/v1/auth/users/update_profile/:
+    put:
+      operationId: v1_auth_users_update_profile_update
+      description: Update current user's profile
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    patch:
+      operationId: v1_auth_users_update_profile_partial_update
+      description: Update current user's profile
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/v1/tenants/:
+    get:
+      operationId: v1_tenants_list
+      description: |-
+        ViewSet for managing tenants.
+        Provides CRUD operations for tenant management.
+      parameters:
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - in: query
+        name: max_users
+        schema:
+          type: integer
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTenantSummaryList'
+          description: ''
+    post:
+      operationId: v1_tenants_create
+      description: |-
+        ViewSet for managing tenants.
+        Provides CRUD operations for tenant management.
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TenantCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TenantCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantCreate'
+          description: ''
+  /api/v1/tenants/{id}/:
+    get:
+      operationId: v1_tenants_retrieve
+      description: |-
+        ViewSet for managing tenants.
+        Provides CRUD operations for tenant management.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Tenant.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+          description: ''
+    put:
+      operationId: v1_tenants_update
+      description: |-
+        ViewSet for managing tenants.
+        Provides CRUD operations for tenant management.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Tenant.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TenantRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TenantRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+          description: ''
+    patch:
+      operationId: v1_tenants_partial_update
+      description: |-
+        ViewSet for managing tenants.
+        Provides CRUD operations for tenant management.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Tenant.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTenantRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedTenantRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedTenantRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+          description: ''
+    delete:
+      operationId: v1_tenants_destroy
+      description: |-
+        ViewSet for managing tenants.
+        Provides CRUD operations for tenant management.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Tenant.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/tenants/{id}/activate/:
+    post:
+      operationId: v1_tenants_activate_create
+      description: Activate a tenant.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Tenant.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TenantRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TenantRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+          description: ''
+  /api/v1/tenants/{id}/deactivate/:
+    post:
+      operationId: v1_tenants_deactivate_create
+      description: Deactivate a tenant.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Tenant.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TenantRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TenantRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+          description: ''
+  /api/v1/tenants/{id}/stats/:
+    get:
+      operationId: v1_tenants_stats_retrieve
+      description: Get tenant statistics.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Tenant.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+          description: ''
+components:
+  schemas:
+    PaginatedTenantSummaryList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TenantSummary'
+    PaginatedUserList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+    PatchedTenantRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Display name of the tenant organization
+          maxLength: 100
+        slug:
+          type: string
+          minLength: 1
+          description: URL-friendly identifier for the tenant
+          pattern: ^[a-z0-9-]+$
+          maxLength: 50
+        domain:
+          type: string
+          nullable: true
+          description: Custom domain for this tenant (optional)
+          maxLength: 253
+        is_active:
+          type: boolean
+          description: Whether this tenant is active and can be accessed
+        max_users:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: Maximum number of users allowed for this tenant
+        contact_email:
+          type: string
+          format: email
+          description: Primary contact email for this tenant
+          maxLength: 254
+        contact_phone:
+          type: string
+          description: Primary contact phone for this tenant
+          maxLength: 20
+        address_line1:
+          type: string
+          maxLength: 255
+        address_line2:
+          type: string
+          maxLength: 255
+        city:
+          type: string
+          maxLength: 100
+        state:
+          type: string
+          maxLength: 100
+        postal_code:
+          type: string
+          maxLength: 20
+        country:
+          type: string
+          maxLength: 100
+    PatchedUserRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 30
+        last_name:
+          type: string
+          maxLength: 30
+        is_active:
+          type: boolean
+    Tenant:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          description: Display name of the tenant organization
+          maxLength: 100
+        slug:
+          type: string
+          description: URL-friendly identifier for the tenant
+          pattern: ^[a-z0-9-]+$
+          maxLength: 50
+        domain:
+          type: string
+          nullable: true
+          description: Custom domain for this tenant (optional)
+          maxLength: 253
+        is_active:
+          type: boolean
+          description: Whether this tenant is active and can be accessed
+        max_users:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: Maximum number of users allowed for this tenant
+        user_count:
+          type: integer
+          description: |-
+            Return the number of users associated with this tenant.
+            Placeholder for Phase 1. Real implementation will use TenantMembership in Phase 3.
+          readOnly: true
+        is_at_user_limit:
+          type: boolean
+          description: Check if tenant has reached its user limit.
+          readOnly: true
+        contact_email:
+          type: string
+          format: email
+          description: Primary contact email for this tenant
+          maxLength: 254
+        contact_phone:
+          type: string
+          description: Primary contact phone for this tenant
+          maxLength: 20
+        address_line1:
+          type: string
+          maxLength: 255
+        address_line2:
+          type: string
+          maxLength: 255
+        city:
+          type: string
+          maxLength: 100
+        state:
+          type: string
+          maxLength: 100
+        postal_code:
+          type: string
+          maxLength: 20
+        country:
+          type: string
+          maxLength: 100
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - is_at_user_limit
+      - name
+      - slug
+      - updated_at
+      - user_count
+    TenantCreate:
+      type: object
+      description: Serializer for creating tenants with required fields.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          description: Display name of the tenant organization
+          maxLength: 100
+        slug:
+          type: string
+          description: URL-friendly identifier for the tenant
+          pattern: ^[a-z0-9-]+$
+          maxLength: 50
+        domain:
+          type: string
+          nullable: true
+          description: Custom domain for this tenant (optional)
+          maxLength: 253
+        is_active:
+          type: boolean
+          description: Whether this tenant is active and can be accessed
+        max_users:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: Maximum number of users allowed for this tenant
+        user_count:
+          type: integer
+          description: |-
+            Return the number of users associated with this tenant.
+            Placeholder for Phase 1. Real implementation will use TenantMembership in Phase 3.
+          readOnly: true
+        is_at_user_limit:
+          type: boolean
+          description: Check if tenant has reached its user limit.
+          readOnly: true
+        contact_email:
+          type: string
+          format: email
+          description: Primary contact email for this tenant
+          maxLength: 254
+        contact_phone:
+          type: string
+          description: Primary contact phone for this tenant
+          maxLength: 20
+        address_line1:
+          type: string
+          maxLength: 255
+        address_line2:
+          type: string
+          maxLength: 255
+        city:
+          type: string
+          maxLength: 100
+        state:
+          type: string
+          maxLength: 100
+        postal_code:
+          type: string
+          maxLength: 20
+        country:
+          type: string
+          maxLength: 100
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - is_at_user_limit
+      - name
+      - slug
+      - updated_at
+      - user_count
+    TenantCreateRequest:
+      type: object
+      description: Serializer for creating tenants with required fields.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Display name of the tenant organization
+          maxLength: 100
+        slug:
+          type: string
+          minLength: 1
+          description: URL-friendly identifier for the tenant
+          pattern: ^[a-z0-9-]+$
+          maxLength: 50
+        domain:
+          type: string
+          nullable: true
+          description: Custom domain for this tenant (optional)
+          maxLength: 253
+        is_active:
+          type: boolean
+          description: Whether this tenant is active and can be accessed
+        max_users:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: Maximum number of users allowed for this tenant
+        contact_email:
+          type: string
+          format: email
+          description: Primary contact email for this tenant
+          maxLength: 254
+        contact_phone:
+          type: string
+          description: Primary contact phone for this tenant
+          maxLength: 20
+        address_line1:
+          type: string
+          maxLength: 255
+        address_line2:
+          type: string
+          maxLength: 255
+        city:
+          type: string
+          maxLength: 100
+        state:
+          type: string
+          maxLength: 100
+        postal_code:
+          type: string
+          maxLength: 20
+        country:
+          type: string
+          maxLength: 100
+      required:
+      - name
+      - slug
+    TenantRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Display name of the tenant organization
+          maxLength: 100
+        slug:
+          type: string
+          minLength: 1
+          description: URL-friendly identifier for the tenant
+          pattern: ^[a-z0-9-]+$
+          maxLength: 50
+        domain:
+          type: string
+          nullable: true
+          description: Custom domain for this tenant (optional)
+          maxLength: 253
+        is_active:
+          type: boolean
+          description: Whether this tenant is active and can be accessed
+        max_users:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: Maximum number of users allowed for this tenant
+        contact_email:
+          type: string
+          format: email
+          description: Primary contact email for this tenant
+          maxLength: 254
+        contact_phone:
+          type: string
+          description: Primary contact phone for this tenant
+          maxLength: 20
+        address_line1:
+          type: string
+          maxLength: 255
+        address_line2:
+          type: string
+          maxLength: 255
+        city:
+          type: string
+          maxLength: 100
+        state:
+          type: string
+          maxLength: 100
+        postal_code:
+          type: string
+          maxLength: 20
+        country:
+          type: string
+          maxLength: 100
+      required:
+      - name
+      - slug
+    TenantSummary:
+      type: object
+      description: Lightweight serializer for tenant lists and references.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          description: Display name of the tenant organization
+          maxLength: 100
+        slug:
+          type: string
+          description: URL-friendly identifier for the tenant
+          pattern: ^[a-z0-9-]+$
+          maxLength: 50
+        is_active:
+          type: boolean
+          description: Whether this tenant is active and can be accessed
+        user_count:
+          type: integer
+          description: |-
+            Return the number of users associated with this tenant.
+            Placeholder for Phase 1. Real implementation will use TenantMembership in Phase 3.
+          readOnly: true
+      required:
+      - id
+      - name
+      - slug
+      - user_count
+    TokenObtainPair:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+          readOnly: true
+      required:
+      - access
+      - refresh
+    TokenObtainPairRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          writeOnly: true
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - email
+      - password
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+      required:
+      - access
+      - refresh
+    TokenRefreshRequest:
+      type: object
+      properties:
+        refresh:
+          type: string
+          minLength: 1
+      required:
+      - refresh
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 30
+        last_name:
+          type: string
+          maxLength: 30
+        is_active:
+          type: boolean
+        date_joined:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - date_joined
+      - email
+      - id
+    UserCreate:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 30
+        last_name:
+          type: string
+          maxLength: 30
+      required:
+      - email
+    UserCreateRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 30
+        last_name:
+          type: string
+          maxLength: 30
+        password:
+          type: string
+          writeOnly: true
+          minLength: 8
+        password_confirm:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - email
+      - password
+      - password_confirm
+    UserRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 30
+        last_name:
+          type: string
+          maxLength: 30
+        is_active:
+          type: boolean
+      required:
+      - email
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
