@@ -5,11 +5,11 @@
 Phase 3 (Shop / Tenant) implementation is active.
 ## Current task
 
-Task T3-01 (Supplier and Shop Entities) is complete and verified.
+Task T3-02 (User-Shop membership and roles) is complete and verified.
 
-- **Changed areas:** `apps/tenants/models/supplier.py`, `apps/tenants/models/tenant.py`, `apps/tenants/models/__init__.py`, `apps/tenants/admin.py`, `apps/tenants/views/__init__.py`, `apps/tenants/migrations/0002_supplier_tenant_supplier.py`, `apps/tenants/tests/test_supplier.py`, `apps/tenants/tests/test_tenants.py`, `docs/ARCHITECTURE.md`, `docs/DATABASE.md`, `docs/PROJECT_STATE.md`, and `docs/HANDOFF.md`.
-- **Validation performed:** The inspected local development database contains zero Tenant records. (Staging: not yet created. Production: not yet created.) `manage.py makemigrations`, `manage.py migrate`, and `pytest` successful (55 tests pass). `makemigrations --check --dry-run` reports no changes.
-- **Next authorized task:** T3-02 is NOT YET AUTHORIZED. It requires a separate explicit `CONFIRM TASK T3-02` after presenting its task plan. Do not infer authorization.
+- **Changed areas:** `apps/tenants/models/membership.py`, `apps/tenants/policy.py`, `apps/tenants/tests/test_membership.py`, `apps/tenants/tests/test_membership_api.py`, `apps/tenants/views/membership.py`, `apps/tenants/serializers/membership.py`, `core/permissions.py`, `docs/PROJECT_STATE.md`, and `docs/HANDOFF.md`.
+- **Validation performed:** Verified local tests running clean. `pytest` successful (65 tests pass). `manage.py check` passes with zero issues.
+- **Next authorized task:** T3-03 is NOT YET AUTHORIZED. It requires a separate explicit `CONFIRM TASK T3-03` after presenting its task plan. Do not infer authorization.
 - **Current blockers/deferred items:** None.
 ## Repository state evidence
 - Verify current HEAD with `git rev-parse HEAD`
