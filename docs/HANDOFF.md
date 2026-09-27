@@ -5,13 +5,14 @@
 Phase 2 (Backend Core Security) is complete. Phase 3 has not started.
 ## Current task
 
-Task B2-05 (API documentation and security validation) is completed and audit-cleared.
+Task PRE-P3-01 (Repository State & Documentation Consistency Hardening) is complete.
+The last completed implementation task was B2-05 (API documentation and security validation), which is complete and audit-cleared.
 
-- **Changed areas:** `apps/accounts/views/__init__.py`, `core/health.py`, `core/tests/test_b2_04_health_errors.py`, `schema.yml`, `docs/HANDOFF.md`, and `docs/PROJECT_STATE.md`.
-- **Validation performed:** 47 tests pass, `manage.py check` passes cleanly, and OpenAPI schema validation passes cleanly.
+- **Changed areas:** `scripts/verify_project_state.py`, `scripts/tests/test_verify_project_state.py`, `.github/workflows/project-state.yml`, `AGENTS.md`, `docs/PROJECT_STATE.md`, `docs/HANDOFF.md`, and `docs/CHANGELOG.md`.
+- **Validation performed:** validator passes, validator tests pass (11), application tests pass (47), `manage.py check` passes, `makemigrations --check --dry-run` reports no changes, production-like `check --deploy` passes, and Black/Flake8 pass for the new scripts.
 - **Next authorized task:** Phase 3 has not started. The next phase requires separate explicit `CONFIRM PHASE 3`.
 - **Current blockers/deferred items:** None. F-01, C-01, C-02, and C-03 were resolved in B2-05.
--Repository state:
+## Repository state evidence
 - Verify current HEAD with `git rev-parse HEAD`
 - Verify remote parity with `git status -sb`
 - Do not treat a stored commit hash in documentation as authoritative.
@@ -29,11 +30,11 @@ Task B2-05 (API documentation and security validation) is completed and audit-cl
 
 ## Target final product
 
-SGTP is now defined as the Supplier-Centric Garment & Tailor Platform, with Tailor Management as the core V1 module. The hierarchy is Supplier/Main Admin Ã¢â€ â€™ Supplier Back Office Ã¢â€ â€™ isolated Shop workspaces Ã¢â€ â€™ Clients, Designs, Measurements, Fabric/Materials, Work, Billing, and Reports.
+SGTP is now defined as the Supplier-Centric Garment & Tailor Platform, with Tailor Management as the core V1 module. The hierarchy is Supplier/Main Admin -> Supplier Back Office -> isolated Shop workspaces -> Clients, Designs, Measurements, Fabric/Materials, Work, Billing, and Reports.
 
 The required persisted flow is:
 
-`Client Request Ã¢â€ â€™ Design Ã¢â€ â€™ Measurement Ã¢â€ â€™ Fabric/Material Ã¢â€ â€™ Cutting Ã¢â€ â€™ Stitching Ã¢â€ â€™ Check Ã¢â€ â€™ Finishing Ã¢â€ â€™ QC Ã¢â€ â€™ Completed Ã¢â€ â€™ Billing Ã¢â€ â€™ Reports/History`
+`Client Request -> Design -> Measurement -> Fabric/Material -> Cutting -> Stitching -> Check -> Finishing -> QC -> Completed -> Billing -> Reports/History`
 
 The full product definition and Definition of Done are in `docs/PRODUCT_DEFINITION.md`.
 
@@ -78,14 +79,14 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 
 - Previous planning treated the repository as an uninitialized generic Django foundation and deferred V1 requirements.
 - The target is now explicit and broader: an integrated supplier/shop Tailor Management product with an end-to-end production-to-billing workflow and operational capabilities.
-- The development plan has been realigned to this target, but the starter implementation remains unchanged. Phase 1 foundation gaps belong to Phase 1; later-phase decisions remain scoped to their respective phases.
+- The development plan has been realigned to this target. Phase 1 and Phase 2 implementation work is complete; Phase 3 business work remains not started and later-phase decisions remain scoped to their respective phases.
 
 ## Decisions and constraints
 
 - Do not create a replacement Django project.
 - Do not create new business modules.
 - Phase 1 work was completed and published to `origin/main`.
-- Preserve the approved supplier Ã¢â€ â€™ back office Ã¢â€ â€™ isolated shop hierarchy and V1 workflow.
+- Preserve the approved supplier -> back office -> isolated shop hierarchy and V1 workflow.
 - Treat `docs/PRODUCT_DEFINITION.md` as the target product reference.
 - Phase confirmation activates only the named phase; it does not authorize all tasks in that phase.
 - Every task requires a separate `CONFIRM TASK <TASK-ID>` after the task brief is presented.

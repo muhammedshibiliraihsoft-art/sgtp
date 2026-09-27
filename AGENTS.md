@@ -28,6 +28,15 @@ All auditing tasks must strictly follow the rules, procedures, and evidence hier
 - Whenever making a meaningful change, update `docs/PROJECT_STATE.md` and `docs/HANDOFF.md`; update the other project documents when their subject changes.
 - Before ending a meaningful session, leave a continuation-ready handoff with changed files, tests, known issues, blockers, and the next action.
 
+## Repository-state completion gate
+
+- Git is authoritative for the current repository state, including `HEAD`, branch, working-tree status, and local/remote parity. Documentation must not be treated as an authoritative substitute for Git.
+- Before declaring a meaningful task complete, run `python scripts/verify_project_state.py` and record its result. A task is not complete when the validator reports a blocking error.
+- Current-state claims must be evidence-backed by the repository and commands actually run. Historical facts must be labelled historical; do not copy historical commit hashes or test counts into current-state sections.
+- Local-ahead-of-remote is not equivalent to synchronized or published. State local, remote, and push status separately.
+- Do not silently invent or resolve business decisions. Public company/product names, production domains, hostnames, and public URL architecture require a human/business decision.
+- Before ending a meaningful task, verify documentation consistency, validator output, relevant tests/checks, and Git state. Update `docs/PROJECT_STATE.md` and `docs/HANDOFF.md` only with evidence from the current repository.
+
 ## Target product and definition of done
 
 SGTP means Supplier-Centric Garment & Tailor Platform. The target V1 is a complete integrated product, with Tailor Management as the core business module. The business hierarchy is Supplier/Main Admin → Supplier Back Office → isolated Shop workspaces → Clients and their Designs, Measurements, Fabric/Materials, Work, Billing, and Reports.
