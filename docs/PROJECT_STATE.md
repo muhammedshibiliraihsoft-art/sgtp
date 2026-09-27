@@ -106,10 +106,17 @@
 - After one task, the agent must validate, document, report, and stop; next-task and next-phase activation are never automatic.
 - Phase playbooks 07-10 have now been added with task IDs, validation, handoff, rollback, Definition of Done, and Antigravity prompts.
 
-## Implementation Status (Phase 1 Complete)
+## Implementation Status (Phase 2 Active)
 
-- Phase 1 is complete.
-- F1-01 through F1-05 are all complete.
+- Phase 1 is complete. F1-01 through F1-05 are all complete.
+- Phase 2 is active.
+- B2-01 DRF API Baseline is complete.
+- B2-02 JWT Lifecycle implementation is completed and verified.
+  - Standard Django CSRF mechanism is implemented.
+  - Refresh token cookie lifecycle is implemented.
+  - Rotation and blacklist/reuse behavior are implemented.
+  - Relevant validation results are recorded accurately (30 tests passing, 0 check issues).
+- B2-05 remains pending for OpenAPI schema correction. F-01 OpenAPI mismatch is explicitly recorded as a deferred item targeting B2-05.
 - Python virtual environment `.venv` created, and dependency baseline established. `manage.py check` passed.
 - Lint tools can run, but existing starter lint violations remain. `pytest` is passing against the new devcontainer PostgreSQL database with all project tests collected.
 - Environment settings are now split into base, dev, test, and prod. `core/settings.py` acts as a backward-compatible router rejecting unknown environments. Missing secrets fail safely.

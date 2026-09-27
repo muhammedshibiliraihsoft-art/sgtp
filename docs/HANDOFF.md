@@ -2,11 +2,17 @@
 
 ## Current phase
 
-Phase 1 corrective work is complete.
+Phase 2 (Backend Core Security) is active.
 
 ## Current task
 
-Task F1-05 (Secure defaults and baseline documentation) is completed. We hardened JWT configuration (explicit algorithm, UUID claims, signing key, shorter access token lifetime, UPDATE_LAST_LOGIN), added explicit security cookie flags per environment, fixed an exception-leaking logout view, updated the API schema branding to SGTP, and documented secret handling in `.env.example`. Phase 1 is now complete.
+Task B2-02 (Secure JWT Lifecycle) is completed and awaiting closure.
+- **Changed areas:** `apps/accounts/views/__init__.py`, `apps/accounts/urls.py`, and `apps/accounts/tests`.
+- **Validation performed:** 30 tests pass (including 5 new test cases covering full cookie/CSRF matrix), `manage.py check` passes cleanly.
+- **Known deferred issue:** The OpenAPI schema currently expects JSON refresh tokens, causing a mismatch (F-01). This is explicitly deferred to **B2-05**.
+- **Next authorized task:** NOT automatically started. The next task requires separate explicit confirmation.
+- **Current blockers/deferred items:** OpenAPI mismatch â†’ B2-05.
+- **Repository state:** The repository remains in the current working-tree state. No commit/push was performed by this task.
 
 ## Repository and workspace
 

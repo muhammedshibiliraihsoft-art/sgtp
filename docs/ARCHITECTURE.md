@@ -77,6 +77,18 @@ Docker        -> development container and production web/db services
 - DRF uses JWT authentication first and session authentication second.
 - Login and refresh routes use SimpleJWT.
 - The JWT blacklist application is installed and configured.
+- Access token is returned in JSON.
+- Refresh token is stored in an HttpOnly cookie.
+- Refresh cookie uses SameSite=Lax.
+- Refresh cookie Secure flag is environment-specific.
+- Django CSRF protection is required for refresh/logout.
+- csrftoken is issued explicitly at login.
+- Frontend sends X-CSRFToken for cookie-authenticated refresh/logout.
+- Refresh tokens rotate.
+- Old rotated refresh tokens are blacklisted.
+- Reuse of a blacklisted rotated token is rejected.
+- Logout blacklists the current refresh token and clears both refresh and csrftoken cookies.
+- No custom token-family revocation architecture is used in B2-02.
 
 ## Data architecture
 

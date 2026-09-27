@@ -62,7 +62,7 @@ class UserAPITest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_login_success(self):
-        """Test user login"""
+        """Test user login returns access token and sets refresh cookie"""
         # Create user first
         user = User.objects.create_user(
             email='test@example.com',
@@ -76,7 +76,8 @@ class UserAPITest(TestCase):
         response = self.client.post('/api/v1/auth/login/', login_data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('access', response.data)
-        self.assertIn('refresh', response.data)
+        self.assertNotIn('refresh', response.data)  # Refresh is moved to cookie
+        self.assertIn('refresh', response.cookies)  # It should be in cookies
 
     def test_login_invalid_credentials(self):
         """Test login with invalid credentials"""
