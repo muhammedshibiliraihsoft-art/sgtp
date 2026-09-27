@@ -2,8 +2,7 @@
 
 ## Current phase
 
-Phase 2 (Backend Core Security) is active.
-
+Phase 2 (Backend Core Security) is complete. Phase 3 has not started.
 ## Current task
 
 Task B2-05 (API documentation and security validation) is completed and audit-cleared.
