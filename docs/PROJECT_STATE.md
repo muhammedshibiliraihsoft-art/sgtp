@@ -3,7 +3,7 @@
 ## Status
 
 - Phase 2 is complete.
-- Current task: PRE-P3-01 Repository State & Documentation Consistency Hardening (Completed).
+- Current task: PRE-P3-02 V1 Supplier / Shop / External Supplier tenancy model lock (Completed).
 - Current verified application test count: 47 tests passing.
 - Project root: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp`
 - Remote: `https://github.com/muhammedshibiliraihsoft-art/sgtp.git`
@@ -12,9 +12,18 @@
 - Target status: SGTP V1 is explicitly defined in `docs/PRODUCT_DEFINITION.md`
 - Starter foundation: exists in the cloned SGTP repository.
 - Phase 1 implementation: **Historical - Complete.**
-- Confirmation status: Phase 2 is complete. Phase 3 is explicitly NOT STARTED.
+- Confirmation status: Phase 2 is complete. Phase 3 is activated for planning/governance only; no Phase 3 implementation task is authorized. T3-01 is NOT YET AUTHORIZED and requires separate explicit task confirmation.
 - Detailed phase playbooks: 01-10 present.
 - Later-phase decisions: Tenant context is approved as URL-path based (`/shops/{shop_id}/...`), and Related Person billing is owned by the Primary Client.
+
+## Locked V1 business tenancy model
+
+- Exactly one top-level Supplier / Main Admin exists in V1; there is no multi-supplier SaaS model.
+- The hierarchy is one Main Supplier / Main Admin → Supplier Back Office → multiple Shops.
+- Shop is the actual business workspace and tenant/isolation boundary.
+- External Supplier records belong to exactly one Shop and are non-user, non-tenant business records with no login or system permissions.
+- External Supplier data is never global/shared and is isolated by Shop.
+- The legacy starter `Tenant` model remains a technical input pending T3-01 assessment; no automatic Tenant-to-Supplier, Tenant-to-Shop, or Tenant-to-External-Supplier mapping has been approved.
 
 ## Repository verification
 
@@ -71,6 +80,12 @@
 - Tenant-context resolution is approved as URL-path based (`/shops/{shop_id}/...`) and must be enforced in Phase 3.
 - Billing ownership for work belonging to a Related Person is approved as Primary Client ownership and must be enforced in Phase 5.
 - No domain/business modules beyond accounts and generic tenants exist.
+
+### PRE-P3-02 result
+
+- The V1 Supplier / Shop / External Supplier business meaning is now explicit across the governing documentation.
+- Phase 3 remains activated only as a planning scope; no T3-01 implementation is authorized or complete.
+- The legacy Tenant compatibility strategy remains a T3-01 gate. If selecting it changes business meaning, the implementation agent must stop with `BUSINESS DECISION REQUIRED`.
 
 ### Phase 3+ Deferred Implementations
 

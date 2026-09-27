@@ -9,10 +9,14 @@
   - **Production:** Managed PostgreSQL service (e.g., Render PostgreSQL).
 - **Connection Configuration:** Configured dynamically via environment variables (`DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`). See `.env.example`.
 
-## Multi-Tenancy
+## V1 Shop Tenancy and Legacy Tenant Input
 
-- **Tenant Isolation Policy:** The target schema enforces strict tenant separation. Most business entities (Shops, Clients, Designs, Orders) will inherit from `backend.core.models.BaseModelWithTenant`, containing a cascading foreign key to `Tenant`.
-- **Identity Sharing:** The `User` model is tenant-agnostic to support users belonging to multiple shops (e.g., a supplier admin).
+- **Business boundary:** Shop is the V1 tenant/workspace and owns its permitted business records, including External Supplier records.
+- **Top-level owner:** V1 has exactly one Supplier / Main Admin above the Shops; this is not a multi-supplier tenancy model.
+- **External Suppliers:** An External Supplier is a non-user, non-tenant, shop-owned business record. It belongs to exactly one Shop and is never a global/shared supplier record.
+- **Legacy starter model:** The existing `Tenant` model and its migration are technical starter inputs only. They must be inspected by T3-01 before any rename, retention, replacement, adapter, or migration strategy is selected. No automatic `Tenant = Supplier`, `Tenant = Shop`, or `Tenant = External Supplier` mapping is approved by this document.
+- **Identity sharing:** The `User` model may support users belonging to multiple Shops through the future approved membership model; ordinary Shop users must not receive cross-Shop visibility. Main Supplier cross-Shop access must be explicit and backend-authorized.
+- **Isolation:** Shop-scoped foreign keys, querysets, permissions, and APIs must enforce isolation for direct IDs, lists, search, filters, ordering, pagination, counts, aggregates, autocomplete, and nested/foreign-key traversal.
 
 ## Migration Strategy & Policies
 

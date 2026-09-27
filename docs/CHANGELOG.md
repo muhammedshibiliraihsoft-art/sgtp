@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-09-27
+
+- Completed PRE-P3-02 documentation-only governance correction.
+- Locked the V1 model as exactly one Main Supplier / Main Admin above multiple isolated Shops.
+- Clarified that External Suppliers are Shop-owned non-user records with no login, tenant role, or global/shared directory.
+- Hardened the Phase 3 T3-01 brief and preserved the legacy Tenant compatibility decision gate.
+- No Phase 3 business implementation, models, migrations, APIs, or application source changes were made.
+
 ## 2026-09-25
 
 - Bootstrapped repository continuity documentation and agent instructions.

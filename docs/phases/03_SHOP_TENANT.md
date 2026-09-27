@@ -1,11 +1,11 @@
 # Phase 3 — Shop / Tenant
 
 ## 1. Phase Overview
-Implement the supplier, back office, shop, membership, role, and isolation foundation.
+Implement the single Main Supplier / Main Admin, Supplier Back Office, Shop, membership, role, and isolation foundation.
 ## 2. Phase Objective
-Make each shop an isolated business workspace with controlled supplier cross-shop visibility.
+Make each Shop the isolated V1 business workspace/tenant boundary, with controlled Main Supplier cross-Shop visibility.
 ## 3. Business Purpose
-Allow a supplier to manage shops while preventing unauthorized cross-shop access.
+Allow the single Main Supplier / Main Admin to manage Shops while preventing unauthorized cross-Shop access.
 ## 4. Technical Purpose
 Implement tenant context, membership, scoped querysets, object permissions, constraints, and tests.
 ## 5. Preconditions
@@ -15,17 +15,23 @@ User/auth, permission primitives, PostgreSQL, service boundaries.
 ## 7. Current Repository Assumptions
 Starter Tenant exists but User has no membership; BaseModelWithTenant is nullable; no isolation mixin exists.
 ## 8. Exact Scope
-Supplier, Shop, UserShop/membership, roles, context, scoping, supplier visibility, admin/back-office API, isolation tests.
+Main Supplier / Main Admin, Supplier Back Office, Shop, UserShop/membership, roles, context, scoping, authorized Main Supplier visibility, admin/back-office API, isolation tests. External Supplier records are Shop-owned non-user records and are not authenticated participants in this phase.
 ## 9. Out of Scope
 Clients, designs, production, billing, reports, AI, frontend screens.
 ## 10. Architecture Context
-Supplier owns/oversees shops; shop-scoped records require active membership and object-level authorization.
+Exactly one Main Supplier / Main Admin owns/oversees multiple Shops. Shop is the tenant/workspace boundary; Shop-scoped records require active membership and object-level authorization. External Suppliers are separate Shop-owned business records, not users, tenants, members, or roles.
 ## 11. Implementation Sequence
 Entity model → membership/roles → context → query/permission enforcement → APIs/admin → isolation tests.
 ## 12. Detailed Task List
 
 ### T3-01 Supplier and Shop entities
-Objective: define supplier/shop data model and ownership. Why: current Tenant is not the approved hierarchy. Dependencies: Phase 2. Files: target `backend/apps/shops/{models,migrations,admin,tests}` and transition adapters for current `apps/tenants/`. Steps: decide Tenant rename/compatibility, add Supplier/Shop identities, unique constraints, active status, audit fields. DB: models/indexes/constraints. API: internal/admin contract. Security: ownership. Tests: constraints/soft delete. Docs: database/architecture. DoD: approved model.
+Objective: define the V1 entity and ownership model for exactly one Main Supplier / Main Admin, the Supplier Back Office, and multiple isolated Shops. Shop is the actual tenant/workspace boundary. External Supplier means only a Shop-owned, non-user business-contact record; it is not a tenant, member, login, role, or top-level Supplier entity, and T3-01 must not create external-supplier authentication or a global supplier directory.
+
+Why: the current generic `Tenant` starter model does not establish the approved Shop-based business meaning. Before selecting any compatibility strategy, inspect the existing Tenant model, migration, database assumptions, APIs, tests, and all references. Assess presence, meaning, references, migration impact, preservation/mapping, and rollback/recovery.
+
+Dependencies: Phase 2 and explicit `CONFIRM TASK T3-01` after Phase 3 activation. Files: target `backend/apps/shops/{models,migrations,admin,tests}` and documented transition handling for current `apps/tenants/`. Steps: document the evidence; define Supplier/Main Admin cardinality; define Shop ownership and isolation boundary; define the distinction from External Supplier; then select a technically compatible Tenant strategy only if it preserves approved business meaning. Do not automatically rename, retain, replace, adapt, or reinterpret Tenant. If the choice changes business meaning or approved architecture, stop and report `BUSINESS DECISION REQUIRED`.
+
+DB: only the approved entity/migration strategy; no migration is authorized by this documentation task. API: internal/admin contract only; no external supplier login, portal, API account, or public supplier directory. Security: enforce the future Shop boundary and prevent cross-Shop discovery. Tests: cardinality/ownership constraints, legacy Tenant evidence, preservation/mapping, rollback/recovery, and explicit rejection of cross-Shop access assumptions. Docs: architecture, database, decisions, state, handoff, and changelog. DoD: the entity model and legacy Tenant compatibility strategy are explicitly approved, or the exact unresolved business decision is reported without implementation.
 Validation:
 - existing Tenant data preservation/mapping strategy
 - migration impact
@@ -37,13 +43,13 @@ Validation:
 - soft-delete behavior
 
 ### T3-02 User-Shop membership and roles
-Objective: connect users to shops and supplier roles. Dependencies: T3-01. Files: membership model, role constants/permissions, serializers/tests. Steps: model membership/status/role; prevent duplicate membership; define supplier cross-shop role; enforce inactive shop/user. DB: FK/index/unique constraints. API: membership management. Security: least privilege. Tests: role matrix. DoD: explicit role policy.
+Objective: connect users to Shops and approved roles under the single Main Supplier / Main Admin model. Dependencies: T3-01. Files: membership model, role constants/permissions, serializers/tests. Steps: model membership/status/role; prevent duplicate membership; define explicit Main Supplier cross-Shop authority; enforce inactive Shop/user. External Suppliers do not receive membership, roles, credentials, or permissions. DB: FK/index/unique constraints. API: membership management only. Security: least privilege. Tests: role matrix and external-supplier non-user boundary. DoD: explicit role policy.
 
 ### T3-03 Tenant context
-Objective: resolve active shop safely per request. Dependencies: T3-02. Files: context middleware/service/request helpers/tests. Steps: implement the approved URL-path tenant context `/shops/{shop_id}/...`; validate membership; avoid ambient mutable globals; support supplier-selected shop with authorization. API: context errors and shop-scoped URL contracts. Security: path spoofing resistance and object-level authorization. Tests: missing/invalid/inactive/cross-shop paths and URL-context spoofing. DoD: deterministic, authorized URL-path context.
+Objective: resolve the active Shop safely per request. Dependencies: T3-02. Files: context middleware/service/request helpers/tests. Steps: implement the approved URL-path tenant context `/shops/{shop_id}/...`; validate membership; avoid ambient mutable globals; support only explicitly authorized Main Supplier-selected Shop access. API: context errors and Shop-scoped URL contracts. Security: path spoofing resistance and object-level authorization. Tests: missing/invalid/inactive/cross-Shop paths and URL-context spoofing. DoD: deterministic, authorized URL-path context.
 
 ### T3-04 Scoped querysets and object permissions
-Objective: enforce isolation at backend boundaries. Dependencies: T3-03. Files: managers/querysets, permissions, base viewsets, tests. Steps: filter all shop-scoped reads/writes; deny foreign IDs; define supplier reporting visibility; require explicit unscoped access for platform-only records. DB: indexes. API: 403/404 policy. Tests: Shop A never sees Shop B. DoD: isolation proven.
+Objective: enforce Shop isolation at backend boundaries. Dependencies: T3-03. Files: managers/querysets, permissions, base viewsets, tests. Steps: filter all Shop-scoped reads/writes; deny foreign IDs; define Main Supplier reporting visibility; require explicit unscoped access only for platform-level records. External Supplier records must be scoped to exactly one Shop. DB: indexes. API: 403/404 policy. Tests: Shop A never sees Shop B through direct IDs, lists, search, filters, ordering, pagination, counts, aggregates, autocomplete, or nested relations. DoD: isolation proven.
 
 ### T3-05 Back-office/shop APIs and admin
 Objective: expose only approved supplier/shop management. Dependencies: T3-01–04. Files: views/serializers/URLs/admin/tests/docs. Steps: implement CRUD, membership actions, activation/deactivation, audit. DB: migrations already defined. API: contracts/schema. DoD: API and isolation tests pass.
@@ -69,7 +75,7 @@ None; document context contract only.
 ## 22. Security Requirements
 Backend isolation, role least privilege, no IDOR, inactive membership rejection, audit membership changes.
 ## 23. Tenant / Permission Requirements
-Shop-scoped by default; supplier cross-shop only through explicit role/policy; no frontend-only enforcement.
+Shop-scoped by default; Main Supplier cross-Shop access only through explicit backend role/policy; no frontend-only enforcement. External Suppliers never receive system access.
 ## 24. Validation Requirements
 Cross-shop matrix, supplier visibility, inactive access, direct-ID attacks, pagination/filter leakage.
 ## 25. Testing Requirements
@@ -83,7 +89,9 @@ Checkpoint each T3 task; never push.
 ## 29. Handoff Requirements
 Record role matrix, context strategy, migrations, isolation evidence, and next task.
 ## 30. Phase Validation Checklist
-- [ ] Supplier/shop model approved
+- [ ] Single Main Supplier / Main Admin and Shop model approved
+- [ ] External Supplier explicitly remains a Shop-owned non-user record
+- [ ] Legacy Tenant compatibility strategy approved without unreviewed business reinterpretation
 - [ ] Membership/roles tested
 - [ ] Context deterministic
 - [ ] Querysets scoped
@@ -91,10 +99,10 @@ Record role matrix, context strategy, migrations, isolation evidence, and next t
 ## 31. Definition of Done
 Supplier and shop boundaries are persisted, authorized, tested, and ready for business records.
 ## 32. Common Implementation Mistakes
-Nullable scope, trusting `shop_id` from client, filtering only list views, leaking counts/search/order, conflating supplier and shop roles.
+Nullable scope, trusting `shop_id` from client, filtering only list views, leaking counts/search/order, conflating Main Supplier and External Supplier, treating External Suppliers as users, and mapping legacy Tenant automatically.
 ## 33. Rollback / Recovery Notes
 Use data migration rollback plan; disable affected endpoints if isolation regression appears; revoke access changes safely.
 ## 34. Phase Implementation Prompt
-**Implement ONLY this phase. Do not implement future phases.** Phase confirmation activates Phase 3 only; it does not authorize T3-01 through T3-05. Before each task, present that task's objective, affected files/areas, dependencies/preconditions, and validation/tests, then wait for explicit `CONFIRM TASK <TASK-ID>`. After confirmation, implement only that task, run its validation, update documentation, report the result, and stop. Do not begin the next task or Phase 4 automatically. Preserve the approved shop-isolation architecture.
+**Implement ONLY this phase. Do not implement future phases.** Phase confirmation activates Phase 3 only; it does not authorize T3-01 through T3-05. Before each task, present that task's objective, affected files/areas, dependencies/preconditions, and validation/tests, then wait for explicit `CONFIRM TASK <TASK-ID>`. After confirmation, implement only that task, run its validation, update documentation, report the result, and stop. Do not begin the next task or Phase 4 automatically. Preserve the locked model: exactly one Main Supplier / Main Admin above multiple isolated Shops; Shop is the tenant/workspace boundary; External Suppliers are Shop-owned non-user records with no login or system role. T3-01 must inspect the legacy Tenant model before any compatibility change and must stop with `BUSINESS DECISION REQUIRED` if the choice changes business meaning.
 ## 35. Phase Completion Report Format
 `Phase: 3` / `Tasks:` / `Role matrix:` / `Migrations:` / `Isolation tests:` / `API:` / `Docs:` / `Next task:`.

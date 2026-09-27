@@ -30,3 +30,15 @@ This decision expands the prior generic-starter planning context into an integra
   1. Final public company/product name
   2. Preferred primary domain
   3. Public app/API hostname structure
+
+## 2026-09-27 - Lock V1 Supplier / Shop / External Supplier model
+
+- V1 has exactly one top-level Supplier / Main Admin.
+- The single Main Supplier / Main Admin owns and manages multiple Shops.
+- Shop is the actual tenant/workspace and isolation boundary.
+- Each Shop may maintain its own External Supplier records.
+- An External Supplier is a Shop-owned business record only. It is not a user, tenant, member, role, login participant, dashboard user, or system participant.
+- External Supplier data belongs only to its owning Shop. Shop A must not see Shop B's External Supplier records.
+- There is no multi-supplier SaaS model in V1.
+- Do not create a global/shared External Supplier directory.
+- The existence of External Suppliers does not justify platform-level Supplier tenancy.

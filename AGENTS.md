@@ -41,6 +41,8 @@ All auditing tasks must strictly follow the rules, procedures, and evidence hier
 
 SGTP means Supplier-Centric Garment & Tailor Platform. The target V1 is a complete integrated product, with Tailor Management as the core business module. The business hierarchy is Supplier/Main Admin → Supplier Back Office → isolated Shop workspaces → Clients and their Designs, Measurements, Fabric/Materials, Work, Billing, and Reports.
 
+The V1 business hierarchy is exactly one Supplier/Main Admin → Supplier Back Office → multiple isolated Shop workspaces. External Suppliers are separate Shop-owned business records, not users, tenants, members, roles, or authenticated participants. There is no multi-supplier SaaS model in V1.
+
 The core persisted workflow is:
 
 `Client Request → Design → Measurement → Fabric/Material → Cutting → Stitching → Check → Finishing → QC → Completed → Billing → Reports/History`

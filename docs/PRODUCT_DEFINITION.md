@@ -24,6 +24,21 @@ Clients, Designs, Measurements, Fabric, Work, Billing, Reports
 
 The supplier/main admin manages the back office and shop workspaces. Each shop is an isolated business workspace. Users may access only the shops and records permitted by their role and membership.
 
+## V1 Supplier / Shop / External Supplier Model
+
+This section is authoritative for V1 business meaning:
+
+- V1 has exactly one top-level **Supplier / Main Admin**. V1 is not a multi-supplier SaaS platform.
+- The hierarchy is **one Main Supplier / Main Admin → Supplier Back Office → multiple Shops**.
+- A **Shop** is the actual business workspace and the tenant/isolation boundary.
+- Shop-owned records include the Shop's users/memberships and permitted clients, related persons, designs, measurements, materials, works, production records, billing, reports/history, and external supplier records.
+- An **External Supplier** is a shop-owned business-contact record. It is not the Main Supplier, a user, a tenant, a member, a role, or an authenticated system participant.
+- External Suppliers have no login, dashboard, permissions, API account, or cross-shop visibility in V1.
+- Each External Supplier record belongs to exactly one Shop. Similar real-world suppliers in different Shops are separate records; there is no global or shared supplier directory.
+- Shop A data must never be exposed to Shop B through IDs, lists, search, filters, ordering, pagination, counts, aggregates, autocomplete, nested relations, foreign-key traversal, or URL manipulation.
+- The Main Supplier / Main Admin may have explicitly authorized cross-shop operational visibility, but that does not make Shop data globally shared with Shop users.
+- The existing starter `Tenant` model is a legacy technical input and must not automatically be interpreted as the Main Supplier, an External Supplier, a Shop, or a platform-wide multi-supplier tenant. Its compatibility mapping is governed by the Phase 3 T3-01 decision gate.
+
 ## Core V1 business flow
 
 ```text

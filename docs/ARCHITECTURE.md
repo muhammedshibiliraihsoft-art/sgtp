@@ -2,7 +2,7 @@
 
 ## Target product architecture
 
-SGTP V1 is a supplier-centric, multi-shop business system. The supplier/main admin operates the supplier back office, which manages isolated shop workspaces. Each shop owns or accesses only its permitted clients, designs, measurements, materials, production work, billing, reports, and history.
+SGTP V1 has exactly one top-level Supplier / Main Admin. That operator runs the Supplier Back Office and manages multiple isolated Shop workspaces. V1 is not a multi-supplier SaaS platform. Each Shop owns or accesses only its permitted clients, designs, measurements, materials, production work, billing, reports, history, and External Supplier records.
 
 ```text
 Supplier / Main Admin
@@ -15,6 +15,20 @@ Client → Design → Measurement → Fabric/Material → Production Workflow
                                                    ↓
                                       Completion → Billing → Reports/History
 ```
+
+## V1 Supplier / Shop / External Supplier Model
+
+The following business model is locked for V1:
+
+- There is exactly one top-level **Supplier / Main Admin**.
+- The approved hierarchy is **one Main Supplier / Main Admin → Supplier Back Office → multiple Shops**.
+- **Shop** is the actual business workspace and the tenant/isolation boundary.
+- An **External Supplier** is a normal business record owned by exactly one Shop. It is distinct from the Main Supplier / Main Admin.
+- External Suppliers are not users, tenants, members, roles, administrators, API accounts, or authentication participants. They do not log in or receive a dashboard.
+- External Supplier records are not global or shared between Shops. Shop A and Shop B may each have separate records with the same real-world supplier name.
+- Backend enforcement must prevent cross-Shop discovery or access through direct IDs, list/detail endpoints, search, filters, ordering, pagination, counts, aggregates, autocomplete, nested relations, foreign-key traversal, or manipulated URL paths.
+- Main Supplier cross-Shop visibility is an explicitly authorized operational capability; it does not make Shop data globally visible to Shop users.
+- The starter `Tenant` model is a legacy technical input only. It must not automatically be mapped to Supplier, External Supplier, Shop, or a multi-supplier tenant. T3-01 must inspect and document its compatibility strategy before changing its business meaning.
 
 The target production workflow is:
 
@@ -63,7 +77,7 @@ Docker        -> development container and production web/db services
 
 - `core` owns global configuration and URL entry points.
 - `accounts` owns authentication identity and user-facing auth endpoints.
-- `tenants` owns organization records and tenant administration endpoints.
+- `tenants` owns the legacy starter organization record and tenant administration endpoints; it is not yet the approved V1 Shop model.
 - `common` owns shared model abstractions.
 - No service layer, domain modules, background worker, event bus, or external integration layer exists.
 - Target modules for V1 are not yet implemented: supplier/back office, shop workspace, clients, related persons, designs, measurements, materials, production workflow, billing, reports/PDFs, storage, jobs, and monitoring.
@@ -109,9 +123,10 @@ Docker        -> development container and production web/db services
 ## Data architecture
 
 - `BaseModel` provides UUID IDs, created/updated timestamps, created/updated user references, and `SOFT_DELETE_CASCADE`.
-- `BaseModelWithTenant` adds an optional foreign key to `tenants.Tenant`.
-- `Tenant` is an organization record with profile/contact/address fields and a user limit.
+- `BaseModelWithTenant` adds an optional foreign key to the legacy `tenants.Tenant` input.
+- `Tenant` is currently an organization record with profile/contact/address fields and a user limit; its V1 business mapping is not established by the starter.
 - `User` has no tenant foreign key or membership model. Consequently, tenant ownership and isolation are not implemented in the starter. The approved target tenant-context mechanism is URL-path based: `/shops/{shop_id}/...`.
+- The target Shop boundary and External Supplier ownership rules are defined above; they are not implemented by the current starter Tenant CRUD/API.
 
 ## API surface
 
@@ -138,13 +153,13 @@ Docker        -> development container and production web/db services
 4. The README references missing `apps.common.views.base_model_view` and `apps.tenants.mixins` components.
 5. Settings and infrastructure disagree: settings read `DJANGO_DEBUG` and `DB_*`, while devcontainer configuration supplies `DEBUG` and `DATABASE_URL`.
 6. Production settings do not define `ALLOWED_HOSTS`.
-7. The starter is a generic foundation and does not yet implement the approved SGTP V1 business hierarchy or end-to-end workflow.
+7. The starter is a generic foundation and does not yet implement the approved SGTP V1 hierarchy, Shop boundary, External Supplier record, or end-to-end workflow.
 8. The target requires a frontend and supporting infrastructure that are absent from the starter.
 
 ## Recommended foundation changes
 
 - Make the V1 architecture authoritative in repository documentation before coding.
-- Select and document the tenant membership model and active-tenant resolution strategy.
+- In T3-01, inspect the legacy Tenant model, migrations, APIs, tests, and references before selecting a compatibility strategy. If the choice changes business meaning, stop with `BUSINESS DECISION REQUIRED`.
 - Implement tenant isolation at queryset and permission boundaries, with tests proving cross-tenant access is denied.
 - Decide whether tenant-scoped foreign keys are mandatory and enforce that decision in models/serializers.
 - Align settings with container environment variables and explicitly configure allowed hosts/CORS.

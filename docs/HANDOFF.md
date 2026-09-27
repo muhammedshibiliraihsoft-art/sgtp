@@ -2,15 +2,15 @@
 
 ## Current phase
 
-Phase 2 (Backend Core Security) is complete. Phase 3 has not started.
+Phase 2 (Backend Core Security) is complete. Phase 3 is activated for planning/governance only; no Phase 3 implementation task is authorized.
 ## Current task
 
-Task PRE-P3-01 (Repository State & Documentation Consistency Hardening) is complete.
+Task PRE-P3-02 (Lock V1 Business Tenancy Model and Close Supplier/Shop Interpretation Gaps) is complete.
 The last completed implementation task was B2-05 (API documentation and security validation), which is complete and audit-cleared.
 
 - **Changed areas:** `scripts/verify_project_state.py`, `scripts/tests/test_verify_project_state.py`, `.github/workflows/project-state.yml`, `AGENTS.md`, `docs/PROJECT_STATE.md`, `docs/HANDOFF.md`, and `docs/CHANGELOG.md`.
 - **Validation performed:** validator passes, validator tests pass (11), application tests pass (47), `manage.py check` passes, `makemigrations --check --dry-run` reports no changes, production-like `check --deploy` passes, and Black/Flake8 pass for the new scripts.
-- **Next authorized task:** Phase 3 has not started. The next phase requires separate explicit `CONFIRM PHASE 3`.
+- **Next authorized task:** T3-01 is not yet authorized. It requires a separate explicit `CONFIRM TASK T3-01` after presenting its task plan. Do not infer authorization from PRE-P3-02.
 - **Current blockers/deferred items:** None. F-01, C-01, C-02, and C-03 were resolved in B2-05.
 ## Repository state evidence
 - Verify current HEAD with `git rev-parse HEAD`
@@ -37,6 +37,15 @@ The required persisted flow is:
 `Client Request -> Design -> Measurement -> Fabric/Material -> Cutting -> Stitching -> Check -> Finishing -> QC -> Completed -> Billing -> Reports/History`
 
 The full product definition and Definition of Done are in `docs/PRODUCT_DEFINITION.md`.
+
+## Locked V1 tenancy model
+
+- V1 has exactly one top-level Supplier / Main Admin and no multi-supplier SaaS model.
+- The hierarchy is Main Supplier / Main Admin → Supplier Back Office → multiple isolated Shops.
+- Shop is the tenant/workspace boundary.
+- External Supplier records are owned by exactly one Shop and are not users, tenants, members, roles, or authentication participants. They do not log in.
+- External Supplier records are not global/shared; Shop isolation applies to all access and discovery paths.
+- The starter `Tenant` model is legacy technical input only. T3-01 must inspect its meaning, references, migrations, APIs, tests, preservation/mapping, and recovery impact before selecting a compatibility strategy. A business-meaning change requires `BUSINESS DECISION REQUIRED`.
 
 ## Inspection summary
 
@@ -78,7 +87,7 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 ## Target contradiction record
 
 - Previous planning treated the repository as an uninitialized generic Django foundation and deferred V1 requirements.
-- The target is now explicit and broader: an integrated supplier/shop Tailor Management product with an end-to-end production-to-billing workflow and operational capabilities.
+- The target is now explicit and broader: an integrated single-Main-Supplier/multiple-Shop Tailor Management product with an end-to-end production-to-billing workflow and operational capabilities.
 - The development plan has been realigned to this target. Phase 1 and Phase 2 implementation work is complete; Phase 3 business work remains not started and later-phase decisions remain scoped to their respective phases.
 
 ## Decisions and constraints
@@ -86,7 +95,7 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 - Do not create a replacement Django project.
 - Do not create new business modules.
 - Phase 1 work was completed and published to `origin/main`.
-- Preserve the approved supplier -> back office -> isolated shop hierarchy and V1 workflow.
+- Preserve the approved one Main Supplier / Main Admin -> back office -> isolated Shop hierarchy and V1 workflow. Keep External Suppliers as Shop-owned non-user records.
 - Treat `docs/PRODUCT_DEFINITION.md` as the target product reference.
 - Phase confirmation activates only the named phase; it does not authorize all tasks in that phase.
 - Every task requires a separate `CONFIRM TASK <TASK-ID>` after the task brief is presented.
@@ -120,4 +129,4 @@ Phase 1 is complete. All tasks F1-01 through F1-05 are done. The repository has 
 
 ## Recommended next action
 
-Next, await explicit `CONFIRM PHASE 3` to authorize Phase 3.
+Next, present the T3-01 task plan and await explicit `CONFIRM TASK T3-01`. Phase 3 activation does not authorize T3-01 or any other Phase 3 task.
