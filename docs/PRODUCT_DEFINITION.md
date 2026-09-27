@@ -4,6 +4,8 @@
 
 SGTP is the **Supplier-Centric Garment & Tailor Platform**. V1 is a complete integrated business system for a supplier that manages multiple tailoring shops. Tailor Management is the core V1 business module.
 
+> **Note on Naming & Branding:** "SGTP" is strictly an internal project identifier. The public product/company name is currently unfinalized. Agents must not invent public names, replace SGTP with assumed brand names, or finalize public production domains/hostnames without explicitly halting and raising a **BUSINESS DECISION REQUIRED** prompt to the human user for the final name and domain architecture. Technical internal API paths (e.g. `/api/v1/`, `/shops/{shop_id}/`) are independent of branding and may proceed.
+
 The product is not defined as a generic Django backend, a set of disconnected APIs, or a collection of screens. It must connect the business records and workflow so that a supplier and each authorized shop can operate their work from request through billing and history.
 
 ## Business hierarchy

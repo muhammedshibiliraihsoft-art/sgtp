@@ -19,3 +19,14 @@ This decision expands the prior generic-starter planning context into an integra
 - Tenant context resolution: use URL-path context in the form `/shops/{shop_id}/...`. T3-03 must implement and test this approved mechanism; it must not substitute another context mechanism.
 - Related Person billing ownership: the Primary Client owns billing for work belonging to a Related Person. R5-01 must enforce and test this rule.
 - CSRF: protection is a fixed requirement for refresh-cookie flows. Phase 2 owns selection, implementation, and validation of the concrete CSRF mechanism; the mechanism must be explicitly documented and tested before Phase 2 is complete.
+
+## 2026-09-27 — Product and Company Name Rule
+
+"SGTP" is explicitly an internal project identifier. The final public company/product name has NOT been finalized.
+- Do not invent a public product name or replace "SGTP" with an assumed brand name.
+- Do not finalize production domains, subdomains, hostnames, or public URLs.
+- Technical API paths (e.g., `/api/v1/`) and shop context paths (e.g., `/shops/{shop_id}/`) are permitted as they are separate from public branding.
+- When public URL/domain naming becomes technically necessary for deployment or configuration, agents must halt and raise a **BUSINESS DECISION REQUIRED** prompt to the user, requesting:
+  1. Final public company/product name
+  2. Preferred primary domain
+  3. Public app/API hostname structure
