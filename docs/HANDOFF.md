@@ -1,4 +1,4 @@
-﻿# Handoff
+# Handoff
 
 ## Current phase
 
@@ -11,7 +11,7 @@ Task B2-04 (Exceptions, throttling, CORS, health) is completed and audit-cleared
 - **Validation performed:** 45 tests pass (including throttles, error normalization, and health checks), `manage.py check` passes cleanly.
 - **Next authorized task:** B2-05 has not started. The next task requires separate explicit confirmation. Phase 2 remains active (not complete).
 - **Current blockers/deferred items:** C-01, C-02, C-03, and the OpenAPI mismatch (F-01) remain explicitly deferred to B2-05.
-- **Repository state:** B2-04 is audited and cleared. The latest repository correction commit is `83169750c50cb312a7d1fb709dc54c97d77ef313`.
+- **Repository state:** B2-04 is audited and cleared. The latest repository correction commit is `11de4d8f99f209ad91a2df6a6bb2886c4582c228`.
 
 ## Repository and workspace
 

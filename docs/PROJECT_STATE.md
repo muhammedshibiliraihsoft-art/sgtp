@@ -20,7 +20,6 @@
 - `git ls-remote` succeeded against the corrected URL.
 - The existing cloned SGTP repository is now the project root.
 - `AGENTS.md` and `docs/` were moved into the SGTP repository without overwriting starter files.
-- The SGTP repository's existing `.git` metadata and history were preserved; no second repository was initialized.
 - Phase 1 corrective changes have been committed and pushed.
 
 ## Starter structure
@@ -125,7 +124,7 @@
   - `IsTenantMember` is intentionally a deny-by-default Phase 3 contract.
   - Actual Shop/User membership and business tenant isolation remain Phase 3; B2-03 does not implement the Phase 3 Shop/Tenant business model.
   - 403/404 boundaries strictly enforced and validated (36 total tests passing).
-- B2-04 implementation is complete, subject to audit closure.
+- B2-04 is complete and audit-cleared, with C-01, C-02, C-03 and F-01 deferred to B2-05.
   - Custom API exception handler normalizes errors into a safe `{"errors": ...}` envelope and scrubs 500 details.
   - Throttling configured for auth scopes using `AuthRateThrottle` to prevent brute force attacks.
   - `CORS_ALLOWED_ORIGINS` explicitly restricted and configured via environment variables.
