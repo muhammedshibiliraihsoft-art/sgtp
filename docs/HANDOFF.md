@@ -11,7 +11,10 @@ Task B2-05 (API documentation and security validation) is completed and audit-cl
 - **Validation performed:** 47 tests pass, `manage.py check` passes cleanly, and OpenAPI schema validation passes cleanly.
 - **Next authorized task:** Phase 3 has not started. The next phase requires separate explicit `CONFIRM PHASE 3`.
 - **Current blockers/deferred items:** None. F-01, C-01, C-02, and C-03 were resolved in B2-05.
-- **Repository state:** B2-05 is complete and audit-cleared. The latest repository commit is `2d977d062c9d83754681e9c0519868edb4db9ee7`.
+-Repository state:
+- Verify current HEAD with `git rev-parse HEAD`
+- Verify remote parity with `git status -sb`
+- Do not treat a stored commit hash in documentation as authoritative.
 
 ## Repository and workspace
 
