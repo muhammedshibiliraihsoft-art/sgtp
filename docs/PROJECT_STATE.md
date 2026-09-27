@@ -116,6 +116,11 @@
   - Refresh token cookie lifecycle is implemented.
   - Rotation and blacklist/reuse behavior are implemented.
   - Relevant validation results are recorded accurately (30 tests passing, 0 check issues).
+- B2-03 Permission and tenant-scope interfaces implementation is completed and verified.
+  - Reusable tenant queryset scoping is implemented via `TenantScopedMixin`.
+  - `IsTenantMember` is intentionally a deny-by-default Phase 3 contract.
+  - Actual Shop/User membership and business tenant isolation remain Phase 3; B2-03 does not implement the Phase 3 Shop/Tenant business model.
+  - 403/404 boundaries strictly enforced and validated (36 total tests passing).
 - B2-05 remains pending for OpenAPI schema correction. F-01 OpenAPI mismatch is explicitly recorded as a deferred item targeting B2-05.
 - Python virtual environment `.venv` created, and dependency baseline established. `manage.py check` passed.
 - Lint tools can run, but existing starter lint violations remain. `pytest` is passing against the new devcontainer PostgreSQL database with all project tests collected.

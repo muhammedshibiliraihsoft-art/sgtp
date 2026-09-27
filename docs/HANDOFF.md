@@ -6,13 +6,12 @@ Phase 2 (Backend Core Security) is active.
 
 ## Current task
 
-Task B2-02 (Secure JWT Lifecycle) is completed and awaiting closure.
-- **Changed areas:** `apps/accounts/views/__init__.py`, `apps/accounts/urls.py`, and `apps/accounts/tests`.
-- **Validation performed:** 30 tests pass (including 5 new test cases covering full cookie/CSRF matrix), `manage.py check` passes cleanly.
-- **Known deferred issue:** The OpenAPI schema currently expects JSON refresh tokens, causing a mismatch (F-01). This is explicitly deferred to **B2-05**.
-- **Next authorized task:** B2-03 has not started. The next task requires separate explicit confirmation. Phase 2 remains active (not complete).
+Task B2-03 (Permission and tenant-scope interfaces) is completed and awaiting closure.
+- **Changed areas:** `core/permissions.py`, `apps/common/views.py`, and `core/tests/test_permissions.py`.
+- **Validation performed:** 36 tests pass (including 6 new test cases verifying exact 403/404 matrix and scoping behavior), `manage.py check` passes cleanly.
+- **Next authorized task:** B2-04 has not started. The next task requires separate explicit confirmation. Phase 2 remains active (not complete).
 - **Current blockers/deferred items:** OpenAPI mismatch (F-01) intentionally deferred to B2-05.
-- **Repository state:** The B2-02 implementation was committed and pushed to origin/main. The current repository state reflects the pushed B2-02 work.
+- **Repository state:** The repository is currently in an uncommitted working-tree state reflecting B2-03 work, built upon the pushed B2-02 baseline. No commit/push was performed by this task.
 
 ## Repository and workspace
 
