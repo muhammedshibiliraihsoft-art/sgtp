@@ -1,4 +1,4 @@
-# Handoff
+﻿# Handoff
 
 ## Current phase
 
@@ -6,12 +6,12 @@ Phase 2 (Backend Core Security) is active.
 
 ## Current task
 
-Task B2-04 (Exceptions, throttling, CORS, health) is completed and awaiting closure.
+Task B2-04 (Exceptions, throttling, CORS, health) is completed and audit-cleared with deferred items.
 - **Changed areas:** `core/exceptions.py`, `core/health.py`, `core/urls.py`, `backend/config/settings/base.py`, `apps/accounts/views/__init__.py`, and new tests in `core/tests/test_b2_04_health_errors.py`.
 - **Validation performed:** 45 tests pass (including throttles, error normalization, and health checks), `manage.py check` passes cleanly.
 - **Next authorized task:** B2-05 has not started. The next task requires separate explicit confirmation. Phase 2 remains active (not complete).
-- **Current blockers/deferred items:** OpenAPI mismatch (F-01) intentionally deferred to B2-05.
-- **Repository state:** B2-04 implementation is committed at `9ce8f655e3489c9111088e4bfce53860bee94e64` and the audit correction commit is `2d68662119517f00e188ea611467a8da04f7205b`. F-01 is explicitly deferred to B2-05.
+- **Current blockers/deferred items:** C-01, C-02, C-03, and the OpenAPI mismatch (F-01) remain explicitly deferred to B2-05.
+- **Repository state:** B2-04 is audited and cleared. The latest repository correction commit is `83169750c50cb312a7d1fb709dc54c97d77ef313`.
 
 ## Repository and workspace
 
@@ -26,11 +26,11 @@ Task B2-04 (Exceptions, throttling, CORS, health) is completed and awaiting clos
 
 ## Target final product
 
-SGTP is now defined as the Supplier-Centric Garment & Tailor Platform, with Tailor Management as the core V1 module. The hierarchy is Supplier/Main Admin â†’ Supplier Back Office â†’ isolated Shop workspaces â†’ Clients, Designs, Measurements, Fabric/Materials, Work, Billing, and Reports.
+SGTP is now defined as the Supplier-Centric Garment & Tailor Platform, with Tailor Management as the core V1 module. The hierarchy is Supplier/Main Admin Ã¢â€ â€™ Supplier Back Office Ã¢â€ â€™ isolated Shop workspaces Ã¢â€ â€™ Clients, Designs, Measurements, Fabric/Materials, Work, Billing, and Reports.
 
 The required persisted flow is:
 
-`Client Request â†’ Design â†’ Measurement â†’ Fabric/Material â†’ Cutting â†’ Stitching â†’ Check â†’ Finishing â†’ QC â†’ Completed â†’ Billing â†’ Reports/History`
+`Client Request Ã¢â€ â€™ Design Ã¢â€ â€™ Measurement Ã¢â€ â€™ Fabric/Material Ã¢â€ â€™ Cutting Ã¢â€ â€™ Stitching Ã¢â€ â€™ Check Ã¢â€ â€™ Finishing Ã¢â€ â€™ QC Ã¢â€ â€™ Completed Ã¢â€ â€™ Billing Ã¢â€ â€™ Reports/History`
 
 The full product definition and Definition of Done are in `docs/PRODUCT_DEFINITION.md`.
 
@@ -46,10 +46,6 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 - UUID, timestamps, audit fields, and soft-delete base model.
 - PostgreSQL, Docker, devcontainer, Gunicorn, WhiteNoise, Makefile, and tooling setup.
 
-## Phase 2/3 Deferred Implementations
-
-- Tenant membership and isolation are incomplete: users are not related to tenants.
-- `BaseModelWithTenant.tenant` is nullable and no active-tenant/request authorization mechanism exists.
 ## Phase 3+ Deferred Implementations
 
 - Tenant membership and isolation are incomplete: users are not related to tenants.
@@ -86,7 +82,7 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 - Do not create a replacement Django project.
 - Do not create new business modules.
 - Phase 1 work was completed and published to `origin/main`.
-- Preserve the approved supplier â†’ back office â†’ isolated shop hierarchy and V1 workflow.
+- Preserve the approved supplier Ã¢â€ â€™ back office Ã¢â€ â€™ isolated shop hierarchy and V1 workflow.
 - Treat `docs/PRODUCT_DEFINITION.md` as the target product reference.
 - Phase confirmation activates only the named phase; it does not authorize all tasks in that phase.
 - Every task requires a separate `CONFIRM TASK <TASK-ID>` after the task brief is presented.
