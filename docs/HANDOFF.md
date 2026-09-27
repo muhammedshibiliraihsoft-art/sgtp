@@ -6,12 +6,13 @@ Phase 2 (Backend Core Security) is active.
 
 ## Current task
 
-Task B2-04 (Exceptions, throttling, CORS, health) is completed and audit-cleared with deferred items.
-- **Changed areas:** `core/exceptions.py`, `core/health.py`, `core/urls.py`, `backend/config/settings/base.py`, `apps/accounts/views/__init__.py`, and new tests in `core/tests/test_b2_04_health_errors.py`.
-- **Validation performed:** 45 tests pass (including throttles, error normalization, and health checks), `manage.py check` passes cleanly.
-- **Next authorized task:** B2-05 is complete. Phase 2 is now complete. The next task is to CONFIRM PHASE 3.
-- **Current blockers/deferred items:** None. C-01, C-02, C-03, and F-01 were resolved in B2-05.
-- **Repository state:** B2-05 is complete. The latest repository state includes the OpenAPI and security validation fixes.
+Task B2-05 (API documentation and security validation) is completed and audit-cleared.
+
+- **Changed areas:** `apps/accounts/views/__init__.py`, `core/health.py`, `core/tests/test_b2_04_health_errors.py`, `schema.yml`, `docs/HANDOFF.md`, and `docs/PROJECT_STATE.md`.
+- **Validation performed:** 47 tests pass, `manage.py check` passes cleanly, and OpenAPI schema validation passes cleanly.
+- **Next authorized task:** Phase 3 has not started. The next phase requires separate explicit `CONFIRM PHASE 3`.
+- **Current blockers/deferred items:** None. F-01, C-01, C-02, and C-03 were resolved in B2-05.
+- **Repository state:** B2-05 is complete and audit-cleared. The latest repository commit is `2d977d062c9d83754681e9c0519868edb4db9ee7`.
 
 ## Repository and workspace
 
