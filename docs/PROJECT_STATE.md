@@ -11,7 +11,7 @@
 - Target status: SGTP V1 is explicitly defined in `docs/PRODUCT_DEFINITION.md`
 - Starter foundation: exists in the cloned SGTP repository.
 - Phase 1 implementation: **Historical - Complete.**
-- Confirmation status: B2-05 has NOT started. F-01 OpenAPI mismatch is deferred to B2-05.
+- Confirmation status: Phase 2 is complete. Phase 3 is explicitly NOT STARTED.
 - Detailed phase playbooks: 01-10 present.
 - Later-phase decisions: Tenant context is approved as URL-path based (`/shops/{shop_id}/...`), and Related Person billing is owned by the Primary Client.
 
@@ -109,7 +109,7 @@
 - After one task, the agent must validate, document, report, and stop; next-task and next-phase activation are never automatic.
 - Phase playbooks 07-10 have now been added with task IDs, validation, handoff, rollback, Definition of Done, and Antigravity prompts.
 
-## Implementation Status (Phase 2 Active)
+## Implementation Status (Phase 2 Complete)
 
 - Phase 1 is complete. F1-01 through F1-05 are all complete.
 - Phase 2 is complete.
