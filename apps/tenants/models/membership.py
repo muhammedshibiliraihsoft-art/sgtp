@@ -44,11 +44,16 @@ class TenantMember(BaseModel):
     class Meta:
         verbose_name = 'Shop Membership'
         verbose_name_plural = 'Shop Memberships'
+        ordering = ['-created_at']
         constraints = [
             models.UniqueConstraint(
                 fields=['tenant', 'user'],
                 name='unique_tenant_user_membership',
                 condition=models.Q(deleted__isnull=True)
+            ),
+            models.CheckConstraint(
+                check=models.Q(is_active=False) | models.Q(deleted__isnull=True),
+                name='active_membership_cannot_be_deleted'
             )
         ]
 
@@ -65,3 +70,8 @@ class TenantMember(BaseModel):
     def save(self, *args, **kwargs):
         self.clean()
         super().save(*args, **kwargs)
+
+    def delete(self, force_policy=None, **kwargs):
+        if self.is_active:
+            raise ValidationError("Cannot remove an active membership. Deactivate it first.")
+        return super().delete(force_policy=force_policy, **kwargs)

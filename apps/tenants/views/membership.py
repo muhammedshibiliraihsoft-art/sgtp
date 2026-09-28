@@ -41,10 +41,21 @@ class TenantMemberViewSet(viewsets.ModelViewSet):
         ).distinct()
 
     def perform_create(self, serializer):
-        tenant = serializer.validated_data.get('tenant')
-        if not ShopRolePolicy.can_manage_memberships(self.request.user, tenant.id):
-            raise PermissionDenied("You do not have permission to manage memberships for this Shop.")
-        serializer.save(created_by=self.request.user)
+        from django.db import transaction
+        tenant_id = serializer.validated_data.get('tenant').id
+        
+        with transaction.atomic():
+            from ..models import Tenant
+            # Lock the tenant row to prevent capacity race conditions
+            tenant = Tenant.objects.select_for_update().get(pk=tenant_id)
+            
+            if not ShopRolePolicy.can_manage_memberships(self.request.user, tenant.id):
+                raise PermissionDenied("You do not have permission to manage memberships for this Shop.")
+                
+            if tenant.is_at_user_limit:
+                raise ValidationError({"tenant": "Shop has reached its maximum user limit."})
+                
+            serializer.save(created_by=self.request.user)
 
     def perform_update(self, serializer):
         serializer.save(updated_by=self.request.user)
@@ -75,6 +86,8 @@ class TenantMemberViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def undo_remove(self, request, pk=None):
+        from django.db import transaction
+        
         try:
             membership = TenantMember.objects.all_with_deleted().get(pk=pk)
         except TenantMember.DoesNotExist:
@@ -89,12 +102,17 @@ class TenantMemberViewSet(viewsets.ModelViewSet):
         if timezone.now() - membership.deleted > timedelta(seconds=5):
             return Response({"detail": "Undo window expired."}, status=status.HTTP_400_BAD_REQUEST)
             
-        if membership.tenant.is_at_user_limit:
-            return Response({"detail": "Shop has reached its maximum user limit. Cannot restore."}, status=status.HTTP_400_BAD_REQUEST)
+        with transaction.atomic():
+            from ..models import Tenant
+            # Lock the tenant row to prevent capacity race conditions during restoration
+            tenant = Tenant.objects.select_for_update().get(pk=membership.tenant_id)
             
-        try:
-            membership.undelete()
-        except IntegrityError:
-            return Response({"detail": "Cannot restore: a membership for this user already exists in this Shop."}, status=status.HTTP_400_BAD_REQUEST)
+            if tenant.is_at_user_limit:
+                return Response({"detail": "Shop has reached its maximum user limit. Cannot restore."}, status=status.HTTP_400_BAD_REQUEST)
+                
+            try:
+                membership.undelete()
+            except IntegrityError:
+                return Response({"detail": "Cannot restore: a membership for this user already exists in this Shop."}, status=status.HTTP_400_BAD_REQUEST)
             
         return Response({"detail": "Membership restored to previous state.", "status": "INACTIVE" if not membership.is_active else "ACTIVE"})

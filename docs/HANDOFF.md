@@ -5,7 +5,7 @@
 Phase 3 (Shop / Tenant) implementation is active.
 ## Current task
 
-Task T3-02 (User-Shop membership and roles) is complete and verified.
+Task T3-02 (User-Shop membership and roles) remediation is complete and verified (Identity, Lifecycle, Undo, Capacity).
 
 - **Changed areas:** `apps/tenants/models/membership.py`, `apps/tenants/policy.py`, `apps/tenants/tests/test_membership.py`, `apps/tenants/tests/test_membership_api.py`, `apps/tenants/views/membership.py`, `apps/tenants/serializers/membership.py`, `core/permissions.py`, `docs/PROJECT_STATE.md`, and `docs/HANDOFF.md`.
 - **Validation performed:** Verified local tests running clean. `pytest` successful (65 tests pass). `manage.py check` passes with zero issues.
