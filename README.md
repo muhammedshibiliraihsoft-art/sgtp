@@ -4,7 +4,7 @@ A production-ready Django REST Framework project template with Docker, PostgreSQ
 
 ## SGTP repository status
 
-This repository is being used for SGTP. Phase 1–2 foundations and the Phase 3 Supplier/Shop and User-Shop membership tasks exist. `Tenant` is the technical Shop representation, and a singleton `Supplier` plus `TenantMember`/`ShopRolePolicy` are present. T3-02 remediation closure is in progress. URL-path Shop context and complete cross-Shop isolation are not yet implemented; client, tailoring, billing, reports, and frontend business modules are also pending. The generic starter feature descriptions below do not mean SGTP V1 is complete or production-ready.
+This repository is being used for SGTP. Phase 1–2 foundations and the Phase 3 Supplier/Shop and User-Shop membership tasks exist. `Tenant` is the technical Shop representation, and a singleton `Supplier` plus `TenantMember`/`ShopRolePolicy` are present. T3-02 remediation is COMPLETE and fully closed. URL-path Shop context and complete cross-Shop isolation are not yet implemented; client, tailoring, billing, reports, and frontend business modules are also pending. The generic starter feature descriptions below do not mean SGTP V1 is complete or production-ready.
 
 ## ✨ Features
 

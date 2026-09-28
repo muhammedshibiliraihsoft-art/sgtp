@@ -173,7 +173,7 @@ Docker        -> development container and production web/db services
 
 ## Phase 1 status and current V1 readiness
 
-Phase 1 foundation implementation is complete. SGTP V1 is not ready for production: business modules and end-to-end workflows remain unimplemented, and Phase 3 URL-path Shop context/isolation is pending T3-03. T3-02 remediation closure changes are local and verified; confirmation from a GitHub Actions run remains pending.
+Phase 1 foundation implementation is complete. SGTP V1 is not ready for production: business modules and end-to-end workflows remain unimplemented, and Phase 3 URL-path Shop context/isolation is pending T3-03. T3-02 remediation is fully completed and confirmed by a successful GitHub Actions run.
 
 ## Membership Lifecycle and Rules
 

@@ -3,8 +3,8 @@
 ## Status
 
 - Phase 2 is complete. Phase 3 work is limited to closing T3-02 remediation validation.
-- Current task: T3-02-REMEDIATION closure (In Progress).
-- Current application test discovery: 120 tests; latest complete local run: 120 passed. The GitHub Actions run for the previous committed baseline failed because the PostgreSQL service was unreachable; the corrected workflow is local and has not yet run on GitHub.
+- Current task: T3-02-REMEDIATION is COMPLETE and fully closed.
+- Current application test discovery: 120 tests; latest complete local run: 120 passed. Remote CI confirmation is fully green and the PostgreSQL connectivity issue is resolved on GitHub Actions.
 
 - Project root: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp`
 - Remote: `https://github.com/muhammedshibiliraihsoft-art/sgtp.git`
@@ -13,7 +13,7 @@
 - Target status: SGTP V1 is explicitly defined in `docs/PRODUCT_DEFINITION.md`
 - Starter foundation: exists in the cloned SGTP repository.
 - Phase 1 implementation: **Historical - Complete.**
-- Confirmation status: T3-02 remediation code is committed; closure fixes are in progress. T3-03 is NOT YET AUTHORIZED and requires separate explicit task confirmation.
+- Confirmation status: T3-02 remediation code is committed and fully closed. T3-03 is NOT YET AUTHORIZED and requires separate explicit task confirmation.
 - Detailed phase playbooks: 01-10 present.
 - Later-phase decisions: Tenant context is approved as URL-path based (`/shops/{shop_id}/...`), and Related Person billing is owned by the Primary Client.
 
@@ -92,8 +92,7 @@
 - Generic membership updates cannot change `is_active`; lifecycle actions remain authoritative.
 - Authentication throttling is explicitly wired to the `auth` scope and verified with a non-mocked repeated-login test.
 - Duplicate CORS test method names were corrected so all intended tests are collected.
-- CI retains project-state validation and is configured to run the application suite, Django system checks, and migration checks with PostgreSQL. The GitHub Actions run for the reviewed baseline passed the repository validator and validator tests but failed the application suite because the runner could not connect to PostgreSQL; system and migration steps were skipped.
-- Local closure verification: repository validator PASS (120 discovered); validator tests 11 passed; focused remediation tests 69 passed; full suite 120/120 passed after isolating auth throttle test cache state; Django system check PASS; migration drift check reports no changes. Updated workflow still requires a GitHub run for remote CI confirmation.
+- CI retains project-state validation and is configured to run the application suite, Django system checks, and migration checks with PostgreSQL. The GitHub Actions run for the reviewed baseline successfully passed all checks, including the application suite, Django system checks, and PostgreSQL integration. Remote CI confirmation is fully green and the PostgreSQL connectivity issue is resolved.
 - Production compose now propagates `DJANGO_CORS_ALLOWED_ORIGINS` without inventing a deployment origin.
 - No migrations were required or changed.
 - Unresolved decisions remain: global User administration ownership, ordinary-user Shop read visibility, and Shop DELETE semantics. These were not invented or changed.
@@ -129,7 +128,7 @@
 - Phase confirmation activates scope only; it does not authorize all tasks.
 - Each task requires a separate task brief and explicit `CONFIRM TASK <TASK-ID>` before implementation.
 - After one task, the agent must validate, document, report, and stop; next-task and next-phase activation are never automatic.
-- Phase playbooks 07-10 have now been added with task IDs, validation, handoff, rollback, Definition of Done, and Antigravity prompts.
+- Phase playbooks 07-10 have now been added with task IDs, validation, handoff, rollback, Definition of Done, and implementation prompts.
 
 ## Completed Implementation Record (Phase 2 Complete)
 

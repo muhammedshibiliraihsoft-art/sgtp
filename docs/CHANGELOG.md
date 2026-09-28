@@ -42,3 +42,9 @@
 - Added an evidence-backed repository-state completion rule to `AGENTS.md` and synchronized current Phase 2/B2-05, 47-test, and Phase 3-not-started documentation claims.
 - Activated Phase 1 and completed Task F1-01 (Repository and dependency baseline). Established virtual environment and verified manage.py check. Documented validation limitations: existing starter lint violations remain and pytest is blocked by unavailable PostgreSQL; no application source cleanup was performed.
 - Completed Task F1-02 (Environment management and settings split) by modularizing core/settings.py into ackend/config/settings/{base,dev,prod,test}.py, updating .env.example, and ensuring safe failure on missing secrets.
+
+## 2026-09-28 — T3-02-REMEDIATION final documentation closure
+
+- Confirmed that the GitHub Actions run for the closure commit successfully passed the application suite, Django system checks, and PostgreSQL integration.
+- Confirmed T3-02-REMEDIATION is now fully CLOSED.
+- Added agent transition note regarding the shift to Codex for upcoming engineering work, maintaining all established governance and architectural rules.

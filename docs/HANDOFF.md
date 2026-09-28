@@ -5,13 +5,13 @@
 Phase 3 (Shop / Tenant) implementation is active.
 ## Current task
 
-Task T3-02-REMEDIATION closure is in progress. The security/integrity implementation is committed; current validation exposed CI PostgreSQL connectivity and full-suite throttle cache isolation failures.
+Task T3-02-REMEDIATION is COMPLETE and fully closed. The security/integrity implementation and validation fixes are committed and verified remotely.
 
-- **Changed areas:** User API authorization/serializer, Main Supplier Shop-write permission, membership serializer lifecycle protection, real throttle wiring/tests, duplicate CORS tests, production CORS environment propagation, CI validation, and remediation regression tests.
-- **Current validation:** Repository validator PASS (120 discovered); validator tests 11 passed; focused remediation tests 69 passed; full local application suite 120/120 passed after test-cache isolation; Django check PASS; migration drift check reports no changes. GitHub Actions for the previous committed baseline failed the application suite with PostgreSQL connection refused; later checks were skipped.
-- **Closure changes now local:** PostgreSQL service port mapping, test-only throttle cache isolation, and corrected current-state documentation. The updated workflow has not run on GitHub because changes have not been pushed.
-- **Next authorized task:** T3-03 is NOT YET AUTHORIZED. It requires a separate explicit `CONFIRM TASK T3-03` after presenting its task plan. Do not infer authorization.
-- **Current blockers:** Remote CI confirmation on the updated workflow requires it to run against a new commit. Business decisions remain required for global User administration ownership, ordinary-user Shop read visibility, and Shop DELETE semantics. T3-03 remains unauthorized.
+- **Changed areas:** User API authorization/serializer, Main Supplier Shop-write permission, membership serializer lifecycle protection, real throttle wiring/tests, duplicate CORS tests, production CORS environment propagation, CI validation, remediation regression tests, and documentation.
+- **Validation:** Repository validator PASS; Django check PASS; migration drift check PASS; local application test suite PASS. Remote CI is green: the latest GitHub Actions workflow passed successfully, confirming the PostgreSQL CI connectivity and throttle cache isolation fixes. No migrations were required for closure. Production authentication throttling behavior was not weakened to make tests pass.
+- **Next authorized task:** T3-03 is NOT YET AUTHORIZED. It requires a separate explicit CONFIRM TASK T3-03 after presenting its task plan. Do not infer authorization.
+- **Current blockers:** Business decisions remain required for global User administration ownership, ordinary-user Shop read visibility, and Shop DELETE semantics. T3-03 remains unauthorized.
+- **Agent Transition Note:** Upcoming engineering work may be executed through Codex; repository governance and explicit task-confirmation rules remain authoritative regardless of implementation agent.
 ## Repository state evidence
 - Verify current HEAD with `git rev-parse HEAD`
 - Verify remote parity with `git status -sb`
