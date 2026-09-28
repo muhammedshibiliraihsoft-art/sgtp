@@ -24,7 +24,7 @@ Phase confirmation activates only the named phase. It does not authorize all tas
 
 ## Phase 3 — shop / tenant
 
-- Implement T3-02A account/phone/locale/preference foundation after closed membership/remediation work; then the approved URL-path context `/shops/{shop_id}/...`, scoped queries/isolation, APIs/settings, and Staging Backend Foundation through T3-03–T3-05A. Exact ordering and decision gates are in the Phase 3 playbook.
+- T3-02A account/preferences and T3-03 URL-path request context are complete. T3-04 onward remains individually gated; it applies full query/object isolation before later Shop APIs and Staging Backend Foundation, as detailed in the Phase 3 playbook.
 
 ## Phase 4 — core tailor business
 
@@ -77,7 +77,7 @@ This amendment adds requirements and checkpoints without changing the ten-phase 
 `T3-01 (complete) → T3-02 (complete) → T3-02-REMEDIATION (closed) → T3-02A (complete) → T3-03 → T3-04 → T3-05 → T3-05A`.
 
 - **T3-02A — Account, phone, locale, and preference foundation (complete):** implemented UUID/email-compatible E.164 phone login, Main Supplier Admin-only account creation/phone administration, one-time no-store generated credentials and forced first-login change, email reset and session revocation, persisted nullable User locale/appearance and Shop defaults. Do not add OTP/SMS/WhatsApp/2FA providers. Currency change after financial history and Shop Admin scoped settings authority remain `BUSINESS DECISION REQUIRED`. See Phase 3 playbook and current handoff for validation evidence.
-- **T3-03:** retain `/shops/{shop_id}/...`; preferences and Shop defaults never authorize access.
+- **T3-03 (complete):** establish authenticated request-local context at `/api/v1/shops/{shop_id}/...`; deny foreign or unavailable Shops with a uniform non-disclosing 404 and preserve 401 authentication failures. Preferences and Shop defaults never authorize access. This does not implement query/object isolation.
 - **T3-04:** prove isolation for scoped access, including later business resources.
 - **T3-05:** expose only authorized Shop and User settings APIs; authority to change Shop defaults remains unresolved unless approved.
 - **T3-05A — Staging Backend Foundation:** after T3-05 and verified isolation, establish the first shared non-production staging backend environment at `api-staging.birky.com` with isolated PostgreSQL, health/readiness, CORS/CSRF configuration, staging logs, synthetic/demo data, and safe data reset. Staging is not Production.

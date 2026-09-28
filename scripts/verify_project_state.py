@@ -183,12 +183,22 @@ class ProjectStateValidator:
                         f"Current task {state_task} is described as incomplete in {relative}."
                     )
 
-        if state.get(3) in {"active", "in progress", "complete"} or handoff.get(3) in {
+        phase3_active = state.get(3) in {
             "active",
             "in progress",
             "complete",
-        }:
-            self.result.error("Phase 3 is marked active or complete before activation.")
+        } or handoff.get(3) in {"active", "in progress", "complete"}
+        if phase3_active:
+            activation_marker = re.compile(r"\bCONFIRM\s+PHASE\s+3\b", re.IGNORECASE)
+            for relative, heading in (
+                ("docs/PROJECT_STATE.md", "Status"),
+                ("docs/HANDOFF.md", "Current phase"),
+            ):
+                section = self._current_section(self.read(relative), heading)
+                if not activation_marker.search(section):
+                    self.result.error(
+                        f"Phase 3 is active but explicit activation is not recorded in {relative}."
+                    )
 
     def check_test_count(self) -> None:
         claims: list[int] = []

@@ -2,9 +2,12 @@
 
 ## Status
 
-- Phase 1 and Phase 2 are complete. Phase 3 NOT STARTED for general phase execution; the separately confirmed bounded task T3-02A is complete. T3-01, T3-02, and T3-02-REMEDIATION are prior completed foundation tasks. T3-03 has not started.
-- Latest implementation task: T3-02A = COMPLETE / PUSHED / CI GREEN. Verified by GitHub Actions. T3-03 = NOT STARTED / NOT CONFIRMED.
-- Current application test discovery: 130 tests. Latest full local run: 130 passed. GitHub Actions "Project State Validation Run #17" confirms SUCCESS for T3-02A.
+- Phase 1 and Phase 2 are complete.
+- Phase 3 is ACTIVE; activation was explicitly confirmed with `CONFIRM PHASE 3`.
+- Completed Phase 3 tasks: T3-01, T3-02, T3-02-REMEDIATION, T3-02A, and T3-03.
+- Remaining tasks T3-04 onward are not started and remain individually gated.
+- Latest implementation task: T3-03 — Tenant / Shop Request Context = COMPLETE locally; changes are uncommitted and unpushed. T3-03 was explicitly confirmed. T3-04 is NOT STARTED / NOT CONFIRMED.
+- Current application test discovery: 145 tests. Latest full local run and validation results are recorded in the T3-03 verification section below. The latest remote CI green result applies to the prior pushed baseline; it does not validate this local diff.
 
 - Project root: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp`
 - Remote: `https://github.com/muhammedshibiliraihsoft-art/sgtp.git`
@@ -13,12 +16,12 @@
 - Target status: SGTP V1 is explicitly defined in `docs/PRODUCT_DEFINITION.md`
 - Starter foundation: exists in the cloned SGTP repository.
 - Phase 1 implementation: **Historical - Complete.**
-- Confirmation status: T3-02A was explicitly confirmed and is complete. T3-03 remains unconfirmed and must not start until separately confirmed.
+- Confirmation status: T3-03 was explicitly confirmed and completed. T3-04 has not been confirmed and must not start without its own task plan and confirmation.
 - Detailed phase playbooks: 01-10 present.
 - Later-phase decisions: Tenant context is approved as URL-path based (`/shops/{shop_id}/...`), and Related Person billing is owned by the Primary Client.
 - T3-05A (Staging Backend Foundation) and F7-01A (Staging Frontend & Client Review Checkpoint) remain planned only. T3-02A implemented the account/preference data and API foundation; frontend localization, RTL/LTR layout, and full Light/Dark/System UI remain Phase 7 work.
 - T3-02A confirmed policy is now implemented: anonymous self-registration denied; Main Supplier Admin controls global account creation/phone lifecycle and Shop defaults; email and optional unique E.164 phone authenticate one UUID account; generated initial password is returned once/no-store and must be changed; email reset is single-use and revokes sessions; nullable locale and `system|light|dark` preferences and nullable Shop defaults persist.
-- T3-02A verification: see the current verification record below. GitHub Actions Project State Validation Run #17 reported SUCCESS for the pushed T3-02A commit.
+- T3-02A verification: the pushed baseline CI passed in GitHub Actions run #17. T3-03 is locally verified only; its changes have not been pushed or covered by CI.
 
 ### Latest T3-02A Verification
 
@@ -28,6 +31,17 @@
 - Migration status: both new migrations applied locally; `makemigrations --check --dry-run`: no changes detected.
 - API schema validation: PASS. Black check for new/rewritten account implementation: PASS; Black and Flake8 checks for `scripts/`: PASS; Flake8 for account implementation: PASS.
 - `git diff --check`: PASS. GitHub Actions Project State Validation Run #17 reported SUCCESS for the pushed commit.
+
+### Latest T3-03 Verification
+
+- T3-03 uses DRF request-local context at `/api/v1/shops/{shop_id}/context/`; authentication and the password-change gate precede Shop resolution.
+- Shop context requires an active, non-deleted Shop and either an active, non-deleted membership or explicit Main Supplier authority. ADMIN, STAFF, and VIEWER memberships may enter context; selected-Shop role is attached to the request.
+- Foreign, unauthorized, inactive, deleted, unavailable, and nonexistent Shop requests return the same non-disclosing 404 (`shop_context_unavailable`). Unauthenticated, invalid, and revoked credentials preserve 401 behavior.
+- Full queryset/object isolation remains T3-04 scope. Global Shop visibility, Shop deletion semantics, Shop Admin settings authority, and currency-change policy remain unresolved and unchanged.
+- Focused context/membership/permission suite: 76 passed; the dedicated Shop-context module contains 15 tests.
+- Full application suite: 145 passed (144 warnings). Django check, migration drift check, OpenAPI schema validation, validator unit tests (11 passed), Black, Flake8, and `git diff --check` passed.
+- Repository validator: PASS; Phase 3 is recorded as active with explicit activation in both current-state documents. Validator unit tests: 14 passed; application discovery: 145 tests. Dirty-worktree warning is expected for these uncommitted local changes.
+- No database schema or dependency changes; no commit or push. Remote CI does not cover this local T3-03 diff.
 
 ## Locked V1 business tenancy model
 
@@ -83,19 +97,19 @@
 - The required end-to-end workflow is documented, but no production-domain modules for clients, designs, measurements, materials, production stages, billing, or reports exist yet.
 - The target requires React/Vite/Tailwind, but the starter contains no frontend implementation; `frontend/` is only an empty placeholder.
 - The target requires a service layer, object-level permissions, persistent object storage, background jobs, audit logging, CI, monitoring, and automatic documentation; the starter does not implement these as complete capabilities.
-- Existing tenant support is insufficient for isolated shop workspaces: active-shop context is missing (pending T3-03).
+- T3-03 request-local active-Shop context is implemented; complete queryset/object isolation remains pending T3-04.
 
 ## Phase 3+ Missing or incomplete business logic
 
-- Tenant-aware base model permits `tenant = NULL`, and no request/context policy establishes the active tenant.
-- Tenant-context resolution is approved as URL-path based (`/shops/{shop_id}/...`) and must be enforced in Phase 3.
+- Tenant-aware base model still permits `tenant = NULL`; T3-03 now establishes the active Shop per request, but T3-04 must apply the trusted context to every Shop-owned queryset/object.
+- Tenant-context resolution is implemented at `/api/v1/shops/{shop_id}/...`; T3-04 full isolation remains pending.
 - Billing ownership for work belonging to a Related Person is approved as Primary Client ownership and must be enforced in Phase 5.
 - No domain/business modules beyond accounts, tenants, and membership exist.
 
 ### PRE-P3-02 result
 
 - The V1 Supplier / Shop / External Supplier business meaning is now explicit across the governing documentation.
-- Historical/current Phase 3 task outcomes: T3-01, T3-02, T3-02-REMEDIATION, and T3-02A are complete. T3-03 and subsequent tasks remain individually gated.
+- Phase 3 task outcomes: T3-01, T3-02, T3-02-REMEDIATION, T3-02A, and T3-03 are complete. T3-04 and subsequent tasks remain individually gated.
 
 ### T3-02 remediation result
 
@@ -111,9 +125,9 @@
 
 ### Phase 3+ Deferred Implementations
 
-- Actual business tenant isolation is not fully enforced (URL context pending).
-- Tenant-aware base model permits `tenant = NULL`, and no request/context policy establishes the active tenant.
-- Tenant-context resolution is approved as URL-path based (`/shops/{shop_id}/...`) and must be enforced in Phase 3.
+- Actual business tenant isolation is not fully enforced; T3-04 queryset/object enforcement is pending.
+- Tenant-aware base model permits `tenant = NULL`; T3-03 establishes trusted request context, but does not change model nullability or scope business queries.
+- Tenant-context resolution is implemented as URL-path based (`/api/v1/shops/{shop_id}/...`).
 - Billing ownership for work belonging to a Related Person is approved as Primary Client ownership and must be enforced in Phase 5.
 - No domain/business modules beyond accounts, tenants, and membership exist.
 
@@ -178,9 +192,9 @@
 - Infrastructure direction is documented as Cloudflare Pages, Render, Render PostgreSQL, Cloudflare R2/S3-compatible storage, and an open Django-Q or Celery+Redis worker choice.
 - Auth planning now explicitly includes an HttpOnly/Secure refresh cookie, rotation, and reuse detection.
 
-## Roadmap update status (2026-09-28)
+## Historical roadmap update status (2026-09-28; current task status is recorded above)
 
-- V1-ROADMAP-UPDATE and V1-ENVIRONMENT-LOCK were documentation/roadmap work only. T3-02A has since been implemented and verified locally. T3-03, T3-05A (Staging Backend Foundation), F7-01A (Staging Frontend & Client Review Checkpoint), and deployments remain unimplemented; each requires its own confirmation. Environment model is locked as LOCAL → STAGING → PRODUCTION.
+- V1-ROADMAP-UPDATE and V1-ENVIRONMENT-LOCK were documentation/roadmap work only. T3-02A and T3-03 are implemented. T3-04 onward, T3-05A (Staging Backend Foundation), F7-01A (Staging Frontend & Client Review Checkpoint), and deployments remain unimplemented; each requires its own confirmation. Environment model is locked as LOCAL → STAGING → PRODUCTION.
 - Post-V1 work is gated until Phase 10 and the complete V1 Definition of Done are accepted.
 - GitHub Actions run 36415017163 passed on repository HEAD before this documentation-only change. This historical CI result does not validate the current documentation diff.
-- Current local validation after the documentation update: repository validator PASS; validator tests 11 passed; application suite 120 passed; Django system check PASS; migration drift check PASS; `git diff --check` PASS. No application source or migration files changed.
+- Historical local validation for the roadmap documentation update: repository validator PASS; validator tests 11 passed; application suite 120 passed; Django system check PASS; migration drift check PASS; `git diff --check` PASS. This does not describe the current T3-03 diff.

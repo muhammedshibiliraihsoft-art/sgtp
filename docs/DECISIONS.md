@@ -16,7 +16,7 @@ This decision expands the prior generic-starter planning context into an integra
 
 ## 2026-09-25 — Approve tenant context, billing ownership, and CSRF phase gate
 
-- Tenant context resolution: use URL-path context in the form `/shops/{shop_id}/...`. T3-03 must implement and test this approved mechanism; it must not substitute another context mechanism.
+- Tenant context resolution: use URL-path context in the form `/shops/{shop_id}/...`. T3-03 implemented and tested this approved mechanism; it must not be replaced by another context mechanism.
 - Related Person billing ownership: the Primary Client owns billing for work belonging to a Related Person. R5-01 must enforce and test this rule.
 - CSRF: protection is a fixed requirement for refresh-cookie flows. Phase 2 owns selection, implementation, and validation of the concrete CSRF mechanism; the mechanism must be explicitly documented and tested before Phase 2 is complete.
 
@@ -77,7 +77,7 @@ This decision supersedes the earlier four-tier LOCAL → PREVIEW → STAGING →
 
 Human-approved V1 decisions, recorded as confirmed rules in `docs/BUSINESS_RULES.md` (BR-ACC-002, BR-AUTH-001, BR-PHONE-001–003, BR-PASS-001–004, BR-SHOP-005–007, BR-LOC-003):
 
-- Public self-registration is prohibited. Main Supplier Admin is the current authority for global User-account creation/management; Shop Admins receive no global authority. The current unauthenticated create endpoint is existing behavior and has not yet been disabled.
+- Public self-registration is prohibited. Main Supplier Admin is the current authority for global User-account creation/management; Shop Admins receive no global authority. At the time of this 2026-09-28 decision, the unauthenticated create endpoint had not yet been disabled; T3-02A later implemented the denial.
 - Email remains required and an email login identifier; UUID remains permanent identity. A registered optional E.164 phone may also log into the same UUID account with the same password. User login phones are unique to one User; this rule does not apply to Shop, Client, or External Supplier contact numbers.
 - No V1 phone OTP/SMS/WhatsApp/2FA verification. Phone add/change/remove is controlled through the authorized account-management flow, initially Main Supplier Admin; no unrestricted self-service or silent reassignment.
 - Generated initial passwords use cryptographic randomness, are stored only as hashes, are never logged/persisted in plaintext, and may be revealed once through an approved flow. Such credentials require password change at first login.
@@ -85,8 +85,14 @@ Human-approved V1 decisions, recorded as confirmed rules in `docs/BUSINESS_RULES
 - Every Shop has explicit timezone and currency settings; values are not inferred and may remain unset until configured. Display currency cannot change canonical financial values. Main Supplier Admin manages Shop settings in the current foundation; Shop Admin settings authority is not granted here.
 - User locale may remain NULL; resolution is User preference → authorized Shop default → English. Appearance is `system|light|dark`, default `system`, and presentation-only.
 
-This is a documentation/business-rule lock only. It does not implement the rules, disable the current public create endpoint, create migrations, or authorize T3-02A or T3-03. Currency changes after financial history remain a separate business decision.
+This 2026-09-28 entry records a documentation/business-rule lock and did not itself implement the rules, disable the public create endpoint, create migrations, or authorize T3-02A or T3-03. T3-02A was later separately confirmed and implemented. Currency changes after financial history remain a separate business decision.
 
 ## 2026-09-28 — Clarify company and product naming
 
 Company: BiRKy. Technical/internal project: SGTP. Customer-facing product brand: not yet decided.
+
+## 2026-09-28 — Approve T3-03 Shop-context denial disclosure
+
+- For `/api/v1/shops/{shop_id}/...` context authorization, foreign, unauthorized, inactive, soft-deleted, unavailable, and nonexistent Shops return one uniform non-disclosing 404 response.
+- Unauthenticated, invalid, and revoked authentication continue to use the existing 401 behavior.
+- This decision governs Shop-context establishment only. It does not define T3-04 object/queryset behavior or change global Shop visibility.

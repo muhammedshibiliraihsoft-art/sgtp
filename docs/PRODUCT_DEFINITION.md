@@ -41,7 +41,7 @@ This section is authoritative for V1 business meaning:
 
 ## V1 Account and Preference Policy
 
-Confirmed business rules are maintained canonically in `docs/BUSINESS_RULES.md`. Public self-registration is prohibited; Main Supplier Admin is the current authority for global User account creation and management. Email is required, UUID remains permanent identity, and optional unique E.164 User login phone plus email authenticate the same account. Phone verification is not required in V1; phone lifecycle is controlled through authorized account management. Generated initial credentials require secure one-time handling and first-login change; recovery is email-based and credential changes revoke refresh sessions. T3-02A is completed.
+Confirmed business rules are maintained canonically in `docs/BUSINESS_RULES.md`. Public self-registration is prohibited; Main Supplier Admin is the current authority for global User account creation and management. Email is required, UUID remains permanent identity, and optional unique E.164 User login phone plus email authenticate the same account. Phone verification is not required in V1; phone lifecycle is controlled through authorized account management. Generated initial credentials require secure one-time handling and first-login change; recovery is email-based and credential changes revoke refresh sessions. These T3-02A rules are implemented. T3-03 establishes authorized request-local Shop context using the approved URL path; complete data isolation remains T3-04 scope.
 
 ## Core V1 business flow
 

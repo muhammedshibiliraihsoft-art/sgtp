@@ -2,10 +2,30 @@
 
 ## Current phase
 
-Phase 3 NOT STARTED for general phase execution. The separately confirmed bounded task T3-02A is complete; T3-01, T3-02, and remediation are prior completed foundation tasks. T3-03 has not started.
+Phase 3 is ACTIVE; activation was explicitly confirmed with `CONFIRM PHASE 3`.
+
+Completed tasks: T3-01, T3-02, T3-02-REMEDIATION, T3-02A, and T3-03.
+
+Remaining tasks T3-04 onward are not started.
 ## Current task
 
-T3-02A — Account, phone, locale, and preference foundation: COMPLETE and locally verified. The human explicitly confirmed `CONFIRM TASK T3-02A`. Stop after this task. Do not start T3-03 without its own task plan and exact confirmation.
+T3-03 — Tenant / Shop Request Context: COMPLETE locally. The human explicitly confirmed `CONFIRM TASK T3-03` and approved a uniform non-disclosing 404 for denied/unavailable Shop context. Stop after this task; do not begin T3-04 without its own task plan and exact confirmation.
+
+- **Implemented:** DRF request-local context resolver/base and `GET /api/v1/shops/{shop_id}/context/`; active Shop plus active membership or explicit Main Supplier; ADMIN/STAFF/VIEWER context; context-bound `IsTenantMember` entry check; URL selector only.
+- **Security:** authentication and password-change gate precede Shop resolution. Foreign, unauthorized, inactive, deleted, unavailable, and nonexistent Shops share 404 code `shop_context_unavailable`; unauthenticated/invalid/revoked credentials retain 401. No Shop defaults are returned.
+- **Database/API scope:** no migration or dependency change. This establishes request context only; T3-04 still owns business queryset/object isolation. Existing global Tenant/member APIs and unresolved Shop visibility/deletion/settings/currency decisions are unchanged.
+- **Validation:** see the current T3-03 verification record below. Changes remain local, uncommitted, and unpushed; GitHub Actions does not cover this diff.
+- **Next task:** T3-04 — Scoped Querysets and Object Permissions; NOT AUTHORIZED. Prepare its task plan and wait for exact `CONFIRM TASK T3-04`.
+- **Known warning baseline:** Django tests emit existing test-key-length, local staticfiles, and DRF format-converter warnings; these are not T3-03 failures.
+
+## T3-03 verification record
+
+- Focused context/membership/permission suite: 76 passed; dedicated Shop-context module: 15 tests.
+- Full application suite: 145 passed (144 warnings); Django check, migration drift check, OpenAPI schema validation, validator unit tests (11 passed), Black, Flake8, and `git diff --check` passed.
+- Repository validator: PASS; 14 validator tests passed and 145 application tests were discovered. It reports the expected dirty-worktree warning; no CI run covers this local diff.
+- No GitHub Actions run covers this local diff. No migration or dependency change; changes are uncommitted and unpushed.
+
+### Historical: T3-02A verification record
 
 - **Implemented:** optional unique E.164 User phone and compatible email/phone login; anonymous account creation denied; Main Supplier Admin account/phone administration; one-time random initial password with no-store response and forced first-login change; email password reset with generic response, expiry/single use, and refresh-session revocation; nullable user locale, `system|light|dark` appearance; nullable Shop locale/timezone/currency with Main Supplier Admin-only serialization; versioned JWT access/refresh revocation.
 - **Database:** additive migrations `accounts.0003_alter_user_options_user_appearance_preference_and_more` and `tenants.0008_tenant_default_currency_tenant_default_locale_and_more`; UUID identity/memberships preserved; no fabricated phones or inferred Shop defaults.
@@ -21,11 +41,11 @@ T3-02A — Account, phone, locale, and preference foundation: COMPLETE and local
 
 Final verification outcomes are recorded in the `Tests and checks` section below.
 
-## Tests and checks
+## Historical tests and checks — T3-02A
 
 - Application suite: 130 collected, 130 passed (`python -m pytest -q -p no:cacheprovider --no-cov`).
 - Dedicated T3-02A module: 10 passed; the complete 130-test run also covers existing auth lifecycle, migration, and API error tests.
-- Repository validator: PASS; validator tests: 11 passed; detected 130 application tests and expected dirty working tree.
+- Historical T3-02A validation: repository validator PASS; validator tests: 11 passed; detected 130 application tests and expected dirty working tree.
 - `manage.py check`: PASS. `manage.py check --deploy` with `DJANGO_ENV=prod`: PASS. Default development `check --deploy`: exit 0 with six expected local dev security warnings (DEBUG, development secret, SSL redirect/HSTS, secure session/CSRF cookies).
 - `manage.py makemigrations --check --dry-run`: PASS, no changes. Both T3-02A migrations are applied locally. API schema validation: PASS.
 - Black check for new/rewritten account implementation: PASS. Black and Flake8 for `scripts/`: PASS. Flake8 for account implementation: PASS. `git diff --check`: PASS.
@@ -33,8 +53,8 @@ Final verification outcomes are recorded in the `Tests and checks` section below
 - Git status: local working tree is clean. Branch `main` is up to date with `origin/main`.
 - **Historical Changed areas:** User API authorization/serializer, Main Supplier Shop-write permission, membership serializer lifecycle protection, real throttle wiring/tests, duplicate CORS tests, production CORS environment propagation, CI validation, remediation regression tests, and documentation.
 - **Validation:** remote CI is green: the latest GitHub Actions workflow passed successfully.
-- **Next implementation candidate:** T3-03 is the next candidate, but remains NOT authorized. Present its bounded task plan and wait for exact `CONFIRM TASK T3-03`.
-- **Current blockers:** Ordinary-user Shop read visibility, Shop DELETE semantics, Shop Admin scoped settings authority, currency changes after financial history, and other later-phase decisions remain unresolved. Global User authority, public signup prohibition, phone rules, credential lifecycle, and Main Supplier Shop-settings authority are now confirmed in `docs/BUSINESS_RULES.md` and `docs/DECISIONS.md`. T3-03 remains unauthorized.
+- **Historical next implementation candidate:** T3-03 was then unconfirmed; it has since been completed as recorded above.
+- **Unresolved policies unchanged by T3-03:** ordinary-user global Shop read visibility, Shop delete/archive/deactivate semantics, Shop Admin scoped settings authority, currency changes after financial history, and other later-phase decisions remain `BUSINESS DECISION REQUIRED` where recorded.
 - **Agent Transition Note:** Upcoming engineering work may be executed through Codex; repository governance and explicit task-confirmation rules remain authoritative regardless of implementation agent.
 ## Repository state evidence
 - Verify current HEAD with `git rev-parse HEAD`
@@ -85,10 +105,10 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 
 ## Phase 3+ Deferred Implementations
 
-- `BaseModelWithTenant.tenant` is nullable and no active-tenant/request authorization mechanism exists.
-- The starter is not yet the target product: complete request-scoped Shop isolation, clients, related persons, designs, measurements, materials, production stages, billing, reports/PDFs, frontend, persistent storage, workers, complete audit capture, monitoring, and end-to-end validation remain unimplemented. The latest verified baseline GitHub Actions run passed repository validation, application tests, Django checks, and migration checks; this local documentation diff has not been pushed and has no CI result.
+- `BaseModelWithTenant.tenant` remains nullable. T3-03 establishes request context; T3-04 complete queryset/object isolation is pending.
+- The starter is not yet the target product: Clients, Related Persons, Designs, Measurements, Materials, production stages, billing, reports/PDFs, frontend, persistent storage, workers, complete audit capture, monitoring, and end-to-end validation remain unimplemented. The latest pushed baseline CI passed; the current local T3-03 diff has no CI result.
 - The target requires React/Vite/Tailwind, but the starter has only an empty `frontend/` placeholder. English/ar-KW/Bangla/Urdu localization, RTL/LTR, and Light/Dark/System are planned V1 requirements, not implemented.
-- Tenant context is approved as URL-path based (`/shops/{shop_id}/...`) and must be implemented/tested in Phase 3.
+- Tenant context is implemented as URL-path based (`/api/v1/shops/{shop_id}/...`); T3-04 must apply it to all Shop-owned queries and objects.
 - Related Person billing ownership is approved as Primary Client ownership and must be implemented/tested in Phase 5.
 
 ## Historical Phase Status
@@ -107,13 +127,13 @@ Historical Phase 3 task outcomes:
 - CI now includes the full application suite, Django check, and migration check in addition to project-state validation.
 - Production CORS configuration receives `DJANGO_CORS_ALLOWED_ORIGINS` from deployment environment variables.
 - No migrations were created.
-- T3-03, external suppliers, and future business modules remain unimplemented.
+- At that historical checkpoint T3-03 request context, External Supplier records, and future business modules remained unimplemented; T3-03 has since been completed as recorded above.
 
-## Historical roadmap handoff (superseded by the current T3-02A status above)
+## Historical roadmap handoff (superseded by the current T3-03 status above)
 
 T3-02A-BUSINESS-DECISION-LOCK authorized documentation/business-rule reconciliation only. Do not implement T3-02A, T3-03, T3-05A (Staging Backend Foundation), F7-01A (Staging Frontend & Client Review Checkpoint), any application feature, or deploy any environment under this task. T3-02A remains the next candidate and requires its own task plan and exact explicit confirmation. Newly approved account/authentication policies are targets, not implemented behavior; remaining policy items stay `BUSINESS DECISION REQUIRED` in the canonical decision record.
 
-## Tests and checks — V1-ROADMAP-UPDATE
+## Historical tests and checks — V1-ROADMAP-UPDATE
 
 - Repository validator: PASS (dirty working tree warning is expected until documentation changes are committed).
 - Validator tests: 11 passed.

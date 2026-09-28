@@ -13,7 +13,7 @@
 
 The cloned starter contains partial security scaffolding: a custom email-based User, Django/DRF authentication, SimpleJWT access/refresh endpoints, session middleware, CSRF middleware, security middleware, CORS middleware, soft-delete/audit base-model fields, and production security settings. These controls are incomplete and have not established the full SGTP V1 security architecture.
 
-The repository contains `TenantMember`/`ShopRolePolicy`, User API protections, Main Supplier Shop-write checks, membership lifecycle controls, an auth throttle scope, and a JWT blacklist application. T3-02A additionally implements phone login, first-login password change, email reset, session invalidation, persisted preferences, and Main Supplier-only exposure of Shop defaults. T3-03 URL-path context and end-to-end Shop isolation remain pending. Runtime token rotation/reuse and the T3-02A revocation paths are covered by tests; dependency presence alone is not runtime evidence.
+The repository contains `TenantMember`/`ShopRolePolicy`, User API protections, Main Supplier Shop-write checks, membership lifecycle controls, an auth throttle scope, and a JWT blacklist application. T3-02A implements phone login, first-login password change, email reset, session invalidation, persisted preferences, and Main Supplier-only exposure of Shop defaults. T3-03 implements request-local URL-path Shop context after DRF authentication; foreign, unauthorized, inactive, deleted, unavailable, and nonexistent Shops receive a uniform 404, while authentication failures remain 401. T3-04 end-to-end Shop data isolation remains pending. Runtime token rotation/reuse and revocation paths are covered by tests; dependency presence alone is not runtime evidence.
 
 ## Target V1 security architecture
 
@@ -29,7 +29,7 @@ The target security architecture will be built and verified by the implementatio
 - Email reset is enumeration-resistant and single-use. Successful password change/reset invalidates prior access tokens by auth-version and refresh tokens by blacklist.
 - Ordinary globally authenticated Shop serializers omit Shop default locale/timezone/currency; Main Supplier Admin serializers manage and read them.
 
-These controls do not establish T3-03 URL context or complete Shop isolation. Ordinary-user Shop read visibility and Shop deletion semantics remain unresolved and are not inferred here. T3-02A grants no Shop Admin settings authority.
+T3-03 context does not establish complete Shop data isolation; T3-04 remains responsible for scoped querysets and objects. Ordinary-user global Shop read visibility and Shop deletion semantics remain unresolved and are not inferred here. T3-02A grants no Shop Admin settings authority.
 
 ## Future review areas
 

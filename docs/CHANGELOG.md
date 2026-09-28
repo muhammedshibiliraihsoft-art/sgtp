@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-09-28 — T3-03 Tenant / Shop Request Context
+
+- Added a request-local Shop context resolver and reusable DRF context base that authenticates before Shop authorization and preserves the mandatory password-change gate.
+- Added `GET /api/v1/shops/{shop_id}/context/` with UUID path selection, selected-Shop membership role, and explicit Main Supplier context; no Shop defaults are returned.
+- Added the approved uniform non-disclosing 404 contract for foreign, unauthorized, inactive, soft-deleted, unavailable, and nonexistent Shops; authentication failures retain 401.
+- Updated `IsTenantMember` to require the resolved request context and added focused context/security regressions. T3-04 query/object isolation remains out of scope; no business model, migration, dependency, or global Shop-visibility policy changed.
+- T3-02A current-state documentation was reconciled while updating task handoff; dated historical decision/audit records were retained and labelled historical where needed.
+- Validation is local only; no commit or push was made. GitHub Actions does not cover this T3-03 diff.
+
 ## 2026-09-28 — T3-02A Account and preference foundation
 
 - Implemented the confirmed account/authentication foundation: unique optional E.164 phone and email-or-phone login, Main Supplier Admin-only account creation/phone management, one-time no-store initial credentials with forced password change, and email reset with refresh-session revocation.

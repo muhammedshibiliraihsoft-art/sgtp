@@ -126,9 +126,9 @@ Docker        -> development container and production web/db services
 
 ## Permissions and Scoping
 
-- Object-level permission primitives are established: `IsOwner` (verifies ownership), `IsTenantMember` (Phase 3 deny-by-default contract), and `DenyAll` (explicit denial).
-- Reusable tenant queryset scoping is provided by `TenantScopedMixin`, which enforces the `/shops/{shop_id}/...` path contract by filtering querysets and preventing cross-tenant IDOR access.
-- Actual User-Shop membership logic is modeled via `TenantMember` and `ShopRolePolicy`. Shop write authority uses the existing Main Supplier policy, while business tenant isolation context implementation remains pending for Phase 3 (T3-03, T3-04).
+- Object-level permission primitives include `IsOwner`, `IsTenantMember`, and `DenyAll`. `IsTenantMember` now requires the trusted T3-03 request context for endpoint-level Shop entry; complete object authorization remains T3-04 scope.
+- `TenantScopedMixin` is legacy URL-based queryset filtering only. A raw `shop_id` filter is not authorization and does not prove cross-tenant IDOR safety; T3-04 must consume the trusted context.
+- Actual User-Shop membership logic is modeled via `TenantMember` and `ShopRolePolicy`. T3-03 now resolves request-local Shop context after DRF authentication; T3-04 full queryset/object isolation remains pending.
 
 ## API Security and Reliability
 
@@ -144,7 +144,7 @@ Docker        -> development container and production web/db services
 
 - `BaseModel` provides UUID IDs, created/updated timestamps, created/updated user references, and `SOFT_DELETE_CASCADE`.
 - `BaseModelWithTenant` adds an optional foreign key to the legacy `tenants.Tenant` input.
-- `Tenant` is the current technical representation of the approved Shop entity, with a Main Supplier foreign key and profile/contact/address fields. `TenantMember` links Users to Shops; T3-03 request context and end-to-end isolation remain pending.
+- `Tenant` is the current technical representation of the approved Shop entity, with a Main Supplier foreign key and profile/contact/address fields. `TenantMember` links Users to Shops. T3-03 request context is implemented; end-to-end isolation remains pending in T3-04.
 - `User` has no tenant foreign key directly. Instead, TenantMember links User and Tenant.  The approved target tenant-context mechanism is URL-path based: `/shops/{shop_id}/...`.
 - The target Shop boundary and External Supplier ownership rules are defined above; they are not implemented by the current starter Tenant CRUD/API.
 
@@ -153,8 +153,9 @@ Docker        -> development container and production web/db services
 - `/admin/`
 - `/api/v1/auth/users/`, `/login/`, `/logout/`, `/token/refresh/`
 - `/api/v1/tenants/` and tenant actions `activate`, `deactivate`, `stats`
+- `GET /api/v1/shops/{shop_id}/context/` authenticates first, resolves one active Shop, and returns only the selected Shop UUID, the actor's selected-Shop role (null for Main Supplier), and Main Supplier context flag. Denied/unavailable Shop cases share a uniform 404; invalid/unauthenticated authentication remains 401.
 - User API ordinary-user access is restricted to the authenticated user's own record; self-profile activation state is read-only.
-- Target shop-scoped API paths use `/shops/{shop_id}/...` for tenant context.
+- Shop-scoped APIs use `/shops/{shop_id}/...`; T3-03 establishes request-local context, while T3-04 remains responsible for all business-data queryset/object isolation.
 - `/api/schema/` and `/api/docs/`
 - `/` serves a static API test/reference page.
 
@@ -169,12 +170,12 @@ Docker        -> development container and production web/db services
 ## Architecture gaps and conflicts
 
 1. `Tenant.user_count` counts ACTIVE and INACTIVE memberships via the `memberships` reverse relation.
-2. Business tenant isolation (context, URL resolution, and cross-module scoped querysets) remains pending for Phase 3 (T3-03, T3-04), although the membership foundation and base `TenantScopedMixin` were introduced.
+2. T3-03 URL-path request context is implemented. Cross-module queryset/object isolation remains pending for T3-04; the existing `TenantScopedMixin` is not an authorization mechanism.
 3. The tenant field is nullable, so tenant-scoped records can be unscoped by default.
 4. The README references missing `apps.common.views.base_model_view` and `apps.tenants.mixins` components.
 5. Local settings use `DJANGO_DEBUG`, `DJANGO_ALLOWED_HOSTS` and `DB_*`; verify each deployment environment supplies those documented names.
 6. JWT blacklist is installed/configured; runtime refresh rotation and reuse behavior is covered by authentication lifecycle tests, while deployment-specific database behavior still requires CI/runtime verification.
-7. The foundation includes the single Supplier, Tenant-as-Shop mapping and membership/role policy, but does not yet implement External Supplier records, URL-path context, complete business-record isolation, or the end-to-end tailoring workflow.
+7. The foundation includes the single Supplier, Tenant-as-Shop mapping, membership/role policy, and T3-03 URL-path context, but does not yet implement External Supplier records, complete business-record isolation, or the end-to-end tailoring workflow.
 8. The target React/Vite/Tailwind frontend is absent; persistent object storage, background workers, monitoring and complete release operations are also pending.
 
 ## Recommended foundation changes
@@ -193,7 +194,7 @@ Docker        -> development container and production web/db services
 
 ## Phase 1 status and current V1 readiness
 
-Phase 1 foundation implementation is complete. Phase 3 T3-02A is implemented and pushed; remote CI is green. SGTP V1 is not ready for production. Business modules and end-to-end workflows remain unimplemented. Phase 3 URL-path Shop context is pending T3-03. Full isolation is pending T3-04.
+Phase 1 foundation implementation is complete. Phase 3 T3-02A is implemented and pushed; remote CI is green. T3-03 request-local URL-path Shop context is implemented and locally verified. SGTP V1 is not ready for production. Business modules and end-to-end workflows remain unimplemented. Full data isolation is pending T3-04.
 
 ## Membership Lifecycle and Rules
 

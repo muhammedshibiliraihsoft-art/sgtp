@@ -187,7 +187,7 @@ New business rules require:
 
 ### BR-ACC-002 — Global User Account Creation Authority
 **Status:** CONFIRMED
-**Rule:** Public self-registration is not allowed. For the current V1 foundation, only the Main Supplier Admin may create and manage global User accounts. Shop Admins do not receive global User-management authority. Any future Shop-scoped provisioning requires a separately approved authorization task. This rule records the target policy; the current unauthenticated create endpoint has not yet been changed.
+**Rule:** Public self-registration is not allowed. For the current V1 foundation, only the Main Supplier Admin may create and manage global User accounts. Shop Admins do not receive global User-management authority. Any future Shop-scoped provisioning requires a separately approved authorization task. This policy is implemented by T3-02A; anonymous account creation is denied.
 
 ### BR-AUTH-001 — Email-or-Phone Login to One User Identity
 **Status:** CONFIRMED
@@ -241,7 +241,7 @@ New business rules require:
 
 *   **Initial Creation**: Added confirmed rules for Membership Lifecycle, Shop Capacity, and Governance.
 
-*   **2026-09-28 — T3-02A business decision lock**: Added confirmed account-creation, unified email/phone identity, login-phone, generated-password/recovery/session, explicit Shop settings, and nullable locale rules. These are approved policy targets; application behavior is not thereby implemented.
+*   **2026-09-28 — T3-02A business decision lock**: Added confirmed account-creation, unified email/phone identity, login-phone, generated-password/recovery/session, explicit Shop settings, and nullable locale rules. At the time, this recorded approved policy targets only; T3-02A was later separately implemented.
 
 ### BR-MEM-007 — Undo and Capacity Limits
 

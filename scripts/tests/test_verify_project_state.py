@@ -62,6 +62,21 @@ Task B2-05 is complete and audit-cleared.
 - Validation performed: 2 tests pass.
 """
 
+ACTIVE_STATE = """## Status
+- Phase 1 and Phase 2 are complete.
+- Phase 3 is active; activation: CONFIRM PHASE 3.
+- Current task: T3-03 is complete locally.
+## Current Verification Results
+- Application tests: 2 tests verified passing.
+"""
+ACTIVE_HANDOFF = """## Current phase
+Phase 3 is active; activation: CONFIRM PHASE 3.
+## Current task
+T3-03 is complete locally.
+## Tests and checks
+- Validation performed: 2 tests pass.
+"""
+
 
 class ValidatorTests(unittest.TestCase):
     def validator(self, root, git=None, count=2):
@@ -75,6 +90,27 @@ class ValidatorTests(unittest.TestCase):
         result = self.validator(make_repo(VALID_STATE, VALID_HANDOFF)).run()
         self.assertTrue(result.ok, result.errors)
         self.assertEqual(result.facts["current_task"], "B2-05")
+
+    def test_phase_three_active_with_matching_activation_records_is_accepted(self):
+        result = self.validator(make_repo(ACTIVE_STATE, ACTIVE_HANDOFF)).run()
+        self.assertTrue(result.ok, result.errors)
+        self.assertEqual(result.facts["phase_state"], "Phase 3=active")
+
+    def test_phase_three_active_without_explicit_activation_is_rejected(self):
+        state = ACTIVE_STATE.replace("; activation: CONFIRM PHASE 3", "")
+        handoff = ACTIVE_HANDOFF.replace("; activation: CONFIRM PHASE 3", "")
+        result = self.validator(make_repo(state, handoff)).run()
+        self.assertTrue(
+            any(
+                "explicit activation is not recorded" in error
+                for error in result.errors
+            )
+        )
+
+    def test_inconsistent_phase_three_status_is_rejected(self):
+        handoff = ACTIVE_HANDOFF.replace("Phase 3 is active", "Phase 3 is not started")
+        result = self.validator(make_repo(ACTIVE_STATE, handoff)).run()
+        self.assertTrue(any("Phase 3 disagrees" in error for error in result.errors))
 
     def test_contradictory_phase_state_is_blocking(self):
         handoff = VALID_HANDOFF.replace("Phase 2 is complete", "Phase 2 is active")
