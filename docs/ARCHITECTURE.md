@@ -87,7 +87,7 @@ Docker        -> development container and production web/db services
 ## Authentication
 
 - `AUTH_USER_MODEL = accounts.User`.
-- Current code authenticates by email only. The approved T3-02A target supports required email or an optional unique E.164 phone as identifiers for the same UUID User through one coherent authentication/token flow; phone login is not yet implemented.
+- T3-02A authentication accepts the compatible `email` field or an `identifier` containing email/E.164 phone; both resolve to the same UUID User and password-authentication path. Anonymous account creation is denied; Main Supplier Admin may create accounts and manage login phones.
 - Base DRF configuration uses JWT authentication; development settings also enable session authentication and the browsable API.
 - Login and refresh routes use SimpleJWT.
 - The JWT blacklist application is installed and configured.
@@ -102,9 +102,9 @@ Docker        -> development container and production web/db services
 - Old rotated refresh tokens are blacklisted.
 - Reuse of a blacklisted rotated token is rejected.
 - Logout blacklists the current refresh token and clears both refresh and csrftoken cookies.
-- No custom token-family revocation architecture is used in B2-02.
+- T3-02A adds `auth_version` to access/refresh tokens and increments it on password change/reset. Credential changes also blacklist outstanding refresh tokens; no custom token-family architecture is introduced.
 
-### Approved V1 identity and preferences (Phase 3 T3-02A; not implemented)
+### Implemented V1 identity and preferences (Phase 3 T3-02A)
 
 - Preserve the User UUID primary key and required unique email. Add country-aware phone normalization to E.164 without fabricating values for existing users; login may use email or phone through one deterministic authentication path.
 - Persist nullable User preferred locale and `system|light|dark` appearance, defaulting appearance to `system`; locale selection is `User preference → authorized Shop default → English`.
@@ -112,6 +112,8 @@ Docker        -> development container and production web/db services
 - Public self-registration is prohibited; Main Supplier Admin is the current authority for global User creation/management. Email is required, phone is optional, and a registered unique E.164 User phone or email authenticates the same UUID account. Phone add/change/remove follows authorized account management; no V1 phone verification is required.
 - Generated initial passwords must be cryptographically random, hash-only at rest, never logged or repeatedly exposed, and changed at first login. Recovery is email-based with secure, expiring, single-use behavior; password change/reset revokes refresh-token sessions.
 - Shop timezone/currency are explicit and are never inferred; they may remain unset until configured. Main Supplier Admin manages Shop-level settings in the current foundation. Shop Admin settings authority is not granted by T3-02A.
+- Generated account credentials are one-time response data with `Cache-Control: no-store`; first-login password change gates normal authenticated API operations. Password recovery is generic to the caller and uses expiring single-use Django reset tokens delivered by configured email. Plaintext passwords/reset tokens are not written to application storage or audit records.
+- Shop default settings are serialized only on Main Supplier Admin reads/writes. Existing broad authenticated Shop reads retain their previous scope but omit the new settings fields; this does not implement T3-03 context or change Shop visibility policy.
 
 ## Planned cross-cutting V1 presentation and operations
 
@@ -191,7 +193,7 @@ Docker        -> development container and production web/db services
 
 ## Phase 1 status and current V1 readiness
 
-Phase 1 foundation implementation is complete. SGTP V1 is not ready for production: business modules and end-to-end workflows remain unimplemented, and Phase 3 URL-path Shop context/isolation is pending T3-03. T3-02 remediation is fully completed and confirmed by a successful GitHub Actions run.
+Phase 1 foundation implementation is complete. Phase 3 T3-02A is implemented and locally validated; SGTP V1 is not ready for production. Business modules and end-to-end workflows remain unimplemented, and Phase 3 URL-path Shop context/isolation is pending T3-03. T3-02 remediation was confirmed by a successful GitHub Actions run; no CI run covers this unpushed T3-02A work.
 
 ## Membership Lifecycle and Rules
 

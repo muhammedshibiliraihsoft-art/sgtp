@@ -50,16 +50,27 @@ class UserAPITest(TestCase):
         }
 
     def test_create_user_success(self):
-        """Test creating user via API"""
-        response = self.client.post('/api/v1/auth/users/', self.user_data)
+        """Only the Main Supplier Admin may create accounts; credentials are one-time."""
+        admin = User.objects.create_superuser(email='main@example.com', password='AdminPass-934!')
+        self.client.force_authenticate(user=admin)
+        response = self.client.post('/api/v1/auth/users/', {
+            'email': self.user_data['email'],
+            'first_name': self.user_data['first_name'],
+            'last_name': self.user_data['last_name'],
+        })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertTrue(User.objects.filter(email=self.user_data['email']).exists())
+        self.assertEqual(response['Cache-Control'], 'no-store')
+        self.assertEqual(response['Pragma'], 'no-cache')
+        self.assertIn('initial_password', response.data)
+        created = User.objects.get(email=self.user_data['email'])
+        self.assertTrue(created.must_change_password)
+        self.assertTrue(created.check_password(response.data['initial_password']))
+        self.assertNotEqual(created.password, response.data['initial_password'])
 
     def test_create_user_password_mismatch(self):
-        """Test creating user with password mismatch"""
-        self.user_data['password_confirm'] = 'wrongpassword'
+        """Anonymous public registration is prohibited."""
         response = self.client.post('/api/v1/auth/users/', self.user_data)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn(response.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
 
     def test_login_success(self):
         """Test user login returns access token and sets refresh cookie"""

@@ -121,10 +121,11 @@ AUTH_USER_MODEL = "accounts.User"
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "apps.accounts.authentication.VersionedJWTAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
+        "apps.accounts.permissions.PasswordChangeGate",
     ],
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
@@ -162,6 +163,17 @@ SIMPLE_JWT = {
     "USER_ID_CLAIM": "user_id",
 }
 
+PASSWORD_RESET_URL = get_env_var("PASSWORD_RESET_URL", "")
+EMAIL_BACKEND = get_env_var(
+    "DJANGO_EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend"
+)
+DEFAULT_FROM_EMAIL = get_env_var("DEFAULT_FROM_EMAIL", "noreply@sgtp.local")
+EMAIL_HOST = get_env_var("EMAIL_HOST", "localhost")
+EMAIL_PORT = int(get_env_var("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = get_env_var("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = get_env_var("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = get_env_var("EMAIL_USE_TLS", "True") == "True"
+
 # drf-spectacular configuration
 SPECTACULAR_SETTINGS = {
     "TITLE": "SGTP API",
@@ -170,6 +182,14 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "SWAGGER_UI_SETTINGS": {"deepLinking": True},
     "COMPONENT_SPLIT_REQUEST": True,
+    "ENUM_NAME_OVERRIDES": {
+        "Locale": [
+            ("en", "English"),
+            ("ar-KW", "Arabic (Kuwait)"),
+            ("bn", "Bangla"),
+            ("ur", "Urdu"),
+        ],
+    },
 }
 
 # CORS Configuration

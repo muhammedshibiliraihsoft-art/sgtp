@@ -2,9 +2,9 @@
 
 ## Status
 
-- Phase 2 is complete. Phase 3 NOT STARTED for new implementation activation; previously confirmed Phase 3 tasks T3-01, T3-02, and remediation are historical completed work.
-- Latest completed implementation task: T3-02-REMEDIATION is COMPLETE and fully closed. Latest documentation task T3-02A-BUSINESS-DECISION-LOCK records newly approved rules only; it does not authorize or implement T3-02A.
-- Current application test discovery: 120 tests; latest complete local run: 120 passed. Remote CI confirmation is fully green and the PostgreSQL connectivity issue is resolved on GitHub Actions.
+- Phase 1 and Phase 2 are complete. Phase 3 NOT STARTED for general phase execution; the separately confirmed bounded task T3-02A is complete. T3-01, T3-02, and T3-02-REMEDIATION are prior completed foundation tasks. T3-03 has not started.
+- Latest implementation task: T3-02A COMPLETE after local validation. It was explicitly confirmed; no subsequent task is authorized.
+- Current application test discovery: 130 tests. Latest full local run: 130 passed. The previously verified GitHub Actions run covers the prior baseline only; this local T3-02A diff has not been pushed and has no CI result.
 
 - Project root: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp`
 - Remote: `https://github.com/muhammedshibiliraihsoft-art/sgtp.git`
@@ -13,13 +13,21 @@
 - Target status: SGTP V1 is explicitly defined in `docs/PRODUCT_DEFINITION.md`
 - Starter foundation: exists in the cloned SGTP repository.
 - Phase 1 implementation: **Historical - Complete.**
-- Confirmation status: T3-02A-BUSINESS-DECISION-LOCK is documentation/business-rule reconciliation only. T3-02A and T3-03 are not authorized; each implementation task requires its own exact task confirmation.
+- Confirmation status: T3-02A was explicitly confirmed and is complete. T3-03 remains unconfirmed and must not start until separately confirmed.
 - Detailed phase playbooks: 01-10 present.
 - Later-phase decisions: Tenant context is approved as URL-path based (`/shops/{shop_id}/...`), and Related Person billing is owned by the Primary Client.
-- T3-02A, T3-05A (Staging Backend Foundation), and F7-01A (Staging Frontend & Client Review Checkpoint) are planned only; none is implemented or activated. English, ar-KW, Bangla, Urdu, RTL/LTR, and Light/Dark/System are planned V1 requirements, not implemented.
-- T3-02A policy is now locked in `docs/BUSINESS_RULES.md` and `docs/DECISIONS.md`: no public self-registration; Main Supplier Admin manages global accounts and Shop settings; required email and optional unique E.164 phone authenticate one UUID account; no V1 phone verification; approved generated-password, email-recovery, session-revocation, locale, and appearance rules apply. These are target rules, not implemented behavior.
-- Current code contradiction: anonymous User creation is still allowed by the existing endpoint and login remains email-only. T3-02A must reconcile these behaviors; documentation does not claim public registration is already disabled or phone login implemented.
-- T3-02A-BUSINESS-DECISION-LOCK documentation validation: repository validator PASS (dirty-working-tree warning expected); validator tests 11 passed; full pytest suite 120 passed; Django system check PASS; migration drift check reported no changes; `git diff --check` PASS. No duplicate Business Rule IDs; repaired decision/rule files pass strict UTF-8 decoding. No application source or migration files changed. This local diff has not been pushed and has no new CI run.
+- T3-05A (Staging Backend Foundation) and F7-01A (Staging Frontend & Client Review Checkpoint) remain planned only. T3-02A implemented the account/preference data and API foundation; frontend localization, RTL/LTR layout, and full Light/Dark/System UI remain Phase 7 work.
+- T3-02A confirmed policy is now implemented: anonymous self-registration denied; Main Supplier Admin controls global account creation/phone lifecycle and Shop defaults; email and optional unique E.164 phone authenticate one UUID account; generated initial password is returned once/no-store and must be changed; email reset is single-use and revokes sessions; nullable locale and `system|light|dark` preferences and nullable Shop defaults persist.
+- T3-02A verification: see the current verification record below. No new GitHub Actions run is available because this local work was not pushed.
+
+### Latest T3-02A Verification
+
+- Full application suite: 130 collected, 130 passed (`pytest -q -p no:cacheprovider --no-cov`).
+- Repository validator: PASS; validator tests: 11 passed. Validator confirms 130 discovered application tests and reports only the expected dirty-worktree warning.
+- Django system check: PASS. Production deployment check (`DJANGO_ENV=prod`): PASS with no issues. The default local development `check --deploy` emits six expected development-environment security warnings; the production settings check is clean.
+- Migration status: both new migrations applied locally; `makemigrations --check --dry-run`: no changes detected.
+- API schema validation: PASS. Black check for new/rewritten account implementation: PASS; Black and Flake8 checks for `scripts/`: PASS; Flake8 for account implementation: PASS.
+- `git diff --check`: PASS. No GitHub Actions run covers this local diff; no push was made.
 
 ## Locked V1 business tenancy model
 
@@ -87,7 +95,7 @@
 ### PRE-P3-02 result
 
 - The V1 Supplier / Shop / External Supplier business meaning is now explicit across the governing documentation.
-- Historical Phase 3 task outcomes: T3-01, T3-02, and T3-02-REMEDIATION are complete. T3-02A is the next planned implementation task; it is not authorized by this documentation confirmation. T3-03 and all subsequent tasks remain individually gated.
+- Historical/current Phase 3 task outcomes: T3-01, T3-02, T3-02-REMEDIATION, and T3-02A are complete. T3-03 and subsequent tasks remain individually gated.
 
 ### T3-02 remediation result
 
@@ -172,7 +180,7 @@
 
 ## Roadmap update status (2026-09-28)
 
-- V1-ROADMAP-UPDATE and V1-ENVIRONMENT-LOCK are documentation/roadmap work only. T3-02A, T3-03, T3-05A (Staging Backend Foundation), F7-01A (Staging Frontend & Client Review Checkpoint), application code, migrations, and deployments remain unimplemented/unauthorized. Environment model is locked as LOCAL → STAGING → PRODUCTION.
+- V1-ROADMAP-UPDATE and V1-ENVIRONMENT-LOCK were documentation/roadmap work only. T3-02A has since been implemented and verified locally. T3-03, T3-05A (Staging Backend Foundation), F7-01A (Staging Frontend & Client Review Checkpoint), and deployments remain unimplemented; each requires its own confirmation. Environment model is locked as LOCAL → STAGING → PRODUCTION.
 - Post-V1 work is gated until Phase 10 and the complete V1 Definition of Done are accepted.
 - GitHub Actions run 36415017163 passed on repository HEAD before this documentation-only change. This historical CI result does not validate the current documentation diff.
 - Current local validation after the documentation update: repository validator PASS; validator tests 11 passed; application suite 120 passed; Django system check PASS; migration drift check PASS; `git diff --check` PASS. No application source or migration files changed.

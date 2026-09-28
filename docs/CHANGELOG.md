@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-09-28 — T3-02A Account and preference foundation
+
+- Implemented the confirmed account/authentication foundation: unique optional E.164 phone and email-or-phone login, Main Supplier Admin-only account creation/phone management, one-time no-store initial credentials with forced password change, and email reset with refresh-session revocation.
+- Added nullable User locale, `system|light|dark` appearance, and nullable Shop default locale/timezone/currency; ordinary authenticated global Shop reads omit the new defaults.
+- Added additive accounts/tenants migrations and regression tests; preserved UUID identity, existing memberships, email login, JWT/CSRF/refresh rotation/blacklist protections, and production throttle rates.
+- Updated current API, architecture, database, security, phase plan, project state, and handoff descriptions. No T3-03 or later-phase implementation, CI push, or GitHub push was performed.
+
 ## 2026-09-28 — T3-02A-BUSINESS-DECISION-LOCK
 
 - Recorded human-approved account creation, email/phone identity and management, credential lifecycle, Shop timezone/currency/settings authority, nullable locale, and appearance rules in `docs/BUSINESS_RULES.md` and `docs/DECISIONS.md`.

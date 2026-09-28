@@ -20,9 +20,10 @@
 
 ## Migration Strategy & Policies
 
-### Approved planned V1 schema additions (not implemented)
+### Implemented T3-02A schema additions
 
-- T3-02A may add nullable User phone (canonical E.164, database-enforced uniqueness for non-NULL User login phones), nullable preferred locale and appearance enum/default `system`, plus explicit Shop locale/timezone/currency fields. Preserve UUID identity, required email and existing memberships; do not fabricate phone values or infer Shop timezone/currency. Main Supplier Admin is the current Shop-settings authority. Review normalized phone collisions and existing-data compatibility before migration. Exact initial Shop timezone/currency may remain unset until configured.
+- `accounts.0003` adds nullable User phone (canonical E.164, database-enforced uniqueness for non-NULL User login phones), nullable preferred locale, `system|light|dark` appearance defaulting to `system`, `must_change_password`, and `auth_version`. Existing phone values remain NULL; UUID identity, required email, and memberships are preserved.
+- `tenants.0008` adds nullable Shop locale, timezone, and currency; no defaults are inferred or backfilled. Main Supplier Admin is the current Shop-settings authority. Ordinary globally scoped Shop serializers omit these fields.
 - Later business migrations preserve historical measurement versions and financial values. Locale changes must not rewrite canonical source data; theme changes have no business-data effect; currency changes must never reinterpret historical transactions.
 - Prefer additive, forward-only migrations. Each task documents empty-database replay, upgrade compatibility, constraints/indexes and recovery. Retention duration, currency changes after finance, and other unresolved policy remain `BUSINESS DECISION REQUIRED`.
 
@@ -48,4 +49,4 @@
 - **Current Data Models:** 
   - `User` (TimeStamped, no soft-delete)
   - `Tenant` (TimeStamped, soft-delete enabled)
-  - Business domain models (Shops, Works, Billing) are currently pending Phase 3-5 implementation.
+  - The Shop entity/settings foundation exists; tailoring, Client, Work, Billing, and other business models remain pending Phase 3-5 tasks.

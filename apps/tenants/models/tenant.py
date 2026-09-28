@@ -64,6 +64,15 @@ class Tenant(BaseModel):
     postal_code = models.CharField(max_length=20, blank=True)
     country = models.CharField(max_length=100, blank=True)
 
+    default_locale = models.CharField(
+        max_length=5,
+        choices=[('en', 'English'), ('ar-KW', 'Arabic (Kuwait)'), ('bn', 'Bangla'), ('ur', 'Urdu')],
+        blank=True,
+        null=True,
+    )
+    default_timezone = models.CharField(max_length=64, blank=True, null=True)
+    default_currency = models.CharField(max_length=3, blank=True, null=True)
+
     class Meta:
         ordering = ['name']
         verbose_name = 'Tenant'

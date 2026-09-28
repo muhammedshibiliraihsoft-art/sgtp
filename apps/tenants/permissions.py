@@ -1,12 +1,16 @@
 from rest_framework.permissions import BasePermission
 from apps.tenants.policy import ShopRolePolicy
+from apps.accounts.permissions import PasswordChangeGate
 
 
 class IsMainSupplierAdmin(BasePermission):
     """Allow Shop administration only to the approved Main Supplier authority."""
 
     def has_permission(self, request, view):
-        return ShopRolePolicy.is_main_supplier_admin(request.user)
+        return (
+            PasswordChangeGate().has_permission(request, view)
+            and ShopRolePolicy.is_main_supplier_admin(request.user)
+        )
 
 class CanManageShopMembership(BasePermission):
     """
@@ -18,7 +22,10 @@ class CanManageShopMembership(BasePermission):
     def has_permission(self, request, view):
         # Allow if authenticated; scoping is handled by get_queryset() for LIST
         # For CREATE, we validate the target tenant in serializer or view.
-        if not request.user or not request.user.is_authenticated or not request.user.is_active:
+        if (
+            not request.user or not request.user.is_authenticated or not request.user.is_active
+            or not PasswordChangeGate().has_permission(request, view)
+        ):
             return False
             
         # We allow authenticated users to hit the view, but get_queryset will scope

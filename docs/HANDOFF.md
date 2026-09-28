@@ -2,10 +2,35 @@
 
 ## Current phase
 
-Phase 3 NOT STARTED for new implementation activation. Previously confirmed Phase 3 task outcomes are historical; latest work is the documentation-only T3-02A-BUSINESS-DECISION-LOCK.
+Phase 3 NOT STARTED for general phase execution. The separately confirmed bounded task T3-02A is complete; T3-01, T3-02, and remediation are prior completed foundation tasks. T3-03 has not started.
 ## Current task
 
-T3-02A-BUSINESS-DECISION-LOCK documentation task is COMPLETE. Latest implementation task T3-02-REMEDIATION remains COMPLETE and fully closed. This task recorded approved business rules only; it did not authorize or implement application work.
+T3-02A — Account, phone, locale, and preference foundation: COMPLETE and locally verified. The human explicitly confirmed `CONFIRM TASK T3-02A`. Stop after this task. Do not start T3-03 without its own task plan and exact confirmation.
+
+- **Implemented:** optional unique E.164 User phone and compatible email/phone login; anonymous account creation denied; Main Supplier Admin account/phone administration; one-time random initial password with no-store response and forced first-login change; email password reset with generic response, expiry/single use, and refresh-session revocation; nullable user locale, `system|light|dark` appearance; nullable Shop locale/timezone/currency with Main Supplier Admin-only serialization; versioned JWT access/refresh revocation.
+- **Database:** additive migrations `accounts.0003_alter_user_options_user_appearance_preference_and_more` and `tenants.0008_tenant_default_currency_tenant_default_locale_and_more`; UUID identity/memberships preserved; no fabricated phones or inferred Shop defaults.
+- **Tests added/updated:** T3-02A account/auth/Shop settings regressions; existing account-creation tests aligned to the confirmed deny-anonymous/admin-create contract; auth lifecycle test cache is cleared between tests without changing runtime throttling; historical tenant migration test now uses historical models and restores the latest schema.
+- **Files/areas:** accounts models/auth/serializers/views/URLs/settings/dependency and tests; tenant settings model/serializers/permissions/view/migration/tests; docs/API, ARCHITECTURE, DATABASE, SECURITY, Phase 3 plan, DEVELOPMENT_PLAN, PROJECT_STATE, HANDOFF, CHANGELOG, `.env.example`.
+- **Validation:** final test/check results are recorded in the T3-02A verification section below.
+- **Known limitations:** no front-end localization/theme UI, no Shop URL context or tenant isolation, no later-phase business modules. Shop defaults must not be read by ordinary users. Email reset delivery requires deployment email configuration and `PASSWORD_RESET_URL`.
+- **Unresolved decisions:** ordinary-user Shop read visibility, Shop deletion semantics, Shop Admin scoped settings authority, currency changes after financial history, and other later-phase items remain `BUSINESS DECISION REQUIRED` where recorded. These did not block T3-02A.
+- **Next task:** T3-03, but NOT AUTHORIZED; prepare its task plan and wait for exact `CONFIRM TASK T3-03`. Do not implement it automatically.
+- **Git/CI:** work is local and uncommitted; no push was performed. There is no GitHub Actions result for this diff.
+
+### T3-02A verification record
+
+Final verification outcomes are recorded in the `Tests and checks` section below.
+
+## Tests and checks
+
+- Application suite: 130 collected, 130 passed (`python -m pytest -q -p no:cacheprovider --no-cov`).
+- Dedicated T3-02A module: 10 passed; the complete 130-test run also covers existing auth lifecycle, migration, and API error tests.
+- Repository validator: PASS; validator tests: 11 passed; detected 130 application tests and expected dirty working tree.
+- `manage.py check`: PASS. `manage.py check --deploy` with `DJANGO_ENV=prod`: PASS. Default development `check --deploy`: exit 0 with six expected local dev security warnings (DEBUG, development secret, SSL redirect/HSTS, secure session/CSRF cookies).
+- `manage.py makemigrations --check --dry-run`: PASS, no changes. Both T3-02A migrations are applied locally. API schema validation: PASS.
+- Black check for new/rewritten account implementation: PASS. Black and Flake8 for `scripts/`: PASS. Flake8 for account implementation: PASS. `git diff --check`: PASS.
+- GitHub Actions: no run for this unpushed local diff. No push/commit was made.
+- Git status: local working tree contains T3-02A implementation and documentation changes; branch remains `main`, remote URL is unchanged, and no remote update was made.
 
 - **Changed areas:** User API authorization/serializer, Main Supplier Shop-write permission, membership serializer lifecycle protection, real throttle wiring/tests, duplicate CORS tests, production CORS environment propagation, CI validation, remediation regression tests, and documentation.
 - **Validation:** Repository validator PASS; Django check PASS; migration drift check PASS; local application test suite PASS. Remote CI is green: the latest GitHub Actions workflow passed successfully, confirming the PostgreSQL CI connectivity and throttle cache isolation fixes. No migrations were required for closure. Production authentication throttling behavior was not weakened to make tests pass.
@@ -85,7 +110,7 @@ Historical Phase 3 task outcomes:
 - No migrations were created.
 - T3-03, external suppliers, and future business modules remain unimplemented.
 
-## Roadmap handoff
+## Historical roadmap handoff (superseded by the current T3-02A status above)
 
 T3-02A-BUSINESS-DECISION-LOCK authorized documentation/business-rule reconciliation only. Do not implement T3-02A, T3-03, T3-05A (Staging Backend Foundation), F7-01A (Staging Frontend & Client Review Checkpoint), any application feature, or deploy any environment under this task. T3-02A remains the next candidate and requires its own task plan and exact explicit confirmation. Newly approved account/authentication policies are targets, not implemented behavior; remaining policy items stay `BUSINESS DECISION REQUIRED` in the canonical decision record.
 
@@ -100,7 +125,7 @@ T3-02A-BUSINESS-DECISION-LOCK authorized documentation/business-rule reconciliat
 - GitHub Actions: the previously verified baseline run was green; this local documentation diff has not been pushed and has no new CI run.
 - Scope: documentation only; no application source, migrations, deployment, commit, or push.
 
-## T3-02A-BUSINESS-DECISION-LOCK — current session
+## Historical: T3-02A-BUSINESS-DECISION-LOCK (superseded by the current T3-02A status above)
 
 - Decision: approved T3-02A account/authentication, phone, credential lifecycle, Shop settings, locale, and appearance rules are now recorded in the canonical business-rule and decision documents.
 - Code status: unchanged. Anonymous User creation is still available in the current endpoint, and login remains email-only; T3-02A must reconcile these approved policy targets.

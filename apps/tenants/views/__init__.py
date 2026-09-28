@@ -9,9 +9,13 @@ from ..models import Tenant
 from ..serializers import (
     TenantSerializer, 
     TenantCreateSerializer, 
-    TenantSummarySerializer
+    TenantSummarySerializer,
+    TenantAdminSerializer,
+    TenantAdminSummarySerializer,
 )
 from ..permissions import IsMainSupplierAdmin
+from apps.accounts.permissions import PasswordChangeGate
+from ..policy import ShopRolePolicy
 
 
 class TenantViewSet(viewsets.ModelViewSet):
@@ -29,10 +33,15 @@ class TenantViewSet(viewsets.ModelViewSet):
     ordering = ['name']
     
     def get_serializer_class(self):
+        is_main_supplier_admin = ShopRolePolicy.is_main_supplier_admin(self.request.user)
         if self.action == 'create':
             return TenantCreateSerializer
         elif self.action == 'list':
+            if is_main_supplier_admin:
+                return TenantAdminSummarySerializer
             return TenantSummarySerializer
+        if is_main_supplier_admin:
+            return TenantAdminSerializer
         return TenantSerializer
     
     def get_permissions(self):
@@ -43,9 +52,9 @@ class TenantViewSet(viewsets.ModelViewSet):
         if self.action in [
             'create', 'update', 'partial_update', 'destroy', 'activate', 'deactivate'
         ]:
-            permission_classes = [IsMainSupplierAdmin]
+            permission_classes = [IsMainSupplierAdmin, PasswordChangeGate]
         else:
-            permission_classes = [IsAuthenticated]
+            permission_classes = [IsAuthenticated, PasswordChangeGate]
         return [permission() for permission in permission_classes]
     
     def perform_create(self, serializer):

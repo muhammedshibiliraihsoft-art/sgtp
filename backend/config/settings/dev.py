@@ -7,6 +7,8 @@ load_dotenv(BASE_DIR / ".env")
 
 from .base import *
 
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
 # Override any base settings for development
 # Ensure debug is true if not overridden
 DEBUG = get_env_var("DJANGO_DEBUG", "True") == "True"
@@ -28,7 +30,7 @@ CACHES = {
 REST_FRAMEWORK = {
     **REST_FRAMEWORK,
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "apps.accounts.authentication.VersionedJWTAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ],
     "DEFAULT_RENDERER_CLASSES": [

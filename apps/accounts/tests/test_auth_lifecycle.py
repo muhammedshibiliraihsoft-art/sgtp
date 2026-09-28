@@ -3,6 +3,7 @@ Tests for B2-02 JWT Lifecycle: CSRF, HttpOnly Cookies, Rotation, and Revocation.
 """
 import pytest
 from django.test import TestCase
+from django.core.cache import cache
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from rest_framework import status
@@ -12,6 +13,7 @@ User = get_user_model()
 
 class AuthLifecycleTest(TestCase):
     def setUp(self):
+        cache.clear()
         # APIClient explicitly sets enforce_csrf_checks=True for these tests
         # We want to test that Django CsrfViewMiddleware correctly rejects/allows our requests.
         self.client = APIClient(enforce_csrf_checks=True)

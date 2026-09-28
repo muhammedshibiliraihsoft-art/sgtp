@@ -74,9 +74,9 @@ This amendment adds requirements and checkpoints without changing the ten-phase 
 
 ### Phase 3 task sequence
 
-`T3-01 (complete) → T3-02 (complete) → T3-02-REMEDIATION (closed) → T3-02A → T3-03 → T3-04 → T3-05 → T3-05A`.
+`T3-01 (complete) → T3-02 (complete) → T3-02-REMEDIATION (closed) → T3-02A (complete) → T3-03 → T3-04 → T3-05 → T3-05A`.
 
-- **T3-02A — Account, phone, locale, and preference foundation:** retain UUID identity and required email; add country-aware E.164 phone support and deterministic email-or-phone login, password change and email recovery foundation, persisted nullable User locale and `system|light|dark` appearance, plus explicit Shop locale/timezone/currency data foundation. Apply confirmed rules BR-ACC-002, BR-AUTH-001, BR-PHONE-001–003, BR-PASS-001–004, BR-SHOP-005–007, BR-LOC-003, and BR-UX-001. Do not add OTP/SMS/WhatsApp/2FA providers. Keep currency change after financial history and Shop Admin scoped settings authority as `BUSINESS DECISION REQUIRED`; preserve existing public-create behavior only until this task is implemented, then reconcile it with the approved prohibition.
+- **T3-02A — Account, phone, locale, and preference foundation (complete):** implemented UUID/email-compatible E.164 phone login, Main Supplier Admin-only account creation/phone administration, one-time no-store generated credentials and forced first-login change, email reset and session revocation, persisted nullable User locale/appearance and Shop defaults. Do not add OTP/SMS/WhatsApp/2FA providers. Currency change after financial history and Shop Admin scoped settings authority remain `BUSINESS DECISION REQUIRED`. See Phase 3 playbook and current handoff for validation evidence.
 - **T3-03:** retain `/shops/{shop_id}/...`; preferences and Shop defaults never authorize access.
 - **T3-04:** prove isolation for scoped access, including later business resources.
 - **T3-05:** expose only authorized Shop and User settings APIs; authority to change Shop defaults remains unresolved unless approved.

@@ -24,11 +24,20 @@ class TenantSerializer(serializers.ModelSerializer):
         return value
 
 
-class TenantCreateSerializer(TenantSerializer):
-    """Serializer for creating tenants with required fields."""
-    
+class TenantAdminSerializer(TenantSerializer):
+    """Shop settings are serialized only on Main Supplier Admin paths."""
+
     class Meta(TenantSerializer.Meta):
-        fields = TenantSerializer.Meta.fields
+        fields = TenantSerializer.Meta.fields + [
+            'default_locale', 'default_timezone', 'default_currency'
+        ]
+
+
+class TenantCreateSerializer(TenantAdminSerializer):
+    """Serializer for creating tenants with required fields."""
+
+    class Meta(TenantAdminSerializer.Meta):
+        fields = TenantAdminSerializer.Meta.fields
         extra_kwargs = {
             'name': {'required': True},
             'slug': {'required': True},
@@ -42,4 +51,11 @@ class TenantSummarySerializer(serializers.ModelSerializer):
     class Meta:
         model = Tenant
         fields = ['id', 'name', 'slug', 'is_active', 'user_count']
+
+
+class TenantAdminSummarySerializer(TenantSummarySerializer):
+    class Meta(TenantSummarySerializer.Meta):
+        fields = TenantSummarySerializer.Meta.fields + [
+            'default_locale', 'default_timezone', 'default_currency'
+        ]
 from .membership import TenantMemberSerializer

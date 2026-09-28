@@ -19,7 +19,12 @@ class TestTenantMigration(TransactionTestCase):
         self.tenant = Tenant.objects.create(max_users=10, name="Legacy Tenant", slug="legacy")
         
         # Apply the migration
-        self.migrate(self.migrate_to)
+        self.migrated_state = self.migrate(self.migrate_to)
+
+    def tearDown(self):
+        executor = MigrationExecutor(connection)
+        executor.migrate(executor.loader.graph.leaf_nodes())
+        super().tearDown()
 
     def migrate(self, target):
         executor = MigrationExecutor(connection)
@@ -29,7 +34,8 @@ class TestTenantMigration(TransactionTestCase):
 
     def test_migration_assigns_supplier(self):
         """Test that the migration assigns the Main Supplier to existing Tenants"""
-        from apps.tenants.models import Tenant, Supplier
+        Tenant = self.migrated_state.apps.get_model('tenants', 'Tenant')
+        Supplier = self.migrated_state.apps.get_model('tenants', 'Supplier')
         
         # Verify exactly one supplier exists
         self.assertEqual(Supplier.objects.count(), 1)
