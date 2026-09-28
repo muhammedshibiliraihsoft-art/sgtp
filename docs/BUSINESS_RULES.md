@@ -150,3 +150,10 @@ New business rules require:
 ## 6. Business Rule Change Log
 
 *   **Initial Creation**: Added confirmed rules for Membership Lifecycle, Shop Capacity, and Governance.
+
+### BR-MEM-007 — Undo and Capacity Limits
+
+**Status:** CONFIRMED
+
+**Rule:**
+Undo is valid only within the exact 5-second window. Current Shop capacity must be re-checked immediately before restoration. If current user_count < max_users, restore the same membership and previous state. If current user_count >= max_users, reject Undo and leave the membership REMOVED. Do not remove/deactivate another membership, and do not exceed max_users.

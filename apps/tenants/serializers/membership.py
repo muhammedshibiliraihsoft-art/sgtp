@@ -36,7 +36,5 @@ class TenantMemberSerializer(serializers.ModelSerializer):
         if not self.instance and user and tenant:
             if TenantMember.objects.filter(user=user, tenant=tenant, deleted__isnull=True).exists():
                 raise serializers.ValidationError("This user is already a member of the shop.")
-            if tenant.is_at_user_limit:
-                raise serializers.ValidationError({"tenant": "Shop has reached its maximum user limit."})
 
         return data

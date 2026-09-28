@@ -147,7 +147,7 @@ Docker        -> development container and production web/db services
 
 ## Architecture gaps and conflicts
 
-1. `Tenant.user_count` assumes a reverse `user_set` and is currently hardcoded to 0 (BUSINESS DECISION REQUIRED for inactive user limit consumption).
+1. `Tenant.user_count` counts ACTIVE and INACTIVE memberships via the `memberships` reverse relation.
 2. Business tenant isolation (context, URL resolution, and cross-module scoped querysets) remains pending for Phase 3 (T3-03, T3-04), although the membership foundation and base `TenantScopedMixin` were introduced.
 3. The tenant field is nullable, so tenant-scoped records can be unscoped by default.
 4. The README references missing `apps.common.views.base_model_view` and `apps.tenants.mixins` components.
