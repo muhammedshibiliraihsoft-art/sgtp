@@ -112,7 +112,7 @@ Frontend shell/i18n/theme → authenticated API client → accepted Staging Fron
 - Validation: end-to-end supplier and shop workspace smoke test.
 - Documentation update: state, handoff, UI/API docs.
 - Definition of Done: supplier and shop shells are usable and scoped.
-- Add authorized Shop default locale/timezone/currency UI and User language/appearance settings only through authorized APIs; leave editing authority unresolved if no policy is approved.
+- Add Shop default locale/timezone/currency UI only for Main Supplier Admin through authorized APIs (BR-SHOP-007); do not grant Shop Admin settings authority without a separately approved policy. User language/appearance settings remain self-scoped and presentation-only.
 
 ### F7-04 Tailor Management screens
 

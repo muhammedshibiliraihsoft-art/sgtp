@@ -48,7 +48,7 @@ Test inventory → unit/API coverage → auth/permissions/isolation → workflow
 
 ### Integrated V1 acceptance matrix (applies across H8-01–H8-04)
 
-- **Authentication:** email/phone login, international E.164 normalization/collisions, existing User migration compatibility, unchanged UUID identity, password provisioning security, password change/recovery contract, throttling, refresh, logout and CSRF. Do not add unapproved OTP/provider behavior.
+- **Authentication:** reject anonymous account creation and enforce Main Supplier Admin account-management authority; email/phone login resolves to one UUID, international E.164 normalization/unique collisions, existing User migration compatibility, password provisioning and first-login change, email-only recovery/session revocation, throttling, refresh, logout and CSRF. Do not add OTP/provider behavior (BR-ACC-002, BR-AUTH-001, BR-PHONE-001–003, BR-PASS-001–004).
 - **Localization:** `en`, `ar-KW`, `bn`, `ur`, English/missing-resource fallback, persisted User preference, authorized Shop fallback, first-login chooser and no cross-User preference leakage.
 - **RTL/LTR:** Arabic/Urdu navigation, forms, tables, dialogs, pagination and mixed-direction fields; English/Bangla LTR.
 - **Themes:** Light, Dark, System; at minimum English-Light, English-Dark, Arabic-Light, Arabic-Dark, Urdu-Dark, Bangla-Light; system-preference behavior and no severe startup flash.

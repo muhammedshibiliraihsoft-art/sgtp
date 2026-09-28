@@ -185,9 +185,63 @@ New business rules require:
 **Status:** CONFIRMED
 **Rule:** Post-V1 implementation may begin only after Phase 10 acceptance and the complete V1 Definition of Done pass. Client feedback and Staging review do not independently authorize implementation or production release.
 
+### BR-ACC-002 — Global User Account Creation Authority
+**Status:** CONFIRMED
+**Rule:** Public self-registration is not allowed. For the current V1 foundation, only the Main Supplier Admin may create and manage global User accounts. Shop Admins do not receive global User-management authority. Any future Shop-scoped provisioning requires a separately approved authorization task. This rule records the target policy; the current unauthenticated create endpoint has not yet been changed.
+
+### BR-AUTH-001 — Email-or-Phone Login to One User Identity
+**Status:** CONFIRMED
+**Rule:** A User with a registered login phone may authenticate using either that phone or the required registered email plus the same password. Both identifiers authenticate the same User UUID; they must never create separate accounts or identities. Preserve existing email login. The eventual API uses one identifier concept and one coherent authentication/token flow.
+
+### BR-PHONE-001 — User Login Phone Uniqueness and Representation
+**Status:** CONFIRMED
+**Rule:** User login phone is optional and existing Users without a phone remain valid. A phone used as a User login identifier belongs to only one User. Persist canonical international E.164 representation, support multiple countries with a maintained libphonenumber-compatible approach, and never infer a universal default region or fabricate/backfill a phone. This uniqueness rule applies only to User login phones, not Shop, Client, or External Supplier contact numbers.
+
+### BR-PHONE-002 — User Login Phone Management
+**Status:** CONFIRMED
+**Rule:** For the current V1 foundation, adding, changing, or removing a User login phone is controlled through the authorized account-management flow, initially Main Supplier Admin. Ordinary Users do not receive unrestricted phone replacement/removal, and a phone is never silently reassigned between User UUIDs. Any enhanced change/reassignment workflow requires a separately approved task.
+
+### BR-PHONE-003 — Phone Verification Is Not Required in V1
+**Status:** CONFIRMED
+**Rule:** V1 does not require OTP, SMS, WhatsApp, or 2FA phone verification. A phone registered through the authorized account-management flow may be used as a login identifier. No verification-provider infrastructure is authorized by this rule.
+
+### BR-PASS-001 — Generated Initial Credential Safety
+**Status:** CONFIRMED
+**Rule:** When an authorized account creator uses a system-generated initial password, generate it with cryptographically secure randomness, store only the Django password hash, never persist or log plaintext, and expose plaintext at most once through an approved credential display/delivery flow. SMS/WhatsApp delivery is not approved.
+
+### BR-PASS-002 — Change Generated Password at First Login
+**Status:** CONFIRMED
+**Rule:** A User created with a system-generated initial password must change it at first login. The application must persist enough state to distinguish that credential from a normal user-selected password.
+
+### BR-PASS-003 — Email-Based Password Recovery
+**Status:** CONFIRMED
+**Rule:** V1 password recovery is email-based and uses secure, expiring, single-use semantics with generic responses that do not reveal account existence. Phone, SMS, and WhatsApp recovery are not part of V1.
+
+### BR-PASS-004 — Revoke Refresh Sessions After Credential Change
+**Status:** CONFIRMED
+**Rule:** After a successful password change or reset, existing refresh-token sessions must be revoked. The User must authenticate again with the new password. Integrate with the existing SimpleJWT rotation/blacklist lifecycle; do not weaken it.
+
+### BR-SHOP-005 — Explicit Shop Timezone
+**Status:** CONFIRMED
+**Rule:** Each Shop has an explicit timezone setting. Do not infer it from server, browser, company, IP, or Shop country. Until a concrete value is approved/configured, the data-model foundation may remain unset/null.
+
+### BR-SHOP-006 — Explicit Shop Currency
+**Status:** CONFIRMED
+**Rule:** Each Shop has an explicit currency setting. Do not infer it from server/Shop country, locale, or browser. Do not invent an initial currency. Display currency must not alter canonical financial values. Currency changes after financial records exist remain BUSINESS DECISION REQUIRED.
+
+### BR-SHOP-007 — Shop Settings Authority
+**Status:** CONFIRMED
+**Rule:** For the current V1 foundation, Main Supplier Admin may manage Shop-level locale, timezone, and currency settings. Shop Admins do not receive this authority under T3-02A; any scoped Shop Admin settings authority requires a separately approved authorization task.
+
+### BR-LOC-003 — User Locale May Be Unset
+**Status:** CONFIRMED
+**Rule:** A User preferred locale may remain NULL until selected. Do not persist English merely as fallback. Resolve locale as User preference → authorized Shop default → English; consult a Shop default only after authorization. Locale never determines access.
+
 ## 7. Business Rule Change Log
 
 *   **Initial Creation**: Added confirmed rules for Membership Lifecycle, Shop Capacity, and Governance.
+
+*   **2026-09-28 — T3-02A business decision lock**: Added confirmed account-creation, unified email/phone identity, login-phone, generated-password/recovery/session, explicit Shop settings, and nullable locale rules. These are approved policy targets; application behavior is not thereby implemented.
 
 ### BR-MEM-007 — Undo and Capacity Limits
 
@@ -198,10 +252,10 @@ Undo is valid only within the exact 5-second window. Current Shop capacity must 
 
 ## 8. Environment and Deployment Rules
 
-### BR-ENV-001 � V1 Environment Progression
+### BR-ENV-001 — V1 Environment Progression
 **Status:** CONFIRMED
 **Rule:** The approved V1 environment progression is LOCAL ? STAGING ? PRODUCTION. There is no separate Preview environment in V1. Client review and early non-production deployments use the Staging environment. Production is deferred until Phase 10.
 
-### BR-ENV-002 � Staging Is Never Production
+### BR-ENV-002 — Staging Is Never Production
 **Status:** CONFIRMED
 **Rule:** Staging must always remain non-production with isolated PostgreSQL, isolated credentials, isolated object storage, demo/test data, and environment-tagged logs. Real production customer data, production payment credentials, production messaging credentials, and production secrets must never be used in Staging.

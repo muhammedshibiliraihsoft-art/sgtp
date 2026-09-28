@@ -3,7 +3,7 @@
 ## Status
 
 - Phase 2 is complete. Phase 3 NOT STARTED for new implementation activation; previously confirmed Phase 3 tasks T3-01, T3-02, and remediation are historical completed work.
-- Latest completed implementation task: T3-02-REMEDIATION is COMPLETE and fully closed. V1-ROADMAP-UPDATE documentation task is now complete; no implementation task was authorized.
+- Latest completed implementation task: T3-02-REMEDIATION is COMPLETE and fully closed. Latest documentation task T3-02A-BUSINESS-DECISION-LOCK records newly approved rules only; it does not authorize or implement T3-02A.
 - Current application test discovery: 120 tests; latest complete local run: 120 passed. Remote CI confirmation is fully green and the PostgreSQL connectivity issue is resolved on GitHub Actions.
 
 - Project root: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp`
@@ -13,10 +13,13 @@
 - Target status: SGTP V1 is explicitly defined in `docs/PRODUCT_DEFINITION.md`
 - Starter foundation: exists in the cloned SGTP repository.
 - Phase 1 implementation: **Historical - Complete.**
-- Confirmation status: V1-ROADMAP-UPDATE documentation task is explicitly confirmed. It does not authorize T3-02A, T3-03, or other implementation. Each future task requires its own explicit confirmation.
+- Confirmation status: T3-02A-BUSINESS-DECISION-LOCK is documentation/business-rule reconciliation only. T3-02A and T3-03 are not authorized; each implementation task requires its own exact task confirmation.
 - Detailed phase playbooks: 01-10 present.
 - Later-phase decisions: Tenant context is approved as URL-path based (`/shops/{shop_id}/...`), and Related Person billing is owned by the Primary Client.
 - T3-02A, T3-05A (Staging Backend Foundation), and F7-01A (Staging Frontend & Client Review Checkpoint) are planned only; none is implemented or activated. English, ar-KW, Bangla, Urdu, RTL/LTR, and Light/Dark/System are planned V1 requirements, not implemented.
+- T3-02A policy is now locked in `docs/BUSINESS_RULES.md` and `docs/DECISIONS.md`: no public self-registration; Main Supplier Admin manages global accounts and Shop settings; required email and optional unique E.164 phone authenticate one UUID account; no V1 phone verification; approved generated-password, email-recovery, session-revocation, locale, and appearance rules apply. These are target rules, not implemented behavior.
+- Current code contradiction: anonymous User creation is still allowed by the existing endpoint and login remains email-only. T3-02A must reconcile these behaviors; documentation does not claim public registration is already disabled or phone login implemented.
+- T3-02A-BUSINESS-DECISION-LOCK documentation validation: repository validator PASS (dirty-working-tree warning expected); validator tests 11 passed; full pytest suite 120 passed; Django system check PASS; migration drift check reported no changes; `git diff --check` PASS. No duplicate Business Rule IDs; repaired decision/rule files pass strict UTF-8 decoding. No application source or migration files changed. This local diff has not been pushed and has no new CI run.
 
 ## Locked V1 business tenancy model
 
@@ -96,7 +99,7 @@
 - CI retains project-state validation and is configured to run the application suite, Django system checks, and migration checks with PostgreSQL. The GitHub Actions run for the reviewed baseline successfully passed all checks, including the application suite, Django system checks, and PostgreSQL integration. Remote CI confirmation is fully green and the PostgreSQL connectivity issue is resolved.
 - Production compose now propagates `DJANGO_CORS_ALLOWED_ORIGINS` without inventing a deployment origin.
 - No migrations were required or changed.
-- Unresolved decisions remain: global User administration ownership, ordinary-user Shop read visibility, and Shop DELETE semantics. These were not invented or changed.
+- Remaining unresolved decisions include ordinary-user Shop read visibility, Shop DELETE semantics, Shop Admin scoped settings authority, currency changes after financial history, and the other later-phase items in `docs/DECISIONS.md`. Global User administration/public signup, phone rules, credential lifecycle, and current Main Supplier Shop-settings authority are now confirmed.
 
 ### Phase 3+ Deferred Implementations
 

@@ -22,7 +22,7 @@
 
 ### Approved planned V1 schema additions (not implemented)
 
-- T3-02A may add nullable User phone (canonical E.164), nullable preferred locale and appearance enum/default `system`, plus Shop default locale/timezone/currency. Preserve UUID identity, required email and existing memberships; do not fabricate phone values. Review uniqueness/collisions and existing-data compatibility before migration.
+- T3-02A may add nullable User phone (canonical E.164, database-enforced uniqueness for non-NULL User login phones), nullable preferred locale and appearance enum/default `system`, plus explicit Shop locale/timezone/currency fields. Preserve UUID identity, required email and existing memberships; do not fabricate phone values or infer Shop timezone/currency. Main Supplier Admin is the current Shop-settings authority. Review normalized phone collisions and existing-data compatibility before migration. Exact initial Shop timezone/currency may remain unset until configured.
 - Later business migrations preserve historical measurement versions and financial values. Locale changes must not rewrite canonical source data; theme changes have no business-data effect; currency changes must never reinterpret historical transactions.
 - Prefer additive, forward-only migrations. Each task documents empty-database replay, upgrade compatibility, constraints/indexes and recovery. Retention duration, currency changes after finance, and other unresolved policy remain `BUSINESS DECISION REQUIRED`.
 

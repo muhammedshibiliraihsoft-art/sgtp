@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-09-28 — T3-02A-BUSINESS-DECISION-LOCK
+
+- Recorded human-approved account creation, email/phone identity and management, credential lifecycle, Shop timezone/currency/settings authority, nullable locale, and appearance rules in `docs/BUSINESS_RULES.md` and `docs/DECISIONS.md`.
+- Reconciled architecture, product definition, API, database, security, phase plan, project state, handoff, and agent instructions. Explicitly recorded that public User creation remains enabled in current code and email-only login remains implemented; T3-02A must reconcile these behaviors.
+- Repaired the identified Windows-1252 em-dash encoding bytes in `BUSINESS_RULES.md` and `DECISIONS.md` without changing their business meaning; strict UTF-8 validation now passes.
+- Documentation/business-rule reconciliation only. No application source, migrations, dependencies, deployment, commit, or push; T3-02A and T3-03 remain unimplemented and unauthorized.
+
 ## 2026-09-28 — V1-ENVIRONMENT-LOCK
 
 - Locked the V1 environment model as LOCAL → STAGING → PRODUCTION. Removed the separate Preview tier from the approved architecture.

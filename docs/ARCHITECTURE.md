@@ -87,7 +87,7 @@ Docker        -> development container and production web/db services
 ## Authentication
 
 - `AUTH_USER_MODEL = accounts.User`.
-- Email is the login identifier.
+- Current code authenticates by email only. The approved T3-02A target supports required email or an optional unique E.164 phone as identifiers for the same UUID User through one coherent authentication/token flow; phone login is not yet implemented.
 - Base DRF configuration uses JWT authentication; development settings also enable session authentication and the browsable API.
 - Login and refresh routes use SimpleJWT.
 - The JWT blacklist application is installed and configured.
@@ -104,12 +104,14 @@ Docker        -> development container and production web/db services
 - Logout blacklists the current refresh token and clears both refresh and csrftoken cookies.
 - No custom token-family revocation architecture is used in B2-02.
 
-### Planned V1 identity and preferences (Phase 3 T3-02A; not implemented)
+### Approved V1 identity and preferences (Phase 3 T3-02A; not implemented)
 
 - Preserve the User UUID primary key and required unique email. Add country-aware phone normalization to E.164 without fabricating values for existing users; login may use email or phone through one deterministic authentication path.
 - Persist nullable User preferred locale and `system|light|dark` appearance, defaulting appearance to `system`; locale selection is `User preference → authorized Shop default → English`.
 - Shop default locale/timezone/currency are configuration only and must be resolved only after authorization. None of these preferences or settings may determine role, membership, access, or Shop selection.
-- Account creation authority, public registration, phone requiredness/reassignment, initial-password delivery/forced change and recovery proof remain `BUSINESS DECISION REQUIRED` unless separately approved.
+- Public self-registration is prohibited; Main Supplier Admin is the current authority for global User creation/management. Email is required, phone is optional, and a registered unique E.164 User phone or email authenticates the same UUID account. Phone add/change/remove follows authorized account management; no V1 phone verification is required.
+- Generated initial passwords must be cryptographically random, hash-only at rest, never logged or repeatedly exposed, and changed at first login. Recovery is email-based with secure, expiring, single-use behavior; password change/reset revokes refresh-token sessions.
+- Shop timezone/currency are explicit and are never inferred; they may remain unset until configured. Main Supplier Admin manages Shop-level settings in the current foundation. Shop Admin settings authority is not granted by T3-02A.
 
 ## Planned cross-cutting V1 presentation and operations
 

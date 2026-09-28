@@ -2,7 +2,7 @@
 
 ## V1 roadmap security requirements (planned, not yet implemented)
 
-- Preserve User UUID identity; phone is normalized to E.164 and must not be fabricated for existing users. Never log/store plaintext passwords. Do not add OTP/SMS/WhatsApp/2FA providers without separate approval.
+- Preserve User UUID identity and required email; optional User login phones are canonical E.164 and unique per login User, with no fabricated backfill. Public self-registration is prohibited by BR-ACC-002, but the current public create endpoint remains enabled until T3-02A reconciles it. Main Supplier Admin controls global account creation and phone lifecycle; no V1 phone verification/provider is required. Generated initial credentials are hash-only at rest, one-time exposed, and require first-login change; V1 recovery is email-based and credential changes revoke refresh sessions. Never log/store plaintext passwords. Do not add OTP/SMS/WhatsApp/2FA providers.
 - User/Shop locale and theme are never authorization inputs. Authorize Shop context before resolving its defaults; every preference/settings endpoint remains subject to object and tenant permissions.
 - Staging uses isolated services, demo/test data and separate secrets at `staging.birky.com` / `api-staging.birky.com`; verify cookie SameSite/Secure, CSRF, Origin and credentialed CORS in a real browser. Never expose production credentials/data.
 - Audit events may contain actor UUID, Shop, action, object identity, safe before/after fields, timestamp and request correlation only; exclude passwords, tokens, secrets and sensitive prompts. Logs must be secret-safe.

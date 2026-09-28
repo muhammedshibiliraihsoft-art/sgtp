@@ -4,7 +4,7 @@
 
 SGTP is the **Supplier-Centric Garment & Tailor Platform**. V1 is a complete integrated business system for a supplier that manages multiple tailoring shops. Tailor Management is the core V1 business module.
 
-> **Note on Naming & Branding:** "SGTP" is strictly an internal project identifier. The public product/company name is currently unfinalized. Agents must not invent public names, replace SGTP with assumed brand names, or finalize public production domains/hostnames without explicitly halting and raising a **BUSINESS DECISION REQUIRED** prompt to the human user for the final name and domain architecture. Technical internal API paths (e.g. `/api/v1/`, `/shops/{shop_id}/`) are independent of branding and may proceed.
+> **Note on Naming & Branding:** BiRKy is the company; SGTP is the technical/internal project identifier. The customer-facing product brand is not yet decided. Do not invent a product brand or finalize public production domains/hostnames beyond the already approved environment decisions. Technical internal API paths (e.g. `/api/v1/`, `/shops/{shop_id}/`) are independent of branding and may proceed.
 
 The product is not defined as a generic Django backend, a set of disconnected APIs, or a collection of screens. It must connect the business records and workflow so that a supplier and each authorized shop can operate their work from request through billing and history.
 
@@ -38,6 +38,10 @@ This section is authoritative for V1 business meaning:
 - Shop A data must never be exposed to Shop B through IDs, lists, search, filters, ordering, pagination, counts, aggregates, autocomplete, nested relations, foreign-key traversal, or URL manipulation.
 - The Main Supplier / Main Admin may have explicitly authorized cross-shop operational visibility, but that does not make Shop data globally shared with Shop users.
 - The existing starter `Tenant` model is a legacy technical input and must not automatically be interpreted as the Main Supplier, an External Supplier, a Shop, or a platform-wide multi-supplier tenant. Its compatibility mapping is governed by the Phase 3 T3-01 decision gate.
+
+## V1 Account and Preference Policy
+
+Confirmed business rules are maintained canonically in `docs/BUSINESS_RULES.md`. Public self-registration is prohibited; Main Supplier Admin is the current authority for global User account creation and management. Email is required, UUID remains permanent identity, and optional unique E.164 User login phone plus email authenticate the same account. Phone verification is not required in V1; phone lifecycle is controlled through authorized account management. Generated initial credentials require secure one-time handling and first-login change; recovery is email-based and credential changes revoke refresh sessions. The current public User-create endpoint remains existing code behavior and has not yet been changed. T3-02A remains a future implementation task, not completed work.
 
 ## Core V1 business flow
 

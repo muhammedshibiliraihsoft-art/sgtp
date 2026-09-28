@@ -2,15 +2,15 @@
 
 ## Current phase
 
-Phase 3 NOT STARTED for new implementation activation. Previously confirmed Phase 3 task outcomes are historical; current authorized work is the documentation-only V1-ROADMAP-UPDATE.
+Phase 3 NOT STARTED for new implementation activation. Previously confirmed Phase 3 task outcomes are historical; latest work is the documentation-only T3-02A-BUSINESS-DECISION-LOCK.
 ## Current task
 
-V1-ROADMAP-UPDATE documentation task is COMPLETE. Latest implementation task T3-02-REMEDIATION remains COMPLETE and fully closed. This roadmap task did not authorize or implement application work.
+T3-02A-BUSINESS-DECISION-LOCK documentation task is COMPLETE. Latest implementation task T3-02-REMEDIATION remains COMPLETE and fully closed. This task recorded approved business rules only; it did not authorize or implement application work.
 
 - **Changed areas:** User API authorization/serializer, Main Supplier Shop-write permission, membership serializer lifecycle protection, real throttle wiring/tests, duplicate CORS tests, production CORS environment propagation, CI validation, remediation regression tests, and documentation.
 - **Validation:** Repository validator PASS; Django check PASS; migration drift check PASS; local application test suite PASS. Remote CI is green: the latest GitHub Actions workflow passed successfully, confirming the PostgreSQL CI connectivity and throttle cache isolation fixes. No migrations were required for closure. Production authentication throttling behavior was not weakened to make tests pass.
-- **Next implementation candidate:** T3-02A is planned but NOT authorized by V1-ROADMAP-UPDATE. Present its task plan and wait for exact `CONFIRM TASK T3-02A`. T3-03 and later tasks require their own confirmations.
-- **Current blockers:** Business decisions remain required for global User administration ownership, ordinary-user Shop read visibility, and Shop DELETE semantics. T3-03 remains unauthorized.
+- **Next implementation candidate:** T3-02A remains NOT authorized. Present its bounded task plan and wait for exact `CONFIRM TASK T3-02A`. T3-03 and later tasks require their own confirmations.
+- **Current blockers:** Ordinary-user Shop read visibility, Shop DELETE semantics, Shop Admin scoped settings authority, currency changes after financial history, and other later-phase decisions remain unresolved. Global User authority, public signup prohibition, phone rules, credential lifecycle, and Main Supplier Shop-settings authority are now confirmed in `docs/BUSINESS_RULES.md` and `docs/DECISIONS.md`. T3-03 remains unauthorized.
 - **Agent Transition Note:** Upcoming engineering work may be executed through Codex; repository governance and explicit task-confirmation rules remain authoritative regardless of implementation agent.
 ## Repository state evidence
 - Verify current HEAD with `git rev-parse HEAD`
@@ -62,7 +62,7 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 ## Phase 3+ Deferred Implementations
 
 - `BaseModelWithTenant.tenant` is nullable and no active-tenant/request authorization mechanism exists.
-- The starter is not yet the target product: complete request-scoped Shop isolation, clients, related persons, designs, measurements, materials, production stages, billing, reports/PDFs, frontend, persistent storage, workers, complete audit capture, monitoring, and end-to-end validation remain unimplemented. CI currently validates repository state, runs tests, and performs Django/migration checks, subject to the pending GitHub workflow confirmation recorded above.
+- The starter is not yet the target product: complete request-scoped Shop isolation, clients, related persons, designs, measurements, materials, production stages, billing, reports/PDFs, frontend, persistent storage, workers, complete audit capture, monitoring, and end-to-end validation remain unimplemented. The latest verified baseline GitHub Actions run passed repository validation, application tests, Django checks, and migration checks; this local documentation diff has not been pushed and has no CI result.
 - The target requires React/Vite/Tailwind, but the starter has only an empty `frontend/` placeholder. English/ar-KW/Bangla/Urdu localization, RTL/LTR, and Light/Dark/System are planned V1 requirements, not implemented.
 - Tenant context is approved as URL-path based (`/shops/{shop_id}/...`) and must be implemented/tested in Phase 3.
 - Related Person billing ownership is approved as Primary Client ownership and must be implemented/tested in Phase 5.
@@ -87,7 +87,7 @@ Historical Phase 3 task outcomes:
 
 ## Roadmap handoff
 
-V1-ROADMAP-UPDATE authorized documentation changes only. Do not implement T3-02A, T3-03, T3-05A (Staging Backend Foundation), F7-01A (Staging Frontend & Client Review Checkpoint), any application feature, or deploy any environment under this task. Next implementation candidate is T3-02A; it requires its own task plan and exact explicit confirmation. Unresolved policy items remain `BUSINESS DECISION REQUIRED` in the canonical decision record.
+T3-02A-BUSINESS-DECISION-LOCK authorized documentation/business-rule reconciliation only. Do not implement T3-02A, T3-03, T3-05A (Staging Backend Foundation), F7-01A (Staging Frontend & Client Review Checkpoint), any application feature, or deploy any environment under this task. T3-02A remains the next candidate and requires its own task plan and exact explicit confirmation. Newly approved account/authentication policies are targets, not implemented behavior; remaining policy items stay `BUSINESS DECISION REQUIRED` in the canonical decision record.
 
 ## Tests and checks — V1-ROADMAP-UPDATE
 
@@ -99,3 +99,10 @@ V1-ROADMAP-UPDATE authorized documentation changes only. Do not implement T3-02A
 - `git diff --check`: PASS (Git emitted only CRLF-to-LF normalization warnings).
 - GitHub Actions: the previously verified baseline run was green; this local documentation diff has not been pushed and has no new CI run.
 - Scope: documentation only; no application source, migrations, deployment, commit, or push.
+
+## T3-02A-BUSINESS-DECISION-LOCK — current session
+
+- Decision: approved T3-02A account/authentication, phone, credential lifecycle, Shop settings, locale, and appearance rules are now recorded in the canonical business-rule and decision documents.
+- Code status: unchanged. Anonymous User creation is still available in the current endpoint, and login remains email-only; T3-02A must reconcile these approved policy targets.
+- Validation: repository validator PASS (dirty-tree warning expected); validator tests 11 passed; full pytest 120 passed; Django check PASS; migration drift check no changes; `git diff --check` PASS. Business Rule IDs are unique and `BUSINESS_RULES.md`/`DECISIONS.md` pass strict UTF-8 decoding. Current local diff has no new CI run.
+- Next task: T3-02A remains unauthorized; obtain its exact task confirmation before implementation. T3-03 also remains unauthorized.
