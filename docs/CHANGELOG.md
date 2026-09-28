@@ -7,7 +7,7 @@
 - Added the approved uniform non-disclosing 404 contract for foreign, unauthorized, inactive, soft-deleted, unavailable, and nonexistent Shops; authentication failures retain 401.
 - Updated `IsTenantMember` to require the resolved request context and added focused context/security regressions. T3-04 query/object isolation remains out of scope; no business model, migration, dependency, or global Shop-visibility policy changed.
 - T3-02A current-state documentation was reconciled while updating task handoff; dated historical decision/audit records were retained and labelled historical where needed.
-- Validation is local only; no commit or push was made. GitHub Actions does not cover this T3-03 diff.
+- T3-03 was committed and pushed; GitHub Actions Project State Validation Run #19 passed for the implementation commit.
 
 ## 2026-09-28 — T3-02A Account and preference foundation
 

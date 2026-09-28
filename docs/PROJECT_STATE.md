@@ -6,8 +6,8 @@
 - Phase 3 is ACTIVE; activation was explicitly confirmed with `CONFIRM PHASE 3`.
 - Completed Phase 3 tasks: T3-01, T3-02, T3-02-REMEDIATION, T3-02A, and T3-03.
 - Remaining tasks T3-04 onward are not started and remain individually gated.
-- Latest implementation task: T3-03 — Tenant / Shop Request Context = COMPLETE locally; changes are uncommitted and unpushed. T3-03 was explicitly confirmed. T3-04 is NOT STARTED / NOT CONFIRMED.
-- Current application test discovery: 145 tests. Latest full local run and validation results are recorded in the T3-03 verification section below. The latest remote CI green result applies to the prior pushed baseline; it does not validate this local diff.
+- Latest implementation task: T3-03 — Tenant / Shop Request Context = COMPLETE / COMMITTED / PUSHED / CI GREEN. T3-03 was explicitly confirmed. T3-04 is NOT STARTED / NOT AUTHORIZED.
+- Current application test discovery: 145 tests. The T3-03 commit passed GitHub Actions Project State Validation Run #19; its result covers the current pushed baseline.
 
 - Project root: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp`
 - Remote: `https://github.com/muhammedshibiliraihsoft-art/sgtp.git`
@@ -21,7 +21,7 @@
 - Later-phase decisions: Tenant context is approved as URL-path based (`/shops/{shop_id}/...`), and Related Person billing is owned by the Primary Client.
 - T3-05A (Staging Backend Foundation) and F7-01A (Staging Frontend & Client Review Checkpoint) remain planned only. T3-02A implemented the account/preference data and API foundation; frontend localization, RTL/LTR layout, and full Light/Dark/System UI remain Phase 7 work.
 - T3-02A confirmed policy is now implemented: anonymous self-registration denied; Main Supplier Admin controls global account creation/phone lifecycle and Shop defaults; email and optional unique E.164 phone authenticate one UUID account; generated initial password is returned once/no-store and must be changed; email reset is single-use and revokes sessions; nullable locale and `system|light|dark` preferences and nullable Shop defaults persist.
-- T3-02A verification: the pushed baseline CI passed in GitHub Actions run #17. T3-03 is locally verified only; its changes have not been pushed or covered by CI.
+- T3-02A verification: the pushed baseline CI passed in GitHub Actions run #17. T3-03 is committed and pushed; GitHub Actions run #19 passed for it.
 
 ### Latest T3-02A Verification
 
@@ -39,9 +39,9 @@
 - Foreign, unauthorized, inactive, deleted, unavailable, and nonexistent Shop requests return the same non-disclosing 404 (`shop_context_unavailable`). Unauthenticated, invalid, and revoked credentials preserve 401 behavior.
 - Full queryset/object isolation remains T3-04 scope. Global Shop visibility, Shop deletion semantics, Shop Admin settings authority, and currency-change policy remain unresolved and unchanged.
 - Focused context/membership/permission suite: 76 passed; the dedicated Shop-context module contains 15 tests.
-- Full application suite: 145 passed (144 warnings). Django check, migration drift check, OpenAPI schema validation, validator unit tests (11 passed), Black, Flake8, and `git diff --check` passed.
-- Repository validator: PASS; Phase 3 is recorded as active with explicit activation in both current-state documents. Validator unit tests: 14 passed; application discovery: 145 tests. Dirty-worktree warning is expected for these uncommitted local changes.
-- No database schema or dependency changes; no commit or push. Remote CI does not cover this local T3-03 diff.
+- Full application suite: 145 passed (144 warnings). Django check, migration drift check, OpenAPI schema validation, validator unit tests (14 passed), Black, Flake8, and `git diff --check` passed.
+- Repository validator: PASS; Phase 3 is recorded as active with explicit activation in both current-state documents. It discovered 145 application tests.
+- No database schema or dependency changes. T3-03 is committed and pushed; GitHub Actions Project State Validation Run #19 passed.
 
 ## Locked V1 business tenancy model
 

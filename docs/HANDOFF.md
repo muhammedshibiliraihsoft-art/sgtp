@@ -9,21 +9,21 @@ Completed tasks: T3-01, T3-02, T3-02-REMEDIATION, T3-02A, and T3-03.
 Remaining tasks T3-04 onward are not started.
 ## Current task
 
-T3-03 — Tenant / Shop Request Context: COMPLETE locally. The human explicitly confirmed `CONFIRM TASK T3-03` and approved a uniform non-disclosing 404 for denied/unavailable Shop context. Stop after this task; do not begin T3-04 without its own task plan and exact confirmation.
+T3-03 — Tenant / Shop Request Context: COMPLETE / COMMITTED / PUSHED / CI GREEN. The human explicitly confirmed `CONFIRM TASK T3-03` and approved a uniform non-disclosing 404 for denied/unavailable Shop context. Do not begin T3-04 without its own task plan and exact confirmation.
 
 - **Implemented:** DRF request-local context resolver/base and `GET /api/v1/shops/{shop_id}/context/`; active Shop plus active membership or explicit Main Supplier; ADMIN/STAFF/VIEWER context; context-bound `IsTenantMember` entry check; URL selector only.
 - **Security:** authentication and password-change gate precede Shop resolution. Foreign, unauthorized, inactive, deleted, unavailable, and nonexistent Shops share 404 code `shop_context_unavailable`; unauthenticated/invalid/revoked credentials retain 401. No Shop defaults are returned.
 - **Database/API scope:** no migration or dependency change. This establishes request context only; T3-04 still owns business queryset/object isolation. Existing global Tenant/member APIs and unresolved Shop visibility/deletion/settings/currency decisions are unchanged.
-- **Validation:** see the current T3-03 verification record below. Changes remain local, uncommitted, and unpushed; GitHub Actions does not cover this diff.
+- **Validation:** see the current T3-03 verification record below. The implementation is committed and pushed; GitHub Actions Project State Validation Run #19 passed for the commit.
 - **Next task:** T3-04 — Scoped Querysets and Object Permissions; NOT AUTHORIZED. Prepare its task plan and wait for exact `CONFIRM TASK T3-04`.
 - **Known warning baseline:** Django tests emit existing test-key-length, local staticfiles, and DRF format-converter warnings; these are not T3-03 failures.
 
 ## T3-03 verification record
 
 - Focused context/membership/permission suite: 76 passed; dedicated Shop-context module: 15 tests.
-- Full application suite: 145 passed (144 warnings); Django check, migration drift check, OpenAPI schema validation, validator unit tests (11 passed), Black, Flake8, and `git diff --check` passed.
-- Repository validator: PASS; 14 validator tests passed and 145 application tests were discovered. It reports the expected dirty-worktree warning; no CI run covers this local diff.
-- No GitHub Actions run covers this local diff. No migration or dependency change; changes are uncommitted and unpushed.
+- Full application suite: 145 passed (144 warnings); Django check, migration drift check, OpenAPI schema validation, validator unit tests (14 passed), Black, Flake8, and `git diff --check` passed.
+- Repository validator: PASS; 145 application tests discovered. GitHub Actions Project State Validation Run #19 passed for the pushed T3-03 commit.
+- No migration or dependency change. T3-04 remains not started and unauthorized.
 
 ### Historical: T3-02A verification record
 
@@ -106,7 +106,7 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 ## Phase 3+ Deferred Implementations
 
 - `BaseModelWithTenant.tenant` remains nullable. T3-03 establishes request context; T3-04 complete queryset/object isolation is pending.
-- The starter is not yet the target product: Clients, Related Persons, Designs, Measurements, Materials, production stages, billing, reports/PDFs, frontend, persistent storage, workers, complete audit capture, monitoring, and end-to-end validation remain unimplemented. The latest pushed baseline CI passed; the current local T3-03 diff has no CI result.
+- The starter is not yet the target product: Clients, Related Persons, Designs, Measurements, Materials, production stages, billing, reports/PDFs, frontend, persistent storage, workers, complete audit capture, monitoring, and end-to-end validation remain unimplemented. The pushed T3-03 baseline passed GitHub Actions run #19; T3-04 and later work remain unimplemented.
 - The target requires React/Vite/Tailwind, but the starter has only an empty `frontend/` placeholder. English/ar-KW/Bangla/Urdu localization, RTL/LTR, and Light/Dark/System are planned V1 requirements, not implemented.
 - Tenant context is implemented as URL-path based (`/api/v1/shops/{shop_id}/...`); T3-04 must apply it to all Shop-owned queries and objects.
 - Related Person billing ownership is approved as Primary Client ownership and must be implemented/tested in Phase 5.
