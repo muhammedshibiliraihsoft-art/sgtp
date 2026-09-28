@@ -3,8 +3,8 @@
 ## Status
 
 - Phase 1 and Phase 2 are complete. Phase 3 NOT STARTED for general phase execution; the separately confirmed bounded task T3-02A is complete. T3-01, T3-02, and T3-02-REMEDIATION are prior completed foundation tasks. T3-03 has not started.
-- Latest implementation task: T3-02A COMPLETE after local validation. It was explicitly confirmed; no subsequent task is authorized.
-- Current application test discovery: 130 tests. Latest full local run: 130 passed. The previously verified GitHub Actions run covers the prior baseline only; this local T3-02A diff has not been pushed and has no CI result.
+- Latest implementation task: T3-02A = COMPLETE / PUSHED / CI GREEN. Verified by GitHub Actions. T3-03 = NOT STARTED / NOT CONFIRMED.
+- Current application test discovery: 130 tests. Latest full local run: 130 passed. GitHub Actions "Project State Validation Run #17" confirms SUCCESS for T3-02A.
 
 - Project root: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp`
 - Remote: `https://github.com/muhammedshibiliraihsoft-art/sgtp.git`
@@ -18,7 +18,7 @@
 - Later-phase decisions: Tenant context is approved as URL-path based (`/shops/{shop_id}/...`), and Related Person billing is owned by the Primary Client.
 - T3-05A (Staging Backend Foundation) and F7-01A (Staging Frontend & Client Review Checkpoint) remain planned only. T3-02A implemented the account/preference data and API foundation; frontend localization, RTL/LTR layout, and full Light/Dark/System UI remain Phase 7 work.
 - T3-02A confirmed policy is now implemented: anonymous self-registration denied; Main Supplier Admin controls global account creation/phone lifecycle and Shop defaults; email and optional unique E.164 phone authenticate one UUID account; generated initial password is returned once/no-store and must be changed; email reset is single-use and revokes sessions; nullable locale and `system|light|dark` preferences and nullable Shop defaults persist.
-- T3-02A verification: see the current verification record below. No new GitHub Actions run is available because this local work was not pushed.
+- T3-02A verification: see the current verification record below. GitHub Actions Project State Validation Run #17 reported SUCCESS for the pushed T3-02A commit.
 
 ### Latest T3-02A Verification
 
@@ -27,7 +27,7 @@
 - Django system check: PASS. Production deployment check (`DJANGO_ENV=prod`): PASS with no issues. The default local development `check --deploy` emits six expected development-environment security warnings; the production settings check is clean.
 - Migration status: both new migrations applied locally; `makemigrations --check --dry-run`: no changes detected.
 - API schema validation: PASS. Black check for new/rewritten account implementation: PASS; Black and Flake8 checks for `scripts/`: PASS; Flake8 for account implementation: PASS.
-- `git diff --check`: PASS. No GitHub Actions run covers this local diff; no push was made.
+- `git diff --check`: PASS. GitHub Actions Project State Validation Run #17 reported SUCCESS for the pushed commit.
 
 ## Locked V1 business tenancy model
 

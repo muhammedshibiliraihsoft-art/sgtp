@@ -15,7 +15,7 @@ T3-02A — Account, phone, locale, and preference foundation: COMPLETE and local
 - **Known limitations:** no front-end localization/theme UI, no Shop URL context or tenant isolation, no later-phase business modules. Shop defaults must not be read by ordinary users. Email reset delivery requires deployment email configuration and `PASSWORD_RESET_URL`.
 - **Unresolved decisions:** ordinary-user Shop read visibility, Shop deletion semantics, Shop Admin scoped settings authority, currency changes after financial history, and other later-phase items remain `BUSINESS DECISION REQUIRED` where recorded. These did not block T3-02A.
 - **Next task:** T3-03, but NOT AUTHORIZED; prepare its task plan and wait for exact `CONFIRM TASK T3-03`. Do not implement it automatically.
-- **Git/CI:** work is local and uncommitted; no push was performed. There is no GitHub Actions result for this diff.
+- **Git/CI:** T3-02A is complete. Commit is on `origin/main`. CI is green (GitHub Actions Project State Validation Run #17 SUCCESS).
 
 ### T3-02A verification record
 
@@ -29,12 +29,11 @@ Final verification outcomes are recorded in the `Tests and checks` section below
 - `manage.py check`: PASS. `manage.py check --deploy` with `DJANGO_ENV=prod`: PASS. Default development `check --deploy`: exit 0 with six expected local dev security warnings (DEBUG, development secret, SSL redirect/HSTS, secure session/CSRF cookies).
 - `manage.py makemigrations --check --dry-run`: PASS, no changes. Both T3-02A migrations are applied locally. API schema validation: PASS.
 - Black check for new/rewritten account implementation: PASS. Black and Flake8 for `scripts/`: PASS. Flake8 for account implementation: PASS. `git diff --check`: PASS.
-- GitHub Actions: no run for this unpushed local diff. No push/commit was made.
-- Git status: local working tree contains T3-02A implementation and documentation changes; branch remains `main`, remote URL is unchanged, and no remote update was made.
-
-- **Changed areas:** User API authorization/serializer, Main Supplier Shop-write permission, membership serializer lifecycle protection, real throttle wiring/tests, duplicate CORS tests, production CORS environment propagation, CI validation, remediation regression tests, and documentation.
-- **Validation:** Repository validator PASS; Django check PASS; migration drift check PASS; local application test suite PASS. Remote CI is green: the latest GitHub Actions workflow passed successfully, confirming the PostgreSQL CI connectivity and throttle cache isolation fixes. No migrations were required for closure. Production authentication throttling behavior was not weakened to make tests pass.
-- **Next implementation candidate:** T3-02A remains NOT authorized. Present its bounded task plan and wait for exact `CONFIRM TASK T3-02A`. T3-03 and later tasks require their own confirmations.
+- GitHub Actions: the GitHub Actions workflow passed successfully for T3-02A.
+- Git status: local working tree is clean. Branch `main` is up to date with `origin/main`.
+- **Historical Changed areas:** User API authorization/serializer, Main Supplier Shop-write permission, membership serializer lifecycle protection, real throttle wiring/tests, duplicate CORS tests, production CORS environment propagation, CI validation, remediation regression tests, and documentation.
+- **Validation:** remote CI is green: the latest GitHub Actions workflow passed successfully.
+- **Next implementation candidate:** T3-03 is the next candidate, but remains NOT authorized. Present its bounded task plan and wait for exact `CONFIRM TASK T3-03`.
 - **Current blockers:** Ordinary-user Shop read visibility, Shop DELETE semantics, Shop Admin scoped settings authority, currency changes after financial history, and other later-phase decisions remain unresolved. Global User authority, public signup prohibition, phone rules, credential lifecycle, and Main Supplier Shop-settings authority are now confirmed in `docs/BUSINESS_RULES.md` and `docs/DECISIONS.md`. T3-03 remains unauthorized.
 - **Agent Transition Note:** Upcoming engineering work may be executed through Codex; repository governance and explicit task-confirmation rules remain authoritative regardless of implementation agent.
 ## Repository state evidence

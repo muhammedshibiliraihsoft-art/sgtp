@@ -193,7 +193,7 @@ Docker        -> development container and production web/db services
 
 ## Phase 1 status and current V1 readiness
 
-Phase 1 foundation implementation is complete. Phase 3 T3-02A is implemented and locally validated; SGTP V1 is not ready for production. Business modules and end-to-end workflows remain unimplemented, and Phase 3 URL-path Shop context/isolation is pending T3-03. T3-02 remediation was confirmed by a successful GitHub Actions run; no CI run covers this unpushed T3-02A work.
+Phase 1 foundation implementation is complete. Phase 3 T3-02A is implemented and pushed; remote CI is green. SGTP V1 is not ready for production. Business modules and end-to-end workflows remain unimplemented. Phase 3 URL-path Shop context is pending T3-03. Full isolation is pending T3-04.
 
 ## Membership Lifecycle and Rules
 
