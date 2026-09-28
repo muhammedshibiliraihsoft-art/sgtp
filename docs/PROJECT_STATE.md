@@ -3,7 +3,8 @@
 ## Status
 
 - Phase 2 is complete. Phase 3 implementation is active.
-- Current task: T3-02 User-Shop membership and roles (Completed).
+- Current task: T3-02-REMEDIATION (Completed).
+- Current verified application test count: 120 tests passing.
 
 - Project root: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp`
 - Remote: `https://github.com/muhammedshibiliraihsoft-art/sgtp.git`
@@ -12,7 +13,7 @@
 - Target status: SGTP V1 is explicitly defined in `docs/PRODUCT_DEFINITION.md`
 - Starter foundation: exists in the cloned SGTP repository.
 - Phase 1 implementation: **Historical - Complete.**
-- Confirmation status: T3-02 is complete. T3-03 is NOT YET AUTHORIZED and requires separate explicit task confirmation.
+- Confirmation status: T3-02 remediation is complete. T3-03 is NOT YET AUTHORIZED and requires separate explicit task confirmation.
 - Detailed phase playbooks: 01-10 present.
 - Later-phase decisions: Tenant context is approved as URL-path based (`/shops/{shop_id}/...`), and Related Person billing is owned by the Primary Client.
 
@@ -83,6 +84,18 @@
 
 - The V1 Supplier / Shop / External Supplier business meaning is now explicit across the governing documentation.
 - Phase 3 remains activated only as a planning scope; T3-01 and T3-02 implementation are complete, but URL context (T3-03) is pending.
+
+### T3-02 remediation result
+
+- User API access is restricted so ordinary authenticated users cannot enumerate, modify, or delete other users; self-profile updates remain available and account activation state is read-only through the serializer.
+- Shop write actions and activation/deactivation use the existing `ShopRolePolicy` Main Supplier authority instead of Django `is_staff` alone.
+- Generic membership updates cannot change `is_active`; lifecycle actions remain authoritative.
+- Authentication throttling is explicitly wired to the `auth` scope and verified with a non-mocked repeated-login test.
+- Duplicate CORS test method names were corrected so all intended tests are collected.
+- CI now retains project-state validation and also runs the application suite, Django system checks, and migration checks with PostgreSQL.
+- Production compose now propagates `DJANGO_CORS_ALLOWED_ORIGINS` without inventing a deployment origin.
+- No migrations were required or changed.
+- Unresolved decisions remain: global User administration ownership, ordinary-user Shop read visibility, and Shop DELETE semantics. These were not invented or changed.
 
 ### Phase 3+ Deferred Implementations
 

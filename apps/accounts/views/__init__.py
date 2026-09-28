@@ -38,6 +38,12 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
 
+    def get_queryset(self):
+        """Prevent ordinary users from enumerating or targeting other users."""
+        if self.request.user.is_superuser:
+            return User.objects.all()
+        return User.objects.filter(pk=self.request.user.pk)
+
     def get_serializer_class(self):
         if self.action == 'create':
             return UserCreateSerializer
@@ -49,6 +55,16 @@ class UserViewSet(viewsets.ModelViewSet):
         else:
             permission_classes = [IsAuthenticated]
         return [permission() for permission in permission_classes]
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if not request.user.is_superuser:
+            return Response(
+                {'detail': 'User deletion is restricted.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def me(self, request):
@@ -73,6 +89,7 @@ class UserViewSet(viewsets.ModelViewSet):
 class CustomTokenObtainPairView(TokenObtainPairView):
     """Custom login view that returns user data, issues CSRF token, and sets HttpOnly refresh cookie"""
     throttle_classes = [AuthRateThrottle]
+    throttle_scope = 'auth'
 
     @extend_schema(
         responses={
@@ -106,6 +123,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 class CustomTokenRefreshView(TokenRefreshView):
     """Refresh view that reads refresh token from HttpOnly cookie and requires CSRF"""
     throttle_classes = [AuthRateThrottle]
+    throttle_scope = 'auth'
 
     @extend_schema(
         request=None,
@@ -178,3 +196,6 @@ def logout_view(request):
         response.delete_cookie('refresh')
         response.delete_cookie('csrftoken')
         return response
+
+
+logout_view.throttle_scope = 'auth'

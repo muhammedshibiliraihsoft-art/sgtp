@@ -108,7 +108,7 @@ Docker        -> development container and production web/db services
 
 - Object-level permission primitives are established: `IsOwner` (verifies ownership), `IsTenantMember` (Phase 3 deny-by-default contract), and `DenyAll` (explicit denial).
 - Reusable tenant queryset scoping is provided by `TenantScopedMixin`, which enforces the `/shops/{shop_id}/...` path contract by filtering querysets and preventing cross-tenant IDOR access.
-- Actual User-Shop membership logic is modeled via `TenantMember` and `ShopRolePolicy`. Business tenant isolation context implementation remains pending for Phase 3 (T3-03, T3-04).
+- Actual User-Shop membership logic is modeled via `TenantMember` and `ShopRolePolicy`. Shop write authority uses the existing Main Supplier policy, while business tenant isolation context implementation remains pending for Phase 3 (T3-03, T3-04).
 
 ## API Security and Reliability
 
@@ -133,6 +133,7 @@ Docker        -> development container and production web/db services
 - `/admin/`
 - `/api/v1/auth/users/`, `/login/`, `/logout/`, `/token/refresh/`
 - `/api/v1/tenants/` and tenant actions `activate`, `deactivate`, `stats`
+- User API ordinary-user access is restricted to the authenticated user's own record; self-profile activation state is read-only.
 - Target shop-scoped API paths use `/shops/{shop_id}/...` for tenant context.
 - `/api/schema/` and `/api/docs/`
 - `/` serves a static API test/reference page.

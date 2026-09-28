@@ -5,12 +5,12 @@
 Phase 3 (Shop / Tenant) implementation is active.
 ## Current task
 
-Task T3-02 (User-Shop membership and roles) remediation is complete and verified (Identity, Lifecycle, Undo, Capacity).
+Task T3-02-REMEDIATION (User-Shop membership and roles security/integrity remediation) is complete and verified.
 
-- **Changed areas:** `apps/tenants/models/membership.py`, `apps/tenants/policy.py`, `apps/tenants/tests/test_membership.py`, `apps/tenants/tests/test_membership_api.py`, `apps/tenants/views/membership.py`, `apps/tenants/serializers/membership.py`, `core/permissions.py`, `docs/PROJECT_STATE.md`, and `docs/HANDOFF.md`.
-- **Validation performed:** Verified local tests running clean. `pytest` successful. `manage.py check` passes with zero issues.
+- **Changed areas:** User API authorization/serializer, Main Supplier Shop-write permission, membership serializer lifecycle protection, real throttle wiring/tests, duplicate CORS tests, production CORS environment propagation, CI validation, and remediation regression tests.
+- **Validation performed:** Repository validator passes; 120 application tests pass; focused user, Shop, membership, and CORS/throttle tests pass; `manage.py check` passes; `makemigrations --check --dry-run` reports no changes; `git diff --check` passes.
 - **Next authorized task:** T3-03 is NOT YET AUTHORIZED. It requires a separate explicit `CONFIRM TASK T3-03` after presenting its task plan. Do not infer authorization.
-- **Current blockers/deferred items:** None.
+- **Current blockers/deferred items:** Business decisions remain required for global User administration ownership, ordinary-user Shop read visibility, and Shop DELETE semantics. T3-03 remains unauthorized.
 ## Repository state evidence
 - Verify current HEAD with `git rev-parse HEAD`
 - Verify remote parity with `git status -sb`
@@ -72,6 +72,17 @@ Phase 1 and Phase 2 are complete.
 Phase 3 is active:
 - **T3-01 Supplier and Shop Entities**: Complete. The repository has a reproducible database baseline, Shop mapping, and Supplier singleton constraint.
 - **T3-02 User-Shop membership and roles**: Complete. `TenantMember` and `ShopRolePolicy` firmly establish user roles and Main Supplier cross-shop authority.
+
+## T3-02 remediation status
+
+- Ordinary users cannot enumerate or target other User records through the User API; self-profile updates remain supported.
+- Shop write and activate/deactivate permissions now use `ShopRolePolicy.is_main_supplier_admin`, so `is_staff` alone is insufficient.
+- Membership `is_active` is read-only in generic PATCH/PUT; lifecycle actions remain the only state-transition API.
+- Real authentication throttling is verified by an integration-style repeated-login test; duplicate CORS tests are independently collected.
+- CI now includes the full application suite, Django check, and migration check in addition to project-state validation.
+- Production CORS configuration receives `DJANGO_CORS_ALLOWED_ORIGINS` from deployment environment variables.
+- No migrations were created.
+- T3-03, external suppliers, and future business modules remain unimplemented.
 
 ## Recommended next action
 

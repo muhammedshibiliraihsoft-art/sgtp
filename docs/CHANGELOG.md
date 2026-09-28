@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-09-28
+
+- Completed T3-02-REMEDIATION with minimal security and integrity fixes.
+- Restricted User API targeting, aligned Shop writes with Main Supplier policy, protected membership lifecycle state, verified real authentication throttling, restored duplicate CORS test coverage, expanded CI health checks, and wired production CORS environment propagation.
+- Added regression coverage; 120 application tests pass and no migrations were created.
+- Left global User administration ownership, ordinary-user Shop read visibility, Shop DELETE semantics, and T3-03 work unresolved/deferred.
+
 ## 2026-09-27
 
 - Completed PRE-P3-02 documentation-only governance correction.

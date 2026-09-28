@@ -5,6 +5,8 @@ from rest_framework import status
 from unittest.mock import patch
 from django.db import DatabaseError
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
+from apps.accounts.views import AuthRateThrottle
 
 User = get_user_model()
 
@@ -80,6 +82,26 @@ class ThrottlingTests(TestCase):
     def setUp(self):
         self.client = APIClient()
 
+    def test_aaa_login_endpoint_really_throttles_without_mocking(self):
+        """Repeated login requests eventually receive a real 429 response."""
+        cache.clear()
+        with patch.object(AuthRateThrottle, 'THROTTLE_RATES', {'auth': '2/minute'}):
+            for _ in range(2):
+                response = self.client.post(
+                    '/api/v1/auth/login/',
+                    {'email': 'missing@example.com', 'password': 'wrong-password'},
+                    REMOTE_ADDR='198.51.100.77',
+                )
+                self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+            response = self.client.post(
+                '/api/v1/auth/login/',
+                {'email': 'missing@example.com', 'password': 'wrong-password'},
+                REMOTE_ADDR='198.51.100.77',
+            )
+            self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+        cache.clear()
+
     @patch('rest_framework.throttling.SimpleRateThrottle.wait')
     @patch('rest_framework.throttling.ScopedRateThrottle.allow_request')
     def test_login_endpoint_is_throttled(self, mock_allow_request, mock_wait):
@@ -154,7 +176,7 @@ class CORSTests(TestCase):
         self.client = APIClient()
 
     @override_settings(CORS_ALLOWED_ORIGINS=['https://allowed.com'])
-    def test_cors_allowed_origin(self):
+    def test_cors_allowed_origin_without_credentials_assertion(self):
         """Requests from allowed origins should receive CORS headers."""
         response = self.client.options(
             '/api/v1/auth/login/',
@@ -169,7 +191,7 @@ class CORSTests(TestCase):
         self.assertIn('content-type', response.headers.get('Access-Control-Allow-Headers', '').lower())
 
     @override_settings(CORS_ALLOWED_ORIGINS=['https://allowed.com'])
-    def test_cors_disallowed_origin(self):
+    def test_cors_disallowed_hacker_origin(self):
         """Requests from disallowed origins should NOT receive CORS headers."""
         response = self.client.options(
             '/api/v1/auth/login/',

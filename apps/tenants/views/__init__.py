@@ -1,7 +1,7 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 
@@ -11,6 +11,7 @@ from ..serializers import (
     TenantCreateSerializer, 
     TenantSummarySerializer
 )
+from ..permissions import IsMainSupplierAdmin
 
 
 class TenantViewSet(viewsets.ModelViewSet):
@@ -39,8 +40,10 @@ class TenantViewSet(viewsets.ModelViewSet):
         Instantiates and returns the list of permissions.
         Admins can do everything, regular users can only view.
         """
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
-            permission_classes = [IsAdminUser]
+        if self.action in [
+            'create', 'update', 'partial_update', 'destroy', 'activate', 'deactivate'
+        ]:
+            permission_classes = [IsMainSupplierAdmin]
         else:
             permission_classes = [IsAuthenticated]
         return [permission() for permission in permission_classes]
@@ -56,7 +59,7 @@ class TenantViewSet(viewsets.ModelViewSet):
         """Set the updater when updating a tenant."""
         serializer.save(updated_by=self.request.user)
     
-    @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
+    @action(detail=True, methods=['post'], permission_classes=[IsMainSupplierAdmin])
     def activate(self, request, pk=None):
         """Activate a tenant."""
         tenant = self.get_object()
@@ -65,7 +68,7 @@ class TenantViewSet(viewsets.ModelViewSet):
         tenant.save()
         return Response({'status': 'Tenant activated'})
     
-    @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
+    @action(detail=True, methods=['post'], permission_classes=[IsMainSupplierAdmin])
     def deactivate(self, request, pk=None):
         """Deactivate a tenant."""
         tenant = self.get_object()

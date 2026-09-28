@@ -1,6 +1,13 @@
 from rest_framework.permissions import BasePermission
 from apps.tenants.policy import ShopRolePolicy
 
+
+class IsMainSupplierAdmin(BasePermission):
+    """Allow Shop administration only to the approved Main Supplier authority."""
+
+    def has_permission(self, request, view):
+        return ShopRolePolicy.is_main_supplier_admin(request.user)
+
 class CanManageShopMembership(BasePermission):
     """
     Permission to manage memberships. 

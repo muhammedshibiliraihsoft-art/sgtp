@@ -76,6 +76,16 @@ class TenantMemberAPITest(APITestCase):
         self.mem_a_viewer.refresh_from_db()
         self.assertEqual(self.mem_a_viewer.role, ShopRole.STAFF)
 
+    def test_generic_update_cannot_change_membership_lifecycle_state(self):
+        """Lifecycle state changes must use deactivate/reactivate actions."""
+        self.client.force_authenticate(user=self.super_admin)
+        response = self.client.patch(
+            f'{self.list_url}{self.mem_a_viewer.id}/', {'is_active': False}
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.mem_a_viewer.refresh_from_db()
+        self.assertTrue(self.mem_a_viewer.is_active)
+
     def test_superuser_can_delete_any(self):
         self.mem_a_viewer.is_active = False
         self.mem_a_viewer.save()

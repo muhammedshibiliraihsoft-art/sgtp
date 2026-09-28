@@ -87,3 +87,40 @@ class UserAPITest(TestCase):
         }
         response = self.client.post('/api/v1/auth/login/', login_data)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_regular_user_cannot_target_another_user(self):
+        """A normal user cannot list, modify, or delete another user."""
+        user = User.objects.create_user(email='owner@example.com', password='testpass123')
+        other = User.objects.create_user(email='other@example.com', password='testpass123')
+        self.client.force_authenticate(user=user)
+
+        list_response = self.client.get('/api/v1/auth/users/')
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(list_response.data['count'], 1)
+        self.assertEqual(list_response.data['results'][0]['id'], str(user.id))
+
+        patch_response = self.client.patch(
+            f'/api/v1/auth/users/{other.id}/',
+            {'is_active': False, 'email': 'changed@example.com'},
+        )
+        self.assertEqual(patch_response.status_code, status.HTTP_404_NOT_FOUND)
+
+        delete_response = self.client.delete(f'/api/v1/auth/users/{other.id}/')
+        self.assertEqual(delete_response.status_code, status.HTTP_404_NOT_FOUND)
+        other.refresh_from_db()
+        self.assertTrue(other.is_active)
+        self.assertEqual(other.email, 'other@example.com')
+
+    def test_self_profile_update_cannot_change_activation_state(self):
+        """Self-service profile updates cannot deactivate the account."""
+        user = User.objects.create_user(email='profile@example.com', password='testpass123')
+        self.client.force_authenticate(user=user)
+
+        response = self.client.patch(
+            f'/api/v1/auth/users/{user.id}/',
+            {'first_name': 'Updated', 'is_active': False},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        user.refresh_from_db()
+        self.assertEqual(user.first_name, 'Updated')
+        self.assertTrue(user.is_active)

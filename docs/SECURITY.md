@@ -10,6 +10,15 @@ Known starter gaps included incomplete tenant membership/isolation and missing o
 
 The target security architecture will be built and verified by the implementation phases. It includes secure access/refresh-token handling with an HttpOnly/Secure refresh cookie, rotation and reuse detection, an approved CSRF strategy for cookie-authenticated state-changing requests, supplier/shop isolation, object-level permissions, secure private object storage, audit logging, rate limiting, safe errors, monitoring, and security testing. The complete target architecture does not yet exist in code.
 
+## Verified T3-02 remediation controls
+
+- Ordinary authenticated users cannot enumerate, modify, or delete other users through the User API. Self-profile updates remain available, while account activation state is not writable through the profile serializer.
+- Shop write and activate/deactivate actions require the existing Main Supplier authority from `ShopRolePolicy`; Django `is_staff` alone is insufficient.
+- Membership lifecycle state is not writable through generic PATCH/PUT. Deactivate, reactivate, remove, and undo actions remain the controlled lifecycle paths.
+- Authentication throttling is wired to the `auth` scope for login, refresh, and logout and is covered by a non-mocked repeated-login test.
+
+These controls do not establish T3-03 URL context or complete Shop isolation. Global User administration ownership, ordinary-user Shop read visibility, and Shop deletion semantics remain unresolved and are not inferred here.
+
 ## Future review areas
 
 - Secret and environment-variable handling

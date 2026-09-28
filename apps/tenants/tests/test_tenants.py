@@ -150,3 +150,33 @@ class TenantAPITest(TestCase):
         
         tenant.refresh_from_db()
         self.assertTrue(tenant.is_active)
+
+    def test_staff_without_superuser_cannot_manage_tenants(self):
+        """Shop administration follows Main Supplier policy, not is_staff."""
+        self.user.is_staff = True
+        self.user.save(update_fields=['is_staff'])
+        self.client.force_authenticate(user=self.user)
+        tenant = Tenant.objects.create(
+            name="Protected Shop",
+            slug="protected-shop",
+            max_users=10,
+            created_by=self.user,
+            supplier=self.supplier,
+        )
+
+        create_response = self.client.post('/api/v1/tenants/', {
+            'name': 'Another Shop',
+            'slug': 'another-shop',
+            'max_users': 10,
+        })
+        self.assertEqual(create_response.status_code, status.HTTP_403_FORBIDDEN)
+
+        update_response = self.client.patch(
+            f'/api/v1/tenants/{tenant.id}/', {'name': 'Changed'}
+        )
+        self.assertEqual(update_response.status_code, status.HTTP_403_FORBIDDEN)
+
+        deactivate_response = self.client.post(
+            f'/api/v1/tenants/{tenant.id}/deactivate/'
+        )
+        self.assertEqual(deactivate_response.status_code, status.HTTP_403_FORBIDDEN)
