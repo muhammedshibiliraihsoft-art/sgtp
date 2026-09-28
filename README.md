@@ -2,6 +2,10 @@
 
 A production-ready Django REST Framework project template with Docker, PostgreSQL, and VS Code Dev Container support.
 
+## SGTP repository status
+
+This repository is being used for SGTP. Phase 1–2 foundations and the Phase 3 Supplier/Shop and User-Shop membership tasks exist. `Tenant` is the technical Shop representation, and a singleton `Supplier` plus `TenantMember`/`ShopRolePolicy` are present. T3-02 remediation closure is in progress. URL-path Shop context and complete cross-Shop isolation are not yet implemented; client, tailoring, billing, reports, and frontend business modules are also pending. The generic starter feature descriptions below do not mean SGTP V1 is complete or production-ready.
+
 ## ✨ Features
 
 - 🐍 **Django 5.1** with Django REST Framework
@@ -9,7 +13,7 @@ A production-ready Django REST Framework project template with Docker, PostgreSQ
 - 🐳 **Docker** development and production setup
 - 🔧 **VS Code Dev Container** for consistent development environment
 - 👥 **Custom User Model** with email authentication
-- 🏢 **Multi-Tenant Support** foundation (isolation planned)
+- 🏢 **Supplier / Shop and User-Shop membership** foundation (request context and complete isolation pending T3-03)
 - 🔐 **JWT Authentication** with DRF SimpleJWT
 - 🌐 **CORS** configured for frontend integration
 - 📊 **API Documentation** with drf-spectacular (Swagger/OpenAPI)
@@ -213,23 +217,24 @@ class YourModel(BaseModelWithTenant):
 
 ## 🏢 Multi-Tenant Foundation
 
-This template includes a foundation for multi-tenancy (isolation and membership will be implemented in Phase 2/3):
+The SGTP repository includes the Supplier / Shop and membership foundation. Full request-context enforcement and cross-Shop isolation remain pending T3-03 and later Phase 3 tasks:
 
 ### Tenant Features
-- **Tenant Model**: Organization management with contact info and settings
+- **Tenant Model**: Technical representation of a Shop, owned by the single Main Supplier, with contact info and settings
+- **Membership**: `TenantMember` and `ShopRolePolicy` define User-Shop membership and the current role policy
 - **User Limits**: Configurable maximum users per tenant
 - **Tenant Admin**: Full Django admin interface for tenant management
-- **API Endpoints**: REST API for tenant CRUD operations
-- **Tenant Base Model**: Models can inherit `BaseModelWithTenant` to associate data with a tenant (filtering/isolation planned for Phase 3)
+- **API Endpoints**: REST APIs for Shop/Tenant and membership operations; Main Supplier policy controls Shop writes
+- **Tenant Base Model**: Models can inherit `BaseModelWithTenant`; full request context and business-record isolation remain pending Phase 3
 
-### Tenant API Endpoints
-- `GET /api/v1/tenants/` - List all tenants
-- `POST /api/v1/tenants/` - Create new tenant (admin only)
-- `GET /api/v1/tenants/{id}/` - Get tenant details
-- `PUT /api/v1/tenants/{id}/` - Update tenant (admin only)
-- `POST /api/v1/tenants/{id}/activate/` - Activate tenant (admin only)
-- `POST /api/v1/tenants/{id}/deactivate/` - Deactivate tenant (admin only)
-- `GET /api/v1/tenants/{id}/stats/` - Get tenant statistics
+### Shop (Tenant) and Membership API Endpoints
+- `GET /api/v1/tenants/` - List Shops subject to the current API permissions
+- `POST /api/v1/tenants/` - Create a Shop subject to Main Supplier policy
+- `GET /api/v1/tenants/{id}/` - Retrieve a Shop subject to current API permissions
+- `PUT/PATCH /api/v1/tenants/{id}/` - Update a Shop subject to current API permissions
+- `POST /api/v1/tenants/{id}/activate/` and `/deactivate/` - Main Supplier-authorized lifecycle actions
+- `GET /api/v1/tenants/{id}/stats/` - Shop statistics
+- `/api/v1/memberships/` - User-Shop membership operations and lifecycle actions
 
 ### Using Tenant Models
 ```python

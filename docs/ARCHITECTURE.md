@@ -77,18 +77,18 @@ Docker        -> development container and production web/db services
 
 - `core` owns global configuration and URL entry points.
 - `accounts` owns authentication identity and user-facing auth endpoints.
-- `tenants` owns the legacy starter organization record and tenant administration endpoints; it is not yet the approved V1 Shop model.
+- `tenants` contains the retained `Tenant` model mapped to the V1 Shop, the singleton Main Supplier, membership, policy and administration endpoints.
 - `common` owns shared model abstractions.
 - No service layer, domain modules, background worker, event bus, or external integration layer exists.
 - Target modules for V1 are not yet implemented: supplier/back office, shop workspace, clients, related persons, designs, measurements, materials, production workflow, billing, reports/PDFs, storage, jobs, and monitoring.
-- `backend/` and `frontend/` are currently empty placeholders; the existing Django code remains at the repository root under `core/` and `apps/`.
+- `backend/` contains settings and shared model foundation code; `frontend/` is an empty placeholder. Django project wiring and apps remain at the repository root under `core/` and `apps/`.
 - Target boundaries are `accounts` for identity/auth, `shops` for supplier/shop/membership/workspace tenancy, `clients` for clients/related persons, `catalog` for designs/measurements/materials, `works` for orders and production workflow, `billing` for invoices/payments/accounts, `reports` for reports/history/PDFs, `ai_agents` for controlled AI services, `integrations` for external adapters/webhooks, and `core` for shared primitives only.
 
 ## Authentication
 
 - `AUTH_USER_MODEL = accounts.User`.
 - Email is the login identifier.
-- DRF uses JWT authentication first and session authentication second.
+- Base DRF configuration uses JWT authentication; development settings also enable session authentication and the browsable API.
 - Login and refresh routes use SimpleJWT.
 - The JWT blacklist application is installed and configured.
 - Access token is returned in JSON.
@@ -124,7 +124,7 @@ Docker        -> development container and production web/db services
 
 - `BaseModel` provides UUID IDs, created/updated timestamps, created/updated user references, and `SOFT_DELETE_CASCADE`.
 - `BaseModelWithTenant` adds an optional foreign key to the legacy `tenants.Tenant` input.
-- `Tenant` is currently an organization record with profile/contact/address fields and a user limit; its V1 business mapping is not established by the starter.
+- `Tenant` is the current technical representation of the approved Shop entity, with a Main Supplier foreign key and profile/contact/address fields. `TenantMember` links Users to Shops; T3-03 request context and end-to-end isolation remain pending.
 - `User` has no tenant foreign key directly. Instead, TenantMember links User and Tenant.  The approved target tenant-context mechanism is URL-path based: `/shops/{shop_id}/...`.
 - The target Shop boundary and External Supplier ownership rules are defined above; they are not implemented by the current starter Tenant CRUD/API.
 
@@ -152,15 +152,15 @@ Docker        -> development container and production web/db services
 2. Business tenant isolation (context, URL resolution, and cross-module scoped querysets) remains pending for Phase 3 (T3-03, T3-04), although the membership foundation and base `TenantScopedMixin` were introduced.
 3. The tenant field is nullable, so tenant-scoped records can be unscoped by default.
 4. The README references missing `apps.common.views.base_model_view` and `apps.tenants.mixins` components.
-5. Settings and infrastructure disagree: settings read `DJANGO_DEBUG` and `DB_*`, while devcontainer configuration supplies `DEBUG` and `DATABASE_URL`.
-6. Production settings do not define `ALLOWED_HOSTS`.
-7. The starter is a generic foundation and does not yet implement the approved SGTP V1 hierarchy, Shop boundary, External Supplier record, or end-to-end workflow.
-8. The target requires a frontend and supporting infrastructure that are absent from the starter.
+5. Local settings use `DJANGO_DEBUG`, `DJANGO_ALLOWED_HOSTS` and `DB_*`; verify each deployment environment supplies those documented names.
+6. JWT blacklist is installed/configured; runtime refresh rotation and reuse behavior is covered by authentication lifecycle tests, while deployment-specific database behavior still requires CI/runtime verification.
+7. The foundation includes the single Supplier, Tenant-as-Shop mapping and membership/role policy, but does not yet implement External Supplier records, URL-path context, complete business-record isolation, or the end-to-end tailoring workflow.
+8. The target React/Vite/Tailwind frontend is absent; persistent object storage, background workers, monitoring and complete release operations are also pending.
 
 ## Recommended foundation changes
 
 - Make the V1 architecture authoritative in repository documentation before coding.
-- In T3-01, inspect the legacy Tenant model, migrations, APIs, tests, and references before selecting a compatibility strategy. If the choice changes business meaning, stop with `BUSINESS DECISION REQUIRED`.
+- T3-01 selected and implemented the Tenant-as-Shop mapping and singleton Supplier; preserve that approved mapping in subsequent migrations and APIs.
 - Implement tenant isolation at queryset and permission boundaries, with tests proving cross-tenant access is denied.
 - Decide whether tenant-scoped foreign keys are mandatory and enforce that decision in models/serializers.
 - Align settings with container environment variables and explicitly configure allowed hosts/CORS.
@@ -171,9 +171,9 @@ Docker        -> development container and production web/db services
 - Define a service layer so billing, reports, jobs, and integrations cannot bypass core business rules.
 - Define secure object storage, asynchronous job boundaries, monitoring, CI, and end-to-end acceptance tests.
 
-## Phase 1 readiness
+## Phase 1 status and current V1 readiness
 
-Not ready. The target is now documented, but the starter lacks the business modules and several required security, tenancy, infrastructure, and frontend foundations.
+Phase 1 foundation implementation is complete. SGTP V1 is not ready for production: business modules and end-to-end workflows remain unimplemented, and Phase 3 URL-path Shop context/isolation is pending T3-03. T3-02 remediation closure changes are local and verified; confirmation from a GitHub Actions run remains pending.
 
 ## Membership Lifecycle and Rules
 

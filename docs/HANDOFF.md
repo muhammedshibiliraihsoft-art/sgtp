@@ -5,12 +5,13 @@
 Phase 3 (Shop / Tenant) implementation is active.
 ## Current task
 
-Task T3-02-REMEDIATION (User-Shop membership and roles security/integrity remediation) is complete and verified.
+Task T3-02-REMEDIATION closure is in progress. The security/integrity implementation is committed; current validation exposed CI PostgreSQL connectivity and full-suite throttle cache isolation failures.
 
 - **Changed areas:** User API authorization/serializer, Main Supplier Shop-write permission, membership serializer lifecycle protection, real throttle wiring/tests, duplicate CORS tests, production CORS environment propagation, CI validation, and remediation regression tests.
-- **Validation performed:** Repository validator passes; 120 application tests pass; focused user, Shop, membership, and CORS/throttle tests pass; `manage.py check` passes; `makemigrations --check --dry-run` reports no changes; `git diff --check` passes.
+- **Current validation:** Repository validator PASS (120 discovered); validator tests 11 passed; focused remediation tests 69 passed; full local application suite 120/120 passed after test-cache isolation; Django check PASS; migration drift check reports no changes. GitHub Actions for the previous committed baseline failed the application suite with PostgreSQL connection refused; later checks were skipped.
+- **Closure changes now local:** PostgreSQL service port mapping, test-only throttle cache isolation, and corrected current-state documentation. The updated workflow has not run on GitHub because changes have not been pushed.
 - **Next authorized task:** T3-03 is NOT YET AUTHORIZED. It requires a separate explicit `CONFIRM TASK T3-03` after presenting its task plan. Do not infer authorization.
-- **Current blockers/deferred items:** Business decisions remain required for global User administration ownership, ordinary-user Shop read visibility, and Shop DELETE semantics. T3-03 remains unauthorized.
+- **Current blockers:** Remote CI confirmation on the updated workflow requires it to run against a new commit. Business decisions remain required for global User administration ownership, ordinary-user Shop read visibility, and Shop DELETE semantics. T3-03 remains unauthorized.
 ## Repository state evidence
 - Verify current HEAD with `git rev-parse HEAD`
 - Verify remote parity with `git status -sb`
@@ -22,8 +23,8 @@ Task T3-02-REMEDIATION (User-Shop membership and roles security/integrity remedi
 - `AGENTS.md`: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp\AGENTS.md`
 - `docs/`: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp\docs\`
 - Remote: `https://github.com/muhammedshibiliraihsoft-art/sgtp.git`
-- Phase 1 corrective implementation was completed and published to `origin/main`.
-- Branch: `main` tracking `origin/main`
+- Historical Phase 1 corrective implementation was completed and published to `origin/main`.
+- At the reviewed baseline, branch `main`, HEAD and `origin/main` matched; closure changes remain local.
 - Starter source files were modified for Phase 1.
 - Existing SGTP `.git` metadata and history preserved.
 
@@ -61,12 +62,12 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 ## Phase 3+ Deferred Implementations
 
 - `BaseModelWithTenant.tenant` is nullable and no active-tenant/request authorization mechanism exists.
-- The starter is not yet the target product: supplier back office, isolated shop workspaces, clients, related persons, designs, measurements, materials, production stages, billing, reports/PDFs, frontend, storage, jobs, audit, CI, monitoring, and end-to-end validation are not implemented.
+- The starter is not yet the target product: complete request-scoped Shop isolation, clients, related persons, designs, measurements, materials, production stages, billing, reports/PDFs, frontend, persistent storage, workers, complete audit capture, monitoring, and end-to-end validation remain unimplemented. CI currently validates repository state, runs tests, and performs Django/migration checks, subject to the pending GitHub workflow confirmation recorded above.
 - The target requires React/Vite/Tailwind, but the starter has only an empty `frontend/` placeholder.
 - Tenant context is approved as URL-path based (`/shops/{shop_id}/...`) and must be implemented/tested in Phase 3.
 - Related Person billing ownership is approved as Primary Client ownership and must be implemented/tested in Phase 5.
 
-## Historical Status
+## Historical Phase Status
 
 Phase 1 and Phase 2 are complete. 
 Phase 3 is active:
@@ -86,4 +87,4 @@ Phase 3 is active:
 
 ## Recommended next action
 
-Next, present the T3-03 task plan and await explicit `CONFIRM TASK T3-03`. Phase 3 activation does not authorize T3-03 or any other Phase 3 task automatically.
+After closure is verified and reported, stop. T3-03 remains unauthorized and requires its own task plan and explicit `CONFIRM TASK T3-03`. Phase 3 activation does not authorize T3-03 or any other Phase 3 task automatically.

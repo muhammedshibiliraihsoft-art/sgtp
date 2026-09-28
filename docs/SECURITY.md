@@ -4,7 +4,7 @@
 
 The cloned starter contains partial security scaffolding: a custom email-based User, Django/DRF authentication, SimpleJWT access/refresh endpoints, session middleware, CSRF middleware, security middleware, CORS middleware, soft-delete/audit base-model fields, and production security settings. These controls are incomplete and have not established the full SGTP V1 security architecture.
 
-Known starter gaps included incomplete tenant membership/isolation and missing object-level authorization. The host/CORS configuration and JWT blacklist app have been installed and configured in Phase 1. A control must not be treated as complete merely because a related dependency or middleware is present.
+The repository now contains `TenantMember`/`ShopRolePolicy`, User API protections, Main Supplier Shop-write checks, membership lifecycle controls, an auth throttle scope, and a JWT blacklist application. T3-03 URL-path context and end-to-end Shop isolation are pending. The blacklist application's presence is configuration evidence; runtime token rotation/reuse behavior is separately covered by auth lifecycle tests. A control must not be treated as complete merely because a related dependency or middleware is present.
 
 ## Target V1 security architecture
 

@@ -2,9 +2,9 @@
 
 ## Status
 
-- Phase 2 is complete. Phase 3 implementation is active.
-- Current task: T3-02-REMEDIATION (Completed).
-- Current verified application test count: 120 tests passing.
+- Phase 2 is complete. Phase 3 work is limited to closing T3-02 remediation validation.
+- Current task: T3-02-REMEDIATION closure (In Progress).
+- Current application test discovery: 120 tests; latest complete local run: 120 passed. The GitHub Actions run for the previous committed baseline failed because the PostgreSQL service was unreachable; the corrected workflow is local and has not yet run on GitHub.
 
 - Project root: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp`
 - Remote: `https://github.com/muhammedshibiliraihsoft-art/sgtp.git`
@@ -13,7 +13,7 @@
 - Target status: SGTP V1 is explicitly defined in `docs/PRODUCT_DEFINITION.md`
 - Starter foundation: exists in the cloned SGTP repository.
 - Phase 1 implementation: **Historical - Complete.**
-- Confirmation status: T3-02 remediation is complete. T3-03 is NOT YET AUTHORIZED and requires separate explicit task confirmation.
+- Confirmation status: T3-02 remediation code is committed; closure fixes are in progress. T3-03 is NOT YET AUTHORIZED and requires separate explicit task confirmation.
 - Detailed phase playbooks: 01-10 present.
 - Later-phase decisions: Tenant context is approved as URL-path based (`/shops/{shop_id}/...`), and Related Person billing is owned by the Primary Client.
 
@@ -83,7 +83,7 @@
 ### PRE-P3-02 result
 
 - The V1 Supplier / Shop / External Supplier business meaning is now explicit across the governing documentation.
-- Phase 3 remains activated only as a planning scope; T3-01 and T3-02 implementation are complete, but URL context (T3-03) is pending.
+- Phase 3 scope is activated, but no work beyond T3-02 remediation is authorized. T3-01 and T3-02 implementation are complete; URL context (T3-03) is pending and unauthorized.
 
 ### T3-02 remediation result
 
@@ -92,7 +92,8 @@
 - Generic membership updates cannot change `is_active`; lifecycle actions remain authoritative.
 - Authentication throttling is explicitly wired to the `auth` scope and verified with a non-mocked repeated-login test.
 - Duplicate CORS test method names were corrected so all intended tests are collected.
-- CI now retains project-state validation and also runs the application suite, Django system checks, and migration checks with PostgreSQL.
+- CI retains project-state validation and is configured to run the application suite, Django system checks, and migration checks with PostgreSQL. The GitHub Actions run for the reviewed baseline passed the repository validator and validator tests but failed the application suite because the runner could not connect to PostgreSQL; system and migration steps were skipped.
+- Local closure verification: repository validator PASS (120 discovered); validator tests 11 passed; focused remediation tests 69 passed; full suite 120/120 passed after isolating auth throttle test cache state; Django system check PASS; migration drift check reports no changes. Updated workflow still requires a GitHub run for remote CI confirmation.
 - Production compose now propagates `DJANGO_CORS_ALLOWED_ORIGINS` without inventing a deployment origin.
 - No migrations were required or changed.
 - Unresolved decisions remain: global User administration ownership, ordinary-user Shop read visibility, and Shop DELETE semantics. These were not invented or changed.
@@ -120,7 +121,7 @@
 - `AGENTS.md`: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp\AGENTS.md`
 - Documentation: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp\docs\`
 - Remote: `https://github.com/muhammedshibiliraihsoft-art/sgtp.git`
-- `backend/` and `frontend/` exist as layout placeholders only; no business modules were created yet.
+- `backend/` contains settings and shared model foundation code; `frontend/` is a layout placeholder. No client, catalog, works, billing, or reports business modules exist yet.
 
 ## Phase playbook confirmation audit
 
@@ -152,7 +153,7 @@
   - Lightweight `/api/health/live/` and DB-connected `/api/health/ready/` probes are operational.
 - B2-05 is complete. Schema generation fixed, throttling and CORS tests added. F-01, C-01, C-02, and C-03 resolved. Phase 2 is now complete.
 - Python virtual environment `.venv` created, and dependency baseline established. `manage.py check` passed.
-- Lint tools can run, but existing starter lint violations remain. `pytest` is passing against the new devcontainer PostgreSQL database with all project tests collected.
+- Historical at Phase 2 completion: lint tools ran with existing starter violations; the application suite passed against the devcontainer PostgreSQL database. Current remediation closure validation is recorded above and supersedes old test claims.
 - Environment settings are now split into base, dev, test, and prod. `core/settings.py` acts as a backward-compatible router rejecting unknown environments. Missing secrets fail safely.
 - The `User` model was decoupled from `django-safedelete` (replaced with `TimeStampedUUIDModel`) to fix identity uniqueness issues with soft-deletion, and base models were refactored to `backend/core/models/base.py`.
 - The database migration strategy has been established and documented in `docs/DATABASE.md`. A fresh PostgreSQL migration from an empty database applies perfectly, and the forward-only migration policy is in place.

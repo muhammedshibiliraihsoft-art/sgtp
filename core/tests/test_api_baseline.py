@@ -6,11 +6,13 @@ from django.test import TestCase
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from rest_framework import status
+from django.core.cache import cache
 
 User = get_user_model()
 
 class APIBaselineTest(TestCase):
     def setUp(self):
+        cache.clear()
         self.client = APIClient()
 
     def test_unauthenticated_requests_return_401(self):

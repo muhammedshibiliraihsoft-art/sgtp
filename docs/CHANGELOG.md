@@ -2,10 +2,18 @@
 
 ## 2026-09-28
 
-- Completed T3-02-REMEDIATION with minimal security and integrity fixes.
+- Completed and committed the T3-02-REMEDIATION implementation with security and integrity fixes; subsequent closure review identified CI PostgreSQL connectivity and test throttle-cache isolation issues.
 - Restricted User API targeting, aligned Shop writes with Main Supplier policy, protected membership lifecycle state, verified real authentication throttling, restored duplicate CORS test coverage, expanded CI health checks, and wired production CORS environment propagation.
-- Added regression coverage; 120 application tests pass and no migrations were created.
+- Added regression coverage; 120 application tests are collected. The initial CI result and full-suite details were corrected during the closure follow-up below; no migrations were created.
 - Left global User administration ownership, ordinary-user Shop read visibility, Shop DELETE semantics, and T3-03 work unresolved/deferred.
+
+## 2026-09-28 — T3-02-REMEDIATION validation closure
+
+- Mapped the PostgreSQL service port to the GitHub Actions runner so the PostgreSQL-backed application suite can connect to its service.
+- Isolated auth-throttle cache state in the API tests that expect baseline login responses; production throttle rates and behavior were not changed.
+- Corrected current-state claims in project state, handoff, architecture, security, and README documentation.
+- Local validation: 120/120 application tests passed; 69 focused tests passed; 11 repository-validator tests passed; repository validator and Django system check passed; migration check reported no changes.
+- The GitHub Actions run for the previous committed baseline failed on PostgreSQL connectivity. The updated workflow has not run on GitHub because these closure changes remain local and have not been pushed.
 
 ## 2026-09-27
 

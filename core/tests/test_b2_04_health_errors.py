@@ -37,6 +37,7 @@ class HealthCheckTests(TestCase):
 
 class ErrorEnvelopeTests(TestCase):
     def setUp(self):
+        cache.clear()
         self.client = APIClient()
 
     def test_validation_error_is_enveloped(self):
