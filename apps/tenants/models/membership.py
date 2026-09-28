@@ -14,10 +14,30 @@ class ShopRole(models.TextChoices):
     STAFF = 'STAFF', _('Shop Staff')
     VIEWER = 'VIEWER', _('Shop Viewer')
 
+from safedelete.queryset import SafeDeleteQueryset
+from safedelete.managers import SafeDeleteManager
+
+class TenantMemberQuerySet(SafeDeleteQueryset):
+    def update(self, *args, **kwargs):
+        if 'deleted' in kwargs:
+            if self.filter(is_active=True).exists():
+                raise ValidationError("Cannot bulk remove active memberships. Deactivate them first.")
+        return super().update(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        if self.filter(is_active=True).exists():
+            raise ValidationError("Cannot bulk remove active memberships. Deactivate them first.")
+        return super().delete(*args, **kwargs)
+
+class TenantMemberManager(SafeDeleteManager):
+    _queryset_class = TenantMemberQuerySet
+
 class TenantMember(BaseModel):
     """
     Membership linking a User to a Shop (Tenant).
     """
+    objects = TenantMemberManager()
+    
     tenant = models.ForeignKey(
         'tenants.Tenant',
         on_delete=models.CASCADE,
@@ -50,10 +70,6 @@ class TenantMember(BaseModel):
                 fields=['tenant', 'user'],
                 name='unique_tenant_user_membership',
                 condition=models.Q(deleted__isnull=True)
-            ),
-            models.CheckConstraint(
-                check=models.Q(is_active=False) | models.Q(deleted__isnull=True),
-                name='active_membership_cannot_be_deleted'
             )
         ]
 

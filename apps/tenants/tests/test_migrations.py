@@ -16,7 +16,7 @@ class TestTenantMigration(TransactionTestCase):
         
         # Create an existing tenant with no supplier (as it was in 0001)
         # We need a user to satisfy created_by, but wait, created_by can be null
-        self.tenant = Tenant.objects.create(name="Legacy Tenant", slug="legacy")
+        self.tenant = Tenant.objects.create(max_users=10, name="Legacy Tenant", slug="legacy")
         
         # Apply the migration
         self.migrate(self.migrate_to)

@@ -39,6 +39,7 @@ class TenantModelTest(TestCase):
         tenant = Tenant.objects.create(
             name="Test Tenant",
             slug="test-tenant",
+            max_users=10,
             created_by=self.user,
             supplier=self.supplier
         )
@@ -49,6 +50,7 @@ class TenantModelTest(TestCase):
         tenant = Tenant.objects.create(
             name="Test Tenant",
             slug="test-tenant",
+            max_users=10,
             created_by=self.user,
             supplier=self.supplier
         )
@@ -85,6 +87,7 @@ class TenantAPITest(TestCase):
         Tenant.objects.create(
             name="Test Tenant",
             slug="test-tenant",
+            max_users=10,
             created_by=self.user,
             supplier=self.supplier
         )
@@ -136,6 +139,7 @@ class TenantAPITest(TestCase):
         tenant = Tenant.objects.create(
             name="Test Tenant",
             slug="test-tenant",
+            max_users=10,
             is_active=False,
             created_by=self.user,
             supplier=self.supplier

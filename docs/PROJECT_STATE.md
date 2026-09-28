@@ -4,7 +4,7 @@
 
 - Phase 2 is complete. Phase 3 implementation is active.
 - Current task: T3-02 User-Shop membership and roles (Completed).
-- Current verified application test count: 65 tests passing.
+
 - Project root: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp`
 - Remote: `https://github.com/muhammedshibiliraihsoft-art/sgtp.git`
 - Phase 1 corrective implementation was completed and published to `origin/main`.
@@ -74,25 +74,23 @@
 
 ## Phase 3+ Missing or incomplete business logic
 
-- User-to-tenant membership/ownership is not modeled: `User` has no tenant relation.
 - Tenant-aware base model permits `tenant = NULL`, and no request/context policy establishes the active tenant.
 - Tenant-context resolution is approved as URL-path based (`/shops/{shop_id}/...`) and must be enforced in Phase 3.
 - Billing ownership for work belonging to a Related Person is approved as Primary Client ownership and must be enforced in Phase 5.
-- No domain/business modules beyond accounts and generic tenants exist.
+- No domain/business modules beyond accounts, tenants, and membership exist.
 
 ### PRE-P3-02 result
 
 - The V1 Supplier / Shop / External Supplier business meaning is now explicit across the governing documentation.
-- Phase 3 remains activated only as a planning scope; no T3-01 implementation is authorized or complete.
-- The legacy Tenant compatibility strategy remains a T3-01 gate. If selecting it changes business meaning, the implementation agent must stop with `BUSINESS DECISION REQUIRED`.
+- Phase 3 remains activated only as a planning scope; T3-01 and T3-02 implementation are complete, but URL context (T3-03) is pending.
 
 ### Phase 3+ Deferred Implementations
 
-- Actual business tenant isolation is not fully enforced (URL context pending): `User` has no tenant relation, and business tenant isolation is not enforced.
+- Actual business tenant isolation is not fully enforced (URL context pending).
 - Tenant-aware base model permits `tenant = NULL`, and no request/context policy establishes the active tenant.
 - Tenant-context resolution is approved as URL-path based (`/shops/{shop_id}/...`) and must be enforced in Phase 3.
 - Billing ownership for work belonging to a Related Person is approved as Primary Client ownership and must be enforced in Phase 5.
-- No domain/business modules beyond accounts and generic tenants exist.
+- No domain/business modules beyond accounts, tenants, and membership exist.
 
 ## Historical Phase 1 Verification results
 
@@ -101,7 +99,7 @@
 - Phase 1 corrective changes were committed and published to `origin/main`.
 - File inventory and source/configuration inspection: completed.
 - Django check: passes without issues.
-- Application tests: full project suite passes (21 tests).
+- Application tests: full project suite passes .
 
 ## Current root verification
 
@@ -128,12 +126,12 @@
   - Standard Django CSRF mechanism is implemented.
   - Refresh token cookie lifecycle is implemented.
   - Rotation and blacklist/reuse behavior are implemented.
-  - Relevant validation results are recorded accurately (30 tests passing, 0 check issues).
+  - Relevant validation results are recorded accurately .
 - B2-03 Permission and tenant-scope interfaces implementation is completed and verified.
   - Reusable tenant queryset scoping is implemented via `TenantScopedMixin`.
   - `IsTenantMember` is intentionally a deny-by-default Phase 3 contract.
   - Actual Shop/User membership is implemented (T3-02), but business tenant isolation (URL context) remains Phase 3.
-  - 403/404 boundaries strictly enforced and validated (36 total tests passing).
+  - 403/404 boundaries strictly enforced and validated .
 - B2-04 is complete and audit-cleared.
   - Custom API exception handler normalizes errors.
   - Throttling configured for auth scopes.

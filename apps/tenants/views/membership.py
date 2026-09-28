@@ -61,9 +61,15 @@ class TenantMemberViewSet(viewsets.ModelViewSet):
         serializer.save(updated_by=self.request.user)
 
     def perform_destroy(self, instance):
+        from django.db import transaction
         if instance.is_active:
             raise ValidationError({"detail": "Cannot remove an active membership. Deactivate it first."})
-        instance.delete()
+            
+        with transaction.atomic():
+            from ..models import Tenant
+            # Lock the tenant row to serialize capacity-changing operations
+            tenant = Tenant.objects.select_for_update().get(pk=instance.tenant_id)
+            instance.delete()
 
 
     @action(detail=True, methods=['post'])
@@ -77,11 +83,18 @@ class TenantMemberViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def reactivate(self, request, pk=None):
+        from django.db import transaction
         membership = self.get_object()
         if membership.is_active:
             return Response({"detail": "Membership is already active."}, status=status.HTTP_400_BAD_REQUEST)
-        membership.is_active = True
-        membership.save(update_fields=['is_active'])
+            
+        with transaction.atomic():
+            from ..models import Tenant
+            # Lock the tenant row to align with the authoritative capacity model
+            tenant = Tenant.objects.select_for_update().get(pk=membership.tenant_id)
+            membership.is_active = True
+            membership.save(update_fields=['is_active'])
+            
         return Response({"detail": "Membership reactivated.", "status": "ACTIVE"})
 
     @action(detail=True, methods=['post'])

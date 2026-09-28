@@ -15,8 +15,8 @@ class TenantMemberAPITest(APITestCase):
         except Supplier.DoesNotExist:
             self.supplier = Supplier.objects.create(name="Main Supplier", slug="main-supplier")
             
-        self.shop_a = Tenant.objects.create(name="Shop A", slug="shop-a", supplier=self.supplier)
-        self.shop_b = Tenant.objects.create(name="Shop B", slug="shop-b", supplier=self.supplier)
+        self.shop_a = Tenant.objects.create(max_users=10, name="Shop A", slug="shop-a", supplier=self.supplier)
+        self.shop_b = Tenant.objects.create(max_users=10, name="Shop B", slug="shop-b", supplier=self.supplier)
         
         # Superuser (Main Supplier Admin)
         self.super_admin = User.objects.create_superuser(email="super@test.com", password="testpass")

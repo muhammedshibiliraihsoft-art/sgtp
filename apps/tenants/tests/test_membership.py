@@ -14,6 +14,7 @@ class TenantMembershipTest(TestCase):
         self.tenant = Tenant.objects.create(
             name="Test Shop", 
             slug="test-shop", 
+            max_users=10,
             supplier=self.supplier
         )
         self.user = User.objects.create_user(
@@ -68,6 +69,7 @@ class TenantMembershipTest(TestCase):
         inactive_shop = Tenant.objects.create(
             name="Inactive Shop",
             slug="inactive-shop",
+            max_users=10,
             supplier=self.supplier,
             is_active=False
         )

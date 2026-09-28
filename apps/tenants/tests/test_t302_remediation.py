@@ -57,8 +57,8 @@ class T302RemediationTests(TestCase):
         with self.assertRaises(ValidationError):
             mem.delete()
             
-        # DB layer protection bypassed Model delete? No, CheckConstraint prevents it
-        with self.assertRaises(IntegrityError):
+        # Queryset protection
+        with self.assertRaises(ValidationError):
             with transaction.atomic():
                 TenantMember.objects.filter(id=mem.id).update(deleted=timezone.now())
 
@@ -88,16 +88,42 @@ class T302RemediationTests(TestCase):
         self.assertEqual(mem.tenant_id, self.shop.id)
         self.assertFalse(mem.is_active) # Restored previous state
 
-    def test_undo_outside_5s_fails(self):
-        """20, 21. Undo outside 5 seconds fails."""
+    def test_undo_exactly_at_boundary_succeeds(self):
+        """Undo exactly at 5.0 seconds succeeds."""
         mem = TenantMember.objects.create(tenant=self.shop, user=self.user_1, role=ShopRole.STAFF, is_active=False)
-        with mock.patch('django.utils.timezone.now', return_value=timezone.now() - timedelta(seconds=6)):
+        delete_time = timezone.now()
+        with mock.patch('django.utils.timezone.now', return_value=delete_time):
             mem.delete()
             
         self.client.force_authenticate(user=User.objects.create_superuser(email="admin@test.com", password="pw"))
-        r = self.client.post(f"/api/v1/memberships/{mem.id}/undo_remove/")
-        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(r.data['detail'], "Undo window expired.")
+        with mock.patch('django.utils.timezone.now', return_value=delete_time + timedelta(seconds=5)):
+            r = self.client.post(f"/api/v1/memberships/{mem.id}/undo_remove/")
+            self.assertEqual(r.status_code, status.HTTP_200_OK)
+
+    def test_undo_just_outside_boundary_fails(self):
+        """Undo at 5.000001 seconds fails."""
+        mem = TenantMember.objects.create(tenant=self.shop, user=self.user_1, role=ShopRole.STAFF, is_active=False)
+        delete_time = timezone.now()
+        with mock.patch('django.utils.timezone.now', return_value=delete_time):
+            mem.delete()
+            
+        self.client.force_authenticate(user=User.objects.create_superuser(email="admin@test.com", password="pw"))
+        with mock.patch('django.utils.timezone.now', return_value=delete_time + timedelta(seconds=5, microseconds=1)):
+            r = self.client.post(f"/api/v1/memberships/{mem.id}/undo_remove/")
+            self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_repeated_undo_fails(self):
+        """Repeated Undo after removal has expired or already undone."""
+        mem = TenantMember.objects.create(tenant=self.shop, user=self.user_1, role=ShopRole.STAFF, is_active=False)
+        mem.delete()
+        
+        self.client.force_authenticate(user=User.objects.create_superuser(email="admin@test.com", password="pw"))
+        r1 = self.client.post(f"/api/v1/memberships/{mem.id}/undo_remove/")
+        self.assertEqual(r1.status_code, status.HTTP_200_OK)
+        
+        r2 = self.client.post(f"/api/v1/memberships/{mem.id}/undo_remove/")
+        self.assertEqual(r2.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(r2.data['detail'], "Membership is not removed.")
 
     def test_capacity_counts(self):
         """29, 30, 31, 32. user_count includes ACTIVE and INACTIVE, excludes REMOVED."""
@@ -125,6 +151,24 @@ class T302RemediationTests(TestCase):
         r = self.client.post(f"/api/v1/memberships/{mem.id}/undo_remove/")
         self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("maximum user limit", r.data['detail'])
+
+    def test_capacity_undo_succeeds_when_capacity_freed(self):
+        """Undo succeeds if capacity was full but becomes available within 5 seconds."""
+        # Max users = 2
+        mem = TenantMember.objects.create(tenant=self.shop, user=self.user_1, is_active=False)
+        mem.delete()
+        
+        u3 = User.objects.create_user(email="u3@test.com")
+        u4 = User.objects.create_user(email="u4@test.com")
+        mem_3 = TenantMember.objects.create(tenant=self.shop, user=u3, is_active=True)
+        mem_4 = TenantMember.objects.create(tenant=self.shop, user=u4, is_active=False)
+        
+        # Free up capacity by removing mem_4
+        mem_4.delete()
+        
+        self.client.force_authenticate(user=User.objects.create_superuser(email="admin@test.com", password="pw"))
+        r = self.client.post(f"/api/v1/memberships/{mem.id}/undo_remove/")
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
 
     def test_removed_membership_does_not_authorize(self):
         """17, 40. Removed membership does not authorize."""
@@ -156,3 +200,30 @@ class T302RemediationTests(TestCase):
         self.assertEqual(r2.status_code, status.HTTP_201_CREATED)
         r3 = self.client.post("/api/v1/memberships/", {'tenant': self.shop.id, 'user': u5.id})
         self.assertEqual(r3.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_patch_user_identity_spoofing_denied(self):
+        """Identity spoofing on update is denied."""
+        mem = TenantMember.objects.create(tenant=self.shop, user=self.user_1, role=ShopRole.STAFF)
+        self.client.force_authenticate(user=User.objects.create_superuser(email="admin@test.com", password="pw"))
+        r = self.client.patch(f"/api/v1/memberships/{mem.id}/", {'user': self.user_2.id})
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Cannot change the user", r.data['errors']['user'][0])
+
+    def test_recreate_membership_after_soft_delete(self):
+        """A new membership may be created after an old membership was soft-deleted."""
+        mem = TenantMember.objects.create(tenant=self.shop, user=self.user_1, role=ShopRole.STAFF, is_active=False)
+        mem.delete()
+        
+        self.client.force_authenticate(user=User.objects.create_superuser(email="admin@test.com", password="pw"))
+        r = self.client.post("/api/v1/memberships/", {'tenant': self.shop.id, 'user': self.user_1.id, 'role': ShopRole.VIEWER})
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED)
+        
+        # Identity and history remain correct
+        new_mem = TenantMember.objects.get(id=r.data['id'])
+        self.assertNotEqual(new_mem.id, mem.id)
+        self.assertEqual(new_mem.user_id, self.user_1.id)
+        
+        # Undo of old membership should now fail due to uniqueness!
+        r_undo = self.client.post(f"/api/v1/memberships/{mem.id}/undo_remove/")
+        self.assertEqual(r_undo.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("already exists", r_undo.data['detail'])

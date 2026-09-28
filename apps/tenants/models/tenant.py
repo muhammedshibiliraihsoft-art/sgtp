@@ -42,7 +42,6 @@ class Tenant(BaseModel):
     
     # Tenant settings
     max_users = models.PositiveIntegerField(
-        default=10,
         help_text="Maximum number of users allowed for this tenant"
     )
     
