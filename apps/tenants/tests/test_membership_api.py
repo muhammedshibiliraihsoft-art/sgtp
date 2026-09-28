@@ -77,6 +77,8 @@ class TenantMemberAPITest(APITestCase):
         self.assertEqual(self.mem_a_viewer.role, ShopRole.STAFF)
 
     def test_superuser_can_delete_any(self):
+        self.mem_a_viewer.is_active = False
+        self.mem_a_viewer.save()
         self.client.force_authenticate(user=self.super_admin)
         r = self.client.delete(f'{self.list_url}{self.mem_a_viewer.id}/')
         self.assertEqual(r.status_code, status.HTTP_204_NO_CONTENT)

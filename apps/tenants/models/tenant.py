@@ -77,9 +77,10 @@ class Tenant(BaseModel):
     def user_count(self) -> int:
         """
         Return the number of users associated with this tenant.
-        Placeholder for Phase 1. Real implementation will use TenantMembership in Phase 3.
+        Counts both ACTIVE and INACTIVE memberships.
+        REMOVED (soft-deleted) memberships are excluded by the default manager.
         """
-        return 0
+        return self.memberships.count()
     
     @property
     def is_at_user_limit(self) -> bool:

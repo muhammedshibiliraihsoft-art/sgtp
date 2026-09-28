@@ -1,7 +1,12 @@
 from rest_framework import viewsets, permissions, status
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError, NotFound
+from rest_framework.decorators import action
+from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter
+from django.utils import timezone
+from datetime import timedelta
+from django.db import IntegrityError
 
 from ..models import TenantMember
 from ..serializers.membership import TenantMemberSerializer
@@ -43,3 +48,53 @@ class TenantMemberViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         serializer.save(updated_by=self.request.user)
+
+    def perform_destroy(self, instance):
+        if instance.is_active:
+            raise ValidationError({"detail": "Cannot remove an active membership. Deactivate it first."})
+        instance.delete()
+
+
+    @action(detail=True, methods=['post'])
+    def deactivate(self, request, pk=None):
+        membership = self.get_object()
+        if not membership.is_active:
+            return Response({"detail": "Membership is already inactive."}, status=status.HTTP_400_BAD_REQUEST)
+        membership.is_active = False
+        membership.save(update_fields=['is_active'])
+        return Response({"detail": "Membership deactivated.", "status": "INACTIVE"})
+
+    @action(detail=True, methods=['post'])
+    def reactivate(self, request, pk=None):
+        membership = self.get_object()
+        if membership.is_active:
+            return Response({"detail": "Membership is already active."}, status=status.HTTP_400_BAD_REQUEST)
+        membership.is_active = True
+        membership.save(update_fields=['is_active'])
+        return Response({"detail": "Membership reactivated.", "status": "ACTIVE"})
+
+    @action(detail=True, methods=['post'])
+    def undo_remove(self, request, pk=None):
+        try:
+            membership = TenantMember.objects.all_with_deleted().get(pk=pk)
+        except TenantMember.DoesNotExist:
+            raise NotFound()
+            
+        # Manually check permissions since we bypassed get_object()
+        self.check_object_permissions(request, membership)
+        
+        if not membership.deleted:
+            return Response({"detail": "Membership is not removed."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        if timezone.now() - membership.deleted > timedelta(seconds=5):
+            return Response({"detail": "Undo window expired."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        if membership.tenant.is_at_user_limit:
+            return Response({"detail": "Shop has reached its maximum user limit. Cannot restore."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            membership.undelete()
+        except IntegrityError:
+            return Response({"detail": "Cannot restore: a membership for this user already exists in this Shop."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        return Response({"detail": "Membership restored to previous state.", "status": "INACTIVE" if not membership.is_active else "ACTIVE"})

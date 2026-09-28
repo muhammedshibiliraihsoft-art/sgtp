@@ -173,3 +173,20 @@ Docker        -> development container and production web/db services
 ## Phase 1 readiness
 
 Not ready. The target is now documented, but the starter lacks the business modules and several required security, tenancy, infrastructure, and frontend foundations.
+
+## Membership Lifecycle and Rules
+
+### State Transitions
+The Shop Membership lifecycle follows these strict rules:
+
+- **ACTIVE** -> Deactivate -> **INACTIVE**
+- **INACTIVE** -> Reactivate -> **ACTIVE**
+- **INACTIVE** -> Remove -> **REMOVED** (Soft Delete)
+- **REMOVED** -> Undo (within 5 seconds) -> **Previous State**
+
+*Note: There is NO direct ACTIVE -> REMOVED transition. Memberships must be deactivated before they can be removed.*
+
+### Max Users Logic
+The max_users limit is configured per-Shop (not hard-coded).
+- **ACTIVE** and **INACTIVE** memberships both consume a max_users slot.
+- **REMOVED** (soft-deleted) memberships do NOT consume a slot.
