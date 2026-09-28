@@ -24,23 +24,23 @@ Phase confirmation activates only the named phase. It does not authorize all tas
 
 ## Phase 3 — shop / tenant
 
-- Implement the approved URL-path tenant context `/shops/{shop_id}/...`, then implement Supplier/Main Admin, Supplier Back Office, Shop, User-Shop membership, roles, scoped queries, supplier cross-shop visibility, shop isolation, and object-level access tests.
+- Implement T3-02A account/phone/locale/preference foundation after closed membership/remediation work; then the approved URL-path context `/shops/{shop_id}/...`, scoped queries/isolation, APIs/settings, and Staging Backend Foundation through T3-03–T3-05A. Exact ordering and decision gates are in the Phase 3 playbook.
 
 ## Phase 4 — core tailor business
 
-- Implement Clients, Family/Related Persons, Catalog, Designs, Measurements, Materials, Works/Orders, the approved production workflow, service layer, business rules, indexes, constraints, and concurrency safeguards.
+- Implement Clients/Related Persons and searchable duplicate-warning flow, Catalog/Designs and private reference metadata, extensible measurement templates with immutable history/compare, Materials, Work/Orders with approved priorities and derived date indicators, workflow, service layer, constraints and concurrency safeguards.
 
 ## Phase 5 — billing + reports + reliability
 
-- Implement Billing, Accounts, Transactions, Outstanding, Primary Client ownership for Related Person billing, billing idempotency, audit logging, soft delete, PDF generation, Reports, object storage, background jobs, backup strategy, restore verification, and financial safety.
+- Implement Decimal-safe advance/partial/final Billing, Outstanding, Primary Client ownership for Related Person billing, idempotency, audit/alert foundation, multilingual PDFs/reports with per-document locale override, private object storage, observable background jobs, backup and restore verification, and financial safety.
 
 ## Phase 6 — AI + integrations
 
-- Implement isolated `ai_agents`, controlled tools, service interfaces, AI permissions/tenant awareness, timeout/fallback/output validation, integration adapters, webhook validation, retries, idempotency, and failure isolation.
+- Implement isolated `ai_agents`, controlled tools, service interfaces, locale/authorized Shop and actor context, timeout/fallback/output validation and original-text preservation, adapters/webhook validation/retries/idempotency/failure isolation. Full AI Assistant and Smart Translation Assist remain Post-V1.
 
 ## Phase 7 — frontend
 
-- Implement React + Vite + Tailwind foundation, authentication/API client, role-aware routing, tenant context, Supplier Back Office, Shop workspace, Clients, Designs, Measurements, Materials, Works, Billing, Reports, and approved AI interfaces.
+- Implement React + Vite + Tailwind, English/ar-KW/Bangla/Urdu i18n, RTL/LTR, Light/Dark/System, authenticated API client, Staging checkpoint, role/Shop routing and authorized settings, V1 business screens, and approved AI interfaces; remain desktop-usable, tablet-ready and mobile-safe for essential flows.
 
 ## Phase 8 — testing + hardening
 
@@ -60,9 +60,44 @@ Phase confirmation activates only the named phase. It does not authorize all tas
 - Future phase files may be read for context but must not be implemented early.
 - A phase is not complete merely because its code runs; its own validation checklist, documentation, and handoff must pass.
 - V1 is complete only after the integrated end-to-end journey and Definition of Done in `docs/PRODUCT_DEFINITION.md` pass.
+- No Post-V1 work starts before Phase 10 and the complete V1 Definition of Done pass. Environment progression and the constrained Small Enhancement Lane are documented in `docs/ENVIRONMENTS.md` and `docs/POST_V1_ROADMAP.md`.
 
 ## Out of scope for V1 unless explicitly added
 
 - Unapproved business modules or changes to the supplier/shop hierarchy.
 - AI or third-party integrations that can directly control or break core business workflows.
 - Technology-stack replacement.
+
+## Approved V1 roadmap amendment
+
+This amendment adds requirements and checkpoints without changing the ten-phase architecture, order, or task-confirmation gate above. V1 is a strict release target: no post-V1 work may begin until Phase 10 acceptance and the complete product Definition of Done pass. The controlled Small Enhancement Lane may be used only during an already confirmed task and only within its documented limits in `docs/POST_V1_ROADMAP.md`.
+
+### Phase 3 task sequence
+
+`T3-01 (complete) → T3-02 (complete) → T3-02-REMEDIATION (closed) → T3-02A → T3-03 → T3-04 → T3-05 → T3-05A`.
+
+- **T3-02A — Account, phone, locale, and preference foundation:** retain UUID identity and required email; add country-aware E.164 phone support and deterministic email-or-phone login, password change and recovery foundation, persisted nullable User locale and `system|light|dark` appearance, plus Shop locale/timezone/currency data/API foundation. Do not add OTP/SMS/WhatsApp/2FA providers or invent account/phone/password/recovery policies. Unresolved policy is `BUSINESS DECISION REQUIRED`.
+- **T3-03:** retain `/shops/{shop_id}/...`; preferences and Shop defaults never authorize access.
+- **T3-04:** prove isolation for scoped access, including later business resources.
+- **T3-05:** expose only authorized Shop and User settings APIs; authority to change Shop defaults remains unresolved unless approved.
+- **T3-05A — Staging Backend Foundation:** after T3-05 and verified isolation, establish the first shared non-production staging backend environment at `api-staging.birky.com` with isolated PostgreSQL, health/readiness, CORS/CSRF configuration, staging logs, synthetic/demo data, and safe data reset. Staging is not Production.
+
+### Later-phase requirement placement
+
+- **Phase 4:** Shop-scoped Client quick search by name/normalized phone/stable ID (Work number when available); duplicate warning without silent merge; measurement templates, immutable history and comparison; private design-reference gallery; Normal/Urgent/Very Urgent Work priority; derived delivery-date indicators. No Client tags in V1. Date thresholds/cutoffs remain unresolved.
+- **Phase 5:** advance/deposit, partial and final payments; Decimal-safe, idempotent financial services; outstanding balances; Primary Client billing ownership for Related Person work; linked receipts/invoices/reports with per-document language override; English, Arabic RTL, Bangla and Urdu PDF validation; private object storage, observable jobs, audit events, backup and actual restore verification. Refund, overpayment, allocation and retention choices remain unresolved unless already approved.
+- **Phase 6:** preserve controlled AI/integration scope; propagate requested locale, authorized Shop/actor context, timeout/fallback, output validation and original-text preservation. AI cannot alter canonical data or bypass workflow, billing, or isolation.
+- **Phase 7:** React/Vite/Tailwind foundation includes English/ar-KW/Bangla/Urdu localization, correct RTL/LTR and mixed-direction handling, Light/Dark/System semantic theme, preference synchronization, international phone UX, normalized API errors and request IDs. Insert F7-01A Staging Frontend & Client Review Checkpoint after F7-01 acceptance and before F7-02. F7-02–F7-05 cover preferences/routing, authorized settings, business screens, responsiveness/accessibility and failure handling.
+- **Phase 8:** integrated authentication, localization, RTL, theme, business, PDF, privacy, security and cross-Shop test matrix. Shop A must never discover Shop B through search, duplicate checks, IDs, gallery, measurements, billing, reports, settings or notifications.
+- **Phase 9:** formal release-grade Staging reuses the existing staging environment after appropriate reset/reconfiguration; verify full deployment, auth/CSRF, locale/theme, business flows, files/jobs/PDFs, isolation, backup and restore.
+- **Phase 10:** sole Production/V1 release gate; accept only a Phase 9-approved candidate after full integrated workflow, security, observability, backups/restore and documentation evidence.
+
+Environment progression is `LOCAL → STAGING → PRODUCTION`. Do not deploy unfinished commits automatically or treat client feedback as implementation authorization. See `docs/ENVIRONMENTS.md`.
+
+### Frontend timing adjustment
+
+F7-01 and F7-01A are allowed to execute immediately after T3-05A in the overall dependency sequence:
+
+`T3-01 (complete) → T3-02 (complete) → T3-02-REMEDIATION (closed) → T3-02A → T3-03 → T3-04 → T3-05 → T3-05A → F7-01 → F7-01A → Phase 4 → Phase 5 → Phase 6 → F7-02 → F7-03 → F7-04 → F7-05 → Phase 8 → Phase 9 → Phase 10`.
+
+This gives the client a usable staging shell earlier, validates authentication/i18n/theme integration early, and reduces frontend/backend contract surprises. F7-02–F7-05 remain later frontend implementation tasks unless separately re-planned.

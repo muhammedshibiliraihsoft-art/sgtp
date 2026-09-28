@@ -2,14 +2,14 @@
 
 ## Current phase
 
-Phase 3 (Shop / Tenant) implementation is active.
+Phase 3 NOT STARTED for new implementation activation. Previously confirmed Phase 3 task outcomes are historical; current authorized work is the documentation-only V1-ROADMAP-UPDATE.
 ## Current task
 
-Task T3-02-REMEDIATION is COMPLETE and fully closed. The security/integrity implementation and validation fixes are committed and verified remotely.
+V1-ROADMAP-UPDATE documentation task is COMPLETE. Latest implementation task T3-02-REMEDIATION remains COMPLETE and fully closed. This roadmap task did not authorize or implement application work.
 
 - **Changed areas:** User API authorization/serializer, Main Supplier Shop-write permission, membership serializer lifecycle protection, real throttle wiring/tests, duplicate CORS tests, production CORS environment propagation, CI validation, remediation regression tests, and documentation.
 - **Validation:** Repository validator PASS; Django check PASS; migration drift check PASS; local application test suite PASS. Remote CI is green: the latest GitHub Actions workflow passed successfully, confirming the PostgreSQL CI connectivity and throttle cache isolation fixes. No migrations were required for closure. Production authentication throttling behavior was not weakened to make tests pass.
-- **Next authorized task:** T3-03 is NOT YET AUTHORIZED. It requires a separate explicit CONFIRM TASK T3-03 after presenting its task plan. Do not infer authorization.
+- **Next implementation candidate:** T3-02A is planned but NOT authorized by V1-ROADMAP-UPDATE. Present its task plan and wait for exact `CONFIRM TASK T3-02A`. T3-03 and later tasks require their own confirmations.
 - **Current blockers:** Business decisions remain required for global User administration ownership, ordinary-user Shop read visibility, and Shop DELETE semantics. T3-03 remains unauthorized.
 - **Agent Transition Note:** Upcoming engineering work may be executed through Codex; repository governance and explicit task-confirmation rules remain authoritative regardless of implementation agent.
 ## Repository state evidence
@@ -24,7 +24,7 @@ Task T3-02-REMEDIATION is COMPLETE and fully closed. The security/integrity impl
 - `docs/`: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp\docs\`
 - Remote: `https://github.com/muhammedshibiliraihsoft-art/sgtp.git`
 - Historical Phase 1 corrective implementation was completed and published to `origin/main`.
-- At the reviewed baseline, branch `main`, HEAD and `origin/main` matched; closure changes remain local.
+- At the reviewed baseline, branch `main`, HEAD and `origin/main` matched; T3-02 remediation is committed and GitHub Actions was green. Recheck Git and CI after documentation updates; prior evidence does not validate this diff.
 - Starter source files were modified for Phase 1.
 - Existing SGTP `.git` metadata and history preserved.
 
@@ -63,14 +63,14 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 
 - `BaseModelWithTenant.tenant` is nullable and no active-tenant/request authorization mechanism exists.
 - The starter is not yet the target product: complete request-scoped Shop isolation, clients, related persons, designs, measurements, materials, production stages, billing, reports/PDFs, frontend, persistent storage, workers, complete audit capture, monitoring, and end-to-end validation remain unimplemented. CI currently validates repository state, runs tests, and performs Django/migration checks, subject to the pending GitHub workflow confirmation recorded above.
-- The target requires React/Vite/Tailwind, but the starter has only an empty `frontend/` placeholder.
+- The target requires React/Vite/Tailwind, but the starter has only an empty `frontend/` placeholder. English/ar-KW/Bangla/Urdu localization, RTL/LTR, and Light/Dark/System are planned V1 requirements, not implemented.
 - Tenant context is approved as URL-path based (`/shops/{shop_id}/...`) and must be implemented/tested in Phase 3.
 - Related Person billing ownership is approved as Primary Client ownership and must be implemented/tested in Phase 5.
 
 ## Historical Phase Status
 
 Phase 1 and Phase 2 are complete. 
-Phase 3 is active:
+Historical Phase 3 task outcomes:
 - **T3-01 Supplier and Shop Entities**: Complete. The repository has a reproducible database baseline, Shop mapping, and Supplier singleton constraint.
 - **T3-02 User-Shop membership and roles**: Complete. `TenantMember` and `ShopRolePolicy` firmly establish user roles and Main Supplier cross-shop authority.
 
@@ -85,6 +85,17 @@ Phase 3 is active:
 - No migrations were created.
 - T3-03, external suppliers, and future business modules remain unimplemented.
 
-## Recommended next action
+## Roadmap handoff
 
-After closure is verified and reported, stop. T3-03 remains unauthorized and requires its own task plan and explicit `CONFIRM TASK T3-03`. Phase 3 activation does not authorize T3-03 or any other Phase 3 task automatically.
+V1-ROADMAP-UPDATE authorized documentation changes only. Do not implement T3-02A, T3-03, T3-05A (Staging Backend Foundation), F7-01A (Staging Frontend & Client Review Checkpoint), any application feature, or deploy any environment under this task. Next implementation candidate is T3-02A; it requires its own task plan and exact explicit confirmation. Unresolved policy items remain `BUSINESS DECISION REQUIRED` in the canonical decision record.
+
+## Tests and checks — V1-ROADMAP-UPDATE
+
+- Repository validator: PASS (dirty working tree warning is expected until documentation changes are committed).
+- Validator tests: 11 passed.
+- Application suite: 120 passed; collection was 120.
+- Django system check: PASS.
+- Migration check: no changes detected.
+- `git diff --check`: PASS (Git emitted only CRLF-to-LF normalization warnings).
+- GitHub Actions: the previously verified baseline run was green; this local documentation diff has not been pushed and has no new CI run.
+- Scope: documentation only; no application source, migrations, deployment, commit, or push.

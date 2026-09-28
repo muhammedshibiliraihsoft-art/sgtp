@@ -25,19 +25,19 @@ Money model → invoice/payment services → idempotency/audit → reports/PDF �
 ## 12. Detailed Task List
 
 ### R5-01 Billing and account model
-Objective: define invoice, line item, payment, balance, and outstanding semantics. Dependencies: Phase 4. Files: `backend/apps/billing/{models,migrations,serializers,views,tests}`. Steps: use Decimal, immutable issued records, statuses, tax/discount rules only if approved, shop scope, and Primary Client ownership for billing associated with Related Person work. DB: constraints/indexes. API: draft/issue/read. Security: financial permissions. Tests: totals/rounding/authorization and Primary Client ownership cases. DoD: model safe and the approved Related Person billing rule is enforced.
+Objective: define invoice, line item, payment, balance, and outstanding semantics. Dependencies: Phase 4. Files: `backend/apps/billing/{models,migrations,serializers,views,tests}`. Steps: use Decimal (never float), immutable issued records, statuses, approved tax/discount rules only, shop scope, and Primary Client ownership for Related Person work. Support advance/deposit, partial and final payments; completion/QC cannot be bypassed by payment state. Keep cancellation/refund, overpayment, allocation and currency-change semantics as `BUSINESS DECISION REQUIRED` unless separately approved. DB: constraints/indexes. API: draft/issue/payment/outstanding/read. Security: financial permissions. Tests: totals/rounding/authorization, payment lifecycle, integrity, and Primary Client ownership. DoD: model is safe and approved ownership/payment rules are enforced without invented financial policy.
 
 ### R5-02 Financial service and idempotency
-Objective: connect billing to Completed work and make writes retry-safe. Dependencies: R5-01. Steps: transactional issue/payment/refund policy, idempotency keys, uniqueness, concurrency locks, audit events. DB: keys/constraints. API: idempotent responses. Tests: retries/races/partial failure. DoD: no duplicate charge/record.
+Objective: connect billing to Completed work and make writes retry-safe. Dependencies: R5-01. Steps: transactional issue/payment operations, idempotency keys, uniqueness, concurrency locks, immutable history, audit events, and explicit policy gates for refunds/allocations. Audit records capture actor UUID, Shop, action, object type/ID, safe before/after values, timestamp and request correlation; never passwords, tokens or secrets. DB: keys/constraints. API: idempotent responses linked to client/shop/work. Tests: retries/races/partial failure, duplicate submission, financial invariants, audit completeness and redaction. DoD: retries cannot create duplicate financial effects and no unapproved refund/allocation rule is chosen.
 
 ### R5-03 Reports, history, and PDFs
-Objective: expose shop/supplier reports and generated PDFs. Dependencies: R5-02. Files: `backend/apps/reports/{models,migrations,serializers,views,tests}` and approved report/PDF services. Steps: define permitted aggregates, query indexes, templates, deterministic rendering, report history. DB: report metadata if needed. API: async job/status/download. Security: no cross-shop aggregates. Tests: totals/permissions/rendering. DoD: verified reports.
+Objective: expose shop/supplier reports and generated PDFs. Dependencies: R5-02. Files: `backend/apps/reports/{models,migrations,serializers,views,tests}` and approved report/PDF services. Steps: define permitted aggregates, query indexes, templates, deterministic rendering, report history, linked invoice/payment/account/client/shop/work identity, and document-language override. Default document language follows User preference → authorized Shop default → English; allow one-document override without changing stored canonical data. Validate English, Arabic RTL, Bangla and Urdu shaping/fonts/layout, dates/numbers/currency. DB: report metadata and locale provenance if needed; historical money remains unchanged. API: async job/status/download. Security: no cross-Shop aggregates or public document links. Tests: totals/permissions/rendering/RTL and monetary integrity. DoD: verified scoped reports/documents.
 
 ### R5-04 Storage and background jobs
-Objective: securely persist files and move heavy work off requests. Dependencies: R5-03. Steps: object storage abstraction, private paths, signed access, content validation, worker queue, retries/dead letters, tenant metadata. Tests: file traversal/type/authorization/job retry. DoD: durable safe files/jobs.
+Objective: securely persist files and move heavy work off requests. Dependencies: R5-03. Steps: object storage abstraction for private design/reference galleries and generated PDFs, private paths, bounded signed access, content validation, worker queue, retries/dead letters, tenant metadata, and safe failure visibility/alerts. Add V1 notification/alert foundation for due/overdue Work, outstanding payment, failed job, and important account/security events; no provider integrations absent separate approval. Tests: file traversal/type/authorization, cross-Shop private access, job retry/failure and alert safety. DoD: durable private files/jobs and observable failures.
 
 ### R5-05 Backup and restore verification
-Objective: document and exercise recovery. Dependencies: R5-01–04. Steps: backup DB/object metadata, retention, encryption, restore to isolated environment, verify migrations/data/files. DoD: recorded restore evidence.
+Objective: document and exercise recovery. Dependencies: R5-01–04. Steps: backup DB/object metadata, retention decision, encryption, restore to isolated environment, verify migrations/data/files, and retain evidence. Retention duration and anonymization remain `BUSINESS DECISION REQUIRED` before production. DoD: recorded restore evidence and explicit unresolved retention policy.
 
 ## 13. Task Dependency Graph
 `R5-01 → R5-02 → R5-03 → R5-04 → R5-05`.
@@ -58,7 +58,7 @@ Transactional services, permissions, storage/jobs, audit, report queries.
 ## 21. Frontend Changes
 None.
 ## 22. Security Requirements
-Financial authorization, immutable issued records, private storage, signed URLs, file validation, no sensitive logs.
+Financial authorization, immutable issued records, private storage, signed URLs, file validation, no sensitive logs. V1 observability includes approved error tracking (Sentry or approved equivalent direction), environment tags, request correlation IDs, failed-job visibility, critical failure alerts, and secret-safe logs; provider choice/credentials require explicit configuration and must not be committed.
 ## 23. Tenant / Permission Requirements
 Every financial/report/file/job record must carry and enforce shop context.
 ## 24. Validation Requirements

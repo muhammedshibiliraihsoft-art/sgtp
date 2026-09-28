@@ -71,6 +71,11 @@ The flow must be persisted, connected, auditable, and authorization-aware. A com
 - Production work with controlled transitions through cutting, stitching, check, finishing, QC, and completion
 - Billing connected to completed work
 - Reports, history, and PDF output
+- International account phone support with email-or-phone login; persisted nullable preferred locale and Light/Dark/System appearance preferences (implementation remains future work).
+- English (`en`), Arabic Kuwait (`ar-KW`), Bangla (`bn`), and Urdu (`ur`) UI localization, English fallback, Arabic/Urdu RTL, English/Bangla LTR, and mixed-direction field support.
+- Shop default locale/timezone/currency settings and per-document language override, applied only after Shop authorization; canonical records and historical financial values remain unchanged by display locale.
+- Client quick search and duplicate warnings without silent merge; measurement templates/history/compare; private design-reference gallery; Work priority/date indicators; advance/partial/final payments and outstanding balances.
+- Multilingual invoices, receipts and reports/PDFs; V1 audit events, critical alerts, safe logging, error tracking and request correlation.
 - Secure persistent file/object storage
 - Background jobs for work that should not block core operations
 - Audit logging, security controls, automated API documentation, tests, CI, staging, production configuration, monitoring, and operational error handling
@@ -118,6 +123,13 @@ The final validation must demonstrate:
 15. Staging and production configurations are functional.
 16. Monitoring and error handling are operational.
 17. Documentation reflects the actual implementation.
+18. English/ar-KW/Bangla/Urdu localization, RTL/LTR and Light/Dark/System work without affecting authorization or canonical data.
+19. Client search, measurement history/compare, private references, Work priority/dates, payment/outstanding, receipts and multilingual documents satisfy their approved rules.
+20. V1 audit, alert, observability, privacy, backup and restore requirements are operational; retention policy is decided before Production.
+
+## V1 release boundary
+
+V1 is strict-first: Post-V1 work cannot begin until Phase 10 acceptance and all Definition of Done criteria above pass. Client review uses Staging (`staging.birky.com`), which is not Production. Client feedback enters normal planning and is not implementation authorization. The bounded Small Enhancement Lane is defined in `docs/POST_V1_ROADMAP.md`.
 
 Running backends, frontends, individual APIs, individual pages, or isolated tests is not sufficient for V1 completion.
 

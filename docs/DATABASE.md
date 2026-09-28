@@ -20,6 +20,12 @@
 
 ## Migration Strategy & Policies
 
+### Approved planned V1 schema additions (not implemented)
+
+- T3-02A may add nullable User phone (canonical E.164), nullable preferred locale and appearance enum/default `system`, plus Shop default locale/timezone/currency. Preserve UUID identity, required email and existing memberships; do not fabricate phone values. Review uniqueness/collisions and existing-data compatibility before migration.
+- Later business migrations preserve historical measurement versions and financial values. Locale changes must not rewrite canonical source data; theme changes have no business-data effect; currency changes must never reinterpret historical transactions.
+- Prefer additive, forward-only migrations. Each task documents empty-database replay, upgrade compatibility, constraints/indexes and recovery. Retention duration, currency changes after finance, and other unresolved policy remain `BUSINESS DECISION REQUIRED`.
+
 ### 1. Forward-Only Migrations
 - **Policy:** Migrations must strictly move forward in production. Once a migration has been applied and merged into `main`, it **must not** be edited, deleted, or squashed manually in a way that breaks existing databases.
 - **Rollback Expectations:** Instead of rolling back applied migrations via `migrate <app> <previous_migration>`, the preferred recovery strategy is a **corrective forward migration** (e.g., adding a field back or reversing a data transformation in a new migration file).

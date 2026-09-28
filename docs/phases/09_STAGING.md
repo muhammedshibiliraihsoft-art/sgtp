@@ -32,6 +32,8 @@ The starter has Docker/Compose foundations but no verified staging environment. 
 
 Staging environment, database, secrets/configuration, deployment, migrations, object storage, workers, monitoring, smoke/E2E tests, backup restore drill, production-readiness evidence.
 
+The V1 environment progression is LOCAL → STAGING → PRODUCTION. During earlier development, the Staging environment may have been used for client review and integration validation. Phase 9 reuses the same Staging environment after appropriate reset, reconfiguration, and verification. Phase 9 does not create a second Staging environment; it promotes and validates a release candidate on the existing infrastructure.
+
 ## 9. Out of Scope
 
 Production cutover, unapproved feature work, architecture redesign, real customer data import, and bypassing release gates.
@@ -171,12 +173,16 @@ Record environment, artifact/version, migrations, checks, incidents, recovery ev
 ## 30. Phase Validation Checklist
 
 - [ ] Staging is isolated
+- [ ] Earlier staging data reset/cleaned where required for formal validation
+- [ ] Staging configuration verified as production-like
 - [ ] Deployment and migrations pass
 - [ ] Storage/workers/monitoring work
 - [ ] End-to-end workflow passes
 - [ ] Shop isolation passes
 - [ ] Restore drill passes
 - [ ] Readiness risks recorded
+- [ ] Auth cookies/CSRF/CORS, locale, RTL, themes, Shop settings, files and multilingual PDFs verified
+- [ ] Full billing/business E2E and Shop A/B isolation matrix passed
 
 ## 31. Definition of Done
 

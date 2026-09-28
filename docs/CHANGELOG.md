@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-09-28 — V1-ENVIRONMENT-LOCK
+
+- Locked the V1 environment model as LOCAL → STAGING → PRODUCTION. Removed the separate Preview tier from the approved architecture.
+- Recorded company name BiRKy and staging domains `staging.birky.com` / `api-staging.birky.com`. Production domains `app.birky.com` / `api.birky.com` are reserved but not provisioned.
+- Renamed T3-05A from "Backend Preview" to "Staging Backend Foundation" and F7-01A from "Client Preview Frontend" to "Staging Frontend & Client Review Checkpoint".
+- Moved F7-01/F7-01A earlier in the dependency sequence (immediately after T3-05A) to enable early client staging and auth/i18n/theme browser validation.
+- Updated Phase 9 to reuse the same Staging environment for formal release-candidate validation after reset/reconfiguration.
+- Added BR-ENV-001 and BR-ENV-002 environment/deployment business rules.
+- Documentation/roadmap only: no application code, migrations, or deployment was changed.
+
 ## 2026-09-28
 
 - Completed and committed the T3-02-REMEDIATION implementation with security and integrity fixes; subsequent closure review identified CI PostgreSQL connectivity and test throttle-cache isolation issues.
@@ -13,7 +23,14 @@
 - Isolated auth-throttle cache state in the API tests that expect baseline login responses; production throttle rates and behavior were not changed.
 - Corrected current-state claims in project state, handoff, architecture, security, and README documentation.
 - Local validation: 120/120 application tests passed; 69 focused tests passed; 11 repository-validator tests passed; repository validator and Django system check passed; migration check reported no changes.
-- The GitHub Actions run for the previous committed baseline failed on PostgreSQL connectivity. The updated workflow has not run on GitHub because these closure changes remain local and have not been pushed.
+- Historical note: the earlier run failed on PostgreSQL connectivity. This was superseded by the later verified green GitHub Actions run 36415017163 on `0ac45e1e80606539210ff8f7ad5a653eb4ba5215`; that run does not validate subsequent local documentation changes.
+
+## 2026-09-28 — V1 roadmap update
+
+- Updated the approved V1 requirement-to-task map while preserving the ten-phase architecture and task-level confirmation gate.
+- Added planned Phase 3 tasks T3-02A and T3-05A, and Phase 7 task F7-01A; assigned localization, RTL/LTR, Light/Dark/System, tailoring, billing, documents, audit, observability, preview, testing, staging, production, and Post-V1 requirements to their owning plans.
+- Created `docs/POST_V1_ROADMAP.md` and `docs/ENVIRONMENTS.md`.
+- Documentation/roadmap only: no application code, migrations, or deployment was authorized or changed.
 
 ## 2026-09-27
 

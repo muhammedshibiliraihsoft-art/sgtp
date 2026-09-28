@@ -147,7 +147,45 @@ New business rules require:
 
 ---
 
-## 6. Business Rule Change Log
+## 6. Approved V1 Account, Localization, and Tailoring Rules
+
+### BR-ACC-001 — User Identity Preservation
+**Status:** CONFIRMED
+**Rule:** User UUID remains the primary identity and email remains required. Phone is an additional international identifier, normalized to E.164. Existing users without a phone remain valid; migrations must not fabricate phone values.
+
+### BR-LOC-001 — Supported V1 Locales and Direction
+**Status:** CONFIRMED
+**Rule:** V1 UI supports English (`en`), Arabic Kuwait (`ar-KW`), Bangla (`bn`), and Urdu (`ur`). English is the fallback. Arabic and Urdu render RTL; English and Bangla render LTR. Mixed-direction values must be safely presented without altering canonical stored text.
+
+### BR-LOC-002 — Locale Selection Precedence
+**Status:** CONFIRMED
+**Rule:** Locale precedence is persisted User preference, then the authorized Shop default, then English. A Shop default may be resolved only after the request is authorized for that Shop.
+
+### BR-UX-001 — Appearance Preference Is Presentation Only
+**Status:** CONFIRMED
+**Rule:** User appearance preference is `system`, `light`, or `dark`, with `system` as default. It changes presentation only and must not affect identity, authorization, tenancy, workflow, stored business values, or calculations.
+
+### BR-CLIENT-001 — Client Duplicate Warning
+**Status:** CONFIRMED
+**Rule:** A potential duplicate by phone or email is a warning, not an automatic merge. Duplicate checks and results are confined to the authorized Shop; concurrent writes must not silently merge records.
+
+### BR-WORK-001 — Work Priority and Date Indicators
+**Status:** CONFIRMED
+**Rule:** V1 Work priorities are Normal, Urgent, and Very Urgent. Upcoming, due soon, due today, and overdue are derived date indicators, not workflow states. Exact due-soon threshold and date-cutoff semantics remain **BUSINESS DECISION REQUIRED** before implementation.
+
+### BR-BILL-001 — Related Person Billing Owner
+**Status:** CONFIRMED
+**Rule:** The Primary Client owns billing for work belonging to a Related Person. Financial calculations use exact decimal-safe values; presentation locale cannot change stored monetary values.
+
+### BR-DOC-001 — Document Language Override
+**Status:** CONFIRMED
+**Rule:** Invoice, receipt, or report language defaults to User preference, then authorized Shop default, then English. A user may select a per-document language override where authorized; this does not mutate canonical records or financial values.
+
+### BR-GOV-003 — V1 Completion Gates Post-V1
+**Status:** CONFIRMED
+**Rule:** Post-V1 implementation may begin only after Phase 10 acceptance and the complete V1 Definition of Done pass. Client feedback and Staging review do not independently authorize implementation or production release.
+
+## 7. Business Rule Change Log
 
 *   **Initial Creation**: Added confirmed rules for Membership Lifecycle, Shop Capacity, and Governance.
 
@@ -157,3 +195,13 @@ New business rules require:
 
 **Rule:**
 Undo is valid only within the exact 5-second window. Current Shop capacity must be re-checked immediately before restoration. If current user_count < max_users, restore the same membership and previous state. If current user_count >= max_users, reject Undo and leave the membership REMOVED. Do not remove/deactivate another membership, and do not exceed max_users.
+
+## 8. Environment and Deployment Rules
+
+### BR-ENV-001 � V1 Environment Progression
+**Status:** CONFIRMED
+**Rule:** The approved V1 environment progression is LOCAL ? STAGING ? PRODUCTION. There is no separate Preview environment in V1. Client review and early non-production deployments use the Staging environment. Production is deferred until Phase 10.
+
+### BR-ENV-002 � Staging Is Never Production
+**Status:** CONFIRMED
+**Rule:** Staging must always remain non-production with isolated PostgreSQL, isolated credentials, isolated object storage, demo/test data, and environment-tagged logs. Real production customer data, production payment credentials, production messaging credentials, and production secrets must never be used in Staging.

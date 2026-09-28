@@ -32,6 +32,8 @@ The current repository is a starter and is not production-ready. This playbook i
 
 Production configuration/secrets, PostgreSQL, object storage, workers, migrations, monitoring, backups, deployment validation, security review, final acceptance, documentation, and handoff.
 
+Phase 10 is the only Production release gate. Staging review and client feedback are not Production approval; only a Phase 9-approved release candidate may proceed. Post-V1 implementation remains closed until V1 acceptance succeeds. Production domains are `app.birky.com` (frontend) and `api.birky.com` (backend); they must not be provisioned before Phase 10 authorization.
+
 ## 9. Out of Scope
 
 New features, architecture changes, unapproved schema changes, direct production experimentation, and bypassing staging or approval gates.
@@ -93,7 +95,7 @@ Release approval → secrets/configuration → infrastructure readiness → back
 - Why it exists: V1 completion requires integrated evidence, not running services alone.
 - Dependencies: P10-03, explicit task confirmation.
 - Files/areas: acceptance suite, dashboards/alerts, runbooks, final docs.
-- Steps: validate Supplier → Back Office → Shop → Client → Work → Design → Measurement → Fabric → Production → Completion → Billing → Reports; test Shop A/B isolation, files, jobs, billing/report integrity, alerts, rollback contact paths; record acceptance.
+- Steps: validate Supplier → Back Office → Shop → authentication (email/phone) → persisted locale and Light/Dark/System → Client → Design → Measurement → Fabric/Material → Work/Production → Completion → Billing/advance/payments/outstanding → receipts/multilingual reports/PDFs; verify storage, monitoring, backups/restore, Shop A/B isolation, alerts and rollback contact paths; record acceptance. Test English, ar-KW, Bangla and Urdu with appropriate RTL/LTR behavior. Do not approve Post-V1 until the complete product Definition of Done passes.
 - Database/API/security: real authorized test accounts and controlled data only.
 - Tests: final smoke/E2E/security/backup/monitoring checks.
 - Validation: Definition of Done checklist signed/recorded.

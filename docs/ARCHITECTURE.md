@@ -104,6 +104,22 @@ Docker        -> development container and production web/db services
 - Logout blacklists the current refresh token and clears both refresh and csrftoken cookies.
 - No custom token-family revocation architecture is used in B2-02.
 
+### Planned V1 identity and preferences (Phase 3 T3-02A; not implemented)
+
+- Preserve the User UUID primary key and required unique email. Add country-aware phone normalization to E.164 without fabricating values for existing users; login may use email or phone through one deterministic authentication path.
+- Persist nullable User preferred locale and `system|light|dark` appearance, defaulting appearance to `system`; locale selection is `User preference → authorized Shop default → English`.
+- Shop default locale/timezone/currency are configuration only and must be resolved only after authorization. None of these preferences or settings may determine role, membership, access, or Shop selection.
+- Account creation authority, public registration, phone requiredness/reassignment, initial-password delivery/forced change and recovery proof remain `BUSINESS DECISION REQUIRED` unless separately approved.
+
+## Planned cross-cutting V1 presentation and operations
+
+- Supported UI locales are English (`en`), Arabic Kuwait (`ar-KW`), Bangla (`bn`) and Urdu (`ur`); Arabic/Urdu are RTL, English/Bangla LTR, with explicit mixed-direction handling. Preserve Unicode and canonical source text.
+- Theme is Light/Dark/System, persisted per User; semantic tokens and system preference may change presentation only. No theme-specific business logic or dual component trees.
+- Work priority is Normal/Urgent/Very Urgent. Upcoming/due-soon/today/overdue are derived date indicators, not workflow states; threshold and date cutoff remain business decisions.
+- V1 observability includes approved error tracking, environment tags, request correlation, failed-job visibility, critical alerts and secret-safe logs. Audit captures actor/Shop/action/object/safe change/timestamp/correlation, never credentials or tokens.
+- Environment lifecycle is LOCAL → STAGING → PRODUCTION. Staging is isolated, demo-data-only, visibly non-production and requires browser verification of cookie/CSRF/CORS at `staging.birky.com` / `api-staging.birky.com`. Phase 9 reuses the same Staging environment for formal release-candidate validation. Phase 10 remains the sole Production gate. Details: `docs/ENVIRONMENTS.md`.
+- No Post-V1 work begins before Phase 10 and full V1 acceptance; see `docs/POST_V1_ROADMAP.md` for deferred scope and the constrained enhancement lane.
+
 ## Permissions and Scoping
 
 - Object-level permission primitives are established: `IsOwner` (verifies ownership), `IsTenantMember` (Phase 3 deny-by-default contract), and `DenyAll` (explicit denial).

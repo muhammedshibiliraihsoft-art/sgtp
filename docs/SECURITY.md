@@ -1,5 +1,14 @@
 # Security
 
+## V1 roadmap security requirements (planned, not yet implemented)
+
+- Preserve User UUID identity; phone is normalized to E.164 and must not be fabricated for existing users. Never log/store plaintext passwords. Do not add OTP/SMS/WhatsApp/2FA providers without separate approval.
+- User/Shop locale and theme are never authorization inputs. Authorize Shop context before resolving its defaults; every preference/settings endpoint remains subject to object and tenant permissions.
+- Staging uses isolated services, demo/test data and separate secrets at `staging.birky.com` / `api-staging.birky.com`; verify cookie SameSite/Secure, CSRF, Origin and credentialed CORS in a real browser. Never expose production credentials/data.
+- Audit events may contain actor UUID, Shop, action, object identity, safe before/after fields, timestamp and request correlation only; exclude passwords, tokens, secrets and sensitive prompts. Logs must be secret-safe.
+- Private reference files and generated documents remain Shop-scoped. Test wrong-Shop access, expiring links, upload validation and cross-Shop download denial.
+- Retention, anonymization, account deletion and public host/domain policies must be settled before Production; unresolved items are listed in `docs/DECISIONS.md` as `BUSINESS DECISION REQUIRED`.
+
 ## Current starter state
 
 The cloned starter contains partial security scaffolding: a custom email-based User, Django/DRF authentication, SimpleJWT access/refresh endpoints, session middleware, CSRF middleware, security middleware, CORS middleware, soft-delete/audit base-model fields, and production security settings. These controls are incomplete and have not established the full SGTP V1 security architecture.

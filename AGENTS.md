@@ -53,6 +53,14 @@ V1 is not complete merely because the backend, frontend, individual APIs, pages,
 
 When implementation changes affect this target, update `docs/PRODUCT_DEFINITION.md`, `docs/PROJECT_STATE.md`, `docs/ARCHITECTURE.md`, `docs/DEVELOPMENT_PLAN.md`, and `docs/HANDOFF.md` as applicable. Do not silently change the approved hierarchy or V1 boundaries.
 
+### V1-first governance
+
+- V1 is a strict release target. Do not begin Post-V1 features until Phase 10 acceptance and the complete Definition of Done in `docs/PRODUCT_DEFINITION.md` are verified.
+- The Small Enhancement Lane applies only inside an already confirmed task and only under all constraints in `docs/POST_V1_ROADMAP.md`; uncertain changes become a separately confirmed task.
+- Environment progression is LOCAL → STAGING → PRODUCTION. Never deploy unfinished commits automatically or treat client feedback as authorization. See `docs/ENVIRONMENTS.md`.
+- Localization, RTL/LTR and Light/Dark/System are presentation preferences, never authorization inputs. Resolve authorized Shop context before applying Shop defaults.
+- Never invent listed business policies; record `BUSINESS DECISION REQUIRED` and keep unrelated tasks moving where safe.
+
 ## Phase and task confirmation gate
 
 - A phase confirmation activates the phase only; it does not authorize every task in that phase.
@@ -64,4 +72,4 @@ When implementation changes affect this target, update `docs/PRODUCT_DEFINITION.
 
 ## Current repository status
 
-This repository is the SGTP starter project. It contains a Django/DRF application with accounts, tenants, common base models, PostgreSQL configuration, Docker/devcontainer infrastructure, migrations, and tests. The authoritative inspection, target product, and current gaps are recorded in `docs/PRODUCT_DEFINITION.md`, `docs/PROJECT_STATE.md`, `docs/ARCHITECTURE.md`, and `docs/HANDOFF.md`. Do not begin implementation phases until the current foundation contradictions are reviewed against the target, and do not invent business behavior outside the documented V1 boundaries.
+This repository is the SGTP starter project. It contains a Django/DRF application with accounts, tenants, common base models, PostgreSQL configuration, Docker/devcontainer infrastructure, migrations, and tests. The authoritative inspection, target product, and current gaps are recorded in `docs/PRODUCT_DEFINITION.md`, `docs/PROJECT_STATE.md`, `docs/ARCHITECTURE.md`, and `docs/HANDOFF.md`. Phase 1/2 and T3-02 remediation are complete; future tasks still require their individual confirmation. Do not invent business behavior outside documented V1 boundaries.

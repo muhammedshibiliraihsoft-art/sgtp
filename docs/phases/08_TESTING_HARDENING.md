@@ -46,6 +46,17 @@ Test inventory → unit/API coverage → auth/permissions/isolation → workflow
 
 ## 12. Detailed Task List
 
+### Integrated V1 acceptance matrix (applies across H8-01–H8-04)
+
+- **Authentication:** email/phone login, international E.164 normalization/collisions, existing User migration compatibility, unchanged UUID identity, password provisioning security, password change/recovery contract, throttling, refresh, logout and CSRF. Do not add unapproved OTP/provider behavior.
+- **Localization:** `en`, `ar-KW`, `bn`, `ur`, English/missing-resource fallback, persisted User preference, authorized Shop fallback, first-login chooser and no cross-User preference leakage.
+- **RTL/LTR:** Arabic/Urdu navigation, forms, tables, dialogs, pagination and mixed-direction fields; English/Bangla LTR.
+- **Themes:** Light, Dark, System; at minimum English-Light, English-Dark, Arabic-Light, Arabic-Dark, Urdu-Dark, Bangla-Light; system-preference behavior and no severe startup flash.
+- **Business:** Client quick search/duplicate warnings, measurement templates/history/compare, private gallery ownership, Work priorities/dates, advance/partial/final payments, outstanding, receipts, multilingual documents and override.
+- **Isolation (critical):** prove Shop A cannot discover Shop B via direct IDs, search, duplicate checks, Work number, gallery, measurements, billing, outstanding, reports, locale/settings or notifications.
+- **Documents:** English/Arabic RTL/Bangla/Urdu PDF rendering, per-document language override and unchanged monetary values.
+- **Privacy/operations:** verify safe audit fields (actor UUID, Shop, action, object, safe before/after, timestamp, correlation ID; never secrets/tokens/passwords), alert coverage for due/overdue work, outstanding, failed jobs and account/security events, and no secret leakage in logs. Retention durations remain a pre-production business decision.
+
 ### H8-01 Test inventory and deterministic fixtures
 
 - Objective: map critical requirements to tests and create safe deterministic fixtures/factories.
@@ -176,6 +187,10 @@ Record test commands, artifacts, pass/fail counts, unresolved defects, environme
 - [ ] Workflow/billing/files/jobs tested
 - [ ] E2E journey tested
 - [ ] Security/performance gates recorded
+- [ ] Locale, RTL/LTR, preference, and theme matrix passed
+- [ ] Shop A/B negative tests cover all enumerated discovery surfaces
+- [ ] Multilingual PDF and monetary-integrity tests passed
+- [ ] Audit/alert privacy and observability checks passed
 
 ## 31. Definition of Done
 

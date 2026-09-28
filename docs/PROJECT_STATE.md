@@ -2,8 +2,8 @@
 
 ## Status
 
-- Phase 2 is complete. Phase 3 work is limited to closing T3-02 remediation validation.
-- Current task: T3-02-REMEDIATION is COMPLETE and fully closed.
+- Phase 2 is complete. Phase 3 NOT STARTED for new implementation activation; previously confirmed Phase 3 tasks T3-01, T3-02, and remediation are historical completed work.
+- Latest completed implementation task: T3-02-REMEDIATION is COMPLETE and fully closed. V1-ROADMAP-UPDATE documentation task is now complete; no implementation task was authorized.
 - Current application test discovery: 120 tests; latest complete local run: 120 passed. Remote CI confirmation is fully green and the PostgreSQL connectivity issue is resolved on GitHub Actions.
 
 - Project root: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp`
@@ -13,9 +13,10 @@
 - Target status: SGTP V1 is explicitly defined in `docs/PRODUCT_DEFINITION.md`
 - Starter foundation: exists in the cloned SGTP repository.
 - Phase 1 implementation: **Historical - Complete.**
-- Confirmation status: T3-02 remediation code is committed and fully closed. T3-03 is NOT YET AUTHORIZED and requires separate explicit task confirmation.
+- Confirmation status: V1-ROADMAP-UPDATE documentation task is explicitly confirmed. It does not authorize T3-02A, T3-03, or other implementation. Each future task requires its own explicit confirmation.
 - Detailed phase playbooks: 01-10 present.
 - Later-phase decisions: Tenant context is approved as URL-path based (`/shops/{shop_id}/...`), and Related Person billing is owned by the Primary Client.
+- T3-02A, T3-05A (Staging Backend Foundation), and F7-01A (Staging Frontend & Client Review Checkpoint) are planned only; none is implemented or activated. English, ar-KW, Bangla, Urdu, RTL/LTR, and Light/Dark/System are planned V1 requirements, not implemented.
 
 ## Locked V1 business tenancy model
 
@@ -83,7 +84,7 @@
 ### PRE-P3-02 result
 
 - The V1 Supplier / Shop / External Supplier business meaning is now explicit across the governing documentation.
-- Phase 3 scope is activated, but no work beyond T3-02 remediation is authorized. T3-01 and T3-02 implementation are complete; URL context (T3-03) is pending and unauthorized.
+- Historical Phase 3 task outcomes: T3-01, T3-02, and T3-02-REMEDIATION are complete. T3-02A is the next planned implementation task; it is not authorized by this documentation confirmation. T3-03 and all subsequent tasks remain individually gated.
 
 ### T3-02 remediation result
 
@@ -165,3 +166,10 @@
 - Current root-level `core/`, `apps/accounts/`, `apps/tenants/`, and `apps/common/` references are explicitly labeled as starter transition inputs, not target implementation boundaries.
 - Infrastructure direction is documented as Cloudflare Pages, Render, Render PostgreSQL, Cloudflare R2/S3-compatible storage, and an open Django-Q or Celery+Redis worker choice.
 - Auth planning now explicitly includes an HttpOnly/Secure refresh cookie, rotation, and reuse detection.
+
+## Roadmap update status (2026-09-28)
+
+- V1-ROADMAP-UPDATE and V1-ENVIRONMENT-LOCK are documentation/roadmap work only. T3-02A, T3-03, T3-05A (Staging Backend Foundation), F7-01A (Staging Frontend & Client Review Checkpoint), application code, migrations, and deployments remain unimplemented/unauthorized. Environment model is locked as LOCAL → STAGING → PRODUCTION.
+- Post-V1 work is gated until Phase 10 and the complete V1 Definition of Done are accepted.
+- GitHub Actions run 36415017163 passed on repository HEAD before this documentation-only change. This historical CI result does not validate the current documentation diff.
+- Current local validation after the documentation update: repository validator PASS; validator tests 11 passed; application suite 120 passed; Django system check PASS; migration drift check PASS; `git diff --check` PASS. No application source or migration files changed.

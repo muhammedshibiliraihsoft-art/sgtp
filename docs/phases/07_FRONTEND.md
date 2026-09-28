@@ -20,6 +20,8 @@ Establish frontend structure, API client, authentication/session handling, routi
 
 Phase 6 is complete or explicitly accepted as a dependency; backend API schemas and permission contracts are stable; explicit `CONFIRM PHASE 7` has been received.
 
+**Frontend timing note:** F7-01 and F7-01A are allowed to execute immediately after T3-05A in the overall project dependency sequence, before Phases 4–6, to validate auth/i18n/theme integration early and give the client a usable staging shell. F7-02–F7-05 remain later frontend implementation tasks unless separately re-planned.
+
 ## 6. Dependencies
 
 Phases 1–5 backend foundations, Phase 6 integration contracts where UI exposure is approved, API schema, auth/token behavior, shop context, and object permissions.
@@ -30,7 +32,7 @@ The repository currently has an empty `frontend/` placeholder and no React imple
 
 ## 8. Exact Scope
 
-React/Vite/Tailwind foundation, authenticated API client, role-aware routing, tenant context, supplier back office, shop workspace, Clients, Designs, Measurements, Materials, Works, Billing, Reports, and approved AI interface points.
+React/Vite/Tailwind foundation, authenticated API client, role-aware routing, tenant context, English/ar-KW/Bangla/Urdu localization with RTL/LTR, Light/Dark/System theme, supplier back office, shop workspace, Clients, Designs, Measurements, Materials, Works, Billing, Reports, and approved AI interface points.
 
 ## 9. Out of Scope
 
@@ -42,7 +44,7 @@ Frontend state and route visibility improve usability only. Every read/write mus
 
 ## 11. Implementation Sequence
 
-Frontend shell → API/auth client → role/shop routing → back office/shop shell → domain screens → billing/reports → approved AI surfaces → accessibility and integration validation.
+Frontend shell/i18n/theme → authenticated API client → accepted Staging Frontend checkpoint → role/shop routing/preferences → back office/shop shell → domain screens → billing/reports → approved AI surfaces → accessibility and integration validation.
 
 ## 12. Detailed Task List
 
@@ -62,6 +64,22 @@ Frontend shell → API/auth client → role/shop routing → back office/shop sh
 - Documentation update: frontend setup, API contract, state, handoff.
 - Definition of Done: shell builds and authenticated requests fail safely.
 
+### F7-01A Staging Frontend & Client Review Checkpoint
+
+- Objective: connect the accepted frontend foundation to the staging backend at `api-staging.birky.com` and establish client review readiness at `staging.birky.com`.
+- Why it exists: obtain client feedback on a stable staging checkpoint and validate browser auth/i18n/theme integration early.
+- Dependencies: F7-01 accepted; T3-05A Staging Backend Foundation operational; exact task confirmation.
+- Files to create: Cloudflare Pages staging configuration, build identifier/banner, browser smoke/auth tests, environment documentation/runbook.
+- Files to modify: frontend deployment configuration and docs only; no application business behavior by assumption.
+- Implementation steps: connect staging frontend at `staging.birky.com` to staging backend at `api-staging.birky.com`; show `STAGING — NOT PRODUCTION` visibly; use demo/test data and separate environment config; record accepted commit/short SHA; test login, refresh, logout, CSRF and credentialed requests in a real browser. Require Secure cookies, strict CSRF/origin validation and exact credentialed CORS for the cross-subdomain arrangement.
+- Database impact: none; staging backend owns isolated staging DB.
+- API impact: consume only accepted contracts.
+- Security impact: no production secrets/data; verify cookie SameSite/Secure, CSRF, Origin, CORS and logout/refresh lifecycle in browser.
+- Tests required: environment routing, staging banner/build identity, auth lifecycle, locale/RTL/LTR foundation, Light/Dark/System foundation, and safe error handling.
+- Validation: production frontend build plus browser smoke on the accepted checkpoint.
+- Documentation update: `docs/ENVIRONMENTS.md`, state, handoff, changelog.
+- Definition of Done: a clearly non-production staging frontend serves only the isolated staging backend, auth lifecycle has browser evidence, and locale/theme foundations are validated. Never deploy unfinished commits automatically.
+
 ### F7-02 Role-aware routing and shop context
 
 - Objective: implement supplier back-office and shop workspace navigation with active-shop context.
@@ -77,6 +95,7 @@ Frontend shell → API/auth client → role/shop routing → back office/shop sh
 - Validation: browser smoke flows and cross-shop API denial.
 - Documentation update: frontend/UX/API/state/handoff.
 - Definition of Done: correct shell/context behavior with backend enforcement intact.
+- Also implement first-login locale chooser, persisted preference load/switch, English fallback, `en`, `ar-KW`, `bn`, `ur`, RTL for Arabic/Urdu, LTR for English/Bangla, mixed-direction field handling, and Light/Dark/System selector. Preferences remain UX-only.
 
 ### F7-03 Supplier Back Office and Shop workspace
 
@@ -93,6 +112,7 @@ Frontend shell → API/auth client → role/shop routing → back office/shop sh
 - Validation: end-to-end supplier and shop workspace smoke test.
 - Documentation update: state, handoff, UI/API docs.
 - Definition of Done: supplier and shop shells are usable and scoped.
+- Add authorized Shop default locale/timezone/currency UI and User language/appearance settings only through authorized APIs; leave editing authority unresolved if no policy is approved.
 
 ### F7-04 Tailor Management screens
 
@@ -109,6 +129,7 @@ Frontend shell → API/auth client → role/shop routing → back office/shop sh
 - Validation: end-to-end request-to-report flow in an authorized shop.
 - Documentation update: API/UI/state/handoff.
 - Definition of Done: frontend supports the approved workflow without duplicating business rules.
+- Include quick search/duplicate warning, template/history/compare, private gallery, priority/date highlights, advance/partial/final payment, outstanding, receipts and multilingual invoice/receipt/report with per-document language override. All screens must use shared semantic tokens and support Light/Dark and appropriate LTR/RTL.
 
 ### F7-05 Approved AI interface and frontend hardening
 
@@ -124,10 +145,11 @@ Frontend shell → API/auth client → role/shop routing → back office/shop sh
 - Validation: production build and critical browser journey.
 - Documentation update: state, handoff, frontend/security docs.
 - Definition of Done: approved UI is resilient and does not couple core workflow to AI.
+- Validate desktop-first usability, tablet readiness and essential mobile safety, keyboard/accessibility, long translations, mixed direction, theme contrast, loading/empty/disabled/failure states, focus, and performance.
 
 ## 13. Task Dependency Graph
 
-`F7-01 → F7-02 → F7-03 → F7-04 → F7-05`.
+`F7-01 → F7-01A → F7-02 → F7-03 → F7-04 → F7-05`.
 
 ## 14. Expected Files / Folders
 
@@ -201,6 +223,10 @@ Record task, routes/components, API contracts, tests, browser validation, known 
 - [ ] Back office and shop workspace work
 - [ ] Tailor workflow screens use backend contracts
 - [ ] Accessibility and browser tests pass
+- [ ] English/ar-KW/Bangla/Urdu, RTL/LTR and mixed-direction flows pass
+- [ ] Light/Dark/System works without startup flash and preference leakage
+- [ ] Desktop/tablet/essential mobile layouts validated
+- [ ] Staging is distinct from Production and visibly marked
 
 ## 31. Definition of Done
 
@@ -216,7 +242,7 @@ Revert frontend task commits; disable a broken route behind a feature flag; pres
 
 ## 34. Phase Implementation Prompt
 
-**Implement ONLY this phase. Do not implement future phases.** Phase confirmation activates Phase 7 only; it does not authorize F7-01 through F7-05. Before each task, present its objective, affected files/areas, dependencies/preconditions, and validation/tests, then wait for explicit `CONFIRM TASK <TASK-ID>`. Implement only the confirmed task, validate it, update documentation, report the result, and stop. Do not begin the next task or Phase 8 automatically.
+**Implement ONLY this phase. Do not implement future phases.** Phase confirmation activates Phase 7 only; it does not authorize any task. Before each task, present its objective, affected files/areas, dependencies/preconditions, and validation/tests, then wait for exact `CONFIRM TASK <TASK-ID>`. Implement only the confirmed task, validate it, update documentation, report the result, and stop. Do not begin another task or Phase 8 automatically. F7-01A is an optional-but-planned Staging Frontend & Client Review checkpoint after F7-01 acceptance; deployment requires task confirmation. F7-01 and F7-01A may execute earlier in the dependency sequence once the T3-05A Staging Backend Foundation is stable.
 
 ## 35. Phase Completion Report Format
 
