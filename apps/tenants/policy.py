@@ -31,7 +31,7 @@ class ShopRolePolicy:
         Main Supplier Admins implicitly have cross-shop authority.
         In V1, this is mapped to the Django superuser flag.
         """
-        if not user or not user.is_authenticated:
+        if not user or not user.is_authenticated or not user.is_active:
             return False
         return getattr(user, 'is_superuser', False)
 
@@ -44,7 +44,7 @@ class ShopRolePolicy:
         if ShopRolePolicy.is_main_supplier_admin(user):
             return True
             
-        if not user or not user.is_authenticated:
+        if not user or not user.is_authenticated or not user.is_active:
             return False
             
         from apps.tenants.models import TenantMember
@@ -52,5 +52,29 @@ class ShopRolePolicy:
             user=user, 
             tenant_id=tenant_id, 
             is_active=True,
-            tenant__is_active=True
+            tenant__is_active=True,
+            deleted__isnull=True
+        ).exists()
+
+    @staticmethod
+    def can_manage_memberships(user: Any, tenant_id: Any) -> bool:
+        """
+        Check if a user can manage memberships for a specific shop.
+        Main Supplier Admins can manage memberships for all shops.
+        Shop ADMINs can manage memberships for their authorized shop.
+        """
+        if ShopRolePolicy.is_main_supplier_admin(user):
+            return True
+            
+        if not user or not user.is_authenticated or not user.is_active:
+            return False
+            
+        from apps.tenants.models import TenantMember, ShopRole
+        return TenantMember.objects.filter(
+            user=user, 
+            tenant_id=tenant_id, 
+            role=ShopRole.ADMIN,
+            is_active=True,
+            tenant__is_active=True,
+            deleted__isnull=True
         ).exists()

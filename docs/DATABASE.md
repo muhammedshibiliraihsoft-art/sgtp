@@ -15,7 +15,7 @@
 - **Top-level owner:** V1 has exactly one Supplier / Main Admin above the Shops; this is not a multi-supplier tenancy model.
 - **External Suppliers:** An External Supplier is a non-user, non-tenant, shop-owned business record. It belongs to exactly one Shop and is never a global/shared supplier record.
 - **Technical Mapping:** The existing `Tenant` model serves as the technical representation for the `Shop` entity. T3-01 verified this structural safety because no data existed to corrupt. A `Supplier` model manages the singleton Main Supplier constraint.
-- **Identity sharing:** The `User` model may support users belonging to multiple Shops through the future approved membership model; ordinary Shop users must not receive cross-Shop visibility. Main Supplier cross-Shop access must be explicit and backend-authorized.
+- **Identity sharing:** The `User` model supports users belonging to multiple Shops through the `TenantMember` membership model; ordinary Shop users do not receive cross-Shop visibility. Main Supplier cross-Shop access is explicitly backend-authorized via `ShopRolePolicy`.
 - **Isolation:** Shop-scoped foreign keys, querysets, permissions, and APIs must enforce isolation for direct IDs, lists, search, filters, ordering, pagination, counts, aggregates, autocomplete, and nested/foreign-key traversal.
 
 ## Migration Strategy & Policies

@@ -70,12 +70,11 @@
 - The required end-to-end workflow is documented, but no production-domain modules for clients, designs, measurements, materials, production stages, billing, or reports exist yet.
 - The target requires React/Vite/Tailwind, but the starter contains no frontend implementation; `frontend/` is only an empty placeholder.
 - The target requires a service layer, object-level permissions, persistent object storage, background jobs, audit logging, CI, monitoring, and automatic documentation; the starter does not implement these as complete capabilities.
-- Existing tenant support is insufficient for isolated shop workspaces: user membership and active-shop context are missing.
+- Existing tenant support is insufficient for isolated shop workspaces: active-shop context is missing (pending T3-03).
 
 ## Phase 3+ Missing or incomplete business logic
 
 - User-to-tenant membership/ownership is not modeled: `User` has no tenant relation.
-- Actual business tenant isolation is not enforced (although technical scoping primitives were added in B2-03).
 - Tenant-aware base model permits `tenant = NULL`, and no request/context policy establishes the active tenant.
 - Tenant-context resolution is approved as URL-path based (`/shops/{shop_id}/...`) and must be enforced in Phase 3.
 - Billing ownership for work belonging to a Related Person is approved as Primary Client ownership and must be enforced in Phase 5.
@@ -89,7 +88,7 @@
 
 ### Phase 3+ Deferred Implementations
 
-- User-to-tenant membership is not modeled: `User` has no tenant relation, and business tenant isolation is not enforced.
+- Actual business tenant isolation is not fully enforced (URL context pending): `User` has no tenant relation, and business tenant isolation is not enforced.
 - Tenant-aware base model permits `tenant = NULL`, and no request/context policy establishes the active tenant.
 - Tenant-context resolution is approved as URL-path based (`/shops/{shop_id}/...`) and must be enforced in Phase 3.
 - Billing ownership for work belonging to a Related Person is approved as Primary Client ownership and must be enforced in Phase 5.
@@ -133,7 +132,7 @@
 - B2-03 Permission and tenant-scope interfaces implementation is completed and verified.
   - Reusable tenant queryset scoping is implemented via `TenantScopedMixin`.
   - `IsTenantMember` is intentionally a deny-by-default Phase 3 contract.
-  - Actual Shop/User membership and business tenant isolation remain Phase 3; B2-03 does not implement the Phase 3 Shop/Tenant business model.
+  - Actual Shop/User membership is implemented (T3-02), but business tenant isolation (URL context) remains Phase 3.
   - 403/404 boundaries strictly enforced and validated (36 total tests passing).
 - B2-04 is complete and audit-cleared.
   - Custom API exception handler normalizes errors.

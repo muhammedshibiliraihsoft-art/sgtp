@@ -108,7 +108,7 @@ Docker        -> development container and production web/db services
 
 - Object-level permission primitives are established: `IsOwner` (verifies ownership), `IsTenantMember` (Phase 3 deny-by-default contract), and `DenyAll` (explicit denial).
 - Reusable tenant queryset scoping is provided by `TenantScopedMixin`, which enforces the `/shops/{shop_id}/...` path contract by filtering querysets and preventing cross-tenant IDOR access.
-- Actual User-Shop membership logic and business tenant isolation implementation remain pending for Phase 3.
+- Actual User-Shop membership logic is modeled via `TenantMember` and `ShopRolePolicy`. Business tenant isolation context implementation remains pending for Phase 3 (T3-03, T3-04).
 
 ## API Security and Reliability
 
@@ -125,7 +125,7 @@ Docker        -> development container and production web/db services
 - `BaseModel` provides UUID IDs, created/updated timestamps, created/updated user references, and `SOFT_DELETE_CASCADE`.
 - `BaseModelWithTenant` adds an optional foreign key to the legacy `tenants.Tenant` input.
 - `Tenant` is currently an organization record with profile/contact/address fields and a user limit; its V1 business mapping is not established by the starter.
-- `User` has no tenant foreign key or membership model. Consequently, tenant ownership and isolation are not implemented in the starter. The approved target tenant-context mechanism is URL-path based: `/shops/{shop_id}/...`.
+- `User` has no tenant foreign key directly. Instead, TenantMember links User and Tenant.  The approved target tenant-context mechanism is URL-path based: `/shops/{shop_id}/...`.
 - The target Shop boundary and External Supplier ownership rules are defined above; they are not implemented by the current starter Tenant CRUD/API.
 
 ## API surface
@@ -147,8 +147,8 @@ Docker        -> development container and production web/db services
 
 ## Architecture gaps and conflicts
 
-1. Tenant membership is absent. `Tenant.user_count` assumes a reverse `user_set`, but `User` does not reference `Tenant`.
-2. Actual business tenant isolation (User-Shop membership) remains pending for Phase 3, although the base `TenantScopedMixin` and permission primitives were introduced in Phase 2.
+1. `Tenant.user_count` assumes a reverse `user_set` and is currently hardcoded to 0 (BUSINESS DECISION REQUIRED for inactive user limit consumption).
+2. Business tenant isolation (context, URL resolution, and cross-module scoped querysets) remains pending for Phase 3 (T3-03, T3-04), although the membership foundation and base `TenantScopedMixin` were introduced.
 3. The tenant field is nullable, so tenant-scoped records can be unscoped by default.
 4. The README references missing `apps.common.views.base_model_view` and `apps.tenants.mixins` components.
 5. Settings and infrastructure disagree: settings read `DJANGO_DEBUG` and `DB_*`, while devcontainer configuration supplies `DEBUG` and `DATABASE_URL`.
