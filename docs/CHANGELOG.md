@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-09-28 — T3-04 Scoped Querysets and Object Permissions
+
+- Updated `TenantScopedMixin` to require authorized T3-03 context, verify actor/URL/compatibility alias consistency, filter by the trusted Shop, and force Shop ownership on create/update.
+- Bound `IsTenantMember` object checks to the selected Shop for ordinary members and Main Supplier; added temporary UUID/FK/soft-delete test proof for direct IDs, lists/counts, Main Supplier scope, writes, and fail-closed mismatches.
+- No business models/endpoints, migrations, dependencies, global Tenant/member API changes, or T3-05 work. Future business endpoints must adopt and prove the shared boundary.
+- Validation: focused tests 28 passed; full application suite 152 passed (144 warnings); repository validator PASS (152 discovered); validator tests 14 passed; Django check, migration drift, OpenAPI, Black, Flake8, and `git diff --check` passed. Changes are local only, with no commit, push, or CI run.
+
 ## 2026-09-28 — T3-03 Tenant / Shop Request Context
 
 - Added a request-local Shop context resolver and reusable DRF context base that authenticates before Shop authorization and preserves the mandatory password-change gate.

@@ -52,8 +52,17 @@ class IsTenantMember(BasePermission):
         from apps.tenants.policy import ShopRolePolicy
 
         user = getattr(request, "user", None)
-        if ShopRolePolicy.is_main_supplier_admin(user):
-            return True
+        context = getattr(request, "shop_context", None)
+        if (
+            not user
+            or not user.is_authenticated
+            or not user.is_active
+            or not context
+            or not getattr(context, "shop", None)
+            or context.actor_user_id != user.pk
+            or str(getattr(request, "tenant_id", "")) != str(context.shop.pk)
+        ):
+            return False
 
         # If the object is a tenant, check membership against its ID
         tenant_id = getattr(obj, "tenant_id", None)
@@ -65,7 +74,21 @@ class IsTenantMember(BasePermission):
         if not tenant_id:
             return False
 
-        return ShopRolePolicy.is_shop_member(user, tenant_id)
+        if str(tenant_id) != str(context.shop.pk):
+            return False
+
+        if ShopRolePolicy.is_main_supplier_admin(user):
+            return context.is_main_supplier and context.membership is None
+
+        membership = context.membership
+        return bool(
+            membership
+            and membership.user_id == user.pk
+            and membership.tenant_id == context.shop.pk
+            and membership.is_active
+            and membership.deleted is None
+            and not context.is_main_supplier
+        )
 
 
 class DenyAll(BasePermission):

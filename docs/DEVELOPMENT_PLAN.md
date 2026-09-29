@@ -24,7 +24,7 @@ Phase confirmation activates only the named phase. It does not authorize all tas
 
 ## Phase 3 — shop / tenant
 
-- T3-02A account/preferences and T3-03 URL-path request context are complete. T3-04 onward remains individually gated; it applies full query/object isolation before later Shop APIs and Staging Backend Foundation, as detailed in the Phase 3 playbook.
+- T3-02A account/preferences, T3-03 URL-path request context, and T3-04 reusable query/object isolation primitives are complete. T3-05 onward remains individually gated; future Shop APIs must adopt and verify the T3-04 boundary before Staging Backend Foundation, as detailed in the Phase 3 playbook.
 
 ## Phase 4 — core tailor business
 
@@ -74,11 +74,11 @@ This amendment adds requirements and checkpoints without changing the ten-phase 
 
 ### Phase 3 task sequence
 
-`T3-01 (complete) → T3-02 (complete) → T3-02-REMEDIATION (closed) → T3-02A (complete) → T3-03 → T3-04 → T3-05 → T3-05A`.
+`T3-01 (complete) → T3-02 (complete) → T3-02-REMEDIATION (closed) → T3-02A (complete) → T3-03 (complete) → T3-04 (complete) → T3-05 → T3-05A`.
 
 - **T3-02A — Account, phone, locale, and preference foundation (complete):** implemented UUID/email-compatible E.164 phone login, Main Supplier Admin-only account creation/phone administration, one-time no-store generated credentials and forced first-login change, email reset and session revocation, persisted nullable User locale/appearance and Shop defaults. Do not add OTP/SMS/WhatsApp/2FA providers. Currency change after financial history and Shop Admin scoped settings authority remain `BUSINESS DECISION REQUIRED`. See Phase 3 playbook and current handoff for validation evidence.
 - **T3-03 (complete):** establish authenticated request-local context at `/api/v1/shops/{shop_id}/...`; deny foreign or unavailable Shops with a uniform non-disclosing 404 and preserve 401 authentication failures. Preferences and Shop defaults never authorize access. This does not implement query/object isolation.
-- **T3-04:** prove isolation for scoped access, including later business resources.
+- **T3-04 (foundation complete):** `TenantScopedMixin` requires authorized T3-03 context, verifies URL/actor/compatibility-alias consistency, scopes reads/detail lookups, and assigns the selected Shop on create/update. `IsTenantMember` binds objects to the selected Shop for ordinary members and Main Supplier. Test-only UUID/FK proof coverage verifies lists/counts, direct IDs, Main Supplier scope, ownership, update protection, mismatch/missing context, and soft delete. No business modules, migrations, or dependencies were added; each future business endpoint must adopt and test this boundary.
 - **T3-05:** expose only authorized Shop and User settings APIs; authority to change Shop defaults remains unresolved unless approved.
 - **T3-05A — Staging Backend Foundation:** after T3-05 and verified isolation, establish the first shared non-production staging backend environment at `api-staging.birky.com` with isolated PostgreSQL, health/readiness, CORS/CSRF configuration, staging logs, synthetic/demo data, and safe data reset. Staging is not Production.
 

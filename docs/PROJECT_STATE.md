@@ -4,10 +4,10 @@
 
 - Phase 1 and Phase 2 are complete.
 - Phase 3 is ACTIVE; activation was explicitly confirmed with `CONFIRM PHASE 3`.
-- Completed Phase 3 tasks: T3-01, T3-02, T3-02-REMEDIATION, T3-02A, and T3-03.
-- Remaining tasks T3-04 onward are not started and remain individually gated.
-- Latest implementation task: T3-03 — Tenant / Shop Request Context = COMPLETE / COMMITTED / PUSHED / CI GREEN. T3-03 was explicitly confirmed. T3-04 is NOT STARTED / NOT AUTHORIZED.
-- Current application test discovery: 145 tests. The T3-03 commit passed GitHub Actions Project State Validation Run #19; its result covers the current pushed baseline.
+- Completed Phase 3 tasks: T3-01, T3-02, T3-02-REMEDIATION, T3-02A, T3-03, and T3-04.
+- Remaining tasks T3-05 onward are not started and remain individually gated.
+- Latest implementation task: T3-04 — Scoped Querysets and Object Permissions = COMPLETE locally; changes are uncommitted and unpushed. T3-04 was explicitly confirmed. T3-05 is NOT STARTED / NOT AUTHORIZED.
+- Current application test discovery: 152 tests. The T3-03 commit passed GitHub Actions Project State Validation Run #19; that result covers the pushed baseline only, not the local T3-04 changes.
 
 - Project root: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp`
 - Remote: `https://github.com/muhammedshibiliraihsoft-art/sgtp.git`
@@ -16,7 +16,7 @@
 - Target status: SGTP V1 is explicitly defined in `docs/PRODUCT_DEFINITION.md`
 - Starter foundation: exists in the cloned SGTP repository.
 - Phase 1 implementation: **Historical - Complete.**
-- Confirmation status: T3-03 was explicitly confirmed and completed. T3-04 has not been confirmed and must not start without its own task plan and confirmation.
+- Confirmation status: T3-04 was explicitly confirmed and completed. T3-05 has not been confirmed and must not start without its own task plan and confirmation.
 - Detailed phase playbooks: 01-10 present.
 - Later-phase decisions: Tenant context is approved as URL-path based (`/shops/{shop_id}/...`), and Related Person billing is owned by the Primary Client.
 - T3-05A (Staging Backend Foundation) and F7-01A (Staging Frontend & Client Review Checkpoint) remain planned only. T3-02A implemented the account/preference data and API foundation; frontend localization, RTL/LTR layout, and full Light/Dark/System UI remain Phase 7 work.
@@ -37,11 +37,19 @@
 - T3-03 uses DRF request-local context at `/api/v1/shops/{shop_id}/context/`; authentication and the password-change gate precede Shop resolution.
 - Shop context requires an active, non-deleted Shop and either an active, non-deleted membership or explicit Main Supplier authority. ADMIN, STAFF, and VIEWER memberships may enter context; selected-Shop role is attached to the request.
 - Foreign, unauthorized, inactive, deleted, unavailable, and nonexistent Shop requests return the same non-disclosing 404 (`shop_context_unavailable`). Unauthenticated, invalid, and revoked credentials preserve 401 behavior.
-- Full queryset/object isolation remains T3-04 scope. Global Shop visibility, Shop deletion semantics, Shop Admin settings authority, and currency-change policy remain unresolved and unchanged.
+- T3-04 reusable queryset/object isolation primitives are complete; actual business-resource endpoints must adopt and verify them. Global Shop visibility, Shop deletion semantics, Shop Admin settings authority, and currency-change policy remain unresolved and unchanged.
 - Focused context/membership/permission suite: 76 passed; the dedicated Shop-context module contains 15 tests.
 - Full application suite: 145 passed (144 warnings). Django check, migration drift check, OpenAPI schema validation, validator unit tests (14 passed), Black, Flake8, and `git diff --check` passed.
 - Repository validator: PASS; Phase 3 is recorded as active with explicit activation in both current-state documents. It discovered 145 application tests.
 - No database schema or dependency changes. T3-03 is committed and pushed; GitHub Actions Project State Validation Run #19 passed.
+
+### Latest T3-04 Verification
+
+- Added trusted-context queryset scoping and server-controlled Shop ownership in `TenantScopedMixin`; bound `IsTenantMember` object authorization to the selected Shop, including Main Supplier requests.
+- Updated the temporary proof model to use a UUID Shop foreign key and soft-delete base; added tests for selected-Shop lists/counts, foreign direct IDs, Main Supplier one-Shop scope, create ownership, update/reparenting, absent/mismatched context, and deleted rows.
+- Focused scope/context tests: 28 passed. Full application suite: 152 passed (144 warnings). Repository validator: PASS (152 discovered; dirty-tree warning expected); validator tests: 14 passed. Django system check: PASS; migration drift check: no changes; OpenAPI schema validation: PASS; Black check: PASS; Flake8: PASS; `git diff --check`: PASS.
+- No business models/APIs, migrations, or dependencies were added. `BaseModelWithTenant.tenant` remains nullable because no concrete business subclass exists. T3-05 remains not started and unauthorized.
+- T3-04 changes are local, uncommitted, and unpushed; CI has not run for this diff. No production schema, dependency, API-route, or business-module changes were made.
 
 ## Locked V1 business tenancy model
 
@@ -97,19 +105,19 @@
 - The required end-to-end workflow is documented, but no production-domain modules for clients, designs, measurements, materials, production stages, billing, or reports exist yet.
 - The target requires React/Vite/Tailwind, but the starter contains no frontend implementation; `frontend/` is only an empty placeholder.
 - The target requires a service layer, object-level permissions, persistent object storage, background jobs, audit logging, CI, monitoring, and automatic documentation; the starter does not implement these as complete capabilities.
-- T3-03 request-local active-Shop context is implemented; complete queryset/object isolation remains pending T3-04.
+- T3-03 request-local active-Shop context and T3-04 reusable queryset/object isolation primitives are implemented. Business-resource endpoints do not yet exist and must adopt/test the primitives when added.
 
 ## Phase 3+ Missing or incomplete business logic
 
-- Tenant-aware base model still permits `tenant = NULL`; T3-03 now establishes the active Shop per request, but T3-04 must apply the trusted context to every Shop-owned queryset/object.
-- Tenant-context resolution is implemented at `/api/v1/shops/{shop_id}/...`; T3-04 full isolation remains pending.
+- Tenant-aware base model still permits `tenant = NULL`; no concrete business subclass exists. T3-04 provides reusable primitives, but each future Shop-owned endpoint must adopt them and prove its isolation.
+- Tenant-context resolution is implemented at `/api/v1/shops/{shop_id}/...`; T3-04 shared query/object primitives are implemented, while endpoint-specific isolation remains future work.
 - Billing ownership for work belonging to a Related Person is approved as Primary Client ownership and must be enforced in Phase 5.
 - No domain/business modules beyond accounts, tenants, and membership exist.
 
 ### PRE-P3-02 result
 
 - The V1 Supplier / Shop / External Supplier business meaning is now explicit across the governing documentation.
-- Phase 3 task outcomes: T3-01, T3-02, T3-02-REMEDIATION, T3-02A, and T3-03 are complete. T3-04 and subsequent tasks remain individually gated.
+- Phase 3 task outcomes: T3-01, T3-02, T3-02-REMEDIATION, T3-02A, T3-03, and T3-04 are complete. T3-05 and subsequent tasks remain individually gated.
 
 ### T3-02 remediation result
 
@@ -125,8 +133,8 @@
 
 ### Phase 3+ Deferred Implementations
 
-- Actual business tenant isolation is not fully enforced; T3-04 queryset/object enforcement is pending.
-- Tenant-aware base model permits `tenant = NULL`; T3-03 establishes trusted request context, but does not change model nullability or scope business queries.
+- No production business-resource endpoints exist yet, so end-to-end business tenant isolation is not yet demonstrated. T3-04 shared queryset/object primitives are implemented and must be adopted/tested by each future endpoint.
+- Tenant-aware base model permits `tenant = NULL`; T3-03 establishes trusted request context and T3-04 provides reusable query/object scoping, but neither changes model nullability nor creates domain queries.
 - Tenant-context resolution is implemented as URL-path based (`/api/v1/shops/{shop_id}/...`).
 - Billing ownership for work belonging to a Related Person is approved as Primary Client ownership and must be enforced in Phase 5.
 - No domain/business modules beyond accounts, tenants, and membership exist.
@@ -194,7 +202,7 @@
 
 ## Historical roadmap update status (2026-09-28; current task status is recorded above)
 
-- V1-ROADMAP-UPDATE and V1-ENVIRONMENT-LOCK were documentation/roadmap work only. T3-02A and T3-03 are implemented. T3-04 onward, T3-05A (Staging Backend Foundation), F7-01A (Staging Frontend & Client Review Checkpoint), and deployments remain unimplemented; each requires its own confirmation. Environment model is locked as LOCAL → STAGING → PRODUCTION.
+- V1-ROADMAP-UPDATE and V1-ENVIRONMENT-LOCK were documentation/roadmap work only. T3-02A through T3-04 are implemented. T3-05 onward, T3-05A (Staging Backend Foundation), F7-01A (Staging Frontend & Client Review Checkpoint), and deployments remain unimplemented; each requires its own confirmation. Environment model is locked as LOCAL → STAGING → PRODUCTION.
 - Post-V1 work is gated until Phase 10 and the complete V1 Definition of Done are accepted.
 - GitHub Actions run 36415017163 passed on repository HEAD before this documentation-only change. This historical CI result does not validate the current documentation diff.
 - Historical local validation for the roadmap documentation update: repository validator PASS; validator tests 11 passed; application suite 120 passed; Django system check PASS; migration drift check PASS; `git diff --check` PASS. This does not describe the current T3-03 diff.

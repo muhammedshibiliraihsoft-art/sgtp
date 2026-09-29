@@ -24,6 +24,7 @@
 
 - `accounts.0003` adds nullable User phone (canonical E.164, database-enforced uniqueness for non-NULL User login phones), nullable preferred locale, `system|light|dark` appearance defaulting to `system`, `must_change_password`, and `auth_version`. Existing phone values remain NULL; UUID identity, required email, and memberships are preserved.
 - `tenants.0008` adds nullable Shop locale, timezone, and currency; no defaults are inferred or backfilled. Main Supplier Admin is the current Shop-settings authority. Ordinary globally scoped Shop serializers omit these fields.
+- T3-04 adds reusable queryset/permission behavior and test-only proof coverage; it creates no production model, schema change, migration, or dependency. `BaseModelWithTenant.tenant` remains nullable; future concrete Shop-owned models must justify nullability, constraints, and indexes from their domain/data requirements.
 - Later business migrations preserve historical measurement versions and financial values. Locale changes must not rewrite canonical source data; theme changes have no business-data effect; currency changes must never reinterpret historical transactions.
 - Prefer additive, forward-only migrations. Each task documents empty-database replay, upgrade compatibility, constraints/indexes and recovery. Retention duration, currency changes after finance, and other unresolved policy remain `BUSINESS DECISION REQUIRED`.
 

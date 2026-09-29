@@ -66,7 +66,8 @@ Objective: resolve one authorized active Shop per request. Dependencies: complet
 Additional guard: T3-02A locale/appearance preferences and Shop defaults are presentation/configuration only; resolve Shop defaults only after authorization and never infer membership or role from them.
 
 ### T3-04 Scoped querysets and object permissions
-Objective: enforce Shop isolation at backend boundaries. Dependencies: T3-03. Files: managers/querysets, permissions, base viewsets, tests. Steps: filter all Shop-scoped reads/writes; deny foreign IDs; define Main Supplier reporting visibility; require explicit unscoped access only for platform-level records. External Supplier records must be scoped to exactly one Shop. DB: indexes. API: 403/404 policy. Tests: Shop A never sees Shop B through direct IDs, lists, search, filters, ordering, pagination, counts, aggregates, autocomplete, or nested relations. DoD: isolation proven.
+Status: COMPLETE — reusable isolation foundation implemented and regression-tested; no business-resource modules/endpoints were introduced.
+Objective: enforce Shop isolation at backend boundaries. Dependencies: T3-03. Files: `apps/common/views.py`, `core/permissions.py`, and test-only proof coverage. `TenantScopedMixin` requires trusted `request.shop_context`, verifies actor/URL/compatibility-alias consistency, scopes the queryset, and forces ownership from the selected Shop during create/update. `IsTenantMember` requires an object’s Shop to equal the selected context, including for Main Supplier. Missing context/configuration cannot fall back to global rows. No concrete business models exist, so no database index or migration was warranted. Shop-scoped endpoints remain one-Shop scoped; cross-Shop reporting requires a separate explicitly authorized platform path and is not added here. Tests prove Shop A list/count and detail isolation, Main Supplier one-Shop scope, multi-Shop-user isolation, ownership/reparenting safety, missing/mismatched context, and soft-delete exclusion. Future resources must apply same-Shop validation to related IDs and test filter/search/pagination/nested paths as those APIs are introduced. DoD: reusable boundary passes the proof matrix without claiming that unimplemented business endpoints are already isolated.
 Include locale/settings endpoints and ensure language, theme, timezone, and currency presentation do not bypass the same object/tenant authorization. Defer unresolved ordinary-user Shop visibility policy rather than inventing it.
 
 ### T3-05 Back-office/shop APIs and admin
@@ -85,7 +86,7 @@ Documentation: `docs/ENVIRONMENTS.md`, runbook, state/handoff/changelog.
 DoD: reviewed and verified staging backend is isolated and operational. Phase 9 later reuses this same staging environment for formal release-candidate validation after appropriate reset/reconfiguration. This task does not authorize deployment without its own confirmation.
 
 ## 13. Task Dependency Graph
-`T3-01 → T3-02 → T3-02-REMEDIATION → T3-02A → T3-03 → T3-04 → T3-05 → T3-05A`.
+`T3-01 (complete) → T3-02 (complete) → T3-02-REMEDIATION (closed) → T3-02A (complete) → T3-03 (complete) → T3-04 (complete) → T3-05 → T3-05A`.
 ## 14. Expected Files / Folders
 Target `backend/apps/shops/`, `backend/apps/accounts/`, `backend/core/{tenancy,permissions,services}/`, migrations/tests; current `apps/tenants/` and `apps/accounts/` are starter transition inputs only.
 ## 15. Expected New Files
