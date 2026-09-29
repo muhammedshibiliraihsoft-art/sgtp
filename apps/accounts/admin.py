@@ -33,27 +33,6 @@ class UserAdmin(BaseUserAdmin):
     def full_name(self, obj):
         return obj.full_name
 
-    def save_model(self, request, obj, form, change):
-        if change and 'is_active' in form.changed_data and not obj.is_active:
-            # We are deactivating. Ensure we don't bypass T3-04B invariant.
-            from apps.accounts.services.user_lifecycle import deactivate_global_user
-            from rest_framework.exceptions import ValidationError
-            from django.contrib import messages
-
-            # Revert the in-memory object temporarily to let the service act on DB state
-            obj.is_active = True
-            try:
-                deactivate_global_user(actor=request.user, target_user=obj)
-                # Success. The service saved is_active=False to DB.
-                # Update our in-memory object so super().save_model persists it properly.
-                obj.is_active = False
-            except ValidationError as e:
-                messages.set_level(request, messages.ERROR)
-                messages.error(request, str(e.detail[0] if isinstance(e.detail, list) else e.detail))
-                # Leave obj.is_active = True so the bad deactivation is not saved.
-
-        super().save_model(request, obj, form, change)
-
     def has_delete_permission(self, request, obj=None):
         return False
 

@@ -93,7 +93,7 @@ class Tenant(BaseModel):
     @property
     def is_at_user_limit(self) -> bool:
         """Check if tenant has reached its user limit."""
-        return self.user_count >= (self.max_users or 0)
+        return self.user_count >= self.max_users
     
     def clean(self):
         from django.core.exceptions import ValidationError

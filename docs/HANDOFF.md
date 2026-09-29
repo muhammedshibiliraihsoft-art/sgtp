@@ -9,14 +9,14 @@ CI evidence: GitHub Actions Project State Validation succeeded for the published
 
 ## Current task
 
-T3-04B — implementation and local validation are complete. Task was explicitly confirmed. No commit or push has been made; there is no CI result for this diff.
+T3-04A — implementation and local validation are complete. Task was explicitly confirmed. No commit or push has been made; there is no CI result for this diff.
 
 ## Current state and next gate
 
 - T3-04A implements permanent generated `user_code`, optional email/phone for normal Users, required trimmed `first_name`, unified User ID/email/phone login, controlled Main Supplier credential reset, account contact safeguards, and global User hard-delete denial.
 - UUID remains the internal database and JWT `user_id` identity. Existing membership and audit references are preserved. T3-04B/C and T3-05 behavior is not implemented.
 - Approved ordinary-Shop visibility, Shop deactivation/no-delete, and max_users lower-bound rules are pending T3-05 implementation.
-- Next candidate: T3-04C — work functions. It is not confirmed or authorized; do not begin automatically.
+- Next candidate: T3-04B — membership/Admin invariants. It is not confirmed or authorized; do not begin automatically.
 
 ## Tests and checks
 
@@ -24,7 +24,7 @@ T3-04B — implementation and local validation are complete. Task was explicitly
 - Repository validator: PASS (167 tests discovered); validator tests: 14 passed. `manage.py check` and `DJANGO_ENV=prod manage.py check --deploy`: PASS; `makemigrations --check --dry-run`: no changes detected; OpenAPI validation: PASS; `git diff --check`: PASS.
 - Read-only local PostgreSQL preflight found 0 Users, 0 superusers, and 0 Shops, with no unusable names, blank emails, or case-insensitive duplicate email groups. Then the normal local migration command applied T3-04A and its tenant prerequisites successfully. The migration regression test separately verifies preservation of representative legacy identity, password, membership, and audit references.
 - Black and Flake8 pass for all six newly added Python modules. A broader Flake8 run over touched legacy files still reports style/unused-import findings, so whole touched-file lint is not clean. GitHub CI has not run for this local diff.
-- T3-04A and T3-04B changes remain uncommitted and unpushed. No commit or push has been made.
+- T3-04A changes remain uncommitted and unpushed. No commit or push has been made.
 
 ## T3-REBASELINE-01 validation
 

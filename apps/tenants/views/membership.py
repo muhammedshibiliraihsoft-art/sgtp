@@ -8,11 +8,10 @@ from django.utils import timezone
 from datetime import timedelta
 from django.db import IntegrityError
 
-from ..models import TenantMember, ShopRole
+from ..models import TenantMember
 from ..serializers.membership import TenantMemberSerializer
 from ..permissions import CanManageShopMembership
 from ..policy import ShopRolePolicy
-from ..services import membership as membership_service
 
 class TenantMemberViewSet(viewsets.ModelViewSet):
     """
@@ -42,56 +41,95 @@ class TenantMemberViewSet(viewsets.ModelViewSet):
         ).distinct()
 
     def perform_create(self, serializer):
+        from django.db import transaction
         tenant_id = serializer.validated_data.get('tenant').id
-        user_id = serializer.validated_data.get('user').id
-        role = serializer.validated_data.get('role', ShopRole.VIEWER)
 
-        membership = membership_service.create_membership(
-            actor=self.request.user,
-            tenant_id=tenant_id,
-            user_id=user_id,
-            role=role
-        )
-        serializer.instance = membership
+        with transaction.atomic():
+            from ..models import Tenant
+            # Lock the tenant row to prevent capacity race conditions
+            tenant = Tenant.objects.select_for_update().get(pk=tenant_id)
+
+            if not ShopRolePolicy.can_manage_memberships(self.request.user, tenant.id):
+                raise PermissionDenied("You do not have permission to manage memberships for this Shop.")
+
+            if tenant.is_at_user_limit:
+                raise ValidationError({"tenant": "Shop has reached its maximum user limit."})
+
+            serializer.save(created_by=self.request.user)
 
     def perform_update(self, serializer):
-        if 'role' in serializer.validated_data:
-            new_role = serializer.validated_data.get('role')
-            membership = membership_service.change_membership_role(
-                actor=self.request.user,
-                membership_id=serializer.instance.pk,
-                new_role=new_role
-            )
-            serializer.instance = membership
+        serializer.save(updated_by=self.request.user)
 
     def perform_destroy(self, instance):
-        membership_service.remove_membership(
-            actor=self.request.user,
-            membership_id=instance.pk
-        )
+        from django.db import transaction
+        if instance.is_active:
+            raise ValidationError({"detail": "Cannot remove an active membership. Deactivate it first."})
+
+        with transaction.atomic():
+            from ..models import Tenant
+            # Lock the tenant row to serialize capacity-changing operations
+            tenant = Tenant.objects.select_for_update().get(pk=instance.tenant_id)
+            instance.delete()
+
 
     @action(detail=True, methods=['post'])
     def deactivate(self, request, pk=None):
-        membership = membership_service.deactivate_membership(
-            actor=self.request.user,
-            membership_id=pk
-        )
+        membership = self.get_object()
+        if not membership.is_active:
+            return Response({"detail": "Membership is already inactive."}, status=status.HTTP_400_BAD_REQUEST)
+        membership.is_active = False
+        membership.save(update_fields=['is_active'])
         return Response({"detail": "Membership deactivated.", "status": "INACTIVE"})
 
     @action(detail=True, methods=['post'])
     def reactivate(self, request, pk=None):
-        membership = membership_service.reactivate_membership(
-            actor=self.request.user,
-            membership_id=pk
-        )
+        from django.db import transaction
+        membership = self.get_object()
+        if membership.is_active:
+            return Response({"detail": "Membership is already active."}, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            from ..models import Tenant
+            # Lock the tenant row to align with the authoritative capacity model
+            tenant = Tenant.objects.select_for_update().get(pk=membership.tenant_id)
+
+            if tenant.is_at_user_limit:
+                return Response({"detail": "Shop has reached its maximum user limit."}, status=status.HTTP_400_BAD_REQUEST)
+
+            membership.is_active = True
+            membership.save(update_fields=['is_active'])
+
         return Response({"detail": "Membership reactivated.", "status": "ACTIVE"})
 
     @action(detail=True, methods=['post'])
     def undo_remove(self, request, pk=None):
-        membership = membership_service.undo_remove_membership(
-            actor=self.request.user,
-            membership_id=pk
-        )
-        return Response(
-            {"detail": "Membership restored to previous state.", "status": "INACTIVE" if not membership.is_active else "ACTIVE"}
-        )
+        from django.db import transaction
+
+        try:
+            membership = TenantMember.objects.all_with_deleted().get(pk=pk)
+        except TenantMember.DoesNotExist:
+            raise NotFound()
+
+        # Manually check permissions since we bypassed get_object()
+        self.check_object_permissions(request, membership)
+
+        if not membership.deleted:
+            return Response({"detail": "Membership is not removed."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if timezone.now() - membership.deleted > timedelta(seconds=5):
+            return Response({"detail": "Undo window expired."}, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            from ..models import Tenant
+            # Lock the tenant row to prevent capacity race conditions during restoration
+            tenant = Tenant.objects.select_for_update().get(pk=membership.tenant_id)
+
+            if tenant.is_at_user_limit:
+                return Response({"detail": "Shop has reached its maximum user limit. Cannot restore."}, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                membership.undelete()
+            except IntegrityError:
+                return Response({"detail": "Cannot restore: a membership for this user already exists in this Shop."}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({"detail": "Membership restored to previous state.", "status": "INACTIVE" if not membership.is_active else "ACTIVE"})
