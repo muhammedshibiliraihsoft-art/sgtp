@@ -4,18 +4,36 @@
 
 Phase 3 is ACTIVE; activation was explicitly confirmed with `CONFIRM PHASE 3`.
 
-Completed tasks: T3-01, T3-02, T3-02-REMEDIATION, T3-02A, T3-03, and T3-04.
+Completed foundation tasks: T3-01, T3-02, T3-02-REMEDIATION, T3-02A, T3-03, and T3-04. T3-04 is committed/pushed; verified `main`, `origin/main`, and remote `main` match; derive the current SHA from Git.
+CI evidence: GitHub Actions Project State Validation succeeded for the published baseline (run #36511111586).
 
-Remaining tasks T3-05 onward are not started.
 ## Current task
 
-T3-04 — Scoped Querysets and Object Permissions: COMPLETE locally. The human explicitly confirmed `CONFIRM TASK T3-04`. Stop after this task; do not begin T3-05 without its own task plan and exact confirmation.
+T3-REBASELINE-01 — documentation/business architecture rebaseline: explicitly confirmed and completed locally. Only documentation/planning files changed; this local diff is uncommitted and unpushed, and has no CI run. No application code, migration, dependency, endpoint, permission behavior, frontend, staging, or Phase 4 implementation was changed.
+
+## Current state and next gate
+
+- Approved target policy is recorded in `docs/BUSINESS_RULES.md` and `docs/DECISIONS.md`; it is not a statement of implemented behavior.
+- Current code remains email-required and has no permanent User ID or Work Functions. Current membership role is per Shop, but the one-to-two active ADMIN invariant is not implemented.
+- Approved ordinary-Shop visibility, Shop deactivation/no-delete, and max_users lower-bound rules are pending T3-05 implementation.
+- Next recommended task: T3-04A — Global identity/User-ID/authentication remediation. NOT STARTED / NOT AUTHORIZED; prepare its separate task plan and wait for exact `CONFIRM TASK T3-04A`.
+- Then T3-04B membership/Admin invariants, T3-04C Work-Function foundation, T3-05 Shop/API/Admin hardening, and T3-05A staging, each individually gated. Do not begin any automatically.
+
+## T3-REBASELINE-01 validation
+
+- Repository validator: PASS (152 tests discovered; expected dirty-tree warning). Validator unit tests: 14 passed.
+- `manage.py check`: PASS. `makemigrations --check --dry-run`: no changes detected; PostgreSQL at `127.0.0.1:5432` was unavailable, so migration-history consistency was not verified locally.
+- Full pytest: 152 collected but not completed; database-backed setup errored because PostgreSQL was unavailable. Do not report a local full-suite pass. The published T3-04 CI run is separate from this documentation diff.
+- `git diff --check`: PASS. 52 Business Rule IDs checked, no duplicates; Phase 3 task sequence consistent across the development plan and playbook.
+- Application code/migrations/dependencies/tests: unchanged. No commit, push, or deployment.
+
+## T3-04 verification record (historical task evidence)
 
 - **Implemented:** `TenantScopedMixin` requires T3-03 authorized request context, checks actor/URL/compatibility alias, scopes reads, and assigns selected-Shop ownership on create/update. `IsTenantMember` now requires object-to-context Shop equality for members and Main Supplier.
 - **Security:** missing context/configuration fails closed; URL, alias, and actor mismatches are non-disclosing 404s. Foreign direct IDs are excluded by scoped lookup. T3-03 uniform Shop-context 404 and authentication 401 behavior are preserved.
-- **Database/API scope:** no production business models, API routes, migrations, or dependencies added. Test-only UUID/FK/soft-delete proof model validates the reusable boundary. Global Tenant/member APIs and unresolved visibility/deletion/settings/currency decisions are unchanged.
-- **Validation:** 28 focused scope/context tests passed; full suite 152 passed (144 warnings); repository validator PASS (152 discovered, dirty-tree warning expected); 14 validator tests passed; Django check PASS; migration check reports no changes; OpenAPI validation, Black, Flake8, and `git diff --check` PASS. Changes remain local, uncommitted, and unpushed; no CI run covers this diff.
-- **Next task:** T3-05 — Back Office / Shop APIs and Admin; NOT AUTHORIZED. Prepare its own task plan and wait for exact `CONFIRM TASK T3-05`.
+- **Database/API scope:** no production business models, API routes, migrations, or dependencies added. Test-only UUID/FK/soft-delete proof model validates the reusable boundary. At T3-04 completion, Tenant/member APIs were unchanged; later-approved visibility/deactivation rules are now recorded as target behavior for T3-04B/T3-05.
+- **Validation:** 28 focused scope/context tests passed; full suite 152 passed (144 warnings); repository validator PASS (152 discovered); 14 validator tests passed; Django check PASS; migration check reports no changes; OpenAPI validation, Black, Flake8, and `git diff --check` PASS. T3-04 was subsequently pushed and its current CI evidence is stated above.
+- **Next task at that historical point:** T3-05 was the proposed next task; the 2026-09-29 rebaseline supersedes that order with T3-04A–C prerequisites.
 - **Known warning baseline:** Django tests emit existing test-key-length, local staticfiles, and DRF format-converter warnings; these are not T3-03 failures.
 
 ## T3-04 verification record
@@ -32,7 +50,7 @@ T3-04 — Scoped Querysets and Object Permissions: COMPLETE locally. The human e
 - **Files/areas:** accounts models/auth/serializers/views/URLs/settings/dependency and tests; tenant settings model/serializers/permissions/view/migration/tests; docs/API, ARCHITECTURE, DATABASE, SECURITY, Phase 3 plan, DEVELOPMENT_PLAN, PROJECT_STATE, HANDOFF, CHANGELOG, `.env.example`.
 - **Validation:** final test/check results are recorded in the T3-02A verification section below.
 - **Known limitations:** no front-end localization/theme UI, no Shop URL context or tenant isolation, no later-phase business modules. Shop defaults must not be read by ordinary users. Email reset delivery requires deployment email configuration and `PASSWORD_RESET_URL`.
-- **Unresolved decisions:** ordinary-user Shop read visibility, Shop deletion semantics, Shop Admin scoped settings authority, currency changes after financial history, and other later-phase items remain `BUSINESS DECISION REQUIRED` where recorded. These did not block T3-02A.
+- **Unresolved decisions at T3-02A completion (historical):** ordinary-user Shop read visibility and Shop deletion semantics were later resolved as target policy by the 2026-09-29 rebaseline. Shop Admin settings authority remains not granted; currency changes after financial history remain deferred.
 - **Next task:** T3-03, but NOT AUTHORIZED; prepare its task plan and wait for exact `CONFIRM TASK T3-03`. Do not implement it automatically.
 - **Git/CI:** T3-02A is complete. Commit is on `origin/main`. CI is green (GitHub Actions Project State Validation Run #17 SUCCESS).
 
@@ -53,7 +71,7 @@ Final verification outcomes are recorded in the `Tests and checks` section below
 - **Historical Changed areas:** User API authorization/serializer, Main Supplier Shop-write permission, membership serializer lifecycle protection, real throttle wiring/tests, duplicate CORS tests, production CORS environment propagation, CI validation, remediation regression tests, and documentation.
 - **Validation:** remote CI is green: the latest GitHub Actions workflow passed successfully.
 - **Historical next implementation candidate:** T3-03 was then unconfirmed; it has since been completed as recorded above.
-- **Unresolved policies unchanged by T3-03:** ordinary-user global Shop read visibility, Shop delete/archive/deactivate semantics, Shop Admin scoped settings authority, currency changes after financial history, and other later-phase decisions remain `BUSINESS DECISION REQUIRED` where recorded.
+- **Policies as of T3-03 completion (historical):** ordinary-user global Shop read visibility and Shop delete/archive/deactivate semantics were then unresolved; the 2026-09-29 rebaseline approved membership-authorized Shop visibility and deactivate/no-ordinary-DELETE. Shop Admin scoped settings authority remains not granted; currency changes after financial history remain deferred.
 - **Agent Transition Note:** Upcoming engineering work may be executed through Codex; repository governance and explicit task-confirmation rules remain authoritative regardless of implementation agent.
 ## Repository state evidence
 - Verify current HEAD with `git rev-parse HEAD`
@@ -105,7 +123,7 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 ## Phase 3+ Deferred Implementations
 
 - `BaseModelWithTenant.tenant` remains nullable. T3-03 establishes request context and T3-04 provides reusable query/object isolation primitives; future concrete Shop-owned endpoints must adopt and verify those primitives.
-- The starter is not yet the target product: Clients, Related Persons, Designs, Measurements, Materials, production stages, billing, reports/PDFs, frontend, persistent storage, workers, complete audit capture, monitoring, and end-to-end validation remain unimplemented. The pushed T3-03 baseline passed GitHub Actions run #19; T3-04 is complete locally, while T3-05 and later work remain unimplemented.
+- The starter is not yet the target product: Clients, Related Persons, Designs, Measurements, Materials, production stages, billing, reports/PDFs, frontend, persistent storage, workers, complete audit capture, monitoring, and end-to-end validation remain unimplemented. T3-03's pushed baseline passed GitHub Actions run #19. T3-04 is now complete and published (current evidence is in the handoff header); T3-04A–C, T3-05, and later work remain unimplemented and individually gated.
 - The target requires React/Vite/Tailwind, but the starter has only an empty `frontend/` placeholder. English/ar-KW/Bangla/Urdu localization, RTL/LTR, and Light/Dark/System are planned V1 requirements, not implemented.
 - Tenant context is implemented as URL-path based (`/api/v1/shops/{shop_id}/...`); T3-04 primitives are available, and each future Shop-owned endpoint must apply them to queries and objects.
 - Related Person billing ownership is approved as Primary Client ownership and must be implemented/tested in Phase 5.

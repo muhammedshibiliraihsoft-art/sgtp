@@ -50,12 +50,12 @@ The following are approved V1 product requirements mapped in `docs/DEVELOPMENT_P
 - Supported UI locales: English (`en`), Arabic Kuwait (`ar-KW`), Bangla (`bn`), and Urdu (`ur`), with English fallback; Arabic/Urdu use RTL and English/Bangla LTR, including mixed-direction fields.
 - User preferred locale is nullable until selected; precedence is User preference → authorized Shop default → English. Shop authorization must occur before resolving Shop defaults.
 - User appearance is persisted as `system|light|dark`, default `system`; presentation choices never affect access, roles, tenancy, workflow, canonical data, or calculations.
-- Account foundation preserves User UUID identity and required email; international phone uses canonical E.164 and email-or-phone login. No fabricated phone backfill.
+- At the time of this 2026-09-28 entry, account target preserved required email and UUID with optional E.164 phone. The required-email target was superseded by the 2026-09-29 rebaseline below; T3-02A's implementation remains email-required pending T3-04A.
 - V1 includes searchable Clients, duplicate warnings without silent merge, measurement templates/history/compare, private design references, Work priorities and derived delivery indicators, advance/partial/final payment support, outstanding balances, multilingual receipts/invoices/reports, audit/alerts/observability, and controlled Staging checkpoints as mapped in phase plans.
 - Environment progression is LOCAL → STAGING → PRODUCTION. Client review uses Staging (`staging.birky.com` / `api-staging.birky.com`). Phase 9 reuses the same Staging for formal release-candidate validation. Phase 10 remains the sole Production gate.
 - Strict V1-first: Post-V1 features remain gated until Phase 10 acceptance and the full V1 Definition of Done pass.
 
-These approvals do not resolve implementation-independent business policies. The following remain **BUSINESS DECISION REQUIRED**: ordinary-user Shop read visibility; Shop delete/archive/deactivate; Shop Admin scoped settings authority; deployment defaults and public hostnames beyond approved environment configuration; currency changes after financial history; due-soon threshold/date cutoff; advance cancellation/refund, overpayment/allocation; notification channels; retention durations and anonymization. Account creation, phone, initial-password/recovery/session, Main Supplier Shop-settings authority, and locale/appearance policies are now locked below and in `docs/BUSINESS_RULES.md`.
+At the time of this 2026-09-28 entry, ordinary-user Shop read visibility and Shop delete/archive/deactivate were unresolved; they were resolved as target rules on 2026-09-29. Still unresolved: Shop Admin scoped settings authority; deployment defaults and public hostnames beyond approved environment configuration; currency changes after financial history; due-soon threshold/date cutoff; advance cancellation/refund, overpayment/allocation; notification channels; retention durations and anonymization. Account creation, phone, initial-password/recovery/session, Main Supplier Shop-settings authority, and locale/appearance policies are recorded below and in `docs/BUSINESS_RULES.md`.
 
 ## 2026-09-28 — V1 roadmap confirmation gate
 
@@ -87,6 +87,8 @@ Human-approved V1 decisions, recorded as confirmed rules in `docs/BUSINESS_RULES
 
 This 2026-09-28 entry records a documentation/business-rule lock and did not itself implement the rules, disable the public create endpoint, create migrations, or authorize T3-02A or T3-03. T3-02A was later separately confirmed and implemented. Currency changes after financial history remain a separate business decision.
 
+**Supersession note (2026-09-29):** The historical statement that email remains required is superseded by the approved Phase 3 business architecture rebaseline below. UUID remains the internal identity, but a permanent User ID becomes the universal login identifier; normal Shop Users may omit email and phone. This is a target rule pending T3-04A, not current implemented behavior. T3-02A's email/phone login compatibility and security lifecycle remain protected during migration.
+
 ## 2026-09-28 — Clarify company and product naming
 
 Company: BiRKy. Technical/internal project: SGTP. Customer-facing product brand: not yet decided.
@@ -96,3 +98,20 @@ Company: BiRKy. Technical/internal project: SGTP. Customer-facing product brand:
 - For `/api/v1/shops/{shop_id}/...` context authorization, foreign, unauthorized, inactive, soft-deleted, unavailable, and nonexistent Shops return one uniform non-disclosing 404 response.
 - Unauthenticated, invalid, and revoked authentication continue to use the existing 401 behavior.
 - This decision governs Shop-context establishment only. It does not define T3-04 object/queryset behavior or change global Shop visibility.
+- Historical scope note: ordinary-user Shop visibility was subsequently resolved as membership-authorized by the 2026-09-29 rebaseline; this does not alter the T3-03 context-resolution 404/401 contract.
+
+## 2026-09-29 — Approve Phase 3 global identity, membership authority, and Work Function model
+
+This business architecture rebaseline is approved target behavior. It does not claim implementation; repository code remains email-centric and has no User ID or Work Function model. See `docs/BUSINESS_RULES.md` and Phase 3 remediation tasks T3-04A–T3-04C for ownership.
+
+- **Permanent User ID:** Email cannot be universal because ordinary Shop employees may not have or need email. Every global User receives a permanent, system-generated, globally unique, human-usable User ID, while UUID remains the internal database identity. The ID is role-, Shop-, and brand-neutral.
+- **One identity across Shops:** The same person may work in multiple Shops. Duplicate accounts would split credentials, audit attribution, and history. One global User therefore has separate Shop membership identities, each with its own role/lifecycle.
+- **Access Role vs Work Function:** Authority and the work a person performs are distinct. V1 access roles are ADMIN, STAFF, VIEWER; no OWNER role is introduced. TAILOR, SALESMAN, CASHIER, and CUTTER are not access roles.
+- **Function per membership:** The same global User may perform different work in different Shops. A Shop membership may have zero or multiple controlled Work Functions; functions do not grant API permissions.
+- **Fixed V1 workflow, flexible people:** The approved workflow remains stable; Shops vary in who performs each stage. No per-Shop workflow builder is added.
+- **Admin safety:** Each Shop maintains one or two active ADMIN memberships. Main Supplier controls ADMIN hierarchy and global identity; Shop Admins manage only permitted non-ADMIN membership operations and Shop-local Work Functions. Shop creation requires a valid first ADMIN. Global deactivation cannot leave any Shop without an active ADMIN.
+- **Contact and recovery:** Normal Users need User ID/password and may omit email/phone. Active Shop ADMIN and Main Supplier accounts require both. Shop Admins cannot reset a global password; normal users without email recovery use controlled Main Supplier/global-account reset.
+- **Shop policy resolved:** Ordinary Users see only authorized Shops. Main Supplier alone manages Shop lifecycle/settings; deactivation preserves data/memberships, and ordinary Shop DELETE is not a V1 operation. `max_users` cannot be reduced below current user_count.
+- **Migration safety:** Later remediation must preserve UUIDs, password hashes, existing emails, memberships, and approved session semantics; generate unique User IDs without fabricating contacts or duplicating accounts. Migration strategy must be based on repository/data analysis in the implementation task.
+
+These decisions supersede conflicting earlier target assumptions, including required email, globally discoverable Shops, unresolved Shop deletion semantics, and unrestricted max_users reduction. They do not authorize implementation or alter T3-03/T3-04 context/isolation contracts.

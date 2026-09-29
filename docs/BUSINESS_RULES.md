@@ -6,6 +6,9 @@ This file is the repository-level source of truth for approved business rules. E
 ## 2. Rule Status Definitions
 *   **CONFIRMED**: The business rule is approved and locked. It must be implemented and enforced by the application.
 *   **BUSINESS DECISION REQUIRED**: Ambiguous behavior that requires explicit business approval before implementation.
+*   **SUPERSEDED**: A previously approved rule has been replaced by a later explicitly approved rule; the historical rule remains traceable below.
+
+Status records business approval, not implementation completion. A CONFIRMED rule may still be a target awaiting its assigned remediation task.
 
 ---
 
@@ -150,8 +153,9 @@ New business rules require:
 ## 6. Approved V1 Account, Localization, and Tailoring Rules
 
 ### BR-ACC-001 — User Identity Preservation
-**Status:** CONFIRMED
-**Rule:** User UUID remains the primary identity and email remains required. Phone is an additional international identifier, normalized to E.164. Existing users without a phone remain valid; migrations must not fabricate phone values.
+**Status:** SUPERSEDED by BR-ACC-003–BR-ACC-005 (2026-09-29)
+**Historical rule:** User UUID remains the primary identity and email remains required. Phone is an additional international identifier, normalized to E.164. Existing users without a phone remain valid; migrations must not fabricate phone values.
+**Current rule:** UUID remains the internal permanent database identity. A system-generated permanent User ID is the universal human-usable login identifier. Email and phone are optional for normal Shop Users and, when registered, may be alternative identifiers. See BR-ACC-003–BR-ACC-005. Implementation is pending T3-04A.
 
 ### BR-LOC-001 — Supported V1 Locales and Direction
 **Status:** CONFIRMED
@@ -191,7 +195,7 @@ New business rules require:
 
 ### BR-AUTH-001 — Email-or-Phone Login to One User Identity
 **Status:** CONFIRMED
-**Rule:** A User with a registered login phone may authenticate using either that phone or the required registered email plus the same password. Both identifiers authenticate the same User UUID; they must never create separate accounts or identities. Preserve existing email login. The eventual API uses one identifier concept and one coherent authentication/token flow.
+**Rule:** A User authenticates through one `identifier + password` flow. The identifier may be the permanent User ID, or a registered email/phone when present. Every identifier resolves to the same global User UUID and never creates a separate identity. Email-only existing login compatibility must be preserved through remediation. Normal Users need no email or phone to log in by User ID. Admin-grade contact requirements are governed by BR-ACC-006. Implementation is pending T3-04A.
 
 ### BR-PHONE-001 — User Login Phone Uniqueness and Representation
 **Status:** CONFIRMED
@@ -215,7 +219,7 @@ New business rules require:
 
 ### BR-PASS-003 — Email-Based Password Recovery
 **Status:** CONFIRMED
-**Rule:** V1 password recovery is email-based and uses secure, expiring, single-use semantics with generic responses that do not reveal account existence. Phone, SMS, and WhatsApp recovery are not part of V1.
+**Rule:** Admin-grade accounts with a registered email may use secure, expiring, single-use email recovery with generic responses that do not reveal account existence. A normal User without email recovery uses a controlled global-account reset process under Main Supplier/global User management. Shop Admins must not reset another User's global password. Phone, SMS, and WhatsApp recovery are not part of V1. Implementation is pending T3-04A.
 
 ### BR-PASS-004 — Revoke Refresh Sessions After Credential Change
 **Status:** CONFIRMED
@@ -237,11 +241,77 @@ New business rules require:
 **Status:** CONFIRMED
 **Rule:** A User preferred locale may remain NULL until selected. Do not persist English merely as fallback. Resolve locale as User preference → authorized Shop default → English; consult a Shop default only after authorization. Locale never determines access.
 
+## 6A. Phase 3 Business Architecture Rebaseline — Approved Target Rules
+
+These rules are approved target behavior, not claims about current code. Implementation ownership is listed per rule; current behavior and compatibility work are tracked in `docs/PROJECT_STATE.md`, `docs/HANDOFF.md`, and the Phase 3 playbook.
+
+### BR-ACC-003 — One Global User Across Shops
+**Status:** CONFIRMED
+**Rule:** One person has one global User UUID and may hold separate memberships in multiple Shops. Role and lifecycle belong to each membership. Duplicate User accounts must not be created merely because a person works in another Shop. Implementation/compatibility verification is pending T3-04A/T3-04B.
+
+### BR-ACC-004 — Permanent Human-Usable User ID
+**Status:** CONFIRMED
+**Rule:** Every User has a system-generated, globally unique, permanent, role-neutral and Shop-neutral User ID. It is the universal human-usable login identifier and must not encode mutable role, Shop, or brand meaning. Preserve UUID as internal database identity. Implementation and safe existing-user backfill are pending T3-04A.
+
+### BR-ACC-005 — Normal User Contact Optionality
+**Status:** CONFIRMED
+**Rule:** A normal Shop User requires User ID and password; email and phone are optional. Registered email or phone may be an alternative login identifier for the same UUID. Never fabricate contact data. Implementation is pending T3-04A.
+
+### BR-ACC-006 — Admin-Grade Account Contacts
+**Status:** CONFIRMED
+**Rule:** An active Shop ADMIN and the Main Supplier/Main Admin require User ID, password, email, and phone. Promotion to active Shop ADMIN must be rejected unless contacts satisfy this rule. Required contacts must not be removed while the User is an active Shop ADMIN in any Shop. No OTP/SMS/WhatsApp/2FA provider is implied. Implementation is pending T3-04A/T3-04B.
+
+### BR-ACC-007 — Global Account and Credential Authority
+**Status:** CONFIRMED
+**Rule:** Public signup remains disabled. Main Supplier/global account administration controls global User creation and credential reset. Shop Admins may manage permitted membership records but cannot create global User accounts, enumerate the global User directory, or reset another User's global password. Exact User-ID lookup for membership addition returns only User ID and display name. Implementation is pending T3-04A/T3-04B.
+
+### BR-MEM-008 — Membership-Scoped Access Role
+**Status:** CONFIRMED
+**Rule:** One global User may have one membership per Shop and different access roles per Shop. V1 access roles are ADMIN, STAFF, and VIEWER. Do not add OWNER or use business jobs such as TAILOR, SALESMAN, CASHIER, or CUTTER as access roles. Implementation/compatibility validation is pending T3-04B.
+
+### BR-MEM-009 — Active Shop ADMIN Cardinality
+**Status:** CONFIRMED
+**Rule:** Each Shop must have at least one and no more than two ACTIVE ADMIN memberships. Inactive or removed memberships do not consume an active-ADMIN slot. Any operation leaving zero or three active ADMINs is invalid. Implementation is pending T3-04B.
+
+### BR-MEM-010 — ADMIN Authority and Shop Creation
+**Status:** CONFIRMED
+**Rule:** Main Supplier manages ADMIN assignment, promotion, demotion and removal, while preserving the 1–2 active ADMIN invariant. Shop Admins cannot change another membership's ADMIN authority. Shop creation must atomically establish its first valid ADMIN before the Shop enters normal operation. Shop Admins may manage permitted non-ADMIN memberships and Work Functions only within their own Shop. Implementation is pending T3-04B/T3-04C.
+
+### BR-MEM-011 — Global User Deactivation Guard
+**Status:** CONFIRMED
+**Rule:** Reject global User deactivation if it would leave any Shop with zero active ADMIN memberships. Establish a replacement ADMIN first. Global hard deletion is not an ordinary V1 management action; preserve history through deactivation. Implementation is pending T3-04A/T3-04B.
+
+### BR-MEM-012 — Membership Capacity Lower Bound
+**Status:** CONFIRMED
+**Rule:** `user_count` remains ACTIVE + INACTIVE memberships; REMOVED memberships do not count. Reject any reduction of `max_users` below current `user_count`; first remove memberships through the approved lifecycle. API and Django Admin must enforce the same rule. Implementation is pending T3-05 after prerequisite remediation.
+
+### BR-SHOP-008 — Authorized Shop Visibility
+**Status:** CONFIRMED
+**Rule:** Ordinary Users may discover only Shops for which they have authorized membership/access, including list, detail, search, filters, ordering, pagination, stats, autocomplete, counts, foreign-key traversal and direct IDs. A User with a relevant inactive membership may see that Shop only as disabled/inactive historical context, never as selectable operational context. Main Supplier retains authorized cross-Shop visibility. Preserve T3-03/T3-04 non-disclosure and isolation. Implementation is pending T3-05.
+
+### BR-SHOP-009 — Shop Deactivation and Delete
+**Status:** CONFIRMED
+**Rule:** Only Main Supplier manages Shop activation/deactivation. Deactivation preserves Shop data, memberships and history, and makes operational context unavailable until reactivation. V1 does not expose ordinary Shop DELETE; deactivate is the operational shutdown action. Archive is a separate future concept. Implementation is pending T3-05.
+
+### BR-SHOP-010 — Shop Profile and Management Statistics Visibility
+**Status:** CONFIRMED
+**Rule:** Main Supplier may view Shops cross-Shop. An authorized Shop member may view appropriate profile/contact/address information for that Shop only. Management statistics (`user_count`, `max_users`, capacity state) are limited to Main Supplier and that Shop's ADMIN; they are not exposed to STAFF/VIEWER or foreign Shops. Implementation is pending T3-05.
+
+### BR-FUNC-001 — Work Functions Are Membership-Scoped and Not Permissions
+**Status:** CONFIRMED
+**Rule:** A membership may have zero, one, or multiple Work Functions, independently of its access role. The controlled V1 catalog is SALES, MEASUREMENT, CUTTING, STITCHING, FINISHING, QC, and CASHIER. Functions are managed by that Shop's ADMINs, including for ADMIN memberships, but never across Shops. A function describes work eligibility; it does not grant permissions or override endpoint/service authorization. A VIEWER does not gain operational/write authority from a descriptive function; Phase 4 must define the action policy without treating a function as sufficient authorization. Main Supplier cross-Shop administrative authority does not automatically create operational membership or Work Functions in every Shop. Membership deactivation preserves functions; reactivation restores eligibility; removal/undo preserves associated history; fresh re-add requires explicit assignment. Implementation is pending T3-04C. Any distinct function for the Check workflow stage remains a Phase 4 mapping decision.
+
+### BR-FLOW-001 — Fixed Workflow, Flexible Staffing
+**Status:** CONFIRMED
+**Rule:** Keep the approved V1 tailoring workflow canonical and stable. Shops vary in which eligible memberships perform stages, not by creating independent workflow engines. Future stage assignment may associate a stage with eligible Work Functions and Shop memberships, with optional specific User assignment. Work Function eligibility alone is not final authorization. Implementation planning belongs to Phase 4; no workflow builder is in V1.
+
 ## 7. Business Rule Change Log
 
 *   **Initial Creation**: Added confirmed rules for Membership Lifecycle, Shop Capacity, and Governance.
 
 *   **2026-09-28 — T3-02A business decision lock**: Added confirmed account-creation, unified email/phone identity, login-phone, generated-password/recovery/session, explicit Shop settings, and nullable locale rules. At the time, this recorded approved policy targets only; T3-02A was later separately implemented.
+
+*   **2026-09-29 — Phase 3 business architecture rebaseline**: Superseded the required-email assumption and approved the global User/User ID, multi-Shop membership, ADMIN cardinality/authority, Work Function, Shop visibility/deactivation, and capacity rules above. These are target rules; implementation is assigned to T3-04A–T3-04C and T3-05 as recorded in the development plan. No code or schema was changed by this decision-record update.
 
 ### BR-MEM-007 — Undo and Capacity Limits
 

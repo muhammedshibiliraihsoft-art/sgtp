@@ -5,9 +5,13 @@
 - Phase 1 and Phase 2 are complete.
 - Phase 3 is ACTIVE; activation was explicitly confirmed with `CONFIRM PHASE 3`.
 - Completed Phase 3 tasks: T3-01, T3-02, T3-02-REMEDIATION, T3-02A, T3-03, and T3-04.
-- Remaining tasks T3-05 onward are not started and remain individually gated.
-- Latest implementation task: T3-04 — Scoped Querysets and Object Permissions = COMPLETE locally; changes are uncommitted and unpushed. T3-04 was explicitly confirmed. T3-05 is NOT STARTED / NOT AUTHORIZED.
-- Current application test discovery: 152 tests. The T3-03 commit passed GitHub Actions Project State Validation Run #19; that result covers the pushed baseline only, not the local T3-04 changes.
+- Current task: T3-REBASELINE-01 — documentation/business architecture rebaseline; explicitly confirmed and completed locally. No application implementation was performed. Changes in this worktree are documentation-only, uncommitted, and unpushed; the CI run below validates the base commit, not this documentation diff.
+- T3-04 is COMPLETE, COMMITTED, and PUSHED on `main`. Live verification on 2026-09-29: local `HEAD`, `origin/main`, and remote `refs/heads/main` matched; derive the current SHA from Git.
+- CI evidence: GitHub Actions Project State Validation succeeded for the published baseline (run #36511111586).
+- T3-04A, T3-04B, T3-04C, T3-05, and T3-05A have not started and are not authorized. Next candidate is T3-04A; it requires a separate exact task confirmation.
+- Current application test discovery is documented as 152 from the T3-04 validation record. The successful remote CI result is for the pushed T3-04 baseline, not this local documentation diff.
+- T3-REBASELINE-01 local validation: repository validator PASS (152 tests discovered; expected dirty-tree warning); validator tests 14 passed; Django `check` PASS; `makemigrations --check --dry-run` reports no changes, but could not verify migration history because local PostgreSQL at `127.0.0.1:5432` is unavailable; `git diff --check` PASS. Full pytest collected 152 but could not complete because PostgreSQL was unavailable and database-backed test setup errored. No local full-suite pass is claimed.
+- Documentation consistency audit: 52 Business Rule IDs, no duplicates; Phase 3 task dependency graph matches `DEVELOPMENT_PLAN.md`; no application source, migration, dependency, or test file changed. Current doc diff has no CI run.
 
 - Project root: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp`
 - Remote: `https://github.com/muhammedshibiliraihsoft-art/sgtp.git`
@@ -16,12 +20,13 @@
 - Target status: SGTP V1 is explicitly defined in `docs/PRODUCT_DEFINITION.md`
 - Starter foundation: exists in the cloned SGTP repository.
 - Phase 1 implementation: **Historical - Complete.**
-- Confirmation status: T3-04 was explicitly confirmed and completed. T3-05 has not been confirmed and must not start without its own task plan and confirmation.
+- Confirmation status: T3-REBASELINE-01 was explicitly confirmed; no implementation task is currently confirmed. T3-04A is not authorized. Each remediation/T3-05 task requires its own task plan and exact confirmation.
 - Detailed phase playbooks: 01-10 present.
 - Later-phase decisions: Tenant context is approved as URL-path based (`/shops/{shop_id}/...`), and Related Person billing is owned by the Primary Client.
 - T3-05A (Staging Backend Foundation) and F7-01A (Staging Frontend & Client Review Checkpoint) remain planned only. T3-02A implemented the account/preference data and API foundation; frontend localization, RTL/LTR layout, and full Light/Dark/System UI remain Phase 7 work.
-- T3-02A confirmed policy is now implemented: anonymous self-registration denied; Main Supplier Admin controls global account creation/phone lifecycle and Shop defaults; email and optional unique E.164 phone authenticate one UUID account; generated initial password is returned once/no-store and must be changed; email reset is single-use and revokes sessions; nullable locale and `system|light|dark` preferences and nullable Shop defaults persist.
-- T3-02A verification: the pushed baseline CI passed in GitHub Actions run #17. T3-03 is committed and pushed; GitHub Actions run #19 passed for it.
+- T3-02A current implementation: anonymous self-registration denied; Main Supplier Admin controls global account creation/phone lifecycle and Shop defaults; email is required and optional unique E.164 phone can authenticate the same UUID account; generated initial password is returned once/no-store and must be changed; email reset is single-use and revokes sessions; nullable locale and `system|light|dark` preferences and nullable Shop defaults persist.
+- Approved target business rules, NOT YET IMPLEMENTED: universal permanent User ID; optional email/phone for normal users; admin-grade contact requirements; controlled global-account recovery; 1–2 active Shop ADMIN invariant; ADMIN authority boundaries; membership-scoped Work Functions; membership-authorized Shop discovery; Shop deactivation/no ordinary DELETE; and max_users lower bound. These are owned by planned T3-04A–T3-04C and T3-05 as mapped in `docs/DEVELOPMENT_PLAN.md`.
+- T3-02A and T3-03 historical CI records remain below. The published T3-04 baseline passed GitHub Actions; no CI has run for the current uncommitted documentation changes.
 
 ### Latest T3-02A Verification
 
@@ -37,19 +42,19 @@
 - T3-03 uses DRF request-local context at `/api/v1/shops/{shop_id}/context/`; authentication and the password-change gate precede Shop resolution.
 - Shop context requires an active, non-deleted Shop and either an active, non-deleted membership or explicit Main Supplier authority. ADMIN, STAFF, and VIEWER memberships may enter context; selected-Shop role is attached to the request.
 - Foreign, unauthorized, inactive, deleted, unavailable, and nonexistent Shop requests return the same non-disclosing 404 (`shop_context_unavailable`). Unauthenticated, invalid, and revoked credentials preserve 401 behavior.
-- T3-04 reusable queryset/object isolation primitives are complete; actual business-resource endpoints must adopt and verify them. Global Shop visibility, Shop deletion semantics, Shop Admin settings authority, and currency-change policy remain unresolved and unchanged.
+- T3-04 reusable queryset/object isolation primitives are complete; actual business-resource endpoints must adopt and verify them. This T3-03 verification entry is historical: ordinary Shop visibility and Shop deletion were unresolved at that task's completion, then resolved as target rules by the 2026-09-29 rebaseline. Shop Admin settings authority remains not granted; currency changes after financial history remain deferred for a financial-policy decision.
 - Focused context/membership/permission suite: 76 passed; the dedicated Shop-context module contains 15 tests.
 - Full application suite: 145 passed (144 warnings). Django check, migration drift check, OpenAPI schema validation, validator unit tests (14 passed), Black, Flake8, and `git diff --check` passed.
 - Repository validator: PASS; Phase 3 is recorded as active with explicit activation in both current-state documents. It discovered 145 application tests.
 - No database schema or dependency changes. T3-03 is committed and pushed; GitHub Actions Project State Validation Run #19 passed.
 
-### Latest T3-04 Verification
+### T3-04 Verification Record (initial local completion; later published)
 
 - Added trusted-context queryset scoping and server-controlled Shop ownership in `TenantScopedMixin`; bound `IsTenantMember` object authorization to the selected Shop, including Main Supplier requests.
 - Updated the temporary proof model to use a UUID Shop foreign key and soft-delete base; added tests for selected-Shop lists/counts, foreign direct IDs, Main Supplier one-Shop scope, create ownership, update/reparenting, absent/mismatched context, and deleted rows.
 - Focused scope/context tests: 28 passed. Full application suite: 152 passed (144 warnings). Repository validator: PASS (152 discovered; dirty-tree warning expected); validator tests: 14 passed. Django system check: PASS; migration drift check: no changes; OpenAPI schema validation: PASS; Black check: PASS; Flake8: PASS; `git diff --check`: PASS.
-- No business models/APIs, migrations, or dependencies were added. `BaseModelWithTenant.tenant` remains nullable because no concrete business subclass exists. T3-05 remains not started and unauthorized.
-- T3-04 changes are local, uncommitted, and unpushed; CI has not run for this diff. No production schema, dependency, API-route, or business-module changes were made.
+- No business models/APIs, migrations, or dependencies were added. `BaseModelWithTenant.tenant` remains nullable because no concrete business subclass exists. No production schema, dependency, API-route, or business-module changes were made.
+- The local validation figures above are task-completion evidence. T3-04 was subsequently committed/pushed on `main`; the verified published commit and CI status are recorded in the current Status section. Current T3-REBASELINE-01 edits are documentation-only and have no CI run.
 
 ## Locked V1 business tenancy model
 
@@ -129,7 +134,7 @@
 - CI retains project-state validation and is configured to run the application suite, Django system checks, and migration checks with PostgreSQL. The GitHub Actions run for the reviewed baseline successfully passed all checks, including the application suite, Django system checks, and PostgreSQL integration. Remote CI confirmation is fully green and the PostgreSQL connectivity issue is resolved.
 - Production compose now propagates `DJANGO_CORS_ALLOWED_ORIGINS` without inventing a deployment origin.
 - No migrations were required or changed.
-- Remaining unresolved decisions include ordinary-user Shop read visibility, Shop DELETE semantics, Shop Admin scoped settings authority, currency changes after financial history, and the other later-phase items in `docs/DECISIONS.md`. Global User administration/public signup, phone rules, credential lifecycle, and current Main Supplier Shop-settings authority are now confirmed.
+- Remaining decisions include Shop Admin settings authority (not granted), currency changes after financial history, and later items listed in `docs/DECISIONS.md`. Ordinary-user Shop visibility, Shop delete/deactivation, max_users lower bound, identity/User ID, membership/Admin invariants, and Work Functions are approved target rules; identity/membership/function implementation remains pending T3-04A–T3-04C and Shop API/Admin enforcement remains pending T3-05.
 
 ### Phase 3+ Deferred Implementations
 

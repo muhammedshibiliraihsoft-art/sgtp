@@ -9,17 +9,19 @@ Give shops an operational record from client request to completed garment work.
 ## 4. Technical Purpose
 Create normalized entities, service-layer rules, state transitions, constraints, indexes, and concurrency protection.
 ## 5. Preconditions
-Phase 3 isolation DoD passed; explicit activation; all required documents read.
+Phase 3 T3-04A–T3-04C identity/membership/Work-Function prerequisites and T3-05 Shop/API/Admin hardening accepted; T3-04 isolation DoD passed; T3-05A staging foundation accepted; F7-01/F7-01A checkpoints accepted per the approved dependency sequence; explicit `CONFIRM PHASE 4`; all required documents read.
 ## 6. Dependencies
 Shop context/membership, permissions, shared models, PostgreSQL.
 ## 7. Current Repository Assumptions
-Only generic accounts/tenants exist; no business modules or services exist.
+Accounts, Supplier/Shop (legacy Tenant), memberships, T3-03 Shop context, and T3-04 reusable isolation primitives exist. The rebaseline's User ID, ADMIN invariant, and Work-Function target are not implemented until their Phase 3 remediation tasks complete. No tailoring business modules or services exist.
 ## 8. Exact Scope
 Clients, family/related persons, catalog/designs, measurements, materials, works/orders, workflow services, indexes, constraints, concurrency.
 ## 9. Out of Scope
 Billing, PDF/report generation, AI integrations, frontend screens, production deployment.
 ## 10. Architecture Context
-Every record is shop-scoped; service methods are the business boundary; transitions are explicit and audited.
+Every record is shop-scoped; service methods are the business boundary; transitions are explicit and audited. Staffing/authorization combines Access Role, authorized Shop context, Work-Function eligibility, optional specific assignment, and explicit service policy. Work Functions do not authorize actions. The workflow is fixed across Shops; no per-Shop builder.
+
+When a membership becomes inactive or loses a Work Function while assigned work is open, preserve historical actor records; do not silently transfer ownership or block urgent security deactivation. Clearly mark affected open work for reassignment or route it through an explicitly approved reassignment service. The exact operational behavior belongs to the relevant Phase 4 task; do not rewrite workflow history.
 ## 11. Implementation Sequence
 Clients → related persons → catalog/designs → measurements → materials → work aggregate → workflow services → APIs/tests.
 ## 12. Detailed Task List
@@ -34,7 +36,7 @@ Objective: model reusable/catalog designs and shop-owned design records. Depende
 Objective: persist measurement sets and fabric/material records tied to client/work context. Dependencies: T4-01/T4-02. Files: `backend/apps/catalog/{models,migrations,serializers,views,tests}`. Steps: define extensible measurement templates (initial examples may include Shirt, Thobe, Pant, Abaya), typed values/units, immutable measurement versions, history and comparison-ready current/previous/difference data, plus material quantity/status/reservation rules. DB: constraints/indexes/decimal handling. API: create/update/read/history/compare contracts. Security: scope/PII. Tests: units, template evolution, immutable history, comparison, ownership. DoD: history is preserved and usable without hard-coding the template catalog.
 
 ### T4-04 Work aggregate and workflow state
-Objective: create work/order aggregate and approved states. Dependencies: T4-01–03. Files: `backend/apps/works/{models,migrations,serializers,views,tests}`. Steps: model client/design/measurement/material links, stable searchable Work number, status, due dates, and priority `Normal|Urgent|Very Urgent`; implement only Request, Cutting, Stitching, Check, Finishing, QC, Completed transitions; define allowed roles and terminal behavior. Expose upcoming/due-soon/today/overdue as derived date indicators, not workflow states. DB: state/index/constraints. API: work CRUD/transition/search endpoints. Security: shop scope/transition permissions. Tests: valid/invalid transitions, priority, due-date derivation/cutoff decision gate, Work search and cross-Shop denial. DoD: persisted workflow and priority without unapproved workflow states.
+Objective: create work/order aggregate and approved states. Dependencies: T4-01–03 and completed Phase 3 T3-04A–T3-04C/T3-05 prerequisites. Files: `backend/apps/works/{models,migrations,serializers,views,tests}`. Steps: model client/design/measurement/material links, stable searchable Work number, status, due dates, and priority `Normal|Urgent|Very Urgent`; implement only Request, Cutting, Stitching, Check, Finishing, QC, Completed transitions. Do not model TAILOR/SALESMAN/CASHIER as access roles. Workflow eligibility/assignment must use authorized Shop context + membership Access Role + applicable Work Function + explicit service policy. A Work Function alone never authorizes a transition. Specify stage-to-function mapping in this task; if Check requires an additional catalog function, record BUSINESS DECISION REQUIRED rather than inventing one. Keep workflow fixed and do not add a per-Shop workflow builder. Expose upcoming/due-soon/today/overdue as derived date indicators, not workflow states. DB: state/index/constraints. API: work CRUD/transition/search endpoints. Security: shop scope/transition permissions. Tests: valid/invalid transitions, role/function/assignment matrix, denial when membership/function/context is absent or foreign, priority, due-date derivation/cutoff decision gate, Work search and cross-Shop denial. DoD: persisted workflow and priority without unapproved workflow states or function-based permission escalation.
 
 ### T4-05 Service layer and concurrency
 Objective: enforce domain rules outside views. Dependencies: T4-04. Steps: transactional services, select-for-update/version checks, idempotent transitions, audit events, validation and conflict errors. DB: transactions/unique constraints. API: service error mapping. Tests: races, retries, duplicate transitions, rollback. DoD: views cannot bypass rules.

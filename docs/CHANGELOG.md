@@ -5,7 +5,15 @@
 - Updated `TenantScopedMixin` to require authorized T3-03 context, verify actor/URL/compatibility alias consistency, filter by the trusted Shop, and force Shop ownership on create/update.
 - Bound `IsTenantMember` object checks to the selected Shop for ordinary members and Main Supplier; added temporary UUID/FK/soft-delete test proof for direct IDs, lists/counts, Main Supplier scope, writes, and fail-closed mismatches.
 - No business models/endpoints, migrations, dependencies, global Tenant/member API changes, or T3-05 work. Future business endpoints must adopt and prove the shared boundary.
-- Validation: focused tests 28 passed; full application suite 152 passed (144 warnings); repository validator PASS (152 discovered); validator tests 14 passed; Django check, migration drift, OpenAPI, Black, Flake8, and `git diff --check` passed. Changes are local only, with no commit, push, or CI run.
+- Initial task-completion validation (before publication): focused tests 28 passed; full application suite 152 passed (144 warnings); repository validator PASS (152 discovered); validator tests 14 passed; Django check, migration drift, OpenAPI, Black, Flake8, and `git diff --check` passed. The implementation was subsequently committed/pushed; current publication and CI evidence is recorded in the 2026-09-29 entry below.
+
+## 2026-09-29 — T3-REBASELINE-01 Phase 3 business architecture and state sync
+
+- Reconciled approved global User/User ID, optional normal-user contacts, admin-grade contacts, multi-Shop membership, ADMIN cardinality/authority, Shop visibility/lifecycle, capacity, and membership-scoped Work Function rules. Marked them as confirmed target policy, not implemented code; assigned prerequisite work to T3-04A–T3-04C before T3-05.
+- Updated product, architecture, API/security/database, Phase 3/4/7/8 plans, project state, handoff, and decision/business-rule records. Preserved T3-03/T3-04 path-context and isolation contracts and the fixed V1 workflow.
+- Corrected current T3-04 repository state: live verification showed `main`/`origin/main`/remote main in parity (derive current SHA from Git); GitHub Actions Project State Validation run #36511111586 succeeded for the published baseline. Current documentation changes are local/uncommitted and are not covered by that CI result.
+- Validation: repository validator PASS (152 discovered); validator tests 14 passed; Django check PASS; migration drift reports no changes with local PostgreSQL unavailable; full pytest collected 152 but was blocked by unavailable PostgreSQL; `git diff --check` PASS. Documentation audit found 52 unique Business Rule IDs and consistent task sequencing. No application source or migration changes.
+- Documentation/planning only. No application code, migrations, dependencies, tests, frontend, staging, commit, or push.
 
 ## 2026-09-28 — T3-03 Tenant / Shop Request Context
 

@@ -37,11 +37,25 @@ This section is authoritative for V1 business meaning:
 - Each External Supplier record belongs to exactly one Shop. Similar real-world suppliers in different Shops are separate records; there is no global or shared supplier directory.
 - Shop A data must never be exposed to Shop B through IDs, lists, search, filters, ordering, pagination, counts, aggregates, autocomplete, nested relations, foreign-key traversal, or URL manipulation.
 - The Main Supplier / Main Admin may have explicitly authorized cross-shop operational visibility, but that does not make Shop data globally shared with Shop users.
-- The existing starter `Tenant` model is a legacy technical input and must not automatically be interpreted as the Main Supplier, an External Supplier, a Shop, or a platform-wide multi-supplier tenant. Its compatibility mapping is governed by the Phase 3 T3-01 decision gate.
+- The existing starter `Tenant` model is the approved technical representation of the V1 Shop entity, as decided and implemented by T3-01. It is not the Main Supplier, an External Supplier, or a platform-wide multi-supplier tenant. Preserve `/api/v1/tenants/` compatibility unless a separate routing decision is approved.
 
 ## V1 Account and Preference Policy
 
-Confirmed business rules are maintained canonically in `docs/BUSINESS_RULES.md`. Public self-registration is prohibited; Main Supplier Admin is the current authority for global User account creation and management. Email is required, UUID remains permanent identity, and optional unique E.164 User login phone plus email authenticate the same account. Phone verification is not required in V1; phone lifecycle is controlled through authorized account management. Generated initial credentials require secure one-time handling and first-login change; recovery is email-based and credential changes revoke refresh sessions. These T3-02A rules are implemented. T3-03 establishes authorized request-local Shop context using the approved URL path; complete data isolation remains T3-04 scope.
+Confirmed business rules are maintained canonically in `docs/BUSINESS_RULES.md`. Public self-registration is prohibited and Main Supplier/global account administration controls global User creation and credential reset. **Implemented foundation:** UUID identity, email-based account model with optional E.164 phone login, secure JWT/CSRF/refresh lifecycle, generated-password first-login change, email reset, and preferences. **Approved target, not yet implemented:** one global User receives a permanent system-generated User ID; normal Shop Users require User ID/password but may omit email/phone; email/phone remain optional alternative identifiers when registered. Active Shop ADMIN and Main Supplier accounts require email and phone. A normal User without email recovery uses controlled Main Supplier/global-account reset; Shop Admins cannot reset global passwords. These changes belong to T3-04A and must preserve existing UUIDs, password hashes, memberships, and session protections. T3-03 URL-path Shop context and T3-04 query/object primitives remain implemented and must not be weakened.
+
+### Approved identity, membership, and staffing target
+
+- One global User may have memberships in multiple Shops. Each membership owns its role and lifecycle; the same User may have different roles in different Shops.
+- V1 access roles are ADMIN, STAFF, and VIEWER; there is no OWNER security role. Business duties are represented by membership-scoped Work Functions, not access roles.
+- Each Shop must have one or two active ADMIN memberships. Main Supplier controls ADMIN hierarchy; Shop creation establishes a valid first ADMIN; global User deactivation cannot leave a Shop without an active ADMIN.
+- Controlled V1 Work Functions are SALES, MEASUREMENT, CUTTING, STITCHING, FINISHING, QC, and CASHIER. A function is not permission. The stable V1 workflow is staffed flexibly by eligible Shop memberships; no per-Shop workflow builder is introduced.
+- These approved target rules are not evidence that User ID, ADMIN invariants, or Work Functions exist in current code. See `docs/PROJECT_STATE.md` for implementation status and T3-04A–T3-04C ownership.
+
+### Approved Shop management targets
+
+- Ordinary Users discover only Shops for which they have authorized membership; Main Supplier retains authorized cross-Shop visibility.
+- Only Main Supplier manages Shop activation/deactivation and Shop defaults. Deactivation preserves records and memberships; ordinary Shop DELETE is not a V1 operation. A future Archive is separate.
+- `user_count` remains ACTIVE + INACTIVE memberships; reject lowering `max_users` below that count. These rules are approved but T3-05 implementation remains pending its prerequisites.
 
 ## Core V1 business flow
 

@@ -12,6 +12,13 @@ Deliver a role-aware, shop-aware frontend that consumes documented APIs without 
 
 Give supplier/main-admin and shop users usable back-office and tailoring workspaces.
 
+### Approved identity and membership UX contract (future work)
+
+- Login uses the permanent User ID; registered email/phone may be alternative identifiers through the same `identifier + password` contract. Normal-user email and phone are optional. This is a target contract; backend T3-04A must exist before frontend reliance.
+- After authentication, show one active authorized Shop by direct entry, a selector for multiple active Shops, and an authenticated “No Active Shop Assigned” state when there are none. Inactive Shops may appear as disabled historical context for a relevant member, never selectable for operational context.
+- Display role per membership. Shop ADMIN Work-Function management is Shop-local and supports zero/multiple values from the approved controlled catalog. Do not show a global User directory to Shop Admins. Operational UI may consume API-returned capabilities/functions, but frontend state is never authorization authority.
+- Preserve explicit URL-path Shop context and never choose a Shop from a User preference, guessed default, query parameter alone, or client-provided role.
+
 ## 4. Technical Purpose
 
 Establish frontend structure, API client, authentication/session handling, routing, tenant context, feature screens, loading/error states, and accessibility.
@@ -112,7 +119,7 @@ Frontend shell/i18n/theme → authenticated API client → accepted Staging Fron
 - Validation: end-to-end supplier and shop workspace smoke test.
 - Documentation update: state, handoff, UI/API docs.
 - Definition of Done: supplier and shop shells are usable and scoped.
-- Add Shop default locale/timezone/currency UI only for Main Supplier Admin through authorized APIs (BR-SHOP-007); do not grant Shop Admin settings authority without a separately approved policy. User language/appearance settings remain self-scoped and presentation-only.
+- Add Shop default locale/timezone/currency UI only for Main Supplier Admin through authorized APIs (BR-SHOP-007); Shop Admin settings authority is not granted by the approved V1 policy. User language/appearance settings remain self-scoped and presentation-only.
 
 ### F7-04 Tailor Management screens
 
