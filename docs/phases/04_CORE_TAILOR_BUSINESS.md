@@ -13,7 +13,7 @@ Phase 3 T3-04A–T3-04C identity/membership/Work-Function prerequisites and T3-0
 ## 6. Dependencies
 Shop context/membership, permissions, shared models, PostgreSQL.
 ## 7. Current Repository Assumptions
-Accounts, Supplier/Shop (legacy Tenant), memberships, T3-03 Shop context, and T3-04 reusable isolation primitives exist. T3-04A identity/User-ID remediation and T3-04B membership/Admin safeguards are published; T3-04C Work Functions remain a gated prerequisite requiring successful CI for the T3-04B publication SHA. No tailoring business modules or services exist.
+Accounts, Supplier/Shop (legacy Tenant), memberships, T3-03 Shop context, and T3-04 reusable isolation primitives exist. T3-04A identity/User-ID remediation, T3-04B membership/Admin safeguards, and T3-04B-USER-SCOPE are published; User-Scope commit `ed845e89d7656bf9d9e1e24f03b79e7de0d3bd9c` passed exact-SHA CI run `36591864481`. T3-04C Work Functions remains a separately gated prerequisite. No tailoring business modules or services exist.
 ## 8. Exact Scope
 Clients, family/related persons, catalog/designs, measurements, materials, works/orders, workflow services, indexes, constraints, concurrency.
 ## 9. Out of Scope

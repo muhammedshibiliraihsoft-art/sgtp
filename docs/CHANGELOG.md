@@ -1,11 +1,11 @@
 # Changelog
 
-## 2026-09-29 — T3-04B User-Scope remediation (local, in progress)
+## 2026-09-29 — T3-04B User-Scope remediation (published)
 
 - Replaced the superseded one-global-User/multi-Shop assumption with one immutable owning Shop per ordinary account; separate Shops require distinct accounts even for the same real-world person.
 - Added Shop-owned account creation and reset authority, atomic Shop/first-ADMIN account creation, same-Shop membership enforcement, and guarded ownership backfill/database consistency protections.
-- Added/updated account-scope, membership, Shop creation, reset, and migration-preflight regression tests. Focused User-Scope suite: 9 passed; PostgreSQL-backed full application suite: 192 passed. Validator, validator tests, Django check, migration drift and OpenAPI pass; OpenAPI/deploy checks report two nonfatal role-enum naming warnings. New Python files pass Black/Flake8; broad lint/format checks on touched legacy files still show existing style findings. No commit, push, or CI run has occurred for these local changes.
-- Updated current architecture, business rules, API, database, security, phase plan, project state, and handoff docs. T3-04C and later tasks remain unstarted.
+- Added/updated account-scope, membership, Shop creation, reset, and migration-preflight regression tests. Pre-publication local validation: focused User-Scope suite: 9 passed; PostgreSQL-backed full application suite: 192 passed. Validator, validator tests, Django check, migration drift and OpenAPI pass; OpenAPI/deploy checks report two nonfatal role-enum naming warnings. New Python files pass Black/Flake8; broad lint/format checks on touched legacy files still show existing style findings.
+- Updated current architecture, business rules, API, database, security, phase plan, project state, and handoff docs. Published as commit `ed845e89d7656bf9d9e1e24f03b79e7de0d3bd9c`; GitHub Actions Project State Validation run `36591864481` completed SUCCESS for that exact SHA. T3-04C and later tasks remain unstarted.
 
 ## 2026-09-29 — T3-04B Remediation publication checkpoint
 
@@ -20,7 +20,7 @@
 - Added a preflight/backfill migration that refuses unsafe legacy rows rather than fabricating names or contacts; added identity, authentication, API, and migration-preservation regression coverage. Existing UUID primary keys, JWT UUID identity, memberships, and audit references are preserved.
 - Read-only local database preflight found no existing User/superuser/Shop rows or email/name issues. After preflight, the local PostgreSQL database successfully applied required tenant migrations and `accounts.0004_t304a_global_identity`; no production database was accessed.
 - Focused identity/authentication suite: 29 passed; T3-02A compatibility regression: 10 passed. Full PostgreSQL-backed application suite: 167 passed (155 warnings); repository validator PASS; 14 validator tests passed; Django system/deployment checks, migration drift, OpenAPI validation, Black and Flake8 for newly added Python modules, and `git diff --check` passed. A broader Flake8 run over touched legacy files still reports findings and is not reported as clean.
-- Local-only, uncommitted/unpushed; GitHub CI has not run. T3-04B and later tasks remain unstarted and unauthorized.
+- At the original T3-04A task-time checkpoint, changes were local-only and GitHub CI had not run; they were subsequently published. T3-04B and later tasks were unstarted at that historical checkpoint.
 
 ## 2026-09-28 — T3-04 Scoped Querysets and Object Permissions
 

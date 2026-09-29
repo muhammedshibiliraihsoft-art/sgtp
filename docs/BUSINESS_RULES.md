@@ -191,7 +191,7 @@ New business rules require:
 
 ### BR-ACC-002 — Global User Account Creation Authority
 **Status:** CONFIRMED
-**Rule:** Public self-registration is not allowed. For the current V1 foundation, only the Main Supplier Admin may create and manage global User accounts. Shop Admins do not receive global User-management authority. Any future Shop-scoped provisioning requires a separately approved authorization task. This policy is implemented by T3-02A; anonymous account creation is denied.
+**Rule:** Public self-registration is not allowed. Main Supplier Admin retains global User-account authority and may create any approved Shop role. Shop Admins have no global User-management authority, but may create STAFF/VIEWER accounts only in their own Shop and reset only current same-Shop STAFF/VIEWER credentials. T3-04B-USER-SCOPE implements this Shop-scoped provisioning; anonymous account creation remains denied.
 
 ### BR-AUTH-001 — Email-or-Phone Login to One User Identity
 **Status:** CONFIRMED
@@ -279,11 +279,11 @@ These rules are approved target behavior, not claims about current code. Impleme
 
 ### BR-MEM-010 — ADMIN Authority and Shop Creation
 **Status:** CONFIRMED
-**Rule:** Main Supplier manages ADMIN assignment, promotion, demotion and removal, while preserving the 1–2 active ADMIN invariant. Shop Admins cannot change another membership's ADMIN authority. Shop creation must atomically establish its first valid ADMIN before the Shop enters normal operation. Shop Admins may manage permitted non-ADMIN memberships and Work Functions only within their own Shop. ADMIN lifecycle and first-ADMIN safeguards are implemented locally by T3-04B; Work Functions remain T3-04C.
+**Rule:** Main Supplier manages ADMIN assignment, promotion, demotion and removal, while preserving the 1–2 active ADMIN invariant. Shop Admins cannot change another membership's ADMIN authority. Shop creation must atomically establish its first valid ADMIN before the Shop enters normal operation. Shop Admins may manage permitted non-ADMIN memberships and Work Functions only within their own Shop. ADMIN lifecycle and first-ADMIN safeguards are published in T3-04B remediation and T3-04B-USER-SCOPE; Work Functions remain T3-04C.
 
 ### BR-MEM-011 — Global User Deactivation Guard
 **Status:** CONFIRMED
-**Rule:** Reject global User deactivation if it would leave any Shop with zero active ADMIN memberships. Establish a replacement ADMIN first. Global hard deletion is not an ordinary V1 management action; preserve history through deactivation. The safeguard is implemented locally by T3-04B remediation; no global hard-delete behavior is added.
+**Rule:** Reject global User deactivation if it would leave any Shop with zero active ADMIN memberships. Establish a replacement ADMIN first. Global hard deletion is not an ordinary V1 management action; preserve history through deactivation. The safeguard is published in T3-04B remediation; no global hard-delete behavior is added.
 
 ### BR-MEM-012 — Membership Capacity Lower Bound
 **Status:** CONFIRMED
