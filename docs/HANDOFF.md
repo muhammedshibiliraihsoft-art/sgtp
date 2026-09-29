@@ -9,7 +9,7 @@ CI evidence: GitHub Actions Project State Validation succeeded for the published
 
 ## Current task
 
-T3-REBASELINE-01 — documentation/business architecture rebaseline: explicitly confirmed and completed locally. Only documentation/planning files changed; this local diff is uncommitted and unpushed, and has no CI run. No application code, migration, dependency, endpoint, permission behavior, frontend, staging, or Phase 4 implementation was changed.
+T3-REBASELINE-01-PUBLISH — completed. The documentation-only T3-REBASELINE-01 changes are committed and pushed to `main`; GitHub Actions Project State Validation succeeded for the published checkpoint. No application code, migration, dependency, endpoint, permission behavior, frontend, staging, or Phase 4 implementation was changed.
 
 ## Current state and next gate
 
@@ -23,9 +23,9 @@ T3-REBASELINE-01 — documentation/business architecture rebaseline: explicitly 
 
 - Repository validator: PASS (152 tests discovered; expected dirty-tree warning). Validator unit tests: 14 passed.
 - `manage.py check`: PASS. `makemigrations --check --dry-run`: no changes detected; PostgreSQL at `127.0.0.1:5432` was unavailable, so migration-history consistency was not verified locally.
-- Full pytest: 152 collected but not completed; database-backed setup errored because PostgreSQL was unavailable. Do not report a local full-suite pass. The published T3-04 CI run is separate from this documentation diff.
+- Full pytest: 152 collected but not completed; database-backed setup errored because PostgreSQL was unavailable. Do not report a local full-suite pass. The published checkpoint's GitHub Actions validation succeeded; local PostgreSQL-backed full-suite execution remains unverified here.
 - `git diff --check`: PASS. 52 Business Rule IDs checked, no duplicates; Phase 3 task sequence consistent across the development plan and playbook.
-- Application code/migrations/dependencies/tests: unchanged. No commit, push, or deployment.
+- Application code/migrations/dependencies/tests: unchanged. Documentation checkpoint committed and pushed; no deployment occurred.
 
 ## T3-04 verification record (historical task evidence)
 

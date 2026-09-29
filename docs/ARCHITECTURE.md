@@ -208,7 +208,7 @@ The current `User` model requires email and uses it as `USERNAME_FIELD`; `first_
 ## Phase 1 status and current V1 readiness
 
 Phase 1 foundation implementation is complete. T3-02A, T3-03, and T3-04 are complete on `main`; Git evidence showed local `HEAD` matched `origin/main` and remote `main` (derive the current SHA from Git).
-GitHub Actions Project State Validation run #36511111586 succeeded for the published baseline. This CI result covers that pushed baseline, not this local documentation diff. SGTP V1 is not ready for production. The approved identity/membership/Work-Function rebaseline is not implemented; T3-04A–C must precede T3-05. Business modules and end-to-end workflows remain unimplemented; future endpoints must adopt and verify the T3-04 boundary.
+GitHub Actions Project State Validation run #36524789793 succeeded for the published T3-REBASELINE-01 documentation checkpoint. SGTP V1 is not ready for production. The approved identity/membership/Work-Function rebaseline is not implemented; T3-04A–C must precede T3-05. Business modules and end-to-end workflows remain unimplemented; future endpoints must adopt and verify the T3-04 boundary.
 
 ## Membership Lifecycle and Rules
 

@@ -5,13 +5,13 @@
 - Phase 1 and Phase 2 are complete.
 - Phase 3 is ACTIVE; activation was explicitly confirmed with `CONFIRM PHASE 3`.
 - Completed Phase 3 tasks: T3-01, T3-02, T3-02-REMEDIATION, T3-02A, T3-03, and T3-04.
-- Current task: T3-REBASELINE-01 — documentation/business architecture rebaseline; explicitly confirmed and completed locally. No application implementation was performed. Changes in this worktree are documentation-only, uncommitted, and unpushed; the CI run below validates the base commit, not this documentation diff.
+- Current task: T3-REBASELINE-01-PUBLISH — publication checkpoint completed. The documentation/business architecture rebaseline is committed and pushed to `main`; GitHub Actions Project State Validation succeeded. No application implementation was performed.
 - T3-04 is COMPLETE, COMMITTED, and PUSHED on `main`. Live verification on 2026-09-29: local `HEAD`, `origin/main`, and remote `refs/heads/main` matched; derive the current SHA from Git.
 - CI evidence: GitHub Actions Project State Validation succeeded for the published baseline (run #36511111586).
 - T3-04A, T3-04B, T3-04C, T3-05, and T3-05A have not started and are not authorized. Next candidate is T3-04A; it requires a separate exact task confirmation.
-- Current application test discovery is documented as 152 from the T3-04 validation record. The successful remote CI result is for the pushed T3-04 baseline, not this local documentation diff.
+- Current application test discovery is 152. The local full pytest suite did not complete because PostgreSQL was unavailable; GitHub Actions Project State Validation succeeded for the published documentation checkpoint.
 - T3-REBASELINE-01 local validation: repository validator PASS (152 tests discovered; expected dirty-tree warning); validator tests 14 passed; Django `check` PASS; `makemigrations --check --dry-run` reports no changes, but could not verify migration history because local PostgreSQL at `127.0.0.1:5432` is unavailable; `git diff --check` PASS. Full pytest collected 152 but could not complete because PostgreSQL was unavailable and database-backed test setup errored. No local full-suite pass is claimed.
-- Documentation consistency audit: 52 Business Rule IDs, no duplicates; Phase 3 task dependency graph matches `DEVELOPMENT_PLAN.md`; no application source, migration, dependency, or test file changed. Current doc diff has no CI run.
+- Documentation consistency audit: 52 Business Rule IDs, no duplicates; Phase 3 task dependency graph matches `DEVELOPMENT_PLAN.md`; no application source, migration, dependency, or test file changed. The published documentation checkpoint passed GitHub Actions Project State Validation.
 
 - Project root: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp`
 - Remote: `https://github.com/muhammedshibiliraihsoft-art/sgtp.git`
@@ -26,7 +26,7 @@
 - T3-05A (Staging Backend Foundation) and F7-01A (Staging Frontend & Client Review Checkpoint) remain planned only. T3-02A implemented the account/preference data and API foundation; frontend localization, RTL/LTR layout, and full Light/Dark/System UI remain Phase 7 work.
 - T3-02A current implementation: anonymous self-registration denied; Main Supplier Admin controls global account creation/phone lifecycle and Shop defaults; email is required and optional unique E.164 phone can authenticate the same UUID account; generated initial password is returned once/no-store and must be changed; email reset is single-use and revokes sessions; nullable locale and `system|light|dark` preferences and nullable Shop defaults persist.
 - Approved target business rules, NOT YET IMPLEMENTED: universal permanent User ID; optional email/phone for normal users; admin-grade contact requirements; controlled global-account recovery; 1–2 active Shop ADMIN invariant; ADMIN authority boundaries; membership-scoped Work Functions; membership-authorized Shop discovery; Shop deactivation/no ordinary DELETE; and max_users lower bound. These are owned by planned T3-04A–T3-04C and T3-05 as mapped in `docs/DEVELOPMENT_PLAN.md`.
-- T3-02A and T3-03 historical CI records remain below. The published T3-04 baseline passed GitHub Actions; no CI has run for the current uncommitted documentation changes.
+- T3-02A and T3-03 historical CI records remain below. The published T3-04 baseline and the later T3-REBASELINE-01 documentation checkpoint passed GitHub Actions Project State Validation (runs #36511111586 and #36524789793 respectively).
 
 ### Latest T3-02A Verification
 
@@ -54,7 +54,7 @@
 - Updated the temporary proof model to use a UUID Shop foreign key and soft-delete base; added tests for selected-Shop lists/counts, foreign direct IDs, Main Supplier one-Shop scope, create ownership, update/reparenting, absent/mismatched context, and deleted rows.
 - Focused scope/context tests: 28 passed. Full application suite: 152 passed (144 warnings). Repository validator: PASS (152 discovered; dirty-tree warning expected); validator tests: 14 passed. Django system check: PASS; migration drift check: no changes; OpenAPI schema validation: PASS; Black check: PASS; Flake8: PASS; `git diff --check`: PASS.
 - No business models/APIs, migrations, or dependencies were added. `BaseModelWithTenant.tenant` remains nullable because no concrete business subclass exists. No production schema, dependency, API-route, or business-module changes were made.
-- The local validation figures above are task-completion evidence. T3-04 was subsequently committed/pushed on `main`; the verified published commit and CI status are recorded in the current Status section. Current T3-REBASELINE-01 edits are documentation-only and have no CI run.
+- The local validation figures above are task-completion evidence. T3-04 was subsequently committed/pushed on `main`; the verified published commit and CI status are recorded in the current Status section. T3-REBASELINE-01 was later published as a documentation-only checkpoint and passed GitHub Actions Project State Validation.
 
 ## Locked V1 business tenancy model
 
