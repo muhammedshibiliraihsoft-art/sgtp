@@ -34,6 +34,8 @@ class ShopContextAPITests(APITestCase):
             is_superuser=superuser,
             is_staff=superuser,
             must_change_password=password_change,
+            first_name="Test",
+            phone="+96550000999" if superuser else None,
         )
 
     def authenticate(self, user, *, auth_version=None):

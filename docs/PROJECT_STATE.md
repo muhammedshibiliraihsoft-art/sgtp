@@ -4,14 +4,11 @@
 
 - Phase 1 and Phase 2 are complete.
 - Phase 3 is ACTIVE; activation was explicitly confirmed with `CONFIRM PHASE 3`.
-- Completed Phase 3 tasks: T3-01, T3-02, T3-02-REMEDIATION, T3-02A, T3-03, and T3-04.
-- Current task: T3-REBASELINE-01-PUBLISH — publication checkpoint completed. The documentation/business architecture rebaseline is committed and pushed to `main`; GitHub Actions Project State Validation succeeded. No application implementation was performed.
+- Completed Phase 3 tasks: T3-01, T3-02, T3-02-REMEDIATION, T3-02A, T3-03, T3-04, and T3-04A (local implementation; validation recorded below).
+- Current task: T3-04A — implementation and local validation are complete; not committed or pushed.
 - T3-04 is COMPLETE, COMMITTED, and PUSHED on `main`. Live verification on 2026-09-29: local `HEAD`, `origin/main`, and remote `refs/heads/main` matched; derive the current SHA from Git.
-- CI evidence: GitHub Actions Project State Validation succeeded for the published baseline (run #36511111586).
-- T3-04A, T3-04B, T3-04C, T3-05, and T3-05A have not started and are not authorized. Next candidate is T3-04A; it requires a separate exact task confirmation.
-- Current application test discovery is 152. The local full pytest suite did not complete because PostgreSQL was unavailable; GitHub Actions Project State Validation succeeded for the published documentation checkpoint.
-- T3-REBASELINE-01 local validation: repository validator PASS (152 tests discovered; expected dirty-tree warning); validator tests 14 passed; Django `check` PASS; `makemigrations --check --dry-run` reports no changes, but could not verify migration history because local PostgreSQL at `127.0.0.1:5432` is unavailable; `git diff --check` PASS. Full pytest collected 152 but could not complete because PostgreSQL was unavailable and database-backed test setup errored. No local full-suite pass is claimed.
-- Documentation consistency audit: 52 Business Rule IDs, no duplicates; Phase 3 task dependency graph matches `DEVELOPMENT_PLAN.md`; no application source, migration, dependency, or test file changed. The published documentation checkpoint passed GitHub Actions Project State Validation.
+- T3-04A was explicitly confirmed and implemented locally. T3-04B, T3-04C, T3-05, and T3-05A have not started and are not authorized.
+- Published baseline CI evidence remains historical for the pre-T3-04A commit; this local T3-04A change has not been pushed and has no CI result.
 
 - Project root: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp`
 - Remote: `https://github.com/muhammedshibiliraihsoft-art/sgtp.git`
@@ -20,13 +17,21 @@
 - Target status: SGTP V1 is explicitly defined in `docs/PRODUCT_DEFINITION.md`
 - Starter foundation: exists in the cloned SGTP repository.
 - Phase 1 implementation: **Historical - Complete.**
-- Confirmation status: T3-REBASELINE-01 was explicitly confirmed; no implementation task is currently confirmed. T3-04A is not authorized. Each remediation/T3-05 task requires its own task plan and exact confirmation.
+- Confirmation status: T3-04A was explicitly confirmed and is implemented locally. No subsequent task is confirmed; T3-04B requires its own task plan and exact confirmation.
 - Detailed phase playbooks: 01-10 present.
 - Later-phase decisions: Tenant context is approved as URL-path based (`/shops/{shop_id}/...`), and Related Person billing is owned by the Primary Client.
 - T3-05A (Staging Backend Foundation) and F7-01A (Staging Frontend & Client Review Checkpoint) remain planned only. T3-02A implemented the account/preference data and API foundation; frontend localization, RTL/LTR layout, and full Light/Dark/System UI remain Phase 7 work.
-- T3-02A current implementation: anonymous self-registration denied; Main Supplier Admin controls global account creation/phone lifecycle and Shop defaults; email is required and optional unique E.164 phone can authenticate the same UUID account; generated initial password is returned once/no-store and must be changed; email reset is single-use and revokes sessions; nullable locale and `system|light|dark` preferences and nullable Shop defaults persist.
-- Approved target business rules, NOT YET IMPLEMENTED: universal permanent User ID; optional email/phone for normal users; admin-grade contact requirements; controlled global-account recovery; 1–2 active Shop ADMIN invariant; ADMIN authority boundaries; membership-scoped Work Functions; membership-authorized Shop discovery; Shop deactivation/no ordinary DELETE; and max_users lower bound. These are owned by planned T3-04A–T3-04C and T3-05 as mapped in `docs/DEVELOPMENT_PLAN.md`.
+- At T3-02A completion, email was required and optional unique E.164 phone could authenticate the same UUID account. T3-04A now makes normal-user email and phone optional locally while retaining Main Supplier-controlled global account creation, no-store initial credentials, email reset, session revocation, locale/appearance preferences, and Shop defaults.
+- T3-04A implemented locally: permanent User ID, optional normal-user email/phone, required first name, admin-grade account contact safeguards, alias login, controlled global reset, and User hard-delete denial. T3-04B/C and T3-05 targets—ADMIN lifecycle/cardinality, Work Functions, Shop visibility/lifecycle APIs, and capacity enforcement—remain unimplemented.
 - T3-02A and T3-03 historical CI records remain below. The published T3-04 baseline and the later T3-REBASELINE-01 documentation checkpoint passed GitHub Actions Project State Validation (runs #36511111586 and #36524789793 respectively).
+
+## Current Verification Results
+
+- Focused identity/authentication suite: 29 passed; T3-02A compatibility regression: 10 passed. Full application suite: 167 passed (155 warnings), using the local PostgreSQL test database.
+- Repository validator: PASS (167 tests discovered); validator tests: 14 passed. Django system and production deployment checks: PASS; migration drift check: no changes detected; OpenAPI schema validation: PASS; `git diff --check`: PASS.
+- Local PostgreSQL preflight: 0 Users, 0 superusers, 0 Shops, 0 unusable names, 0 blank emails, and 0 case-insensitive email duplicate groups. The database was at the pre-feature migrations; after preflight, the normal migration command applied the tenant prerequisites and `accounts.0004_t304a_global_identity` successfully. Migration regression test preserves representative UUID/password/membership/audit references.
+- Black and Flake8 checks: PASS for all six newly added Python modules. A broader Flake8 run over touched legacy files still reports style/unused-import findings; the whole touched-file lint scope is therefore not clean.
+- Local T3-04A changes are uncommitted and unpushed; GitHub CI has not run for them. An earlier full-suite attempt was interrupted by a stopped local PostgreSQL process; after restarting the existing database without resetting it, the complete 167-test suite passed.
 
 ### Latest T3-02A Verification
 
@@ -134,7 +139,7 @@
 - CI retains project-state validation and is configured to run the application suite, Django system checks, and migration checks with PostgreSQL. The GitHub Actions run for the reviewed baseline successfully passed all checks, including the application suite, Django system checks, and PostgreSQL integration. Remote CI confirmation is fully green and the PostgreSQL connectivity issue is resolved.
 - Production compose now propagates `DJANGO_CORS_ALLOWED_ORIGINS` without inventing a deployment origin.
 - No migrations were required or changed.
-- Remaining decisions include Shop Admin settings authority (not granted), currency changes after financial history, and later items listed in `docs/DECISIONS.md`. Ordinary-user Shop visibility, Shop delete/deactivation, max_users lower bound, identity/User ID, membership/Admin invariants, and Work Functions are approved target rules; identity/membership/function implementation remains pending T3-04A–T3-04C and Shop API/Admin enforcement remains pending T3-05.
+- Remaining decisions include Shop Admin settings authority (not granted), currency changes after financial history, and later items listed in `docs/DECISIONS.md`. T3-04A identity is implemented locally; membership/Admin invariants and Work Functions remain T3-04B/C, with Shop API/Admin enforcement in T3-05.
 
 ### Phase 3+ Deferred Implementations
 

@@ -12,7 +12,8 @@ class TenantModelTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
             email='test@example.com',
-            password='testpass123'
+            password='testpass123',
+            first_name='Test',
         )
         self.supplier = Supplier.objects.get(singleton_lock=True)
     
@@ -67,11 +68,13 @@ class TenantAPITest(TestCase):
         self.client = APIClient()
         self.user = User.objects.create_user(
             email='test@example.com',
-            password='testpass123'
+            password='testpass123',
+            first_name='Test',
         )
         self.admin_user = User.objects.create_superuser(
             email='admin@example.com',
-            password='adminpass123'
+            password='adminpass123',
+            first_name='Main', phone='+96550000000',
         )
         self.supplier = Supplier.objects.get(singleton_lock=True)
         self.tenant_data = {

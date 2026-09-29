@@ -12,7 +12,7 @@ class UserModelTest(TestCase):
         """Test creating a user with email"""
         email = "test@example.com"
         password = "testpass123"
-        user = User.objects.create_user(email=email, password=password)
+        user = User.objects.create_user(email=email, password=password, first_name='Test')
         
         self.assertEqual(user.email, email)
         self.assertTrue(user.check_password(password))
@@ -23,7 +23,7 @@ class UserModelTest(TestCase):
         """Test creating a superuser"""
         email = "admin@example.com"
         password = "adminpass123"
-        user = User.objects.create_superuser(email=email, password=password)
+        user = User.objects.create_superuser(email=email, password=password, first_name='Main', phone='+96550000000')
         
         self.assertEqual(user.email, email)
         self.assertTrue(user.check_password(password))
@@ -34,8 +34,8 @@ class UserModelTest(TestCase):
     def test_user_string_representation(self):
         """Test user string representation"""
         email = "test@example.com"
-        user = User.objects.create_user(email=email)
-        self.assertEqual(str(user), email)
+        user = User.objects.create_user(email=email, first_name='Test')
+        self.assertEqual(str(user), "Test")
 
 
 class UserAPITest(TestCase):
@@ -51,7 +51,7 @@ class UserAPITest(TestCase):
 
     def test_create_user_success(self):
         """Only the Main Supplier Admin may create accounts; credentials are one-time."""
-        admin = User.objects.create_superuser(email='main@example.com', password='AdminPass-934!')
+        admin = User.objects.create_superuser(email='main@example.com', password='AdminPass-934!', first_name='Main', phone='+96550000001')
         self.client.force_authenticate(user=admin)
         response = self.client.post('/api/v1/auth/users/', {
             'email': self.user_data['email'],
@@ -77,7 +77,8 @@ class UserAPITest(TestCase):
         # Create user first
         user = User.objects.create_user(
             email='test@example.com',
-            password='testpass123'
+            password='testpass123',
+            first_name='Test',
         )
         
         login_data = {
@@ -101,8 +102,8 @@ class UserAPITest(TestCase):
 
     def test_regular_user_cannot_target_another_user(self):
         """A normal user cannot list, modify, or delete another user."""
-        user = User.objects.create_user(email='owner@example.com', password='testpass123')
-        other = User.objects.create_user(email='other@example.com', password='testpass123')
+        user = User.objects.create_user(email='owner@example.com', password='testpass123', first_name='Test')
+        other = User.objects.create_user(email='other@example.com', password='testpass123', first_name='Test')
         self.client.force_authenticate(user=user)
 
         list_response = self.client.get('/api/v1/auth/users/')
@@ -117,14 +118,14 @@ class UserAPITest(TestCase):
         self.assertEqual(patch_response.status_code, status.HTTP_404_NOT_FOUND)
 
         delete_response = self.client.delete(f'/api/v1/auth/users/{other.id}/')
-        self.assertEqual(delete_response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(delete_response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
         other.refresh_from_db()
         self.assertTrue(other.is_active)
         self.assertEqual(other.email, 'other@example.com')
 
     def test_self_profile_update_cannot_change_activation_state(self):
         """Self-service profile updates cannot deactivate the account."""
-        user = User.objects.create_user(email='profile@example.com', password='testpass123')
+        user = User.objects.create_user(email='profile@example.com', password='testpass123', first_name='Test')
         self.client.force_authenticate(user=user)
 
         response = self.client.patch(

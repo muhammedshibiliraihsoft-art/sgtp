@@ -19,7 +19,8 @@ class TenantMembershipTest(TestCase):
         )
         self.user = User.objects.create_user(
             email="member@test.com", 
-            password="testpass"
+            password="testpass",
+            first_name='Test',
         )
 
     def test_create_membership(self):
@@ -53,7 +54,8 @@ class TenantMembershipTest(TestCase):
         inactive_user = User.objects.create_user(
             email="inactive@test.com", 
             password="testpass",
-            is_active=False
+            is_active=False,
+            first_name='Test',
         )
         membership = TenantMember(
             tenant=self.tenant,
@@ -104,7 +106,8 @@ class TenantMembershipTest(TestCase):
         """Test that a superuser has cross-shop authority without explicit membership"""
         from apps.tenants.policy import ShopRolePolicy
         admin_user = User.objects.create_superuser(
-            email="main_admin@test.com", password="testpass"
+            email="main_admin@test.com", password="testpass",
+            first_name='Main', phone='+96550000000',
         )
         self.assertTrue(ShopRolePolicy.is_main_supplier_admin(admin_user))
         self.assertTrue(ShopRolePolicy.is_shop_member(admin_user, self.tenant.id))

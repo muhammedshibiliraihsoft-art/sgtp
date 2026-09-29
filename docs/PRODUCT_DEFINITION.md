@@ -41,7 +41,7 @@ This section is authoritative for V1 business meaning:
 
 ## V1 Account and Preference Policy
 
-Confirmed business rules are maintained canonically in `docs/BUSINESS_RULES.md`. Public self-registration is prohibited and Main Supplier/global account administration controls global User creation and credential reset. **Implemented foundation:** UUID identity, email-based account model with optional E.164 phone login, secure JWT/CSRF/refresh lifecycle, generated-password first-login change, email reset, and preferences. **Approved target, not yet implemented:** one global User receives a permanent system-generated User ID; normal Shop Users require User ID/password but may omit email/phone; email/phone remain optional alternative identifiers when registered. Active Shop ADMIN and Main Supplier accounts require email and phone. A normal User without email recovery uses controlled Main Supplier/global-account reset; Shop Admins cannot reset global passwords. These changes belong to T3-04A and must preserve existing UUIDs, password hashes, memberships, and session protections. T3-03 URL-path Shop context and T3-04 query/object primitives remain implemented and must not be weakened.
+Confirmed business rules are maintained canonically in `docs/BUSINESS_RULES.md`. Public self-registration is prohibited and Main Supplier/global account administration controls global User creation and credential reset. **Implemented locally by T3-04A (not yet published):** UUID identity plus permanent generated User ID, required first name/optional last name display name, optional normal-user email/phone, User ID/email/phone login aliases, admin-grade contact safeguards, generated controlled recovery, and preserved JWT/CSRF/refresh lifecycle. Exact User-ID membership lookup remains T3-05; membership lifecycle/cardinality remains T3-04B. T3-03 URL-path Shop context and T3-04 query/object primitives remain implemented and must not be weakened.
 
 ### Approved identity, membership, and staffing target
 
@@ -49,7 +49,7 @@ Confirmed business rules are maintained canonically in `docs/BUSINESS_RULES.md`.
 - V1 access roles are ADMIN, STAFF, and VIEWER; there is no OWNER security role. Business duties are represented by membership-scoped Work Functions, not access roles.
 - Each Shop must have one or two active ADMIN memberships. Main Supplier controls ADMIN hierarchy; Shop creation establishes a valid first ADMIN; global User deactivation cannot leave a Shop without an active ADMIN.
 - Controlled V1 Work Functions are SALES, MEASUREMENT, CUTTING, STITCHING, FINISHING, QC, and CASHIER. A function is not permission. The stable V1 workflow is staffed flexibly by eligible Shop memberships; no per-Shop workflow builder is introduced.
-- These approved target rules are not evidence that User ID, ADMIN invariants, or Work Functions exist in current code. See `docs/PROJECT_STATE.md` for implementation status and T3-04A–T3-04C ownership.
+- T3-04A has implemented the User ID and identity portion locally; these approved target rules are not evidence that the separate ADMIN invariants or Work Functions exist in current code. See `docs/PROJECT_STATE.md` for implementation status and T3-04A–T3-04C ownership.
 
 ### Approved Shop management targets
 

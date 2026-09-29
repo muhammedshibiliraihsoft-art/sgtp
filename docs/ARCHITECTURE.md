@@ -106,10 +106,10 @@ Docker        -> development container and production web/db services
 
 ### Implemented V1 identity and preferences (Phase 3 T3-02A)
 
-- Current implementation: User UUID primary key, required unique email (`USERNAME_FIELD=email`), optional unique E.164 phone, and email-or-phone login. This remains email-centric and does not yet implement the approved universal User ID or optional normal-user email.
+- Current implementation after local T3-04A: UUID primary key, immutable generated `user_code`, optional unique canonical email and E.164 phone for normal Users, and identifier login by User ID/email/phone. `USERNAME_FIELD=email` is retained for Django Admin/CLI compatibility; API auth uses the explicit identifier resolver.
 - Persist nullable User preferred locale and `system|light|dark` appearance, defaulting appearance to `system`; locale selection is `User preference → authorized Shop default → English`.
 - Shop default locale/timezone/currency are configuration only and must be resolved only after authorization. None of these preferences or settings may determine role, membership, access, or Shop selection.
-- Public self-registration is prohibited; Main Supplier Admin is the current authority for global User creation/management. Current code requires email, allows optional phone, and supports either identifier for the same UUID account. No phone verification is required.
+- Public self-registration is prohibited; Main Supplier Admin is the current authority for global User creation/credential reset. Normal Users may omit both contacts; superusers and active Shop ADMIN contact-removal paths require email and phone. No phone verification is required.
 - Generated initial passwords are cryptographically random, hash-only at rest, emitted once with no-store, and changed at first login. Current recovery is email-based with secure, expiring, single-use behavior; password change/reset revokes refresh-token sessions.
 - Shop timezone/currency are explicit and are never inferred; they may remain unset until configured. Main Supplier Admin manages Shop-level settings in the current foundation. Shop Admin settings authority is not granted by T3-02A.
 - Generated account credentials are one-time response data with `Cache-Control: no-store`; first-login password change gates normal authenticated API operations. Password recovery is generic to the caller and uses expiring single-use Django reset tokens delivered by configured email. Plaintext passwords/reset tokens are not written to application storage or audit records.
@@ -118,7 +118,7 @@ Docker        -> development container and production web/db services
 ### Approved identity and staffing target — implementation pending
 
 - One global User UUID may be linked to memberships in multiple Shops. Current `TenantMember` supports a User-to-Shop relationship and role per row, but does not enforce the new active-ADMIN invariant or all proposed lifecycle/authority protections.
-- Every User will receive a permanent system-generated User ID; normal-user email/phone will be optional; active Shop ADMIN/Main Supplier accounts require both. These target rules supersede the earlier required-email assumption. T3-04A owns identity/login/recovery and migration analysis; do not claim this is implemented.
+- Every User receives permanent `user_code` (human User ID); UUID remains the internal key/JWT `user_id`. Normal-user email/phone are optional; active Shop ADMIN/Main Supplier accounts require both. T3-04A is implemented locally; T3-04B owns promotion/lifecycle/cardinality safeguards.
 - Access Role (`ADMIN`, `STAFF`, `VIEWER`) is distinct from membership-scoped Work Functions. Each Shop permits one to two active ADMIN memberships; Main Supplier manages this hierarchy. Shop creation must establish its first ADMIN, and global deactivation must preserve at least one active ADMIN in every affected Shop. T3-04B owns the membership/admin invariant remediation.
 - Work Functions are zero-to-many assignments on a Shop membership, from the approved controlled V1 catalog. They describe work eligibility, not authorization. Shop ADMINs manage functions only within their own Shop. T3-04C owns this foundation; Phase 4 owns workflow-stage mapping and work assignment.
 - Approved Shop targets: ordinary Users see only authorized Shops; Main Supplier controls Shop activation/deactivation and settings; deactivation preserves Shop data/memberships; no ordinary Shop DELETE; max_users cannot be lowered below current user_count. T3-05 owns implementation after T3-04A–C.
@@ -126,7 +126,7 @@ Docker        -> development container and production web/db services
 
 ### Current code boundary and approved target
 
-The current `User` model requires email and uses it as `USERNAME_FIELD`; `first_name`/`last_name` are optional and no User ID exists. `TenantMember` has one row per User/Shop pair and a per-membership role, but current code has no one-to-two active-ADMIN invariant or membership-scoped Work Functions. Django Admin exposes editable membership rows/inline. These are verified current implementation observations, not approval of the behavior. T3-04A–C and T3-05 must remediate only within their confirmed scopes.
+The current `User` model uses email as Django's `USERNAME_FIELD` for Admin/CLI compatibility, but email may be null; `user_code` is the permanent human identifier and `first_name` is required. `TenantMember` has one row per User/Shop pair and a per-membership role, but current code has no one-to-two active-ADMIN invariant or membership-scoped Work Functions. Django Admin exposes editable membership rows/inline. T3-04B–C and T3-05 own those remaining behaviors.
 
 ## Planned cross-cutting V1 presentation and operations
 
@@ -207,8 +207,7 @@ The current `User` model requires email and uses it as `USERNAME_FIELD`; `first_
 
 ## Phase 1 status and current V1 readiness
 
-Phase 1 foundation implementation is complete. T3-02A, T3-03, and T3-04 are complete on `main`; Git evidence showed local `HEAD` matched `origin/main` and remote `main` (derive the current SHA from Git).
-GitHub Actions Project State Validation run #36524789793 succeeded for the published T3-REBASELINE-01 documentation checkpoint. SGTP V1 is not ready for production. The approved identity/membership/Work-Function rebaseline is not implemented; T3-04A–C must precede T3-05. Business modules and end-to-end workflows remain unimplemented; future endpoints must adopt and verify the T3-04 boundary.
+Phase 1 foundation implementation is complete. T3-02A, T3-03, and T3-04 are published; T3-04A is implemented locally and not yet published. The prior GitHub Actions result applies only to the published checkpoint. SGTP V1 is not ready for production. T3-04B–C must precede T3-05. Business modules and end-to-end workflows remain unimplemented; future endpoints must adopt and verify the T3-04 boundary.
 
 ## Membership Lifecycle and Rules
 

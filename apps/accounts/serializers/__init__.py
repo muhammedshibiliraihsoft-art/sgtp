@@ -13,6 +13,7 @@ from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from ..models import User
+from ..identity import USER_CODE_PATTERN, normalize_email
 from ..phone_numbers import InvalidUserPhone, normalize_user_phone
 from ..security import generate_initial_password
 
@@ -20,11 +21,15 @@ from ..security import generate_initial_password
 class UserSerializer(serializers.ModelSerializer):
     phone = serializers.CharField(read_only=True)
     must_change_password = serializers.BooleanField(read_only=True)
+    user_code = serializers.CharField(read_only=True)
+    email = serializers.EmailField(required=False, allow_null=True, allow_blank=True)
+    first_name = serializers.CharField(required=True, allow_blank=False, max_length=30)
 
     class Meta:
         model = User
         fields = (
             "id",
+            "user_code",
             "email",
             "first_name",
             "last_name",
@@ -37,15 +42,18 @@ class UserSerializer(serializers.ModelSerializer):
         )
         read_only_fields = (
             "id",
+            "user_code",
             "date_joined",
             "is_active",
             "phone",
+            "email",
             "must_change_password",
         )
 
 
 class UserAdminSerializer(UserSerializer):
     phone = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    email = serializers.EmailField(required=False, allow_null=True, allow_blank=True)
 
     class Meta(UserSerializer.Meta):
         fields = UserSerializer.Meta.fields
@@ -67,15 +75,69 @@ class UserAdminSerializer(UserSerializer):
             )
         return normalized
 
+    def validate_email(self, value):
+        normalized = normalize_email(value)
+        if normalized and User.objects.filter(email__iexact=normalized).exclude(
+            pk=getattr(self.instance, "pk", None)
+        ).exists():
+            raise serializers.ValidationError("This email is already assigned.", code="duplicate_email")
+        if self.instance and self.instance.is_superuser and not normalized:
+            raise serializers.ValidationError("Main Supplier accounts require email.")
+        self._normalized_email = normalized
+        return normalized
+
+    def validate_first_name(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("First name is required.")
+        return value
+
+    def validate(self, attrs):
+        email = attrs.get("email", getattr(self.instance, "email", None))
+        phone = attrs.get("phone", getattr(self.instance, "phone", None))
+        is_superuser = getattr(self.instance, "is_superuser", False)
+        if is_superuser and (not email or not phone):
+            raise serializers.ValidationError("Main Supplier accounts require email and phone.")
+        if self.instance and self.instance.pk:
+            from apps.tenants.models import TenantMember, ShopRole
+
+            active_admin = TenantMember.objects.filter(
+                user=self.instance, role=ShopRole.ADMIN, is_active=True,
+                deleted__isnull=True,
+            ).exists()
+            if active_admin and (not email or not phone):
+                raise serializers.ValidationError("Active Shop Admin accounts require email and phone.")
+        return attrs
+
+    def update(self, instance, validated_data):
+        if "email" in validated_data:
+            validated_data["email"] = normalize_email(validated_data["email"])
+        return super().update(instance, validated_data)
+
 
 class UserCreateSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(required=False, allow_null=True, allow_blank=True)
+    first_name = serializers.CharField(required=True, allow_blank=False, max_length=30)
     phone = serializers.CharField(
         required=False, allow_blank=True, allow_null=True, write_only=True
     )
 
     class Meta:
         model = User
-        fields = ("email", "first_name", "last_name", "phone")
+        fields = ("user_code", "email", "first_name", "last_name", "phone")
+        read_only_fields = ("user_code",)
+
+    def validate_email(self, value):
+        normalized = normalize_email(value)
+        if normalized and User.objects.filter(email__iexact=normalized).exists():
+            raise serializers.ValidationError("This email is already assigned.", code="duplicate_email")
+        return normalized
+
+    def validate_first_name(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("First name is required.")
+        return value
 
     def validate_phone(self, value):
         try:
@@ -91,7 +153,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         self.initial_password = generate_initial_password(
             User(
-                email=validated_data["email"],
+                email=validated_data.get("email"),
                 first_name=validated_data.get("first_name", ""),
                 last_name=validated_data.get("last_name", ""),
             )
@@ -126,8 +188,14 @@ class EmailOrPhoneTokenObtainPairSerializer(TokenObtainPairSerializer):
                 "Invalid credentials.", code="invalid_credentials"
             )
         value = raw.strip()
+        if USER_CODE_PATTERN.fullmatch(value.upper()):
+            return ("user_code", value.upper())
         if "@" in value:
-            return ("email", User.objects.normalize_email(value))
+            return ("email", normalize_email(value))
+        if not value.startswith("+"):
+            raise AuthenticationFailed(
+                "Invalid credentials.", code="invalid_credentials"
+            )
         try:
             return ("phone", normalize_user_phone(value))
         except InvalidUserPhone as exc:
@@ -148,7 +216,7 @@ class EmailOrPhoneTokenObtainPairSerializer(TokenObtainPairSerializer):
         if not attrs.get("password"):
             raise serializers.ValidationError({"password": ["This field is required."]})
         if legacy_email and identifier:
-            normalized_email = User.objects.normalize_email(legacy_email.strip())
+            normalized_email = normalize_email(legacy_email)
             kind, normalized_identifier = self._normalize_identifier(identifier)
             if kind != "email" or normalized_email != normalized_identifier:
                 raise AuthenticationFailed(
@@ -163,21 +231,10 @@ class EmailOrPhoneTokenObtainPairSerializer(TokenObtainPairSerializer):
                 "Invalid credentials.", code="invalid_credentials"
             )
 
-        matched_phone_user_id = None
-        if kind == "phone":
-            phone_user = (
-                User.objects.filter(phone=normalized_identifier)
-                .only("id", "email")
-                .first()
-            )
-            login_email = phone_user.email if phone_user else normalized_identifier
-            matched_phone_user_id = phone_user.pk if phone_user else None
-        else:
-            login_email = normalized_identifier
-
         authenticated_user = authenticate(
             request=self.context.get("request"),
-            email=login_email,
+            identifier=normalized_identifier,
+            identifier_kind=kind,
             password=attrs["password"],
         )
         if not authenticated_user:
@@ -199,13 +256,10 @@ class EmailOrPhoneTokenObtainPairSerializer(TokenObtainPairSerializer):
                 not user
                 or not user.is_active
                 or user.password != authenticated_user.password
-                or (
-                    matched_phone_user_id
-                    and (
-                        user.pk != matched_phone_user_id
-                        or user.phone != normalized_identifier
-                    )
-                )
+                or not User.objects.filter(
+                    pk=user.pk,
+                    **{kind: normalized_identifier},
+                ).exists()
             ):
                 raise AuthenticationFailed(
                     "Invalid credentials.", code="invalid_credentials"
@@ -263,7 +317,7 @@ class PasswordChangeSerializer(serializers.Serializer):
 
 
 class PasswordResetRequestSerializer(serializers.Serializer):
-    email = serializers.EmailField()
+    email = serializers.EmailField(required=False, allow_null=True, allow_blank=True)
 
 
 class PasswordResetConfirmSerializer(serializers.Serializer):

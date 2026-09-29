@@ -19,25 +19,25 @@ class TenantMemberAPITest(APITestCase):
         self.shop_b = Tenant.objects.create(max_users=10, name="Shop B", slug="shop-b", supplier=self.supplier)
         
         # Superuser (Main Supplier Admin)
-        self.super_admin = User.objects.create_superuser(email="super@test.com", password="testpass")
+        self.super_admin = User.objects.create_superuser(email="super@test.com", password="testpass", first_name='Main', phone='+96550000000')
         
         # Shop A Admin
-        self.shop_a_admin = User.objects.create_user(email="admin_a@test.com", password="testpass")
+        self.shop_a_admin = User.objects.create_user(email="admin_a@test.com", password="testpass", first_name='Test')
         self.mem_a_admin = TenantMember.objects.create(tenant=self.shop_a, user=self.shop_a_admin, role=ShopRole.ADMIN)
         
         # Shop A Staff
-        self.shop_a_staff = User.objects.create_user(email="staff_a@test.com", password="testpass")
+        self.shop_a_staff = User.objects.create_user(email="staff_a@test.com", password="testpass", first_name='Test')
         self.mem_a_staff = TenantMember.objects.create(tenant=self.shop_a, user=self.shop_a_staff, role=ShopRole.STAFF)
         
         # Shop A Viewer
-        self.shop_a_viewer = User.objects.create_user(email="viewer_a@test.com", password="testpass")
+        self.shop_a_viewer = User.objects.create_user(email="viewer_a@test.com", password="testpass", first_name='Test')
         self.mem_a_viewer = TenantMember.objects.create(tenant=self.shop_a, user=self.shop_a_viewer, role=ShopRole.VIEWER)
         
         # Plain user with is_staff (but not superuser)
-        self.staff_user = User.objects.create_user(email="staff_no_super@test.com", password="testpass", is_staff=True)
+        self.staff_user = User.objects.create_user(email="staff_no_super@test.com", password="testpass", is_staff=True, first_name='Test')
         
         # External user
-        self.external_user = User.objects.create_user(email="external@test.com", password="testpass")
+        self.external_user = User.objects.create_user(email="external@test.com", password="testpass", first_name='Test')
 
         self.list_url = '/api/v1/memberships/'
 
@@ -60,8 +60,8 @@ class TenantMemberAPITest(APITestCase):
 
     def test_superuser_can_create_in_shop_a_and_b(self):
         self.client.force_authenticate(user=self.super_admin)
-        u1 = User.objects.create_user(email="u1@test.com", password="tp")
-        u2 = User.objects.create_user(email="u2@test.com", password="tp")
+        u1 = User.objects.create_user(email="u1@test.com", password="tp", first_name='Test')
+        u2 = User.objects.create_user(email="u2@test.com", password="tp", first_name='Test')
         
         r1 = self.client.post(self.list_url, {'tenant': self.shop_a.id, 'user': u1.id, 'role': ShopRole.STAFF})
         self.assertEqual(r1.status_code, status.HTTP_201_CREATED)
@@ -211,7 +211,7 @@ class TenantMemberAPITest(APITestCase):
     # LIFECYCLE
     def test_inactive_user_cannot_be_added(self):
         self.client.force_authenticate(user=self.shop_a_admin)
-        u = User.objects.create_user(email="inactive@test.com", password="tp", is_active=False)
+        u = User.objects.create_user(email="inactive@test.com", password="tp", is_active=False, first_name='Test')
         r = self.client.post(self.list_url, {'tenant': self.shop_a.id, 'user': u.id, 'role': ShopRole.STAFF})
         self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
         

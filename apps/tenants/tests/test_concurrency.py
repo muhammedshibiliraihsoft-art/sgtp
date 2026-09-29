@@ -10,16 +10,16 @@ User = get_user_model()
 class T302ConcurrencyTests(TransactionTestCase):
     def setUp(self):
         from apps.tenants.models import Tenant, Supplier
-        supplier = Supplier.objects.first()
+        supplier, _ = Supplier.objects.get_or_create(singleton_lock=True)
         self.shop = Tenant.objects.create(name="Test Shop", slug="test-shop", supplier=supplier, max_users=2)
-        self.user = User.objects.create_superuser(email="admin@test.com", password="pw")
+        self.user = User.objects.create_superuser(email="admin@test.com", password="pw", first_name='Main', phone='+96550000000')
 
     def test_concurrent_capacity_race(self):
         """F-06: Real concurrency proof. Verify final membership count never exceeds max_users."""
         # Create users to be added concurrently
-        u1 = User.objects.create_user(email="u1@test.com", password="pw")
-        u2 = User.objects.create_user(email="u2@test.com", password="pw")
-        u3 = User.objects.create_user(email="u3@test.com", password="pw")
+        u1 = User.objects.create_user(email="u1@test.com", password="pw", first_name='Test')
+        u2 = User.objects.create_user(email="u2@test.com", password="pw", first_name='Test')
+        u3 = User.objects.create_user(email="u3@test.com", password="pw", first_name='Test')
         users = [u1, u2, u3]
         
         def create_membership(user, results_list, idx):
@@ -50,4 +50,3 @@ class T302ConcurrencyTests(TransactionTestCase):
         self.assertEqual(TenantMember.objects.filter(tenant=self.shop).count(), 2)
         self.assertEqual(len(successes), 2)
         self.assertEqual(len(fails), 1)
-

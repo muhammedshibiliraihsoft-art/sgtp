@@ -9,7 +9,7 @@ class InvalidUserPhone(ValueError):
 
 def normalize_user_phone(value):
     """Return a valid E.164 number; never infer a region for national input."""
-    if value is None or value == "":
+    if value is None or (isinstance(value, str) and not value.strip()):
         return None
     if not isinstance(value, str) or not value.strip().startswith("+"):
         raise InvalidUserPhone("Enter an international phone number with country code.")

@@ -74,7 +74,7 @@ class TenantMember(BaseModel):
         ]
 
     def __str__(self):
-        return f"{self.user.email} - {self.tenant.name} ({self.get_role_display()})"
+        return f"{self.user.full_name} - {self.tenant.name} ({self.get_role_display()})"
 
     def clean(self):
         super().clean()

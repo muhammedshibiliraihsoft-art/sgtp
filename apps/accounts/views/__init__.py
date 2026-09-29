@@ -34,8 +34,10 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from apps.tenants.permissions import IsMainSupplierAdmin
 from ..models import User
+from ..identity import normalize_email
 from ..permissions import PasswordChangeGate
 from ..security import set_password_and_revoke_sessions
+from ..security import generate_initial_password
 from ..serializers import (
     EmailOrPhoneTokenObtainPairSerializer,
     PasswordChangeSerializer,
@@ -71,6 +73,7 @@ def clear_refresh_cookie(response):
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    http_method_names = ["get", "post", "put", "patch", "head", "options"]
 
     def get_queryset(self):
         """Limit user enumeration to the Main Supplier Admin and self."""
@@ -99,6 +102,8 @@ class UserViewSet(viewsets.ModelViewSet):
             classes = [IsAuthenticated, PasswordChangeGate]
         elif self.action == "password_change":
             classes = [IsAuthenticated]
+        elif self.action == "reset_credentials":
+            classes = [IsMainSupplierAdmin, PasswordChangeGate]
         else:
             classes = [IsAuthenticated, PasswordChangeGate]
         return [permission() for permission in classes]
@@ -115,14 +120,44 @@ class UserViewSet(viewsets.ModelViewSet):
         return response
 
     def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        if not request.user.is_superuser:
-            return Response(
-                {"detail": "User deletion is restricted."},
-                status=status.HTTP_403_FORBIDDEN,
+        return Response(
+            {"detail": "Global User deletion is not available."},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
+
+    @extend_schema(
+        request=None,
+        responses={
+            200: inline_serializer(
+                name="AdminCredentialResetResponse",
+                fields={
+                    "user_code": serializers.CharField(),
+                    "temporary_password": serializers.CharField(),
+                },
             )
-        self.perform_destroy(instance)
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        },
+        description="Main Supplier only. Returns one temporary credential with no-store headers.",
+    )
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="reset-credentials",
+        permission_classes=[IsMainSupplierAdmin, PasswordChangeGate],
+        throttle_classes=[AuthRateThrottle],
+    )
+    def reset_credentials(self, request, pk=None):
+        user = self.get_object()
+        temporary_password = generate_initial_password(user)
+        set_password_and_revoke_sessions(
+            user, temporary_password, must_change=True
+        )
+        response = Response(
+            {"user_code": user.user_code, "temporary_password": temporary_password},
+            status=status.HTTP_200_OK,
+        )
+        response["Cache-Control"] = "no-store"
+        response["Pragma"] = "no-cache"
+        return response
 
     @action(
         detail=False,
@@ -258,8 +293,8 @@ class CustomTokenRefreshView(TokenRefreshView):
 def password_reset_request(request):
     serializer = PasswordResetRequestSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    email = User.objects.normalize_email(serializer.validated_data["email"].strip())
-    user = User.objects.filter(email__iexact=email, is_active=True).first()
+    email = normalize_email(serializer.validated_data.get("email"))
+    user = User.objects.filter(email=email, is_active=True).first() if email else None
     if user and getattr(settings, "PASSWORD_RESET_URL", ""):
         uid = urlsafe_base64_encode(str(user.pk).encode())
         token = PasswordResetTokenGenerator().make_token(user)
@@ -278,6 +313,7 @@ def password_reset_request(request):
         status=status.HTTP_200_OK,
     )
     response["Cache-Control"] = "no-store"
+    response["Pragma"] = "no-cache"
     return response
 
 
@@ -298,7 +334,7 @@ def password_reset_confirm(request):
     token = request.data.get("token", "")
     try:
         user_id = force_str(urlsafe_b64decode(uid.encode()))
-        user = User.objects.get(pk=user_id, is_active=True)
+        user = User.objects.get(pk=user_id, is_active=True, email__isnull=False)
     except (
         ValueError,
         TypeError,

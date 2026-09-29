@@ -18,7 +18,8 @@ class T302AAccountTests(TestCase):
         cache.clear()
         self.client = APIClient()
         self.admin = User.objects.create_superuser(
-            email="main@example.test", password="AdminPass-934!"
+            email="main@example.test", password="AdminPass-934!",
+            first_name="Main", phone="+96550000999",
         )
 
     def test_phone_login_uses_same_user_and_uuid(self):
@@ -26,6 +27,7 @@ class T302AAccountTests(TestCase):
             email="phone@example.test",
             password="ExistingPass-934!",
             phone="+96550000000",
+            first_name="Test",
         )
         response = self.client.post(
             "/api/v1/auth/login/",
@@ -39,19 +41,22 @@ class T302AAccountTests(TestCase):
 
     def test_phone_is_unique_and_optional_for_existing_users(self):
         user = User.objects.create_user(
-            email="no-phone@example.test", password="ExistingPass-934!"
+            email="no-phone@example.test", password="ExistingPass-934!",
+            first_name='Test',
         )
         self.assertIsNone(user.phone)
         User.objects.create_user(
             email="phone-one@example.test",
             password="ExistingPass-934!",
             phone="+96550000000",
+            first_name="Test",
         )
         with self.assertRaises(IntegrityError), transaction.atomic():
             User.objects.create_user(
                 email="phone-two@example.test",
                 password="ExistingPass-934!",
                 phone="+96550000000",
+                first_name="Test",
             )
 
     def test_locale_fallback_uses_only_an_authorized_shop_default(self):
@@ -64,7 +69,8 @@ class T302AAccountTests(TestCase):
 
     def test_password_reset_token_expires(self):
         user = User.objects.create_user(
-            email="expired@example.test", password="ExistingPass-934!"
+            email="expired@example.test", password="ExistingPass-934!",
+            first_name='Test',
         )
         generator = PasswordResetTokenGenerator()
         with (
@@ -76,7 +82,8 @@ class T302AAccountTests(TestCase):
 
     def test_admin_controls_phone_lifecycle_and_profile_preferences(self):
         user = User.objects.create_user(
-            email="lifecycle-phone@example.test", password="ExistingPass-934!"
+            email="lifecycle-phone@example.test", password="ExistingPass-934!",
+            first_name='Test',
         )
         self.client.force_authenticate(user=self.admin)
         response = self.client.patch(
@@ -104,14 +111,14 @@ class T302AAccountTests(TestCase):
 
     def test_anonymous_account_creation_is_denied(self):
         response = self.client.post(
-            "/api/v1/auth/users/", {"email": "new@example.test"}
+            "/api/v1/auth/users/", {"email": "new@example.test", "first_name": "New"}
         )
         self.assertIn(response.status_code, (401, 403))
 
     def test_admin_created_initial_password_is_one_time_and_gated(self):
         self.client.force_authenticate(user=self.admin)
         response = self.client.post(
-            "/api/v1/auth/users/", {"email": "new@example.test"}
+            "/api/v1/auth/users/", {"email": "new@example.test", "first_name": "New"}
         )
         self.assertEqual(response.status_code, 201, response.data)
         self.assertEqual(response["Cache-Control"], "no-store")
@@ -153,7 +160,8 @@ class T302AAccountTests(TestCase):
     )
     def test_email_reset_is_generic_single_use_and_revokes_sessions(self):
         user = User.objects.create_user(
-            email="reset@example.test", password="ExistingPass-934!"
+            email="reset@example.test", password="ExistingPass-934!",
+            first_name='Test',
         )
         logged_in = self.client.post(
             "/api/v1/auth/login/",
@@ -223,10 +231,12 @@ class T302AShopSettingsTests(TestCase):
         cache.clear()
         self.client = APIClient()
         self.user = User.objects.create_user(
-            email="shop-reader@example.test", password="ExistingPass-934!"
+            email="shop-reader@example.test", password="ExistingPass-934!",
+            first_name='Test',
         )
         self.admin = User.objects.create_superuser(
-            email="shop-admin@example.test", password="AdminPass-934!"
+            email="shop-admin@example.test", password="AdminPass-934!",
+            first_name='Main', phone='+96550000001',
         )
         supplier = Supplier.objects.get(singleton_lock=True)
         self.shop = Tenant.objects.create(

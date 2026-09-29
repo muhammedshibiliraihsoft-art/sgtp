@@ -67,7 +67,7 @@ class ErrorEnvelopeTests(TestCase):
         # We need an authenticated user to reach the viewset
         from django.contrib.auth import get_user_model
         User = get_user_model()
-        user = User.objects.create_user(email='test500@test.com', password='pw')
+        user = User.objects.create_user(email='test500@test.com', password='pw', first_name='Test')
         self.client.force_authenticate(user=user)
         
         response = self.client.get('/api/v1/tenants/')
@@ -154,7 +154,7 @@ class ThrottlingTests(TestCase):
     @patch('rest_framework.throttling.ScopedRateThrottle.allow_request')
     def test_logout_endpoint_is_throttled(self, mock_allow_request, mock_wait):
         """Logout endpoint should return 429 after exceeding the auth scope limit."""
-        user = User.objects.create_user(email='throttle_logout@example.com', password='password123')
+        user = User.objects.create_user(email='throttle_logout@example.com', password='password123', first_name='Test')
         self.client.force_authenticate(user=user)
         
         mock_allow_request.side_effect = [True, True, False]

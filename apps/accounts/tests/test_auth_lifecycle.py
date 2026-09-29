@@ -19,7 +19,8 @@ class AuthLifecycleTest(TestCase):
         self.client = APIClient(enforce_csrf_checks=True)
         self.user = User.objects.create_user(
             email='lifecycle@example.com',
-            password='testpass123'
+            password='testpass123',
+            first_name='Test',
         )
 
     def get_valid_login_cookies(self):

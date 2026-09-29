@@ -155,7 +155,7 @@ New business rules require:
 ### BR-ACC-001 — User Identity Preservation
 **Status:** SUPERSEDED by BR-ACC-003–BR-ACC-005 (2026-09-29)
 **Historical rule:** User UUID remains the primary identity and email remains required. Phone is an additional international identifier, normalized to E.164. Existing users without a phone remain valid; migrations must not fabricate phone values.
-**Current rule:** UUID remains the internal permanent database identity. A system-generated permanent User ID is the universal human-usable login identifier. Email and phone are optional for normal Shop Users and, when registered, may be alternative identifiers. See BR-ACC-003–BR-ACC-005. Implementation is pending T3-04A.
+**Current rule:** UUID remains the internal permanent database identity. A system-generated permanent User ID is the universal human-usable login identifier. Email and phone are optional for normal Shop Users and, when registered, may be alternative identifiers. Implemented locally by T3-04A; publication remains pending.
 
 ### BR-LOC-001 — Supported V1 Locales and Direction
 **Status:** CONFIRMED
@@ -195,7 +195,7 @@ New business rules require:
 
 ### BR-AUTH-001 — Email-or-Phone Login to One User Identity
 **Status:** CONFIRMED
-**Rule:** A User authenticates through one `identifier + password` flow. The identifier may be the permanent User ID, or a registered email/phone when present. Every identifier resolves to the same global User UUID and never creates a separate identity. Email-only existing login compatibility must be preserved through remediation. Normal Users need no email or phone to log in by User ID. Admin-grade contact requirements are governed by BR-ACC-006. Implementation is pending T3-04A.
+**Rule:** A User authenticates through one `identifier + password` flow. The identifier may be the permanent User ID, or a registered email/phone when present. Every identifier resolves to the same global User UUID and never creates a separate identity. Email-only existing login compatibility is preserved. Normal Users need no email or phone to log in by User ID. Admin-grade contact requirements are governed by BR-ACC-006. Implemented locally by T3-04A.
 
 ### BR-PHONE-001 — User Login Phone Uniqueness and Representation
 **Status:** CONFIRMED
@@ -219,7 +219,7 @@ New business rules require:
 
 ### BR-PASS-003 — Email-Based Password Recovery
 **Status:** CONFIRMED
-**Rule:** Admin-grade accounts with a registered email may use secure, expiring, single-use email recovery with generic responses that do not reveal account existence. A normal User without email recovery uses a controlled global-account reset process under Main Supplier/global User management. Shop Admins must not reset another User's global password. Phone, SMS, and WhatsApp recovery are not part of V1. Implementation is pending T3-04A.
+**Rule:** Admin-grade accounts with a registered email may use secure, expiring, single-use email recovery with generic responses that do not reveal account existence. A normal User without email recovery uses a controlled global-account reset process under Main Supplier/global User management. Shop Admins must not reset another User's global password. Phone, SMS, and WhatsApp recovery are not part of V1. Implemented locally by T3-04A.
 
 ### BR-PASS-004 — Revoke Refresh Sessions After Credential Change
 **Status:** CONFIRMED
@@ -247,23 +247,27 @@ These rules are approved target behavior, not claims about current code. Impleme
 
 ### BR-ACC-003 — One Global User Across Shops
 **Status:** CONFIRMED
-**Rule:** One person has one global User UUID and may hold separate memberships in multiple Shops. Role and lifecycle belong to each membership. Duplicate User accounts must not be created merely because a person works in another Shop. Implementation/compatibility verification is pending T3-04A/T3-04B.
+**Rule:** One person has one global User UUID and may hold separate memberships in multiple Shops. Role and lifecycle belong to each membership. Duplicate User accounts must not be created merely because a person works in another Shop. UUID-preserving identity implementation is local in T3-04A; membership compatibility remains T3-04B validation.
 
 ### BR-ACC-004 — Permanent Human-Usable User ID
 **Status:** CONFIRMED
-**Rule:** Every User has a system-generated, globally unique, permanent, role-neutral and Shop-neutral User ID. It is the universal human-usable login identifier and must not encode mutable role, Shop, or brand meaning. Preserve UUID as internal database identity. Implementation and safe existing-user backfill are pending T3-04A.
+**Rule:** Every User has a system-generated, globally unique, permanent, role-neutral and Shop-neutral User ID. It is the universal human-usable login identifier and must not encode mutable role, Shop, or brand meaning. Preserve UUID as internal database identity. Implemented locally by T3-04A; existing-user migration is guarded by a name/contact/email preflight.
 
 ### BR-ACC-005 — Normal User Contact Optionality
 **Status:** CONFIRMED
-**Rule:** A normal Shop User requires User ID and password; email and phone are optional. Registered email or phone may be an alternative login identifier for the same UUID. Never fabricate contact data. Implementation is pending T3-04A.
+**Rule:** A normal Shop User requires User ID and password; email and phone are optional. Registered email or phone may be an alternative login identifier for the same UUID. Never fabricate contact data. Implemented locally by T3-04A.
 
 ### BR-ACC-006 — Admin-Grade Account Contacts
 **Status:** CONFIRMED
-**Rule:** An active Shop ADMIN and the Main Supplier/Main Admin require User ID, password, email, and phone. Promotion to active Shop ADMIN must be rejected unless contacts satisfy this rule. Required contacts must not be removed while the User is an active Shop ADMIN in any Shop. No OTP/SMS/WhatsApp/2FA provider is implied. Implementation is pending T3-04A/T3-04B.
+**Rule:** An active Shop ADMIN and the Main Supplier/Main Admin require User ID, password, email, and phone. T3-04A implements Main Supplier account validation and prevents required-contact removal while a User has an active ADMIN membership. Promotion to active Shop ADMIN must be rejected unless contacts satisfy this rule; that membership lifecycle enforcement remains T3-04B. No OTP/SMS/WhatsApp/2FA provider is implied.
 
 ### BR-ACC-007 — Global Account and Credential Authority
 **Status:** CONFIRMED
-**Rule:** Public signup remains disabled. Main Supplier/global account administration controls global User creation and credential reset. Shop Admins may manage permitted membership records but cannot create global User accounts, enumerate the global User directory, or reset another User's global password. Exact User-ID lookup for membership addition returns only User ID and display name. Implementation is pending T3-04A/T3-04B.
+**Rule:** Public signup remains disabled. Main Supplier/global account administration controls global User creation and credential reset. Shop Admins may manage permitted membership records but cannot create global User accounts, enumerate the global User directory, or reset another User's global password. Exact User-ID lookup for membership addition returns only User ID and display name; this remains T3-05. T3-04A implements the account creation/reset foundation locally.
+
+### BR-ACC-008 — Human Display Name
+**Status:** CONFIRMED
+**Rule:** `first_name` is required and nonblank after trimming; `last_name` is optional. Display name is `first_name` or `first_name + " " + last_name` when present. Do not add a separate `display_name` field or use email, phone, UUID, or User ID as a normal display fallback. Preflight existing users and never fabricate names. Implemented locally by T3-04A; migration stops if existing rows lack a usable first name.
 
 ### BR-MEM-008 — Membership-Scoped Access Role
 **Status:** CONFIRMED

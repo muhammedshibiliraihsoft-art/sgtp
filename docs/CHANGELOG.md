@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-09-29 — T3-04A Global Identity / User-ID / Authentication
+
+- Implemented the confirmed global identity foundation locally: generated permanent User ID, canonical optional email/phone identity for normal users, required trimmed first name, alias-based authentication, contact safeguards, controlled credential reset, and hard-delete denial.
+- Added a preflight/backfill migration that refuses unsafe legacy rows rather than fabricating names or contacts; added identity, authentication, API, and migration-preservation regression coverage. Existing UUID primary keys, JWT UUID identity, memberships, and audit references are preserved.
+- Read-only local database preflight found no existing User/superuser/Shop rows or email/name issues. After preflight, the local PostgreSQL database successfully applied required tenant migrations and `accounts.0004_t304a_global_identity`; no production database was accessed.
+- Focused identity/authentication suite: 29 passed; T3-02A compatibility regression: 10 passed. Full PostgreSQL-backed application suite: 167 passed (155 warnings); repository validator PASS; 14 validator tests passed; Django system/deployment checks, migration drift, OpenAPI validation, Black and Flake8 for newly added Python modules, and `git diff --check` passed. A broader Flake8 run over touched legacy files still reports findings and is not reported as clean.
+- Local-only, uncommitted/unpushed; GitHub CI has not run. T3-04B and later tasks remain unstarted and unauthorized.
+
 ## 2026-09-28 — T3-04 Scoped Querysets and Object Permissions
 
 - Updated `TenantScopedMixin` to require authorized T3-03 context, verify actor/URL/compatibility alias consistency, filter by the trusted Shop, and force Shop ownership on create/update.

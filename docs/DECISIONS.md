@@ -87,7 +87,7 @@ Human-approved V1 decisions, recorded as confirmed rules in `docs/BUSINESS_RULES
 
 This 2026-09-28 entry records a documentation/business-rule lock and did not itself implement the rules, disable the public create endpoint, create migrations, or authorize T3-02A or T3-03. T3-02A was later separately confirmed and implemented. Currency changes after financial history remain a separate business decision.
 
-**Supersession note (2026-09-29):** The historical statement that email remains required is superseded by the approved Phase 3 business architecture rebaseline below. UUID remains the internal identity, but a permanent User ID becomes the universal login identifier; normal Shop Users may omit email and phone. This is a target rule pending T3-04A, not current implemented behavior. T3-02A's email/phone login compatibility and security lifecycle remain protected during migration.
+**Supersession note (2026-09-29):** The historical statement that email remains required is superseded by the approved Phase 3 business architecture rebaseline below. UUID remains the internal identity, but a permanent User ID becomes the universal login identifier; normal Shop Users may omit email and phone. T3-04A implements this locally; it is not yet published. T3-02A's email/phone login compatibility and security lifecycle remain protected.
 
 ## 2026-09-28 — Clarify company and product naming
 
@@ -102,7 +102,7 @@ Company: BiRKy. Technical/internal project: SGTP. Customer-facing product brand:
 
 ## 2026-09-29 — Approve Phase 3 global identity, membership authority, and Work Function model
 
-This business architecture rebaseline is approved target behavior. It does not claim implementation; repository code remains email-centric and has no User ID or Work Function model. See `docs/BUSINESS_RULES.md` and Phase 3 remediation tasks T3-04A–T3-04C for ownership.
+This business architecture rebaseline records approved target behavior. At decision time it did not claim implementation. T3-04A now implements the identity portion locally; no Work Function model exists. See `docs/BUSINESS_RULES.md` and Phase 3 remediation tasks T3-04A–T3-04C for ownership.
 
 - **Permanent User ID:** Email cannot be universal because ordinary Shop employees may not have or need email. Every global User receives a permanent, system-generated, globally unique, human-usable User ID, while UUID remains the internal database identity. The ID is role-, Shop-, and brand-neutral.
 - **One identity across Shops:** The same person may work in multiple Shops. Duplicate accounts would split credentials, audit attribution, and history. One global User therefore has separate Shop membership identities, each with its own role/lifecycle.
@@ -115,3 +115,13 @@ This business architecture rebaseline is approved target behavior. It does not c
 - **Migration safety:** Later remediation must preserve UUIDs, password hashes, existing emails, memberships, and approved session semantics; generate unique User IDs without fabricating contacts or duplicating accounts. Migration strategy must be based on repository/data analysis in the implementation task.
 
 These decisions supersede conflicting earlier target assumptions, including required email, globally discoverable Shops, unresolved Shop deletion semantics, and unrestricted max_users reduction. They do not authorize implementation or alter T3-03/T3-04 context/isolation contracts.
+
+## 2026-09-29 — Approve T3-04A display-name rule
+
+- `first_name` is required and nonblank after trimming; `last_name` is optional.
+- Human display name is `first_name` or `first_name + " " + last_name` when last name is present.
+- Do not add a separate `display_name` field or fall back to email, phone, UUID, or User ID for a valid account.
+- Existing records must be preflighted. Never fabricate a name; stop migration for approved real-data remediation if a usable first name is missing.
+- This decision resolves the T3-04A display-name question and does not itself authorize implementation.
+
+**Implementation note (2026-09-29):** T3-04A has been implemented locally and is undergoing validation; publication/CI status is not implied.

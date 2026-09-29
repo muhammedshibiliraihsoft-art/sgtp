@@ -79,10 +79,11 @@ class PermissionsAndScopingTest(TestCase):
         self.supplier = Supplier.objects.get(singleton_lock=True)
         self.shop_a = self.make_shop("Shop A", "proof-shop-a")
         self.shop_b = self.make_shop("Shop B", "proof-shop-b")
-        self.user1 = User.objects.create_user(email="user1@test.com", password="pw")
-        self.user2 = User.objects.create_user(email="user2@test.com", password="pw")
+        self.user1 = User.objects.create_user(email="user1@test.com", password="pw", first_name='Test')
+        self.user2 = User.objects.create_user(email="user2@test.com", password="pw", first_name='Test')
         self.main_supplier = User.objects.create_superuser(
-            email="main@test.com", password="pw"
+            email="main@test.com", password="pw",
+            first_name='Main', phone='+96550000000',
         )
         self.member(self.user1, self.shop_a, ShopRole.ADMIN)
         self.member(self.user1, self.shop_b, ShopRole.VIEWER)

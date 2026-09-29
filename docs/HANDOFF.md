@@ -9,15 +9,22 @@ CI evidence: GitHub Actions Project State Validation succeeded for the published
 
 ## Current task
 
-T3-REBASELINE-01-PUBLISH — completed. The documentation-only T3-REBASELINE-01 changes are committed and pushed to `main`; GitHub Actions Project State Validation succeeded for the published checkpoint. No application code, migration, dependency, endpoint, permission behavior, frontend, staging, or Phase 4 implementation was changed.
+T3-04A — implementation and local validation are complete. Task was explicitly confirmed. No commit or push has been made; there is no CI result for this diff.
 
 ## Current state and next gate
 
-- Approved target policy is recorded in `docs/BUSINESS_RULES.md` and `docs/DECISIONS.md`; it is not a statement of implemented behavior.
-- Current code remains email-required and has no permanent User ID or Work Functions. Current membership role is per Shop, but the one-to-two active ADMIN invariant is not implemented.
+- T3-04A implements permanent generated `user_code`, optional email/phone for normal Users, required trimmed `first_name`, unified User ID/email/phone login, controlled Main Supplier credential reset, account contact safeguards, and global User hard-delete denial.
+- UUID remains the internal database and JWT `user_id` identity. Existing membership and audit references are preserved. T3-04B/C and T3-05 behavior is not implemented.
 - Approved ordinary-Shop visibility, Shop deactivation/no-delete, and max_users lower-bound rules are pending T3-05 implementation.
-- Next recommended task: T3-04A — Global identity/User-ID/authentication remediation. NOT STARTED / NOT AUTHORIZED; prepare its separate task plan and wait for exact `CONFIRM TASK T3-04A`.
-- Then T3-04B membership/Admin invariants, T3-04C Work-Function foundation, T3-05 Shop/API/Admin hardening, and T3-05A staging, each individually gated. Do not begin any automatically.
+- Next candidate: T3-04B — membership/Admin invariants. It is not confirmed or authorized; do not begin automatically.
+
+## Tests and checks
+
+- Focused identity/authentication suite: 29 passed; T3-02A compatibility regressions: 10 passed. Full pytest suite: 167 passed (155 warnings) against the local PostgreSQL test database. One earlier run was interrupted by the stopped local PostgreSQL process; the existing service was restarted without resetting its data, and a clean complete rerun passed.
+- Repository validator: PASS (167 tests discovered); validator tests: 14 passed. `manage.py check` and `DJANGO_ENV=prod manage.py check --deploy`: PASS; `makemigrations --check --dry-run`: no changes detected; OpenAPI validation: PASS; `git diff --check`: PASS.
+- Read-only local PostgreSQL preflight found 0 Users, 0 superusers, and 0 Shops, with no unusable names, blank emails, or case-insensitive duplicate email groups. Then the normal local migration command applied T3-04A and its tenant prerequisites successfully. The migration regression test separately verifies preservation of representative legacy identity, password, membership, and audit references.
+- Black and Flake8 pass for all six newly added Python modules. A broader Flake8 run over touched legacy files still reports style/unused-import findings, so whole touched-file lint is not clean. GitHub CI has not run for this local diff.
+- T3-04A changes remain uncommitted and unpushed. No commit or push has been made.
 
 ## T3-REBASELINE-01 validation
 
@@ -123,7 +130,7 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 ## Phase 3+ Deferred Implementations
 
 - `BaseModelWithTenant.tenant` remains nullable. T3-03 establishes request context and T3-04 provides reusable query/object isolation primitives; future concrete Shop-owned endpoints must adopt and verify those primitives.
-- The starter is not yet the target product: Clients, Related Persons, Designs, Measurements, Materials, production stages, billing, reports/PDFs, frontend, persistent storage, workers, complete audit capture, monitoring, and end-to-end validation remain unimplemented. T3-03's pushed baseline passed GitHub Actions run #19. T3-04 is now complete and published (current evidence is in the handoff header); T3-04A–C, T3-05, and later work remain unimplemented and individually gated.
+- The starter is not yet the target product: Clients, Related Persons, Designs, Measurements, Materials, production stages, billing, reports/PDFs, frontend, persistent storage, workers, complete audit capture, monitoring, and end-to-end validation remain unimplemented. T3-03's pushed baseline passed GitHub Actions run #19. T3-04 is complete and published (current evidence is in the handoff header); T3-04A is implemented and validated locally but unpublished; T3-04B/C, T3-05, and later work remain unimplemented and individually gated.
 - The target requires React/Vite/Tailwind, but the starter has only an empty `frontend/` placeholder. English/ar-KW/Bangla/Urdu localization, RTL/LTR, and Light/Dark/System are planned V1 requirements, not implemented.
 - Tenant context is implemented as URL-path based (`/api/v1/shops/{shop_id}/...`); T3-04 primitives are available, and each future Shop-owned endpoint must apply them to queries and objects.
 - Related Person billing ownership is approved as Primary Client ownership and must be implemented/tested in Phase 5.
