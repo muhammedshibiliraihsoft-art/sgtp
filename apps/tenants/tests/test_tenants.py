@@ -12,10 +12,13 @@ class TenantModelTest(TestCase):
     def setUp(self):
         self.supplier = Supplier.objects.get(singleton_lock=True)
         self.owner_shop = Tenant.objects.create(
-            name="Owner Shop", slug="owner-shop-model-test", max_users=10,
+            name="Owner Shop",
+            slug="owner-shop-model-test",
+            max_users=10,
             supplier=self.supplier,
         )
-        self.user = create_test_user(owning_shop=self.owner_shop,
+        self.user = create_test_user(
+            owning_shop=self.owner_shop,
             email="test@example.com",
             password="testpass123",
             first_name="Test",
@@ -51,20 +54,38 @@ class TenantModelTest(TestCase):
         self.assertEqual(str(tenant), "Test Tenant")
 
     def test_tenant_user_count(self):
-        """Test tenant user count property"""
+        """ACTIVE and INACTIVE memberships consume capacity; REMOVED does not."""
         tenant = Tenant.objects.create(
             name="Test Tenant",
             slug="test-tenant",
-            max_users=10,
+            max_users=2,
             created_by=self.user,
             supplier=self.supplier,
         )
+        active_user = create_test_user(
+            owning_shop=tenant, email="tenant-active@example.test", first_name="Active"
+        )
+        inactive_user = create_test_user(
+            owning_shop=tenant,
+            email="tenant-inactive@example.test",
+            first_name="Inactive",
+        )
+        removed_user = create_test_user(
+            owning_shop=tenant,
+            email="tenant-removed@example.test",
+            first_name="Removed",
+        )
+        TenantMember.objects.create(tenant=tenant, user=active_user, role="STAFF")
+        TenantMember.objects.create(
+            tenant=tenant, user=inactive_user, role="STAFF", is_active=False
+        )
+        removed = TenantMember.objects.create(
+            tenant=tenant, user=removed_user, role="STAFF", is_active=False
+        )
+        removed.delete()
 
-        # Initially 0 users
-        self.assertEqual(tenant.user_count, 0)
-
-        # Note: In a real implementation, you'd associate users with tenants
-        # This is a placeholder for when that relationship is established
+        self.assertEqual(tenant.user_count, 2)
+        self.assertTrue(tenant.is_at_user_limit)
 
 
 class TenantAPITest(TestCase):
@@ -95,7 +116,7 @@ class TenantAPITest(TestCase):
         }
 
     def test_list_tenants_authenticated(self):
-        """Test listing tenants as authenticated user"""
+        """Authenticated users do not receive a global Shop directory."""
         self.client.force_authenticate(user=self.user)
         Tenant.objects.create(
             name="Test Tenant",
@@ -107,7 +128,7 @@ class TenantAPITest(TestCase):
 
         response = self.client.get("/api/v1/tenants/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(len(response.data["results"]), 0)
 
     def test_list_tenants_unauthenticated(self):
         """Test listing tenants without authentication"""
@@ -117,9 +138,7 @@ class TenantAPITest(TestCase):
     def test_create_tenant_as_admin(self):
         """Test creating tenant as admin user"""
         self.client.force_authenticate(user=self.admin_user)
-        response = self.client.post(
-            "/api/v1/tenants/", self.tenant_data, format="json"
-        )
+        response = self.client.post("/api/v1/tenants/", self.tenant_data, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
         self.assertTrue(Tenant.objects.filter(slug="test-tenant").exists())
@@ -134,14 +153,12 @@ class TenantAPITest(TestCase):
     def test_create_tenant_as_regular_user(self):
         """Test creating tenant as regular user (should fail)"""
         self.client.force_authenticate(user=self.user)
-        response = self.client.post(
-            "/api/v1/tenants/", self.tenant_data, format="json"
-        )
+        response = self.client.post("/api/v1/tenants/", self.tenant_data, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_tenant_stats(self):
-        """Test getting tenant statistics"""
+    def test_foreign_tenant_stats_are_non_disclosing(self):
+        """Unrelated authenticated users cannot discover a Shop through stats."""
         self.client.force_authenticate(user=self.user)
         tenant = Tenant.objects.create(
             name="Test Tenant",
@@ -152,10 +169,7 @@ class TenantAPITest(TestCase):
         )
 
         response = self.client.get(f"/api/v1/tenants/{tenant.id}/stats/")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("user_count", response.data)
-        self.assertIn("max_users", response.data)
-        self.assertIn("is_at_user_limit", response.data)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_activate_tenant(self):
         """Test activating a tenant"""

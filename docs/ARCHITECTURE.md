@@ -131,12 +131,12 @@ Docker        -> development container and production web/db services
 - Every User receives permanent `user_code` (human User ID); UUID remains the internal key/JWT `user_id`. Normal-user email/phone are optional; active Shop ADMIN/Main Supplier accounts require both. T3-04A and the T3-04B remediation are published; the latter enforces membership promotion/lifecycle/cardinality safeguards.
 - Access Role (`ADMIN`, `STAFF`, `VIEWER`) is distinct from membership-scoped Work Functions. Each Shop permits one to two active ADMIN memberships; Main Supplier manages this hierarchy. Shop creation establishes its first ADMIN, and global deactivation must preserve at least one active ADMIN in every affected Shop.
 - Work Functions are normalized zero-to-many assignments on a Shop membership, from the approved controlled V1 catalog. They describe work eligibility, not authorization. Shop ADMINs manage functions only within their own Shop through the Shop-path API. T3-04C implements persistence, transactional set management, and lifecycle history; Phase 4 owns workflow-stage mapping and work assignment.
-- Approved Shop targets: ordinary Users see only authorized Shops; Main Supplier controls Shop activation/deactivation and settings; deactivation preserves Shop data/memberships; no ordinary Shop DELETE; max_users cannot be lowered below current user_count. T3-05 owns implementation after T3-04A–C.
+- Approved Shop rules are implemented and locally validated in T3-05: ordinary Users see only authorized Shops; Main Supplier controls Shop activation/deactivation and settings; deactivation preserves Shop data/memberships; no ordinary Shop DELETE; max_users cannot be lowered below current user_count. Commit/publication and exact-SHA CI remain pending.
 - Preserve the existing explicit `/shops/{shop_id}/...` context, authentication ordering, uniform non-disclosing unavailable-Shop 404, 401 authentication behavior, and T3-04 trusted-context/query/object boundary. A person with accounts in different Shops uses distinct independent accounts; each request still requires explicit authorized Shop context, and no preference/default guess replaces the path context.
 
 ### Current code boundary and approved target
 
-The current `User` model uses email as Django's `USERNAME_FIELD` for Admin/CLI compatibility, but email may be null; `user_code` is the permanent human identifier, `first_name` is required, and ordinary Users have one immutable `owning_shop`. `TenantMember` is constrained to that owning Shop and has a per-membership role. Published T3-04B safeguards enforce the one-to-two active-ADMIN invariant and lifecycle authority. Membership-scoped Work Functions are implemented by T3-04C; broader Shop management remains T3-05.
+The current `User` model uses email as Django's `USERNAME_FIELD` for Admin/CLI compatibility, but email may be null; `user_code` is the permanent human identifier, `first_name` is required, and ordinary Users have one immutable `owning_shop`. `TenantMember` is constrained to that owning Shop and has a per-membership role. Published T3-04B safeguards enforce the one-to-two active-ADMIN invariant and lifecycle authority. Membership-scoped Work Functions are implemented by T3-04C; T3-05 Shop management is implemented and locally validated, with commit/publication and exact-SHA CI pending.
 
 ## Planned cross-cutting V1 presentation and operations
 
@@ -217,7 +217,7 @@ The current `User` model uses email as Django's `USERNAME_FIELD` for Admin/CLI c
 
 ## Phase 1 status and current V1 readiness
 
-Phase 1 foundation implementation is complete. T3-02A, T3-03, T3-04, T3-04A, T3-04B remediation, T3-04B-USER-SCOPE, and T3-04C are published; Project State Validation passed for the T3-04C implementation commit. SGTP V1 is not ready for production. T3-04C must precede T3-05. Business modules and end-to-end workflows remain unimplemented; future endpoints must adopt and verify the T3-04 boundary.
+Phase 1 foundation implementation is complete. T3-02A, T3-03, T3-04, T3-04A, T3-04B remediation, T3-04B-USER-SCOPE, and T3-04C are published; Project State Validation passed for the T3-04C implementation commit. T3-05 is implemented and locally validated but is not yet committed/published. SGTP V1 is not ready for production. Business modules and end-to-end workflows remain unimplemented; future endpoints must adopt and verify the T3-04 boundary.
 
 ## Membership Lifecycle and Rules
 

@@ -4,13 +4,13 @@
 
 Phase 3 is ACTIVE; activation was explicitly confirmed with `CONFIRM PHASE 3`.
 
-Completed foundation tasks include T3-01–T3-04B-USER-SCOPE and T3-04C. The T3-04C implementation commit is published; Project State Validation succeeded for its exact SHA. Derive current `HEAD`/`main` from Git.
+Completed foundation tasks include T3-01–T3-04B-USER-SCOPE and T3-04C. The T3-04C implementation commit is published; Project State Validation succeeded for its exact SHA. T3-05 is active locally after explicit confirmation. Derive current `HEAD`/`main` from Git.
 
 ## Current task
 
-T3-04C is complete, committed, pushed, and CI-green. The exact-SHA successful run is recorded above. No next task is authorized.
+T3-05 is the current confirmed task. Its implementation and required local validation are complete; it remains uncommitted and unpublished pending the publication/CI gate.
 
-Derive current `HEAD`/`main` from Git rather than storing a current SHA in this handoff. Do not start T3-05 or later work; each requires a separate plan and exact task confirmation.
+Derive current `HEAD`/`main` from Git rather than storing a current SHA in this handoff. Implement only T3-05. T3-05A, Phase 4, frontend integration, and deployment remain separately gated.
 
 ## Current state and next gate
 
@@ -20,20 +20,20 @@ Derive current `HEAD`/`main` from Git rather than storing a current SHA in this 
 
 - T3-04A's published generated `user_code`, optional normal-user email/phone, required trimmed `first_name`, alias login, controlled credential reset, contact safeguards, and User hard-delete denial remain in place; UUID remains the database/JWT `user_id` identity.
 - T3-04B remediation routes membership changes through transactional services; enforces immutable membership User/Shop identity, atomic Shop + first ADMIN creation, ADMIN 1–2 cardinality, global User-deactivation authority/invariants, lifecycle rules, safe Django Admin paths, and approved capacity semantics. No migration was added.
-- Approved ordinary-Shop visibility, Shop deactivation/no-delete, and max_users lower-bound rules are pending T3-05 implementation.
+- Approved ordinary-Shop visibility, Shop deactivation/no-delete, and max_users lower-bound rules are implemented and locally validated under T3-05; do not treat the work as published until the task's exact-SHA CI gate succeeds.
 - The approved T3-04B User-Scope decision supersedes the older one-global-User/multiple-Shops target: each ordinary account has one immutable owning Shop; same-real-world people in different Shops use independent accounts. Main Supplier accounts remain global.
 - Published implementation adds `User.owning_shop`, migration `accounts.0005_user_shop_ownership` with historical-membership preflight and database guards, atomic Shop-owned account creation, `/api/v1/shops/{shop_id}/users/`, same-Shop account reset authorization, and regression fixtures/tests.
 - Pre-publication local preflight found zero Users and memberships in the development DB. GitHub CI migration/application validation passed on its disposable PostgreSQL database. Neither establishes shared/staging/production data status; the migration aborts on ordinary Users with multiple or no determinable Shop. Shared/staging/production ownership preflight was NOT PERFORMED; no shared/staging/production migration was applied.
 - Pre-publication local validation: focused account/membership/auth regressions 138 passed; PostgreSQL-backed full suite 192 passed, including four concurrency cases; validator tests 14 passed; Django and migration checks passed; OpenAPI passed with two nonfatal role-enum naming warnings; Black/Flake8 passed on new Python files. GitHub Actions Project State Validation passed for the published exact SHA. Broad lint checks on touched legacy files still report existing style findings; they were not mass-formatted.
-- T3-04C is complete and published with exact-SHA CI green. T3-05, T3-05A, and Phase 4 remain unstarted and unauthorized. Any next task requires its own plan and exact confirmation.
+- T3-04C is complete and published with exact-SHA CI green. T3-05 is active and authorized; T3-05A and Phase 4 remain unstarted and unauthorized.
 
-## Current T3-04C execution
+## T3-04C execution (historical)
 
 - Scope: membership-scoped seven-code Work Function catalog and Shop ADMIN-only same-Shop GET/PUT management. Functions remain eligibility descriptions, not roles or permissions. No Phase 4 mapping, T3-05, frontend, or deployment work is included.
 - Implementation: additive `tenants.0009_membership_work_functions`, normalized relation with current-assignment uniqueness/catalog check, transactional set replacement and soft-deleted history, Shop-first authorization/locking, audit actor attribution, API/OpenAPI contract, and regression tests. Existing membership lifecycle keeps assignments through inactive/reactivated states and valid removal undo; expired undo does not restore membership/function assignments.
 - Tests: focused Work Function model/API/lifecycle/migration/concurrency tests: 19 passed. Full PostgreSQL-backed suite: 211 passed, 172 warnings. The suite includes the PostgreSQL concurrency tests.
 - Checks: repository validator PASS (211 discovered; one earlier invocation could not reach the remote, then a final invocation verified `origin/main` parity); validator tests 14 passed; Django check PASS; `DJANGO_ENV=prod check --deploy` exit 0 with two nonfatal OpenAPI role-enum warnings; migration drift PASS; OpenAPI validation PASS with the same two warnings; Black/Flake8 PASS; `git diff --check` PASS.
-- Publication and exact-SHA CI are verified. Do not start T3-05, T3-05A, Phase 4, frontend, or deployment work.
+- Publication and exact-SHA CI were verified for T3-04C. At that checkpoint T3-05 had not started; current T3-05 status is recorded at the top of this handoff.
 
 ## T3-04B remediation — task-time local validation record
 
@@ -76,7 +76,7 @@ Derive current `HEAD`/`main` from Git rather than storing a current SHA in this 
 - **Next task at that historical point:** T3-05 was the proposed next task; the 2026-09-29 rebaseline supersedes that order with T3-04A–C prerequisites.
 - **Known warning baseline:** Django tests emit existing test-key-length, local staticfiles, and DRF format-converter warnings; these are not T3-03 failures.
 
-## T3-04 verification record
+## T3-04 verification record (historical)
 
 - T3-03 context/membership tests remain covered by the validation matrix. Focused T3-04 permission/scope plus T3-03 context tests: 28 passed.
 - Full suite: 152 passed (144 warnings). Repository validator: PASS, 152 discovered, dirty-tree warning expected. Validator tests: 14 passed. Django system check: PASS. Migration drift: no changes. OpenAPI validation: PASS. Black and Flake8: PASS. `git diff --check`: PASS.

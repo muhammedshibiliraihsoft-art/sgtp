@@ -10,7 +10,7 @@ from rest_framework.test import APIClient
 
 from apps.accounts.models import User
 from apps.accounts.preferences import resolve_locale
-from apps.tenants.models import Supplier, Tenant
+from apps.tenants.models import ShopRole, Supplier, Tenant, TenantMember
 from .factories import create_test_user
 
 
@@ -19,8 +19,10 @@ class T302AAccountTests(TestCase):
         cache.clear()
         self.client = APIClient()
         self.admin = User.objects.create_superuser(
-            email="main@example.test", password="AdminPass-934!",
-            first_name="Main", phone="+96550000999",
+            email="main@example.test",
+            password="AdminPass-934!",
+            first_name="Main",
+            phone="+96550000999",
         )
 
     def test_phone_login_uses_same_user_and_uuid(self):
@@ -42,8 +44,9 @@ class T302AAccountTests(TestCase):
 
     def test_phone_is_unique_and_optional_for_existing_users(self):
         user = create_test_user(
-            email="no-phone@example.test", password="ExistingPass-934!",
-            first_name='Test',
+            email="no-phone@example.test",
+            password="ExistingPass-934!",
+            first_name="Test",
         )
         self.assertIsNone(user.phone)
         create_test_user(
@@ -70,8 +73,9 @@ class T302AAccountTests(TestCase):
 
     def test_password_reset_token_expires(self):
         user = create_test_user(
-            email="expired@example.test", password="ExistingPass-934!",
-            first_name='Test',
+            email="expired@example.test",
+            password="ExistingPass-934!",
+            first_name="Test",
         )
         generator = PasswordResetTokenGenerator()
         with (
@@ -83,8 +87,9 @@ class T302AAccountTests(TestCase):
 
     def test_admin_controls_phone_lifecycle_and_profile_preferences(self):
         user = create_test_user(
-            email="lifecycle-phone@example.test", password="ExistingPass-934!",
-            first_name='Test',
+            email="lifecycle-phone@example.test",
+            password="ExistingPass-934!",
+            first_name="Test",
         )
         self.client.force_authenticate(user=self.admin)
         response = self.client.patch(
@@ -120,10 +125,14 @@ class T302AAccountTests(TestCase):
         self.client.force_authenticate(user=self.admin)
         supplier, _ = Supplier.objects.get_or_create(singleton_lock=True)
         shop = Tenant.objects.create(
-            supplier=supplier, name="Account Shop", slug="t302a-account-shop", max_users=5
+            supplier=supplier,
+            name="Account Shop",
+            slug="t302a-account-shop",
+            max_users=5,
         )
         response = self.client.post(
-            "/api/v1/auth/users/", {"email": "new@example.test", "first_name": "New"}
+            "/api/v1/auth/users/",
+            {"email": "new@example.test", "first_name": "New"}
             | {"shop": str(shop.pk), "role": "STAFF"},
         )
         self.assertEqual(response.status_code, 201, response.data)
@@ -166,8 +175,9 @@ class T302AAccountTests(TestCase):
     )
     def test_email_reset_is_generic_single_use_and_revokes_sessions(self):
         user = create_test_user(
-            email="reset@example.test", password="ExistingPass-934!",
-            first_name='Test',
+            email="reset@example.test",
+            password="ExistingPass-934!",
+            first_name="Test",
         )
         logged_in = self.client.post(
             "/api/v1/auth/login/",
@@ -237,8 +247,10 @@ class T302AShopSettingsTests(TestCase):
         cache.clear()
         self.client = APIClient()
         self.admin = User.objects.create_superuser(
-            email="shop-admin@example.test", password="AdminPass-934!",
-            first_name='Main', phone='+96550000001',
+            email="shop-admin@example.test",
+            password="AdminPass-934!",
+            first_name="Main",
+            phone="+96550000001",
         )
         supplier = Supplier.objects.get(singleton_lock=True)
         self.shop = Tenant.objects.create(
@@ -253,8 +265,12 @@ class T302AShopSettingsTests(TestCase):
         )
         self.user = create_test_user(
             owning_shop=self.shop,
-            email="shop-reader@example.test", password="ExistingPass-934!",
-            first_name='Test',
+            email="shop-reader@example.test",
+            password="ExistingPass-934!",
+            first_name="Test",
+        )
+        TenantMember.objects.create(
+            tenant=self.shop, user=self.user, role=ShopRole.STAFF
         )
 
     def test_regular_user_global_reads_do_not_expose_new_shop_settings(self):

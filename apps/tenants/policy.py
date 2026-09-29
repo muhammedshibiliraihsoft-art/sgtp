@@ -17,9 +17,10 @@ class ShopRolePolicy:
 
     2. Shop Roles:
        Users assigned to a Shop via `TenantMember` receive one of three roles:
-       - ADMIN: Can manage shop settings and other memberships.
+       - ADMIN: Can manage permitted same-Shop non-ADMIN memberships and accounts.
        - STAFF: Standard operational access to shop records (clients, measurements, etc.).
        - VIEWER: Read-only access to shop records.
+       Shop configuration/settings and lifecycle remain Main Supplier-only.
 
     3. External Suppliers:
        External suppliers are business records owned by a Shop. They are NOT users,
@@ -29,12 +30,16 @@ class ShopRolePolicy:
     @staticmethod
     def is_main_supplier_admin(user: Any) -> bool:
         """
-        Main Supplier Admins implicitly have cross-shop authority.
-        In V1, this is mapped to the Django superuser flag.
+        Resolve Main Supplier authority from current persisted User state.
         """
         if not user or not user.is_authenticated or not user.is_active:
             return False
-        return getattr(user, "is_superuser", False)
+        user_id = getattr(user, "pk", None)
+        if not user_id:
+            return False
+        return User.objects.filter(
+            pk=user_id, is_active=True, is_superuser=True
+        ).exists()
 
     @staticmethod
     def is_shop_member(user: Any, tenant_id: Any) -> bool:
@@ -55,11 +60,16 @@ class ShopRolePolicy:
         """Return the selected Shop membership used to authorize request context."""
         if not user or not user.is_authenticated or not user.is_active:
             return None
+        if not User.objects.filter(
+            pk=getattr(user, "pk", None), is_active=True
+        ).exists():
+            return None
 
         from apps.tenants.models import TenantMember
 
         return TenantMember.objects.filter(
             user=user,
+            user__is_active=True,
             tenant_id=tenant_id,
             is_active=True,
             tenant__is_active=True,
@@ -79,13 +89,5 @@ class ShopRolePolicy:
         if not user or not user.is_authenticated or not user.is_active:
             return False
 
-        from apps.tenants.models import TenantMember, ShopRole
-
-        return TenantMember.objects.filter(
-            user=user,
-            tenant_id=tenant_id,
-            role=ShopRole.ADMIN,
-            is_active=True,
-            tenant__is_active=True,
-            deleted__isnull=True,
-        ).exists()
+        membership = ShopRolePolicy.get_active_membership(user, tenant_id)
+        return membership is not None and membership.role == "ADMIN"

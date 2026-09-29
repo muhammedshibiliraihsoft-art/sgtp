@@ -1,8 +1,16 @@
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from ..models import TenantMember
 
+User = get_user_model()
+
 
 class TenantMemberSerializer(serializers.ModelSerializer):
+    user = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(), write_only=True, required=True
+    )
+    user_code = serializers.CharField(source="user.user_code", read_only=True)
+    display_name = serializers.SerializerMethodField()
     user_email = serializers.ReadOnlyField(source="user.email")
     tenant_name = serializers.ReadOnlyField(source="tenant.name")
 
@@ -13,6 +21,8 @@ class TenantMemberSerializer(serializers.ModelSerializer):
             "tenant",
             "tenant_name",
             "user",
+            "user_code",
+            "display_name",
             "user_email",
             "role",
             "is_active",
@@ -20,6 +30,13 @@ class TenantMemberSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at", "is_active"]
+
+    def get_display_name(self, obj):
+        return " ".join(
+            part
+            for part in (obj.user.first_name.strip(), obj.user.last_name.strip())
+            if part
+        )
 
     def validate(self, data):
         """Membership identity is immutable after creation."""

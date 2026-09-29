@@ -243,7 +243,7 @@ New business rules require:
 
 ## 6A. Phase 3 Business Architecture Rebaseline — Approved Target Rules
 
-These rules are approved target behavior, not claims about current code. Implementation ownership is listed per rule; current behavior and compatibility work are tracked in `docs/PROJECT_STATE.md`, `docs/HANDOFF.md`, and the Phase 3 playbook.
+These are authoritative business rules. Implementation status is recorded separately in `docs/PROJECT_STATE.md`, `docs/HANDOFF.md`, and the Phase 3 playbook; status notes below do not alter rule meaning.
 
 ### BR-ACC-003 — One Global User Across Shops (SUPERSEDED)
 **Status:** SUPERSEDED
@@ -287,19 +287,19 @@ These rules are approved target behavior, not claims about current code. Impleme
 
 ### BR-MEM-012 — Membership Capacity Lower Bound
 **Status:** CONFIRMED
-**Rule:** `user_count` remains ACTIVE + INACTIVE memberships; REMOVED memberships do not count. Reject any reduction of `max_users` below current `user_count`; first remove memberships through the approved lifecycle. API and Django Admin must enforce the same rule. Implementation is pending T3-05 after prerequisite remediation.
+**Rule:** `user_count` remains ACTIVE + INACTIVE memberships; REMOVED memberships do not count. Reject any reduction of `max_users` below current `user_count`; first remove memberships through the approved lifecycle. API and Django Admin must enforce the same rule. **Implementation status:** T3-05 is implemented and locally validated; commit/publication and exact-SHA CI remain pending.
 
 ### BR-SHOP-008 — Authorized Shop Visibility
 **Status:** CONFIRMED
-**Rule:** Ordinary Users may discover only Shops for which they have authorized membership/access, including list, detail, search, filters, ordering, pagination, stats, autocomplete, counts, foreign-key traversal and direct IDs. A User with a relevant inactive membership may see that Shop only as disabled/inactive historical context, never as selectable operational context. Main Supplier retains authorized cross-Shop visibility. Preserve T3-03/T3-04 non-disclosure and isolation. Implementation is pending T3-05.
+**Rule:** Ordinary Users may discover only Shops for which they have authorized membership/access, including list, detail, search, filters, ordering, pagination, stats, autocomplete, counts, foreign-key traversal and direct IDs. A User with a relevant inactive membership may see that Shop only as disabled/inactive historical context, never as selectable operational context. Main Supplier retains authorized cross-Shop visibility. Preserve T3-03/T3-04 non-disclosure and isolation. **Implementation status:** T3-05 is implemented and locally validated; commit/publication and exact-SHA CI remain pending.
 
 ### BR-SHOP-009 — Shop Deactivation and Delete
 **Status:** CONFIRMED
-**Rule:** Only Main Supplier manages Shop activation/deactivation. Deactivation preserves Shop data, memberships and history, and makes operational context unavailable until reactivation. V1 does not expose ordinary Shop DELETE; deactivate is the operational shutdown action. Archive is a separate future concept. Implementation is pending T3-05.
+**Rule:** Only Main Supplier manages Shop activation/deactivation. Deactivation preserves Shop data, memberships and history, and makes operational context unavailable until reactivation. V1 does not expose ordinary Shop DELETE; deactivate is the operational shutdown action. Archive is a separate future concept. **Implementation status:** T3-05 is implemented and locally validated; commit/publication and exact-SHA CI remain pending.
 
 ### BR-SHOP-010 — Shop Profile and Management Statistics Visibility
 **Status:** CONFIRMED
-**Rule:** Main Supplier may view Shops cross-Shop. An authorized Shop member may view appropriate profile/contact/address information for that Shop only. Management statistics (`user_count`, `max_users`, capacity state) are limited to Main Supplier and that Shop's ADMIN; they are not exposed to STAFF/VIEWER or foreign Shops. Implementation is pending T3-05.
+**Rule:** Main Supplier may view Shops cross-Shop. An authorized Shop member may view appropriate profile/contact/address information for that Shop only. Management statistics (`user_count`, `max_users`, capacity state) are limited to Main Supplier and that Shop's ADMIN; they are not exposed to STAFF/VIEWER or foreign Shops. **Implementation status:** T3-05 is implemented and locally validated; commit/publication and exact-SHA CI remain pending.
 
 ### BR-FUNC-001 — Work Functions Are Membership-Scoped and Not Permissions
 **Status:** CONFIRMED
