@@ -29,13 +29,15 @@ Phase 6 is complete or explicitly accepted as a dependency; backend API schemas 
 
 **Frontend timing note:** F7-01 and F7-01A are allowed to execute immediately after T3-05A in the overall project dependency sequence, before Phases 4–6, to validate auth/i18n/theme integration early and give the client a usable staging shell. F7-02–F7-05 remain later frontend implementation tasks unless separately re-planned.
 
+**Parallel Frontend Foundation Track:** repository/tooling, app-shell, design-system, responsive/accessibility, i18n/RTL/LTR/theme, and mock/API-boundary preparation may start before T3-05A in the isolated `frontend/parallel-foundation` worktree. This preparation is not F7-01, does not complete Phase 7, does not authorize F7-02–F7-05, and must not implement unstable backend business behavior. F7-01 and F7-01A retain the T3-05A dependency and approved sequencing above. Canonical cross-project docs remain owned primarily by `main`; frontend-specific instructions/docs belong under `/frontend`.
+
 ## 6. Dependencies
 
 Phases 1–5 backend foundations, Phase 6 integration contracts where UI exposure is approved, API schema, auth/token behavior, shop context, and object permissions.
 
 ## 7. Current Repository Assumptions
 
-The repository currently has an empty `frontend/` placeholder and no React implementation. Backend work is the source of truth for authorization and data contracts.
+At the verified starting main baseline, `frontend/` has no tracked React application. Frontend foundation work is developed on the dedicated parallel branch/worktree; the main branch remains the integration source of truth. Backend work is the source of truth for authorization and data contracts.
 
 ## 8. Exact Scope
 

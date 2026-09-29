@@ -10,6 +10,7 @@
 - T3-04A is published at `304e6ec4a6811b0153db4dea1417d24affa11bec`; its GitHub CI passed.
 - Initial T3-04B publication `5e3b1714289e7b5660e1a54d6cb2752b64d54683` failed GitHub Actions Run #36545855022 and was reverted. T3-04B-REMEDIATION-01 was published as the corrective checkpoint; T3-04B-USER-SCOPE is now published with its exact-SHA CI gate green.
 - T3-04B-REMEDIATION-01 and T3-04B-USER-SCOPE were explicitly confirmed, implemented, validated, and published. T3-04C is the next planned task but is NOT STARTED and requires its own plan and explicit confirmation. T3-05, T3-05A, and Phase 4 remain unstarted and unauthorized.
+- The Parallel Frontend Foundation Track is an approved pre-Phase-7 preparation lane, separate from Phase 7/F7-01 completion and its formal dependencies. Its frontend source belongs in an isolated frontend branch/worktree; `main` remains the canonical backend/integration branch and owner of cross-project documentation. Unimplemented APIs/business workflows must remain behind mock adapters.
 
 - Project root: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp`
 - Remote: `https://github.com/muhammedshibiliraihsoft-art/sgtp.git`
@@ -115,7 +116,7 @@
 - The project target is now a complete Supplier-Centric Garment & Tailor Platform, not merely a generic Django/DRF starter.
 - Tailor Management is the core V1 business module, with isolated shop workspaces under a supplier back office.
 - The required end-to-end workflow is documented, but no production-domain modules for clients, designs, measurements, materials, production stages, billing, or reports exist yet.
-- The target requires React/Vite/Tailwind, but the starter contains no frontend implementation; `frontend/` is only an empty placeholder.
+- At this main-branch baseline, the target requires React/Vite/Tailwind but the repository has no tracked frontend application yet. Parallel frontend foundation work is isolated from `main`; the empty-directory/branch implementation state is verified separately by Git.
 - The target requires a service layer, object-level permissions, persistent object storage, background jobs, audit logging, CI, monitoring, and automatic documentation; the starter does not implement these as complete capabilities.
 - T3-03 request-local active-Shop context and T3-04 reusable queryset/object isolation primitives are implemented. Business-resource endpoints do not yet exist and must adopt/test the primitives when added.
 

@@ -14,6 +14,10 @@ Derive `HEAD`/`main` from Git rather than storing a current SHA in this handoff.
 
 ## Current state and next gate
 
+- Parallel development rule: `main` remains the backend/current integration source and canonical documentation owner. Frontend foundation work uses `frontend/parallel-foundation` in sibling worktree `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp-frontend`, with application source only under `/frontend`. Do not edit frontend source in the main worktree or repeatedly edit canonical docs from the frontend branch.
+- The early Parallel Frontend Foundation Track is preparation only, not F7-01 or Phase 7 completion. F7-01/F7-01A remain after T3-05A. Use mock adapters for unstable APIs and preserve backend authorization as the sole authority. Periodically merge `origin/main` into the frontend branch; do not routinely merge unfinished frontend work into main.
+- Ordinary accounts are Shop-owned and must not receive a post-login multi-Shop selector. Main Supplier cross-Shop UX must rely on an authorized backend contract.
+
 - T3-04A's published generated `user_code`, optional normal-user email/phone, required trimmed `first_name`, alias login, controlled credential reset, contact safeguards, and User hard-delete denial remain in place; UUID remains the database/JWT `user_id` identity.
 - T3-04B remediation routes membership changes through transactional services; enforces immutable membership User/Shop identity, atomic Shop + first ADMIN creation, ADMIN 1–2 cardinality, global User-deactivation authority/invariants, lifecycle rules, safe Django Admin paths, and approved capacity semantics. No migration was added.
 - Approved ordinary-Shop visibility, Shop deactivation/no-delete, and max_users lower-bound rules are pending T3-05 implementation.

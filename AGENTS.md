@@ -65,6 +65,15 @@ When implementation changes affect this target, update `docs/PRODUCT_DEFINITION.
 - Localization, RTL/LTR and Light/Dark/System are presentation preferences, never authorization inputs. Resolve authorized Shop context before applying Shop defaults.
 - Never invent listed business policies; record `BUSINESS DECISION REQUIRED` and keep unrelated tasks moving where safe.
 
+### Parallel frontend work ownership
+
+- `main` is the canonical integration branch and primary owner of backend code and cross-project business/architecture documentation.
+- Parallel frontend development uses the same Git repository on `frontend/parallel-foundation`, in the sibling worktree `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp-frontend`. Do not make frontend implementation changes in the `main` worktree.
+- Frontend-owned source and working instructions belong under `frontend/`; do not repeatedly edit canonical `docs/` from the frontend branch. Bring `main` into the frontend branch periodically using normal merges; do not force-push or routinely merge unfinished frontend work into `main`.
+- This Parallel Frontend Foundation Track is preparation only and does not mark Phase 7 or F7-01 complete. Use mocks/adapters for unstable or unimplemented APIs; do not add backend endpoints, Python/Django changes, migrations, or business behavior to satisfy UI needs.
+- Backend contracts remain authoritative for authentication, authorization, Shop ownership, roles, membership, Work Functions, and business rules. Frontend route/role visibility is UX only, never an authorization boundary.
+- Ordinary Users have exactly one immutable owning Shop; do not build a normal-user Shop selector or account-linking flow. Main Supplier cross-Shop operations may be shown only when supported by an authorized backend contract.
+
 ## Phase and task confirmation gate
 
 - A phase confirmation activates the phase only; it does not authorize every task in that phase.

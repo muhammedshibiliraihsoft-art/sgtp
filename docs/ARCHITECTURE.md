@@ -16,6 +16,14 @@ Client → Design → Measurement → Fabric/Material → Production Workflow
                                       Completion → Billing → Reports/History
 ```
 
+## Parallel frontend foundation and ownership
+
+`main` remains the backend/current integration source of truth and the primary owner of canonical project and business documentation. Parallel visual and frontend-foundation work uses the same repository on `frontend/parallel-foundation` in the sibling worktree `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp-frontend`; frontend implementation lives under `/frontend` and must not be developed in the main worktree. Frontend-specific instructions and handoff belong under `frontend/`.
+
+This early Parallel Frontend Foundation Track is not Phase 7 completion and does not move or waive F7-01 dependencies. It may establish tooling, application/layout shells, design tokens/components, accessibility/responsive/i18n/RTL/LTR/theme foundations, and mock-first API adapters. Unimplemented backend features remain interfaces/mocks, not live contracts. Backend/main is synchronized into the frontend branch through deliberate normal merges; unfinished frontend work is not routinely merged into main. Frontend navigation and role presentation are UX only; all authorization remains backend-enforced.
+
+Ordinary Users have one immutable owning Shop and do not select among multiple Shop memberships after login. Main Supplier is the global authority; any cross-Shop navigation depends on a real authorized backend contract and does not imply ordinary-user multi-Shop identity.
+
 ## V1 Supplier / Shop / External Supplier Model
 
 The following business model is locked for V1:

@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-09-29 — Parallel Frontend Foundation Track governance
+
+- Documented a separate same-repository frontend branch/worktree strategy while retaining `main` as the backend/integration source and canonical cross-project documentation owner.
+- Approved early frontend foundation preparation as distinct from Phase 7/F7-01 completion; F7-01/F7-01A retain their existing T3-05A sequencing. Frontend work must be mock-first for unfinished APIs, backend-authorized, and respect the single-owning-Shop ordinary-account model.
+
 ## 2026-09-29 — T3-04B User-Scope remediation (published)
 
 - Replaced the superseded one-global-User/multi-Shop assumption with one immutable owning Shop per ordinary account; separate Shops require distinct accounts even for the same real-world person.
