@@ -4,13 +4,13 @@
 
 Phase 3 is ACTIVE; activation was explicitly confirmed with `CONFIRM PHASE 3`.
 
-Completed foundation tasks: T3-01, T3-02, T3-02-REMEDIATION, T3-02A, T3-03, and T3-04. T3-04A is published at `304e6ec4a6811b0153db4dea1417d24affa11bec` with green CI. Initial T3-04B commit `5e3b1714289e7b5660e1a54d6cb2752b64d54683` failed Run #36545855022 and was reverted. T3-04B remediation and T3-04B-USER-SCOPE are published. User-Scope commit `ed845e89d7656bf9d9e1e24f03b79e7de0d3bd9c` passed exact-SHA Project State Validation run `36591864481`.
+Completed foundation tasks: T3-01, T3-02, T3-02-REMEDIATION, T3-02A, T3-03, T3-04, T3-04A, T3-04B remediation, and T3-04B-USER-SCOPE are published. T3-04C is explicitly confirmed, implemented locally, and focused-test validated; full validation and publication are in progress. Derive Git baseline from the repository; no T3-04C commit or CI result is claimed yet.
 
 ## Current task
 
-T3-04B-USER-SCOPE is committed and published; exact-SHA Project State Validation succeeded in GitHub Actions run `36591864481`.
+T3-04C is the current confirmed task. Implementation and local validation are complete; focused model/API/lifecycle/migration/concurrency tests pass (19 passed), and the full PostgreSQL-backed suite passes (211 passed). Commit, push, and exact-SHA CI remain pending.
 
-Derive `HEAD`/`main` from Git rather than storing a current SHA in this handoff. T3-04C is the next planned task, NOT STARTED, and requires its own plan and explicit task confirmation.
+Derive `HEAD`/`main` from Git rather than storing a current SHA in this handoff. Do not start T3-05 or later work. T3-04C publication is not complete until pushed exact-SHA GitHub Actions succeeds.
 
 ## Current state and next gate
 
@@ -25,7 +25,15 @@ Derive `HEAD`/`main` from Git rather than storing a current SHA in this handoff.
 - Published implementation adds `User.owning_shop`, migration `accounts.0005_user_shop_ownership` with historical-membership preflight and database guards, atomic Shop-owned account creation, `/api/v1/shops/{shop_id}/users/`, same-Shop account reset authorization, and regression fixtures/tests.
 - Pre-publication local preflight found zero Users and memberships in the development DB. GitHub CI migration/application validation passed on its disposable PostgreSQL database. Neither establishes shared/staging/production data status; the migration aborts on ordinary Users with multiple or no determinable Shop. Shared/staging/production ownership preflight was NOT PERFORMED; no shared/staging/production migration was applied.
 - Pre-publication local validation: focused account/membership/auth regressions 138 passed; PostgreSQL-backed full suite 192 passed, including four concurrency cases; validator tests 14 passed; Django and migration checks passed; OpenAPI passed with two nonfatal role-enum naming warnings; Black/Flake8 passed on new Python files. GitHub Actions Project State Validation passed for the published exact SHA. Broad lint checks on touched legacy files still report existing style findings; they were not mass-formatted.
-- T3-04C, T3-05, T3-05A, and Phase 4 remain unstarted and unauthorized. Any next task requires its own plan and exact confirmation.
+- T3-04C is the active confirmed task; focused/full tests and local validation pass, but publication/CI are pending. T3-05, T3-05A, and Phase 4 remain unstarted and unauthorized. Any next task requires its own plan and exact confirmation.
+
+## Current T3-04C execution
+
+- Scope: membership-scoped seven-code Work Function catalog and Shop ADMIN-only same-Shop GET/PUT management. Functions remain eligibility descriptions, not roles or permissions. No Phase 4 mapping, T3-05, frontend, or deployment work is included.
+- Implementation: additive `tenants.0009_membership_work_functions`, normalized relation with current-assignment uniqueness/catalog check, transactional set replacement and soft-deleted history, Shop-first authorization/locking, audit actor attribution, API/OpenAPI contract, and regression tests. Existing membership lifecycle keeps assignments through inactive/reactivated states and valid removal undo; expired undo does not restore membership/function assignments.
+- Tests: focused Work Function model/API/lifecycle/migration/concurrency tests: 19 passed. Full PostgreSQL-backed suite: 211 passed, 172 warnings. The suite includes the PostgreSQL concurrency tests.
+- Checks: repository validator PASS (211 discovered; one earlier invocation could not reach the remote, then a final invocation verified `origin/main` parity); validator tests 14 passed; Django check PASS; `DJANGO_ENV=prod check --deploy` exit 0 with two nonfatal OpenAPI role-enum warnings; migration drift PASS; OpenAPI validation PASS with the same two warnings; Black/Flake8 PASS; `git diff --check` PASS.
+- Publication remains pending at this handoff update; exact-SHA GitHub Actions must be verified after push. Do not start T3-05, T3-05A, Phase 4, frontend, or deployment work.
 
 ## T3-04B remediation — task-time local validation record
 
@@ -34,7 +42,7 @@ Derive `HEAD`/`main` from Git rather than storing a current SHA in this handoff.
 - Repository validator: PASS (183 discovered); validator tests: 14 passed. Django system/deployment checks, OpenAPI schema validation, Black, Flake8, and `git diff --check`: PASS.
 - `makemigrations --check --dry-run`: no model changes detected. The statements above describe validation at that task-time checkpoint; publication/current status is recorded at the top of this handoff.
 
-## Current T3-04B-USER-SCOPE execution
+## T3-04B-USER-SCOPE execution (historical)
 
 - Task is explicitly confirmed, implemented, validated, committed, and published; T3-04C is not started and must not be begun without its own task plan and confirmation.
 - Confirmed design: one immutable owning Shop per ordinary account; different Shops use distinct accounts even for the same real-world person. Main Supplier accounts remain global with no owning Shop. Existing account attachment/movement is rejected.

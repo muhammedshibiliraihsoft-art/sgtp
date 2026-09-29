@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-09-29 — T3-04C Work-Function foundation (local validation complete; publication pending)
+
+- Added normalized membership-scoped persistence for the approved seven-code catalog, additive migration with no backfill, Shop ADMIN-only GET/PUT management, Shop isolation, actor attribution, transactional set replacement, and soft-deleted assignment history.
+- Added model/API/lifecycle/migration and PostgreSQL concurrency regression coverage. Focused tests: 19 passed; full PostgreSQL-backed suite: 211 passed (172 warnings). Repository validator, validator tests, Django/migration/OpenAPI checks, Black, Flake8, and diff check passed. Publication and exact-SHA CI are pending; this entry does not claim remote CI success.
+- Updated current product-definition, decision, API, architecture, database, security, business-rule, phase, development-plan, project-state, and handoff descriptions. Phase 4 stage/function mapping remains deferred; T3-05 and later tasks have not started.
+
 ## 2026-09-29 — Parallel Frontend Foundation Track governance
 
 - Documented a separate same-repository frontend branch/worktree strategy while retaining `main` as the backend/integration source and canonical cross-project documentation owner.

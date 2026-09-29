@@ -13,7 +13,7 @@ Phase 2 passed; explicit `CONFIRM PHASE 3`; product definition and architecture 
 ## 6. Dependencies
 User/auth, permission primitives, PostgreSQL, service boundaries.
 ## 7. Current Repository Assumptions
-The Phase 3 foundation through T3-04A, T3-04B membership/Admin remediation, and T3-04B-USER-SCOPE are published. User-Scope commit `ed845e89d7656bf9d9e1e24f03b79e7de0d3bd9c` passed exact-SHA Project State Validation run `36591864481`. It supersedes the prior multi-Shop global User assumption while preserving URL-path Shop context and reusable T3-04 scoped query/object primitives. T3-04C remains NOT STARTED and requires its own plan and explicit task confirmation.
+The Phase 3 foundation through T3-04B-USER-SCOPE is published. T3-04C was explicitly confirmed and is implemented locally; full validation/publication is pending. It preserves URL-path Shop context and reusable T3-04 scoped query/object primitives. T3-05 remains gated on T3-04C completion and its own task confirmation.
 ## 8. Exact Scope
 Main Supplier / Main Admin, Supplier Back Office, Shop, UserShop/membership, roles, context, scoping, authorized Main Supplier visibility, admin/back-office API, isolation tests. External Supplier records are Shop-owned non-user records and are not authenticated participants in this phase.
 ## 9. Out of Scope
@@ -21,7 +21,7 @@ Clients, designs, production, billing, reports, AI, frontend screens.
 ## 10. Architecture Context
 Exactly one Main Supplier / Main Admin owns/oversees multiple Shops. Shop is the tenant/workspace boundary; Shop-scoped records require active membership and object-level authorization. External Suppliers are separate Shop-owned business records, not users, tenants, members, or roles.
 ## 11. Implementation Sequence
-Completed foundation: entity model → membership/roles → T3-02A account/preferences → T3-03 URL context → T3-04 query/object isolation. Current sequence: T3-04A, T3-04B safeguards, and T3-04B-USER-SCOPE are published → T3-04C Work-Function foundation is next planned (NOT STARTED; separately gated) → T3-05 Shop/API/Admin hardening → T3-05A Staging Backend Foundation. Each task requires separate exact confirmation.
+Completed foundation: entity model → membership/roles → T3-02A account/preferences → T3-03 URL context → T3-04 query/object isolation. Current sequence: T3-04A, T3-04B safeguards, and T3-04B-USER-SCOPE are published → T3-04C Work-Function foundation is locally implemented and undergoing full validation/publication → T3-05 Shop/API/Admin hardening → T3-05A Staging Backend Foundation. Each task requires separate exact confirmation.
 ## 12. Detailed Task List
 
 ### T3-01 Supplier and Shop entities
@@ -81,7 +81,7 @@ Objective: enforce membership/Admin invariants under the then-approved global-id
 ### T3-04B-USER-SCOPE — Shop-owned ordinary account remediation (PUBLISHED)
 This completed task introduces immutable owning-Shop identity for ordinary Users, same-Shop membership consistency, Shop-scoped account creation and reset authority, and atomic creation of a Shop with a new first ADMIN account. It preserves UUID/JWT identity, password/session protections, existing membership/Admin invariants, and the T3-03/T3-04 security boundaries. Its migration preflights historical memberships (including removed rows), assigns only a uniquely determinable Shop, and stops with actual affected UUIDs for multi-Shop/unowned accounts. This task does not implement Work Functions or broader Shop visibility APIs. Commit `ed845e89d7656bf9d9e1e24f03b79e7de0d3bd9c` passed GitHub Actions run `36591864481`.
 
-### T3-04C — Membership-scoped Work-Function foundation (PLANNED)
+### T3-04C — Membership-scoped Work-Function foundation (IMPLEMENTED LOCALLY; PUBLICATION PENDING)
 Objective: model and manage zero-to-many approved Work Functions per membership without conflating functions with access roles or permissions. Why: staffing differs across Shops while the V1 workflow remains fixed. Dependencies: published T3-04B safeguards and completed/published T3-04B-USER-SCOPE; exact task confirmation. Files/areas: membership/domain model, services, Shop-local admin/API contracts, migrations/tests and docs. Database: analyze normalized representation, constraints, indexes, history, fresh re-add, inactive preservation and five-second undo semantics; do not choose arrays/JSON/bit flags without implementation analysis. Catalog: SALES, MEASUREMENT, CUTTING, STITCHING, FINISHING, QC, CASHIER only; CHECK-to-function mapping is a Phase 4 decision if needed. Authority: Shop ADMINs manage functions for memberships only in that Shop, including ADMIN memberships; function assignment never grants endpoint permission. Tests: zero/one/many, separate accounts/functions by Shop for the same real-world person, cross-Shop denial, non-permission behavior, inactive/reactivation/undo/removal/fresh re-add lifecycle. Out of scope: workflow stages, work assignment, builder, custom catalog. DoD: membership function foundation and lifecycle are isolated, auditable and regression-tested.
 
 ### T3-05 Back-office/shop APIs and admin
@@ -100,7 +100,7 @@ Documentation: `docs/ENVIRONMENTS.md`, runbook, state/handoff/changelog.
 DoD: reviewed and verified staging backend is isolated and operational. Phase 9 later reuses this same staging environment for formal release-candidate validation after appropriate reset/reconfiguration. This task does not authorize deployment without its own confirmation.
 
 ## 13. Task Dependency Graph
-`T3-01 (complete) → T3-02 (complete) → T3-02-REMEDIATION (closed) → T3-02A (complete) → T3-03 (complete) → T3-04 (complete) → T3-04A (published) → T3-04B-REMEDIATION-01 (published) → T3-04B-USER-SCOPE (published; exact-SHA CI green) → T3-04C (planned; not started) → T3-05 → T3-05A`.
+`T3-01 (complete) → T3-02 (complete) → T3-02-REMEDIATION (closed) → T3-02A (complete) → T3-03 (complete) → T3-04 (complete) → T3-04A (published) → T3-04B-REMEDIATION-01 (published) → T3-04B-USER-SCOPE (published; exact-SHA CI green) → T3-04C (local implementation; publication pending) → T3-05 → T3-05A`.
 ## 14. Expected Files / Folders
 Target `backend/apps/shops/`, `backend/apps/accounts/`, `backend/core/{tenancy,permissions,services}/`, migrations/tests; current `apps/tenants/` and `apps/accounts/` are starter transition inputs only.
 ## 15. Expected New Files

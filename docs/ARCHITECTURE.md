@@ -129,14 +129,14 @@ Docker        -> development container and production web/db services
 - `TenantMember` references the ordinary account's owning Shop, and the database guards ownership/membership consistency. Shop creation atomically creates a new first ADMIN account and membership. Main Supplier may create any Shop role; a Shop ADMIN may create STAFF/VIEWER and reset current same-Shop STAFF/VIEWER credentials only.
 - Existing T3-04B membership/Admin safeguards remain in force. T3-04B-USER-SCOPE is published at `ed845e89d7656bf9d9e1e24f03b79e7de0d3bd9c` with exact-SHA CI success in run `36591864481`.
 - Every User receives permanent `user_code` (human User ID); UUID remains the internal key/JWT `user_id`. Normal-user email/phone are optional; active Shop ADMIN/Main Supplier accounts require both. T3-04A and the T3-04B remediation are published; the latter enforces membership promotion/lifecycle/cardinality safeguards.
-- Access Role (`ADMIN`, `STAFF`, `VIEWER`) is distinct from membership-scoped Work Functions. Each Shop permits one to two active ADMIN memberships; Main Supplier manages this hierarchy. Shop creation establishes its first ADMIN, and global deactivation must preserve at least one active ADMIN in every affected Shop. Work Functions remain T3-04C scope.
-- Work Functions are zero-to-many assignments on a Shop membership, from the approved controlled V1 catalog. They describe work eligibility, not authorization. Shop ADMINs manage functions only within their own Shop. T3-04C owns this foundation; Phase 4 owns workflow-stage mapping and work assignment.
+- Access Role (`ADMIN`, `STAFF`, `VIEWER`) is distinct from membership-scoped Work Functions. Each Shop permits one to two active ADMIN memberships; Main Supplier manages this hierarchy. Shop creation establishes its first ADMIN, and global deactivation must preserve at least one active ADMIN in every affected Shop.
+- Work Functions are normalized zero-to-many assignments on a Shop membership, from the approved controlled V1 catalog. They describe work eligibility, not authorization. Shop ADMINs manage functions only within their own Shop through the Shop-path API. T3-04C implements persistence, transactional set management, and lifecycle history; Phase 4 owns workflow-stage mapping and work assignment.
 - Approved Shop targets: ordinary Users see only authorized Shops; Main Supplier controls Shop activation/deactivation and settings; deactivation preserves Shop data/memberships; no ordinary Shop DELETE; max_users cannot be lowered below current user_count. T3-05 owns implementation after T3-04A–C.
 - Preserve the existing explicit `/shops/{shop_id}/...` context, authentication ordering, uniform non-disclosing unavailable-Shop 404, 401 authentication behavior, and T3-04 trusted-context/query/object boundary. A person with accounts in different Shops uses distinct independent accounts; each request still requires explicit authorized Shop context, and no preference/default guess replaces the path context.
 
 ### Current code boundary and approved target
 
-The current `User` model uses email as Django's `USERNAME_FIELD` for Admin/CLI compatibility, but email may be null; `user_code` is the permanent human identifier, `first_name` is required, and ordinary Users have one immutable `owning_shop`. `TenantMember` is constrained to that owning Shop and has a per-membership role. Published T3-04B safeguards enforce the one-to-two active-ADMIN invariant and lifecycle authority. Membership-scoped Work Functions remain T3-04C; broader Shop management remains T3-05.
+The current `User` model uses email as Django's `USERNAME_FIELD` for Admin/CLI compatibility, but email may be null; `user_code` is the permanent human identifier, `first_name` is required, and ordinary Users have one immutable `owning_shop`. `TenantMember` is constrained to that owning Shop and has a per-membership role. Published T3-04B safeguards enforce the one-to-two active-ADMIN invariant and lifecycle authority. Membership-scoped Work Functions are implemented by T3-04C; broader Shop management remains T3-05.
 
 ## Planned cross-cutting V1 presentation and operations
 
@@ -217,7 +217,7 @@ The current `User` model uses email as Django's `USERNAME_FIELD` for Admin/CLI c
 
 ## Phase 1 status and current V1 readiness
 
-Phase 1 foundation implementation is complete. T3-02A, T3-03, T3-04, T3-04A, and the T3-04B remediation are published. Require Project State Validation SUCCESS for the exact T3-04B publication SHA before proceeding to T3-04C. SGTP V1 is not ready for production. T3-04C must precede T3-05. Business modules and end-to-end workflows remain unimplemented; future endpoints must adopt and verify the T3-04 boundary.
+Phase 1 foundation implementation is complete. T3-02A, T3-03, T3-04, T3-04A, and the T3-04B remediation are published. T3-04C is implemented locally and its exact-SHA Project State Validation is pending publication. SGTP V1 is not ready for production. T3-04C must precede T3-05. Business modules and end-to-end workflows remain unimplemented; future endpoints must adopt and verify the T3-04 boundary.
 
 ## Membership Lifecycle and Rules
 

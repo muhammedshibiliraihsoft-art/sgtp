@@ -123,6 +123,7 @@ These decisions supersede conflicting earlier target assumptions, including requ
 - Shop creation atomically creates its first Shop-owned ADMIN account and membership. Main Supplier may create any approved Shop role; a Shop ADMIN may create only STAFF/VIEWER in their own Shop and reset only current same-Shop STAFF/VIEWER credentials.
 - Existing multi-Shop or unowned ordinary-account data must be preflighted. Migration stops with actual affected identifiers; do not merge accounts or fabricate ownership.
 - This decision supersedes only the multi-Shop global User identity and account-attachment assumptions above. It does not authorize T3-04C or otherwise change role names, Shop isolation, or approved ADMIN lifecycle rules.
+- **Implementation status:** Membership-scoped Work Function persistence and Shop-local management are implemented locally under T3-04C. Phase 4 workflow-stage mapping remains deferred and is not resolved by this implementation.
 
 ## 2026-09-29 — Approve T3-04A display-name rule
 
