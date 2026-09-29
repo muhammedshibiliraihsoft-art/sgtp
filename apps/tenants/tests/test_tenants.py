@@ -79,7 +79,7 @@ class TenantAPITest(TestCase):
         self.supplier = Supplier.objects.get(singleton_lock=True)
         self.tenant_data = {
             'name': 'Test Tenant',
-            'slug': 'test-tenant',
+            'slug': 'test-tenant', 'first_admin_user': self.admin_user.id,
             'contact_email': 'admin@test-tenant.com',
             'max_users': 20
         }

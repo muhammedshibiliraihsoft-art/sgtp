@@ -17,7 +17,7 @@ class ShopRolePolicy:
 
     2. Shop Roles:
        Users assigned to a Shop via `TenantMember` receive one of three roles:
-       - ADMIN: Can manage shop settings and other memberships.
+       - ADMIN: Can manage non-ADMIN memberships. Shop settings remain Main Supplier only in V1.
        - STAFF: Standard operational access to shop records (clients, measurements, etc.).
        - VIEWER: Read-only access to shop records.
 

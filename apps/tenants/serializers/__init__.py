@@ -35,9 +35,13 @@ class TenantAdminSerializer(TenantSerializer):
 
 class TenantCreateSerializer(TenantAdminSerializer):
     """Serializer for creating tenants with required fields."""
+    from apps.accounts.models import User
+    first_admin_user = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(), write_only=True
+    )
 
     class Meta(TenantAdminSerializer.Meta):
-        fields = TenantAdminSerializer.Meta.fields
+        fields = TenantAdminSerializer.Meta.fields + ['first_admin_user']
         extra_kwargs = {
             'name': {'required': True},
             'slug': {'required': True},

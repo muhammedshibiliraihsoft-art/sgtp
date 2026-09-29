@@ -4,10 +4,10 @@
 
 - Phase 1 and Phase 2 are complete.
 - Phase 3 is ACTIVE; activation was explicitly confirmed with `CONFIRM PHASE 3`.
-- Completed Phase 3 tasks: T3-01, T3-02, T3-02-REMEDIATION, T3-02A, T3-03, T3-04, and T3-04A (local implementation; validation recorded below).
-- Current task: T3-04A — implementation and local validation are complete; not committed or pushed.
+- Completed Phase 3 tasks: T3-01, T3-02, T3-02-REMEDIATION, T3-02A, T3-03, T3-04, T3-04A, and T3-04B (local implementation).
+- Current task: T3-04B - implementation and local validation are complete; not committed or pushed.
 - T3-04 is COMPLETE, COMMITTED, and PUSHED on `main`. Live verification on 2026-09-29: local `HEAD`, `origin/main`, and remote `refs/heads/main` matched; derive the current SHA from Git.
-- T3-04A was explicitly confirmed and implemented locally. T3-04B, T3-04C, T3-05, and T3-05A have not started and are not authorized.
+- T3-04B was explicitly confirmed and implemented locally. T3-04C, T3-05, and T3-05A have not started and are not authorized.
 - Published baseline CI evidence remains historical for the pre-T3-04A commit; this local T3-04A change has not been pushed and has no CI result.
 
 - Project root: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp`

@@ -19,7 +19,7 @@ class TenantAdmin(admin.ModelAdmin):
     search_fields = ['name', 'slug', 'domain', 'contact_email']
     prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ['id', 'created_at', 'updated_at', 'user_count_display']
-    
+
     fieldsets = (
         ('Basic Information', {
             'fields': ('supplier', 'name', 'slug', 'domain', 'is_active')
@@ -32,7 +32,7 @@ class TenantAdmin(admin.ModelAdmin):
         }),
         ('Address', {
             'fields': (
-                'address_line1', 'address_line2', 'city', 
+                'address_line1', 'address_line2', 'city',
                 'state', 'postal_code', 'country'
             ),
             'classes': ('collapse',)
@@ -42,13 +42,13 @@ class TenantAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         })
     )
-    
+
     def is_active_display(self, obj):
         if obj.is_active:
             return format_html('<span style="color: green;">✓ Active</span>')
         return format_html('<span style="color: red;">✗ Inactive</span>')
     is_active_display.short_description = 'Status'
-    
+
     def user_count_display(self, obj):
         count = obj.user_count
         max_users = obj.max_users
@@ -59,11 +59,11 @@ class TenantAdmin(admin.ModelAdmin):
         else:
             color = 'green'
         return format_html(
-            '<span style="color: {};">{}/{}</span>', 
+            '<span style="color: {};">{}/{}</span>',
             color, count, max_users
         )
     user_count_display.short_description = 'Users'
-    
+
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('supplier')
 
@@ -71,8 +71,17 @@ from .models import TenantMember
 
 class TenantMemberInline(admin.TabularInline):
     model = TenantMember
-    extra = 1
+    extra = 0
     autocomplete_fields = ['user']
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 # Add the inline to TenantAdmin
 TenantAdmin.inlines = [TenantMemberInline]
@@ -83,4 +92,13 @@ class TenantMemberAdmin(admin.ModelAdmin):
     list_filter = ['role', 'is_active', 'tenant']
     search_fields = ['user__email', 'user__first_name', 'user__last_name', 'tenant__name']
     autocomplete_fields = ['tenant', 'user']
-    readonly_fields = ['id', 'created_at', 'updated_at']
+    readonly_fields = ['id', 'created_at', 'updated_at', 'role', 'is_active', 'deleted']
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

@@ -123,7 +123,7 @@ class T302RemediationTests(TestCase):
 
         r2 = self.client.post(f"/api/v1/memberships/{mem.id}/undo_remove/")
         self.assertEqual(r2.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(r2.data['detail'], "Membership is not removed.")
+        self.assertEqual(str(r2.data), "Membership is not removed.")
 
     def test_capacity_counts(self):
         """29, 30, 31, 32. user_count includes ACTIVE and INACTIVE, excludes REMOVED."""
@@ -150,7 +150,7 @@ class T302RemediationTests(TestCase):
         self.client.force_authenticate(user=User.objects.create_superuser(email="admin@test.com", password="pw", first_name='Main', phone='+96550000004'))
         r = self.client.post(f"/api/v1/memberships/{mem.id}/undo_remove/")
         self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("maximum user limit", r.data['detail'])
+        self.assertIn("maximum user limit", str(r.data))
 
     def test_capacity_undo_succeeds_when_capacity_freed(self):
         """Undo succeeds if capacity was full but becomes available within 5 seconds."""
@@ -335,7 +335,7 @@ class T302RemediationTests(TestCase):
 
         r2 = self.client.post(f"/api/v1/memberships/{mem3.id}/reactivate/")
         self.assertEqual(r2.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("maximum user limit", r2.data['detail'])
+        self.assertIn("maximum user limit", str(r2.data))
 
         # C. Failed reactivation leaves membership INACTIVE.
         mem3.refresh_from_db()
