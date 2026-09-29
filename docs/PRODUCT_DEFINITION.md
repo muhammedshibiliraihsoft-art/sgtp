@@ -41,7 +41,7 @@ This section is authoritative for V1 business meaning:
 
 ## V1 Account and Preference Policy
 
-- Confirmed business rules are maintained canonically in `docs/BUSINESS_RULES.md`. Public self-registration is prohibited. Each ordinary account is permanently owned by exactly one Shop; the same real-world person in different Shops uses independent accounts. Main Supplier creates Shop-owned accounts with any approved role; a Shop ADMIN creates only same-Shop STAFF/VIEWER accounts and resets only current same-Shop STAFF/VIEWER credentials. **Published in T3-04A:** UUID identity plus permanent generated User ID, required first name/optional last name display name, optional normal-user email/phone, User ID/email/phone login aliases, admin-grade contact safeguards, generated controlled recovery, and preserved JWT/CSRF/refresh lifecycle. Original T3-04B membership lifecycle/cardinality safeguards and the T3-04B-USER-SCOPE ownership/scoped-account changes are published; User-Scope commit `ed845e89d7656bf9d9e1e24f03b79e7de0d3bd9c` passed GitHub Actions run `36591864481`. Exact User-ID membership lookup and broader Shop management remain T3-05; the membership Work-Function foundation is implemented and published under T3-04C, with exact-SHA CI success. T3-03 URL-path Shop context and T3-04 query/object primitives remain implemented and must not be weakened.
+- Confirmed business rules are maintained canonically in `docs/BUSINESS_RULES.md`. Public self-registration is prohibited. Each ordinary account is permanently owned by exactly one Shop; the same real-world person in different Shops uses independent accounts. Main Supplier creates Shop-owned accounts with any approved role; a Shop ADMIN creates only same-Shop STAFF/VIEWER accounts and resets only current same-Shop STAFF/VIEWER credentials. **Published in T3-04A:** UUID identity plus permanent generated User ID, required first name/optional last name display name, optional normal-user email/phone, User ID/email/phone login aliases, admin-grade contact safeguards, generated controlled recovery, and preserved JWT/CSRF/refresh lifecycle. Original T3-04B membership lifecycle/cardinality safeguards and the T3-04B-USER-SCOPE ownership/scoped-account changes are published; User-Scope commit `ed845e89d7656bf9d9e1e24f03b79e7de0d3bd9c` passed GitHub Actions run `36591864481`. T3-05 implements and publishes exact User-ID membership lookup and broader Shop management; its exact-SHA CI passed in run `36614638187`. The membership Work-Function foundation is implemented and published under T3-04C with exact-SHA CI success. T3-03 URL-path Shop context and T3-04 query/object primitives remain implemented and must not be weakened.
 
 ### Approved identity, membership, and staffing target
 
@@ -55,7 +55,7 @@ This section is authoritative for V1 business meaning:
 
 - Ordinary Users discover only Shops for which they have authorized membership; Main Supplier retains authorized cross-Shop visibility.
 - Only Main Supplier manages Shop activation/deactivation and Shop defaults. Deactivation preserves records and memberships; ordinary Shop DELETE is not a V1 operation. A future Archive is separate.
-- `user_count` remains ACTIVE + INACTIVE memberships; reject lowering `max_users` below that count. These rules are approved but T3-05 implementation remains pending its prerequisites.
+- `user_count` remains ACTIVE + INACTIVE memberships; reject lowering `max_users` below that count. These rules are implemented by T3-05, published, and exact-SHA CI green.
 
 ## Core V1 business flow
 

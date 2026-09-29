@@ -287,19 +287,19 @@ These are authoritative business rules. Implementation status is recorded separa
 
 ### BR-MEM-012 — Membership Capacity Lower Bound
 **Status:** CONFIRMED
-**Rule:** `user_count` remains ACTIVE + INACTIVE memberships; REMOVED memberships do not count. Reject any reduction of `max_users` below current `user_count`; first remove memberships through the approved lifecycle. API and Django Admin must enforce the same rule. **Implementation status:** T3-05 is implemented and locally validated; commit/publication and exact-SHA CI remain pending.
+**Rule:** `user_count` remains ACTIVE + INACTIVE memberships; REMOVED memberships do not count. Reject any reduction of `max_users` below current `user_count`; first remove memberships through the approved lifecycle. API and Django Admin must enforce the same rule. **Implementation status:** T3-05 is implemented and published; exact-SHA Project State Validation run `36614638187` succeeded for commit `3d21a0943006cd866bc19bc728cbec05daae1630`.
 
 ### BR-SHOP-008 — Authorized Shop Visibility
 **Status:** CONFIRMED
-**Rule:** Ordinary Users may discover only Shops for which they have authorized membership/access, including list, detail, search, filters, ordering, pagination, stats, autocomplete, counts, foreign-key traversal and direct IDs. A User with a relevant inactive membership may see that Shop only as disabled/inactive historical context, never as selectable operational context. Main Supplier retains authorized cross-Shop visibility. Preserve T3-03/T3-04 non-disclosure and isolation. **Implementation status:** T3-05 is implemented and locally validated; commit/publication and exact-SHA CI remain pending.
+**Rule:** Ordinary Users may discover only Shops for which they have authorized membership/access, including list, detail, search, filters, ordering, pagination, stats, autocomplete, counts, foreign-key traversal and direct IDs. A User with a relevant inactive membership may see that Shop only as disabled/inactive historical context, never as selectable operational context. Main Supplier retains authorized cross-Shop visibility. Preserve T3-03/T3-04 non-disclosure and isolation. **Implementation status:** T3-05 is implemented and published; exact-SHA Project State Validation run `36614638187` succeeded for commit `3d21a0943006cd866bc19bc728cbec05daae1630`.
 
 ### BR-SHOP-009 — Shop Deactivation and Delete
 **Status:** CONFIRMED
-**Rule:** Only Main Supplier manages Shop activation/deactivation. Deactivation preserves Shop data, memberships and history, and makes operational context unavailable until reactivation. V1 does not expose ordinary Shop DELETE; deactivate is the operational shutdown action. Archive is a separate future concept. **Implementation status:** T3-05 is implemented and locally validated; commit/publication and exact-SHA CI remain pending.
+**Rule:** Only Main Supplier manages Shop activation/deactivation. Deactivation preserves Shop data, memberships and history, and makes operational context unavailable until reactivation. V1 does not expose ordinary Shop DELETE; deactivate is the operational shutdown action. Archive is a separate future concept. **Implementation status:** T3-05 is implemented and published; exact-SHA Project State Validation run `36614638187` succeeded for commit `3d21a0943006cd866bc19bc728cbec05daae1630`.
 
 ### BR-SHOP-010 — Shop Profile and Management Statistics Visibility
 **Status:** CONFIRMED
-**Rule:** Main Supplier may view Shops cross-Shop. An authorized Shop member may view appropriate profile/contact/address information for that Shop only. Management statistics (`user_count`, `max_users`, capacity state) are limited to Main Supplier and that Shop's ADMIN; they are not exposed to STAFF/VIEWER or foreign Shops. **Implementation status:** T3-05 is implemented and locally validated; commit/publication and exact-SHA CI remain pending.
+**Rule:** Main Supplier may view Shops cross-Shop. An authorized Shop member may view appropriate profile/contact/address information for that Shop only. Management statistics (`user_count`, `max_users`, capacity state) are limited to Main Supplier and that Shop's ADMIN; they are not exposed to STAFF/VIEWER or foreign Shops. **Implementation status:** T3-05 is implemented and published; exact-SHA Project State Validation run `36614638187` succeeded for commit `3d21a0943006cd866bc19bc728cbec05daae1630`.
 
 ### BR-FUNC-001 — Work Functions Are Membership-Scoped and Not Permissions
 **Status:** CONFIRMED

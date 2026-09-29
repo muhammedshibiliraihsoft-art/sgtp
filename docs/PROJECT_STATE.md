@@ -9,7 +9,7 @@
 - T3-04 is COMPLETE, COMMITTED, and PUSHED on `main`. Live verification on 2026-09-29: local `HEAD`, `origin/main`, and remote `refs/heads/main` matched; derive the current SHA from Git.
 - T3-04A is published at `304e6ec4a6811b0153db4dea1417d24affa11bec`; its GitHub CI passed.
 - Initial T3-04B publication `5e3b1714289e7b5660e1a54d6cb2752b64d54683` failed GitHub Actions Run #36545855022 and was reverted. T3-04B-REMEDIATION-01 was published as the corrective checkpoint; T3-04B-USER-SCOPE is now published with its exact-SHA CI gate green.
-- T3-04B-REMEDIATION-01, T3-04B-USER-SCOPE, and T3-04C were explicitly confirmed, implemented, validated, and published. T3-04C exact-SHA CI passed in run `36605653294`. T3-05 is ACTIVE locally after explicit task confirmation; implementation and required local validation are complete, but it is not yet committed or published. T3-05A and Phase 4 remain unstarted and unauthorized.
+- T3-04B-REMEDIATION-01, T3-04B-USER-SCOPE, T3-04C, and T3-05 are explicitly confirmed, implemented, validated, and published. T3-04C exact-SHA CI passed in run `36605653294`; T3-05 is published as commit `3d21a0943006cd866bc19bc728cbec05daae1630`, and exact-SHA Project State Validation run `36614638187` succeeded. T3-05A is the next planned task but remains unstarted and unauthorized; Phase 4 also remains unstarted.
 - The Parallel Frontend Foundation Track is an approved pre-Phase-7 preparation lane, separate from Phase 7/F7-01 completion and its formal dependencies. Its frontend source belongs in an isolated frontend branch/worktree; `main` remains the canonical backend/integration branch and owner of cross-project documentation. Unimplemented APIs/business workflows must remain behind mock adapters.
 
 - Project root: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp`
@@ -19,16 +19,18 @@
 - Target status: SGTP V1 is explicitly defined in `docs/PRODUCT_DEFINITION.md`
 - Starter foundation: exists in the cloned SGTP repository.
 - Phase 1 implementation: **Historical - Complete.**
-- Confirmation status: `CONFIRM TASK T3-05` was received. T3-05 alone is authorized and in progress; no later task is authorized.
-- Current task: T3-05 (implementation/local validation complete; publication and exact-SHA CI pending).
+- Confirmation status: `CONFIRM TASK T3-05` was received and completed. No subsequent task is authorized.
+- Current task: T3-05 (complete, committed, pushed, and exact-SHA CI green).
 - Detailed phase playbooks: 01-10 present.
 - Later-phase decisions: Tenant context is approved as URL-path based (`/shops/{shop_id}/...`), and Related Person billing is owned by the Primary Client.
 - T3-05A (Staging Backend Foundation) and F7-01A (Staging Frontend & Client Review Checkpoint) remain planned only. T3-02A implemented the account/preference data and API foundation; frontend localization, RTL/LTR layout, and full Light/Dark/System UI remain Phase 7 work.
 - At T3-02A completion, email was required and optional unique E.164 phone could authenticate the same UUID account. T3-04A subsequently made normal-user email and phone optional while retaining Main Supplier-controlled global account creation, no-store initial credentials, email reset, session revocation, locale/appearance preferences, and Shop defaults.
-- T3-04A implements the published permanent User ID, optional normal-user email/phone, required first name, admin-grade contact safeguards, alias login, controlled reset, and User hard-delete denial. Published T3-04B remediation enforces membership/Admin lifecycle and cardinality invariants. Published T3-04B-USER-SCOPE adds one immutable owning Shop per ordinary account, same-Shop membership enforcement, scoped creation/reset, and a guarded migration. Published T3-04C adds normalized membership-scoped Work Functions and Shop-ADMIN-only set management without permission escalation. T3-05 Shop visibility/lifecycle/API/Admin hardening is implemented and locally validated in the working tree; commit, publication, and exact-SHA CI remain pending.
+- T3-04A implements the published permanent User ID, optional normal-user email/phone, required first name, admin-grade contact safeguards, alias login, controlled reset, and User hard-delete denial. Published T3-04B remediation enforces membership/Admin lifecycle and cardinality invariants. Published T3-04B-USER-SCOPE adds one immutable owning Shop per ordinary account, same-Shop membership enforcement, scoped creation/reset, and a guarded migration. Published T3-04C adds normalized membership-scoped Work Functions and Shop-ADMIN-only set management without permission escalation. T3-05 Shop visibility/lifecycle/API/Admin hardening is published at `3d21a0943006cd866bc19bc728cbec05daae1630`; exact-SHA Project State Validation run `36614638187` succeeded.
 - T3-02A and T3-03 historical CI records remain below. The published T3-04 baseline and the later T3-REBASELINE-01 documentation checkpoint passed GitHub Actions Project State Validation (runs #36511111586 and #36524789793 respectively).
 
 ## Verification history
+
+- **T3-05 — published:** commit `3d21a0943006cd866bc19bc728cbec05daae1630`; GitHub Actions Project State Validation run `36614638187` completed SUCCESS for that exact SHA. Local focused tests: 30 passed. Full PostgreSQL-backed application suite: 231 passed (186 warnings). Repository validator PASS (231 discovered); validator tests 14 passed; Django system/deployment checks, migration drift, OpenAPI (zero errors), Black, Flake8, and `git diff --check` passed. No migration/dependency changes. T3-05A, Phase 4, frontend, and deployment remain unstarted.
 
 - T3-04B remediation focused suite: 77 passed, including exact immutable-identity/error-envelope assertions and Shop/Admin lifecycle cases.
 - PostgreSQL-backed full application suite: 183 passed (113 warnings), including separate-connection tests for concurrent promotions, demotion versus global deactivation, and first-ADMIN creation versus User deactivation.

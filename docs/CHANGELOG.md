@@ -1,10 +1,10 @@
 # Changelog
 
-## 2026-09-30 — T3-05 Back-office / Shop API and Admin hardening (local validation complete)
+## 2026-09-30 — T3-05 Back-office / Shop API and Admin hardening (published; CI green)
 
 - Implemented membership-scoped Shop discovery/profile reads, role-limited statistics, Main Supplier-only Shop settings and lifecycle operations, exact User-ID member lookup, capacity lower-bound enforcement, and hardened Django Admin paths without changing the approved business rules.
 - Added API/Admin, authorization, regression, and PostgreSQL concurrency coverage. Full PostgreSQL-backed suite: 231 passed; repository validator and 14 validator tests passed; Django check, production deployment check, migration drift check, OpenAPI validation (zero errors), Black, Flake8, and `git diff --check` passed. OpenAPI/deployment checks report nonfatal serializer type-hint and role-enum warnings.
-- No migration or dependency changes. T3-05 is locally validated but remains uncommitted/unpublished pending the exact-SHA GitHub Actions gate. T3-05A, Phase 4, frontend, and deployment work have not started.
+- No migration or dependency changes. Published as commit `3d21a0943006cd866bc19bc728cbec05daae1630`; exact-SHA Project State Validation run `36614638187` succeeded. T3-05A, Phase 4, frontend, and deployment work have not started.
 
 ## 2026-09-29 — T3-04C Work-Function foundation (published; CI green)
 
