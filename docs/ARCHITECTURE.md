@@ -217,7 +217,7 @@ The current `User` model uses email as Django's `USERNAME_FIELD` for Admin/CLI c
 
 ## Phase 1 status and current V1 readiness
 
-Phase 1 foundation implementation is complete. T3-02A, T3-03, T3-04, T3-04A, and the T3-04B remediation are published. T3-04C is implemented locally and its exact-SHA Project State Validation is pending publication. SGTP V1 is not ready for production. T3-04C must precede T3-05. Business modules and end-to-end workflows remain unimplemented; future endpoints must adopt and verify the T3-04 boundary.
+Phase 1 foundation implementation is complete. T3-02A, T3-03, T3-04, T3-04A, T3-04B remediation, T3-04B-USER-SCOPE, and T3-04C are published; Project State Validation passed for the T3-04C implementation commit. SGTP V1 is not ready for production. T3-04C must precede T3-05. Business modules and end-to-end workflows remain unimplemented; future endpoints must adopt and verify the T3-04 boundary.
 
 ## Membership Lifecycle and Rules
 

@@ -4,13 +4,13 @@
 
 Phase 3 is ACTIVE; activation was explicitly confirmed with `CONFIRM PHASE 3`.
 
-Completed foundation tasks: T3-01, T3-02, T3-02-REMEDIATION, T3-02A, T3-03, T3-04, T3-04A, T3-04B remediation, and T3-04B-USER-SCOPE are published. T3-04C is explicitly confirmed, implemented locally, and focused-test validated; full validation and publication are in progress. Derive Git baseline from the repository; no T3-04C commit or CI result is claimed yet.
+Completed foundation tasks include T3-01–T3-04B-USER-SCOPE and T3-04C. The T3-04C implementation commit is published; Project State Validation succeeded for its exact SHA. Derive current `HEAD`/`main` from Git.
 
 ## Current task
 
-T3-04C is the current confirmed task. Implementation and local validation are complete; focused model/API/lifecycle/migration/concurrency tests pass (19 passed), and the full PostgreSQL-backed suite passes (211 passed). Commit, push, and exact-SHA CI remain pending.
+T3-04C is complete, committed, pushed, and CI-green. The exact-SHA successful run is recorded above. No next task is authorized.
 
-Derive `HEAD`/`main` from Git rather than storing a current SHA in this handoff. Do not start T3-05 or later work. T3-04C publication is not complete until pushed exact-SHA GitHub Actions succeeds.
+Derive current `HEAD`/`main` from Git rather than storing a current SHA in this handoff. Do not start T3-05 or later work; each requires a separate plan and exact task confirmation.
 
 ## Current state and next gate
 
@@ -25,7 +25,7 @@ Derive `HEAD`/`main` from Git rather than storing a current SHA in this handoff.
 - Published implementation adds `User.owning_shop`, migration `accounts.0005_user_shop_ownership` with historical-membership preflight and database guards, atomic Shop-owned account creation, `/api/v1/shops/{shop_id}/users/`, same-Shop account reset authorization, and regression fixtures/tests.
 - Pre-publication local preflight found zero Users and memberships in the development DB. GitHub CI migration/application validation passed on its disposable PostgreSQL database. Neither establishes shared/staging/production data status; the migration aborts on ordinary Users with multiple or no determinable Shop. Shared/staging/production ownership preflight was NOT PERFORMED; no shared/staging/production migration was applied.
 - Pre-publication local validation: focused account/membership/auth regressions 138 passed; PostgreSQL-backed full suite 192 passed, including four concurrency cases; validator tests 14 passed; Django and migration checks passed; OpenAPI passed with two nonfatal role-enum naming warnings; Black/Flake8 passed on new Python files. GitHub Actions Project State Validation passed for the published exact SHA. Broad lint checks on touched legacy files still report existing style findings; they were not mass-formatted.
-- T3-04C is the active confirmed task; focused/full tests and local validation pass, but publication/CI are pending. T3-05, T3-05A, and Phase 4 remain unstarted and unauthorized. Any next task requires its own plan and exact confirmation.
+- T3-04C is complete and published with exact-SHA CI green. T3-05, T3-05A, and Phase 4 remain unstarted and unauthorized. Any next task requires its own plan and exact confirmation.
 
 ## Current T3-04C execution
 
@@ -33,7 +33,7 @@ Derive `HEAD`/`main` from Git rather than storing a current SHA in this handoff.
 - Implementation: additive `tenants.0009_membership_work_functions`, normalized relation with current-assignment uniqueness/catalog check, transactional set replacement and soft-deleted history, Shop-first authorization/locking, audit actor attribution, API/OpenAPI contract, and regression tests. Existing membership lifecycle keeps assignments through inactive/reactivated states and valid removal undo; expired undo does not restore membership/function assignments.
 - Tests: focused Work Function model/API/lifecycle/migration/concurrency tests: 19 passed. Full PostgreSQL-backed suite: 211 passed, 172 warnings. The suite includes the PostgreSQL concurrency tests.
 - Checks: repository validator PASS (211 discovered; one earlier invocation could not reach the remote, then a final invocation verified `origin/main` parity); validator tests 14 passed; Django check PASS; `DJANGO_ENV=prod check --deploy` exit 0 with two nonfatal OpenAPI role-enum warnings; migration drift PASS; OpenAPI validation PASS with the same two warnings; Black/Flake8 PASS; `git diff --check` PASS.
-- Publication remains pending at this handoff update; exact-SHA GitHub Actions must be verified after push. Do not start T3-05, T3-05A, Phase 4, frontend, or deployment work.
+- Publication and exact-SHA CI are verified. Do not start T3-05, T3-05A, Phase 4, frontend, or deployment work.
 
 ## T3-04B remediation — task-time local validation record
 

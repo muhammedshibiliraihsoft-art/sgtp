@@ -279,7 +279,7 @@ These rules are approved target behavior, not claims about current code. Impleme
 
 ### BR-MEM-010 — ADMIN Authority and Shop Creation
 **Status:** CONFIRMED
-**Rule:** Main Supplier manages ADMIN assignment, promotion, demotion and removal, while preserving the 1–2 active ADMIN invariant. Shop Admins cannot change another membership's ADMIN authority. Shop creation must atomically establish its first valid ADMIN before the Shop enters normal operation. Shop Admins may manage permitted non-ADMIN memberships and Work Functions only within their own Shop. ADMIN lifecycle and first-ADMIN safeguards are published in T3-04B remediation and T3-04B-USER-SCOPE; Work Functions remain T3-04C.
+**Rule:** Main Supplier manages ADMIN assignment, promotion, demotion and removal, while preserving the 1–2 active ADMIN invariant. Shop Admins cannot change another membership's ADMIN authority. Shop creation must atomically establish its first valid ADMIN before the Shop enters normal operation. Shop Admins may manage permitted non-ADMIN memberships and Work Functions only within their own Shop. ADMIN lifecycle and first-ADMIN safeguards are published in T3-04B remediation and T3-04B-USER-SCOPE; membership Work-Function management is implemented in T3-04C.
 
 ### BR-MEM-011 — Global User Deactivation Guard
 **Status:** CONFIRMED
