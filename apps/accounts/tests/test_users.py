@@ -3,6 +3,7 @@ from django.test import TestCase
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from rest_framework import status
+from .factories import create_test_user
 
 User = get_user_model()
 
@@ -12,7 +13,7 @@ class UserModelTest(TestCase):
         """Test creating a user with email"""
         email = "test@example.com"
         password = "testpass123"
-        user = User.objects.create_user(email=email, password=password, first_name='Test')
+        user = create_test_user(email=email, password=password, first_name='Test')
         
         self.assertEqual(user.email, email)
         self.assertTrue(user.check_password(password))
@@ -34,7 +35,7 @@ class UserModelTest(TestCase):
     def test_user_string_representation(self):
         """Test user string representation"""
         email = "test@example.com"
-        user = User.objects.create_user(email=email, first_name='Test')
+        user = create_test_user(email=email, first_name='Test')
         self.assertEqual(str(user), "Test")
 
 
@@ -51,12 +52,17 @@ class UserAPITest(TestCase):
 
     def test_create_user_success(self):
         """Only the Main Supplier Admin may create accounts; credentials are one-time."""
+        from apps.tenants.models import Supplier, Tenant
         admin = User.objects.create_superuser(email='main@example.com', password='AdminPass-934!', first_name='Main', phone='+96550000001')
+        supplier, _ = Supplier.objects.get_or_create(singleton_lock=True)
+        shop = Tenant.objects.create(supplier=supplier, name='Account Shop', slug='account-shop', max_users=5)
         self.client.force_authenticate(user=admin)
         response = self.client.post('/api/v1/auth/users/', {
             'email': self.user_data['email'],
             'first_name': self.user_data['first_name'],
             'last_name': self.user_data['last_name'],
+            'shop': str(shop.pk),
+            'role': 'STAFF',
         })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response['Cache-Control'], 'no-store')
@@ -75,7 +81,7 @@ class UserAPITest(TestCase):
     def test_login_success(self):
         """Test user login returns access token and sets refresh cookie"""
         # Create user first
-        user = User.objects.create_user(
+        user = create_test_user(
             email='test@example.com',
             password='testpass123',
             first_name='Test',
@@ -102,8 +108,8 @@ class UserAPITest(TestCase):
 
     def test_regular_user_cannot_target_another_user(self):
         """A normal user cannot list, modify, or delete another user."""
-        user = User.objects.create_user(email='owner@example.com', password='testpass123', first_name='Test')
-        other = User.objects.create_user(email='other@example.com', password='testpass123', first_name='Test')
+        user = create_test_user(email='owner@example.com', password='testpass123', first_name='Test')
+        other = create_test_user(email='other@example.com', password='testpass123', first_name='Test')
         self.client.force_authenticate(user=user)
 
         list_response = self.client.get('/api/v1/auth/users/')
@@ -125,7 +131,7 @@ class UserAPITest(TestCase):
 
     def test_self_profile_update_cannot_change_activation_state(self):
         """Self-service profile updates cannot deactivate the account."""
-        user = User.objects.create_user(email='profile@example.com', password='testpass123', first_name='Test')
+        user = create_test_user(email='profile@example.com', password='testpass123', first_name='Test')
         self.client.force_authenticate(user=user)
 
         response = self.client.patch(

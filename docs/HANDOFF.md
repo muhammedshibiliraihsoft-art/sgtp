@@ -8,13 +8,17 @@ Completed foundation tasks: T3-01, T3-02, T3-02-REMEDIATION, T3-02A, T3-03, and 
 
 ## Current task
 
-T3-04B-REMEDIATION-01 — explicitly confirmed and published. Require successful Project State Validation for the exact publication SHA before continuing.
+T3-04B-USER-SCOPE — explicitly confirmed, implemented, and validated locally. No commit or push is authorized by the task. T3-04C is not started.
 
 ## Current state and next gate
 
 - T3-04A's published generated `user_code`, optional normal-user email/phone, required trimmed `first_name`, alias login, controlled credential reset, contact safeguards, and User hard-delete denial remain in place; UUID remains the database/JWT `user_id` identity.
 - T3-04B remediation routes membership changes through transactional services; enforces immutable membership User/Shop identity, atomic Shop + first ADMIN creation, ADMIN 1–2 cardinality, global User-deactivation authority/invariants, lifecycle rules, safe Django Admin paths, and approved capacity semantics. No migration was added.
 - Approved ordinary-Shop visibility, Shop deactivation/no-delete, and max_users lower-bound rules are pending T3-05 implementation.
+- The approved T3-04B User-Scope decision supersedes the older one-global-User/multiple-Shops target: each ordinary account has one immutable owning Shop; same-real-world people in different Shops use independent accounts. Main Supplier accounts remain global.
+- Local implementation adds `User.owning_shop`, migration `accounts.0005_user_shop_ownership` with historical-membership preflight and database guards, atomic Shop-owned account creation, `/api/v1/shops/{shop_id}/users/`, same-Shop account reset authorization, and regression fixtures/tests. These local changes are not committed/pushed and have no GitHub Actions result.
+- Local preflight before migration: development DB had zero Users and zero memberships. This does not establish data status for any shared or production database; the migration aborts on ordinary Users with multiple or no determinable Shop.
+- Focused account/membership/auth regression suite: 138 passed, including migration-preflight refusal cases. PostgreSQL-backed full application suite: 192 passed, including T3-03/T3-04A/T3-04B regressions and four separate-connection concurrency cases. Repository validator: PASS with dirty-tree and test-discovery warnings; validator tests: 14 passed. Django check: PASS; production deploy check: exit 0 with two nonfatal role-enum naming warnings. Migration drift: PASS/no changes. OpenAPI: PASS with two nonfatal role-enum naming warnings. Black/Flake8 pass for new Python files; broad checks on all modified legacy files expose existing style findings, intentionally not mass-formatted. Final scope review PASS; no unrelated modules or task scope were changed.
 - T3-04C, T3-05, T3-05A, and Phase 4 remain unstarted and unauthorized. Any next task requires its own plan and exact confirmation.
 
 ## Current T3-04B remediation validation
@@ -23,6 +27,15 @@ T3-04B-REMEDIATION-01 — explicitly confirmed and published. Require successful
 - Full PostgreSQL-backed pytest suite: 183 passed (113 warnings). Separate-connection PostgreSQL races for dual promotion, demotion/global deactivation, and first-ADMIN creation/global User deactivation all passed.
 - Repository validator: PASS (183 discovered); validator tests: 14 passed. Django system/deployment checks, OpenAPI schema validation, Black, Flake8, and `git diff --check`: PASS.
 - `makemigrations --check --dry-run`: no model changes detected. GitHub Actions has not run for this local remediation. No commit or push was made.
+
+## Current T3-04B-USER-SCOPE execution
+
+- Task is explicitly confirmed, implemented, and validated locally; do not start T3-04C or later tasks.
+- Confirmed design: one immutable owning Shop per ordinary account; different Shops use distinct accounts even for the same real-world person. Main Supplier accounts remain global with no owning Shop. Existing account attachment/movement is rejected.
+- Local source work adds the ownership field/migration and database guards, Shop-scoped account creation/reset, atomic Shop + first ADMIN account creation, same-Shop membership enforcement, and regression tests. Relevant current and canonical docs have been reconciled; old one-global-User/multi-Shop language is marked superseded/history.
+- Local preflight before applying the migration found an empty development DB (zero Users/memberships); this does not establish shared/production data status. Migration preflight tests now cover multi-Shop and unowned history refusal.
+- Local validation summary is recorded above. No GitHub Actions result exists for this local work; it remains uncommitted/unpublished.
+- Next action: human review/publication decision for the locally validated task. No commit or push is authorized in this task.
 
 ## Historical T3-04A tests and checks
 

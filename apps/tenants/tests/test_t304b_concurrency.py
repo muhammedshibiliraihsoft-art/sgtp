@@ -12,6 +12,7 @@ from apps.tenants.services.membership import (
     change_membership_role,
     create_shop_with_first_admin,
 )
+from apps.accounts.tests.factories import create_test_user
 
 
 class T304BConcurrencyTests(TransactionTestCase):
@@ -29,8 +30,9 @@ class T304BConcurrencyTests(TransactionTestCase):
             phone="+96550999999",
         )
 
-    def user(self, number):
-        return User.objects.create_user(
+    def user(self, number, shop):
+        return create_test_user(
+            owning_shop=shop,
             email=f"concurrency-{number}@example.test",
             password="pw",
             first_name="Tailor",
@@ -63,8 +65,8 @@ class T304BConcurrencyTests(TransactionTestCase):
 
     def test_two_simultaneous_promotions_never_create_third_admin(self):
         shop = self.shop("race-promote")
-        first = self.user(1)
-        candidates = [self.user(2), self.user(3)]
+        first = self.user(1, shop)
+        candidates = [self.user(2, shop), self.user(3, shop)]
         TenantMember.objects.create(tenant=shop, user=first, role=ShopRole.ADMIN)
         memberships = [
             TenantMember.objects.create(tenant=shop, user=user, role=ShopRole.STAFF)
@@ -94,7 +96,7 @@ class T304BConcurrencyTests(TransactionTestCase):
 
     def test_demote_and_global_deactivate_cannot_remove_both_admins(self):
         shop = self.shop("race-remove-admins")
-        demote_user, deactivate_user = self.user(4), self.user(5)
+        demote_user, deactivate_user = self.user(4, shop), self.user(5, shop)
         demote_membership = TenantMember.objects.create(
             tenant=shop, user=demote_user, role=ShopRole.ADMIN
         )
@@ -121,37 +123,36 @@ class T304BConcurrencyTests(TransactionTestCase):
             1,
         )
 
-    def test_first_admin_creation_races_global_user_deactivation_safely(self):
-        first_admin = self.user(6)
+    def test_new_first_admin_cannot_be_deactivated_after_shop_commit(self):
+        created = threading.Event()
 
         def create_shop():
-            create_shop_with_first_admin(
+            shop, user, _ = create_shop_with_first_admin(
                 self.actor,
                 {
                     "name": "race-first-admin",
                     "slug": "race-first-admin",
                     "max_users": 2,
                 },
-                first_admin.pk,
+                {
+                    "first_name": "First",
+                    "email": "race-first-admin@example.test",
+                    "phone": "+96550999996",
+                },
             )
+            self.assertEqual(user.owning_shop_id, shop.pk)
+            created.set()
 
-        self.concurrently(
-            lambda: deactivate_global_user(self.actor, first_admin), create_shop
+        def deactivate_first_admin():
+            self.assertTrue(created.wait(timeout=10))
+            user = User.objects.get(email="race-first-admin@example.test")
+            with self.assertRaises(ValidationError):
+                deactivate_global_user(self.actor, user)
+
+        self.assertCountEqual(
+            self.concurrently(create_shop, deactivate_first_admin), ["ok", "ok"]
         )
-
-        first_admin.refresh_from_db()
-        shop = Tenant.objects.filter(slug="race-first-admin").first()
-        if shop:
-            self.assertTrue(first_admin.is_active)
-            self.assertEqual(
-                TenantMember.objects.filter(
-                    tenant=shop,
-                    user=first_admin,
-                    role=ShopRole.ADMIN,
-                    is_active=True,
-                    deleted__isnull=True,
-                ).count(),
-                1,
-            )
-        else:
-            self.assertFalse(first_admin.is_active)
+        shop = Tenant.objects.get(slug="race-first-admin")
+        member = TenantMember.objects.get(tenant=shop)
+        self.assertEqual(member.user.owning_shop_id, shop.pk)
+        self.assertTrue(member.user.is_active)

@@ -9,6 +9,7 @@ from rest_framework import status
 from django.core.cache import cache
 
 User = get_user_model()
+from apps.accounts.tests.factories import create_test_user
 
 class APIBaselineTest(TestCase):
     def setUp(self):
@@ -33,7 +34,7 @@ class APIBaselineTest(TestCase):
         
     def test_pagination_default(self):
         """List responses should include pagination structure."""
-        user = User.objects.create_user(email='test@test.com', password='pw', first_name='Test')
+        user = create_test_user(email='test@test.com', password='pw', first_name='Test')
         self.client.force_authenticate(user=user)
         response = self.client.get('/api/v1/tenants/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)

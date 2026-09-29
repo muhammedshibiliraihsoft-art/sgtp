@@ -245,9 +245,9 @@ New business rules require:
 
 These rules are approved target behavior, not claims about current code. Implementation ownership is listed per rule; current behavior and compatibility work are tracked in `docs/PROJECT_STATE.md`, `docs/HANDOFF.md`, and the Phase 3 playbook.
 
-### BR-ACC-003 — One Global User Across Shops
-**Status:** CONFIRMED
-**Rule:** One person has one global User UUID and may hold separate memberships in multiple Shops. Role and lifecycle belong to each membership. Duplicate User accounts must not be created merely because a person works in another Shop. UUID-preserving identity implementation is published in T3-04A; membership compatibility is published in T3-04B remediation.
+### BR-ACC-003 — One Global User Across Shops (SUPERSEDED)
+**Status:** SUPERSEDED
+**Rule:** Historical 2026-09-29 target: one person had one global User UUID and could hold memberships in multiple Shops. The approved T3-04B User-Scope decision below supersedes this rule: each ordinary account is permanently owned by exactly one Shop. Preserve UUID and authentication compatibility while applying the new scope.
 
 ### BR-ACC-004 — Permanent Human-Usable User ID
 **Status:** CONFIRMED
@@ -263,7 +263,7 @@ These rules are approved target behavior, not claims about current code. Impleme
 
 ### BR-ACC-007 — Global Account and Credential Authority
 **Status:** CONFIRMED
-**Rule:** Public signup remains disabled. Main Supplier/global account administration controls global User creation and credential reset. Shop Admins may manage permitted membership records but cannot create global User accounts, enumerate the global User directory, or reset another User's global password. Exact User-ID lookup for membership addition returns only User ID and display name; this remains T3-05. The account creation/reset foundation is published in T3-04A.
+**Rule:** Public signup remains disabled. Main Supplier may create Shop-owned accounts with any approved role. A Shop ADMIN may create STAFF/VIEWER accounts only in their own Shop and reset credentials only for that Shop's current STAFF/VIEWER accounts. Ordinary accounts cannot be attached to another Shop or found through a global User directory. Main Supplier controls global credential reset. Exact User-ID lookup for membership operations remains separately scoped future work. Initial credentials are returned once with no-store headers.
 
 ### BR-ACC-008 — Human Display Name
 **Status:** CONFIRMED
@@ -271,7 +271,7 @@ These rules are approved target behavior, not claims about current code. Impleme
 
 ### BR-MEM-008 — Membership-Scoped Access Role
 **Status:** CONFIRMED
-**Rule:** One global User may have one membership per Shop and different access roles per Shop. V1 access roles are ADMIN, STAFF, and VIEWER. Do not add OWNER or use business jobs such as TAILOR, SALESMAN, CASHIER, or CUTTER as access roles. T3-04B remediation implements and tests the role/membership rules.
+**Rule:** Each ordinary account has one membership in its owning Shop, with access role ADMIN, STAFF, or VIEWER. Do not add OWNER or use business jobs such as TAILOR, SALESMAN, CASHIER, or CUTTER as access roles. The historical multi-Shop membership assumption in this rule was superseded by T3-04B User-Scope; its approved role catalog remains unchanged.
 
 ### BR-MEM-009 — Active Shop ADMIN Cardinality
 **Status:** CONFIRMED
@@ -309,13 +309,21 @@ These rules are approved target behavior, not claims about current code. Impleme
 **Status:** CONFIRMED
 **Rule:** Keep the approved V1 tailoring workflow canonical and stable. Shops vary in which eligible memberships perform stages, not by creating independent workflow engines. Future stage assignment may associate a stage with eligible Work Functions and Shop memberships, with optional specific User assignment. Work Function eligibility alone is not final authorization. Implementation planning belongs to Phase 4; no workflow builder is in V1.
 
+### BR-ACC-009 — Shop-Owned Ordinary Accounts
+**Status:** CONFIRMED
+**Rule:** Every ordinary User account belongs permanently to exactly one Shop. Two accounts for the same real-world person in different Shops are independent identities with separate UUIDs, User IDs, credentials, and histories. Do not attach an existing account to another Shop. Main Supplier accounts are global and have no owning Shop. Email and phone remain globally unique where supplied. Existing data must be preflighted; migration must stop with actual conflicting/unowned account identifiers and must not fabricate assignments.
+
+### BR-MEM-013 — Shop Account Creation and Authority
+**Status:** CONFIRMED
+**Rule:** Shop creation atomically creates its first Shop-owned ADMIN account and membership. Main Supplier may create an account with any approved Shop role. A Shop ADMIN may create only STAFF or VIEWER accounts in that ADMIN's own Shop and may reset credentials only for that Shop's current active STAFF/VIEWER. Existing accounts cannot be assigned as a first membership or moved between Shops. Preserve membership lifecycle and ADMIN invariants; account creation returns any generated initial password once with no-store headers.
+
 ## 7. Business Rule Change Log
 
 *   **Initial Creation**: Added confirmed rules for Membership Lifecycle, Shop Capacity, and Governance.
 
 *   **2026-09-28 — T3-02A business decision lock**: Added confirmed account-creation, unified email/phone identity, login-phone, generated-password/recovery/session, explicit Shop settings, and nullable locale rules. At the time, this recorded approved policy targets only; T3-02A was later separately implemented.
 
-*   **2026-09-29 — Phase 3 business architecture rebaseline**: Superseded the required-email assumption and approved the global User/User ID, multi-Shop membership, ADMIN cardinality/authority, Work Function, Shop visibility/deactivation, and capacity rules above. These are target rules; implementation is assigned to T3-04A–T3-04C and T3-05 as recorded in the development plan. No code or schema was changed by this decision-record update.
+*   **2026-09-29 — Phase 3 business architecture rebaseline**: Superseded the required-email assumption and approved the global User/User ID, multi-Shop membership, ADMIN cardinality/authority, Work Function, Shop visibility/deactivation, and capacity rules above. The multi-Shop User assumptions are now superseded by BR-ACC-009/BR-MEM-013. Other policies remain as recorded and implementation status is in the project state.
 
 ### BR-MEM-007 — Undo and Capacity Limits
 

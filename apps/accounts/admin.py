@@ -15,7 +15,7 @@ class UserAdmin(BaseUserAdmin):
     list_display = ("user_code", "full_name", "email", "phone", "is_staff", "is_active")
     list_filter = ("is_staff", "is_active")
     fieldsets = (
-        (None, {"fields": ("user_code", "email")}),
+        (None, {"fields": ("user_code", "email", "owning_shop")}),
         (_("Personal info"), {"fields": ("first_name", "last_name")}),
         (_("Contact"), {"fields": ("phone",)}),
         (
@@ -50,10 +50,14 @@ class UserAdmin(BaseUserAdmin):
             },
         ),
     )
-    readonly_fields = ("user_code",)
+    readonly_fields = ("user_code", "owning_shop", "is_superuser")
     search_fields = ("user_code", "email", "first_name", "last_name", "phone")
     ordering = ("user_code",)
     actions = None
+
+    def has_add_permission(self, request):
+        # Account creation must atomically set immutable Shop ownership and membership.
+        return False
 
     @admin.display(description="Name")
     def full_name(self, obj):

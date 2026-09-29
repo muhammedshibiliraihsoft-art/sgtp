@@ -8,6 +8,7 @@ from rest_framework.test import APIClient
 from apps.accounts.admin import UserAdmin
 from apps.accounts.models import User
 from apps.tenants.models import ShopRole, Supplier, Tenant, TenantMember
+from .factories import create_test_user
 
 
 class T304AIdentityTests(TestCase):
@@ -21,7 +22,7 @@ class T304AIdentityTests(TestCase):
         )
 
     def test_user_code_and_optional_contacts_are_generated_for_normal_user(self):
-        user = User.objects.create_user(
+        user = create_test_user(
             first_name="  Noor ", last_name="  Khan ", password="Strong-User-934!"
         )
         self.assertRegex(user.user_code, r"^U-[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{16}$")
@@ -32,8 +33,14 @@ class T304AIdentityTests(TestCase):
 
     def test_authorized_account_creation_supports_user_without_email_or_phone(self):
         self.client.force_authenticate(user=self.admin)
+        supplier, _ = Supplier.objects.get_or_create(singleton_lock=True)
+        shop = Tenant.objects.create(
+            supplier=supplier, name="Creation Shop", slug="t304a-create-shop", max_users=5
+        )
         response = self.client.post(
-            "/api/v1/auth/users/", {"first_name": "Noor"}, format="json"
+            "/api/v1/auth/users/",
+            {"first_name": "Noor", "shop": str(shop.pk), "role": "STAFF"},
+            format="json",
         )
         self.assertEqual(response.status_code, 201, response.data)
         self.assertEqual(response["Cache-Control"], "no-store")
@@ -44,28 +51,28 @@ class T304AIdentityTests(TestCase):
         self.assertTrue(user.check_password(response.data["initial_password"]))
 
     def test_user_code_is_immutable_and_not_caller_supplied(self):
-        user = User.objects.create_user(first_name="Noor")
+        user = create_test_user(first_name="Noor")
         code = user.user_code
         user.user_code = "U-2345678923456789"
         with self.assertRaisesMessage(Exception, "User ID is immutable"):
             user.save()
         with self.assertRaisesMessage(ValueError, "user_code is generated"):
-            User.objects.create_user(first_name="Other", user_code=code)
+            create_test_user(first_name="Other", user_code=code)
 
     def test_user_code_collision_retries_only_that_constraint(self):
-        existing = User.objects.create_user(first_name="First")
+        existing = create_test_user(first_name="First")
         with patch(
             "apps.accounts.models.users.generate_user_code",
             side_effect=[existing.user_code, "U-2345678923456789"],
         ) as generate:
-            created = User.objects.create_user(first_name="Second")
+            created = create_test_user(first_name="Second")
         self.assertEqual(generate.call_count, 2)
         self.assertNotEqual(existing.user_code, created.user_code)
 
     def test_first_name_is_required_and_trimmed_and_last_name_optional(self):
         with self.assertRaisesMessage(ValueError, "first_name field must be set"):
-            User.objects.create_user(first_name="   ")
-        user = User.objects.create_user(first_name="  Noor  ")
+            create_test_user(first_name="   ")
+        user = create_test_user(first_name="  Noor  ")
         self.assertEqual(user.first_name, "Noor")
         self.assertEqual(user.full_name, "Noor")
 
@@ -76,15 +83,15 @@ class T304AIdentityTests(TestCase):
             )
 
     def test_email_is_trimmed_and_casefold_unique(self):
-        user = User.objects.create_user(
+        user = create_test_user(
             first_name="Noor", email="  Person@Example.test "
         )
         self.assertEqual(user.email, "person@example.test")
         with self.assertRaises(Exception):
-            User.objects.create_user(first_name="Other", email="PERSON@example.test")
+            create_test_user(first_name="Other", email="PERSON@example.test")
 
     def test_user_id_email_and_phone_login_resolve_same_uuid(self):
-        user = User.objects.create_user(
+        user = create_test_user(
             first_name="Noor",
             email="Person@Example.test",
             phone="+96550000002",
@@ -108,7 +115,7 @@ class T304AIdentityTests(TestCase):
         self.assertEqual(response["Pragma"], "no-cache")
 
     def test_main_supplier_can_reset_credentials_once_and_sessions_are_revoked(self):
-        user = User.objects.create_user(first_name="Noor", password="Old-Strong-936!")
+        user = create_test_user(first_name="Noor", password="Old-Strong-936!")
         login = self.client.post(
             "/api/v1/auth/login/",
             {"identifier": user.user_code, "password": "Old-Strong-936!"},
@@ -140,19 +147,20 @@ class T304AIdentityTests(TestCase):
         shop = Tenant.objects.create(
             supplier=supplier, name="Identity Shop", slug="identity-shop", max_users=5
         )
-        shop_admin = User.objects.create_user(
+        shop_admin = create_test_user(
+            owning_shop=shop,
             first_name="Shop",
             email="shop@example.test",
             phone="+96550000003",
             password="Shop-Strong-937!",
         )
         TenantMember.objects.create(tenant=shop, user=shop_admin, role=ShopRole.ADMIN)
-        target = User.objects.create_user(first_name="Target")
+        target = create_test_user(first_name="Target")
         self.client.force_authenticate(user=shop_admin)
         response = self.client.post(
             f"/api/v1/auth/users/{target.pk}/reset-credentials/", {}, format="json"
         )
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 404)
 
     def test_active_shop_admin_cannot_remove_required_contacts(self):
         supplier, _ = Supplier.objects.get_or_create(
@@ -164,7 +172,8 @@ class T304AIdentityTests(TestCase):
             slug="contact-shop-t304a",
             max_users=5,
         )
-        shop_admin = User.objects.create_user(
+        shop_admin = create_test_user(
+            owning_shop=shop,
             first_name="Shop", email="shop-contact@example.test", phone="+96550000005"
         )
         TenantMember.objects.create(tenant=shop, user=shop_admin, role=ShopRole.ADMIN)
@@ -179,7 +188,7 @@ class T304AIdentityTests(TestCase):
         self.assertEqual(shop_admin.phone, "+96550000005")
 
     def test_global_user_delete_is_disabled_and_admin_delete_denied(self):
-        user = User.objects.create_user(first_name="Retained")
+        user = create_test_user(first_name="Retained")
         self.client.force_authenticate(user=self.admin)
         response = self.client.delete(f"/api/v1/auth/users/{user.pk}/")
         self.assertEqual(response.status_code, 405)

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-09-29 — T3-04B User-Scope remediation (local, in progress)
+
+- Replaced the superseded one-global-User/multi-Shop assumption with one immutable owning Shop per ordinary account; separate Shops require distinct accounts even for the same real-world person.
+- Added Shop-owned account creation and reset authority, atomic Shop/first-ADMIN account creation, same-Shop membership enforcement, and guarded ownership backfill/database consistency protections.
+- Added/updated account-scope, membership, Shop creation, reset, and migration-preflight regression tests. Focused User-Scope suite: 9 passed; PostgreSQL-backed full application suite: 192 passed. Validator, validator tests, Django check, migration drift and OpenAPI pass; OpenAPI/deploy checks report two nonfatal role-enum naming warnings. New Python files pass Black/Flake8; broad lint/format checks on touched legacy files still show existing style findings. No commit, push, or CI run has occurred for these local changes.
+- Updated current architecture, business rules, API, database, security, phase plan, project state, and handoff docs. T3-04C and later tasks remain unstarted.
+
 ## 2026-09-29 — T3-04B Remediation publication checkpoint
 
 - Restored the T3-04B transactional membership and global User-lifecycle services on the verified post-revert `main` baseline. Shop creation commits with exactly one active first ADMIN; membership User/Shop identity is immutable; ADMIN hierarchy/cardinality, locked User validation, global deactivation invariants, undo ordering, and approved capacity/reactivation rules are enforced in services.

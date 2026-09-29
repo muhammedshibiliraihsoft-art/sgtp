@@ -71,12 +71,29 @@ class TenantViewSet(viewsets.ModelViewSet):
         from ..services.membership import create_shop_with_first_admin
 
         validated_data = dict(serializer.validated_data)
-        first_admin = validated_data.pop("first_admin_user")
-        serializer.instance = create_shop_with_first_admin(
+        first_admin = validated_data.pop("first_admin")
+        shop, user, password = create_shop_with_first_admin(
             actor=self.request.user,
             shop_data=validated_data,
-            first_admin_user_id=first_admin.pk,
+            first_admin_data=first_admin,
         )
+        self._created_shop = shop
+        self._created_first_admin = user
+        self._initial_password = password
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        from ..serializers import TenantAdminSerializer
+
+        data = TenantAdminSerializer(self._created_shop).data
+        data["first_admin_user_code"] = self._created_first_admin.user_code
+        data["initial_password"] = self._initial_password
+        response = Response(data, status=status.HTTP_201_CREATED)
+        response["Cache-Control"] = "no-store"
+        response["Pragma"] = "no-cache"
+        return response
 
     def perform_update(self, serializer):
         """Set the updater when updating a tenant."""

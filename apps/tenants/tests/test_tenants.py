@@ -3,18 +3,23 @@ from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from rest_framework import status
 from ..models import Tenant, Supplier, TenantMember
+from apps.accounts.tests.factories import create_test_user
 
 User = get_user_model()
 
 
 class TenantModelTest(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(
+        self.supplier = Supplier.objects.get(singleton_lock=True)
+        self.owner_shop = Tenant.objects.create(
+            name="Owner Shop", slug="owner-shop-model-test", max_users=10,
+            supplier=self.supplier,
+        )
+        self.user = create_test_user(owning_shop=self.owner_shop,
             email="test@example.com",
             password="testpass123",
             first_name="Test",
         )
-        self.supplier = Supplier.objects.get(singleton_lock=True)
 
     def test_create_tenant(self):
         """Test creating a tenant"""
@@ -65,7 +70,7 @@ class TenantModelTest(TestCase):
 class TenantAPITest(TestCase):
     def setUp(self):
         self.client = APIClient()
-        self.user = User.objects.create_user(
+        self.user = create_test_user(
             email="test@example.com",
             password="testpass123",
             first_name="Test",
@@ -80,7 +85,11 @@ class TenantAPITest(TestCase):
         self.tenant_data = {
             "name": "Test Tenant",
             "slug": "test-tenant",
-            "first_admin_user": self.admin_user.id,
+            "first_admin": {
+                "first_name": "First",
+                "email": "first-admin@example.test",
+                "phone": "+96550000019",
+            },
             "contact_email": "admin@test-tenant.com",
             "max_users": 20,
         }
@@ -108,7 +117,9 @@ class TenantAPITest(TestCase):
     def test_create_tenant_as_admin(self):
         """Test creating tenant as admin user"""
         self.client.force_authenticate(user=self.admin_user)
-        response = self.client.post("/api/v1/tenants/", self.tenant_data)
+        response = self.client.post(
+            "/api/v1/tenants/", self.tenant_data, format="json"
+        )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
         self.assertTrue(Tenant.objects.filter(slug="test-tenant").exists())
@@ -123,7 +134,9 @@ class TenantAPITest(TestCase):
     def test_create_tenant_as_regular_user(self):
         """Test creating tenant as regular user (should fail)"""
         self.client.force_authenticate(user=self.user)
-        response = self.client.post("/api/v1/tenants/", self.tenant_data)
+        response = self.client.post(
+            "/api/v1/tenants/", self.tenant_data, format="json"
+        )
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 

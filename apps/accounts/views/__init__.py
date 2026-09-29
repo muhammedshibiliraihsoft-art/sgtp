@@ -37,7 +37,6 @@ from ..models import User
 from ..identity import normalize_email
 from ..permissions import PasswordChangeGate
 from ..security import set_password_and_revoke_sessions
-from ..security import generate_initial_password
 from ..serializers import (
     EmailOrPhoneTokenObtainPairSerializer,
     PasswordChangeSerializer,
@@ -46,6 +45,7 @@ from ..serializers import (
     VersionedTokenRefreshSerializer,
     UserAdminSerializer,
     UserCreateSerializer,
+    ShopUserCreateSerializer,
     UserSerializer,
 )
 
@@ -79,6 +79,8 @@ class UserViewSet(viewsets.ModelViewSet):
         """Limit user enumeration to the Main Supplier Admin and self."""
         if IsMainSupplierAdmin().has_permission(self.request, self):
             return User.objects.all()
+        if self.action == "reset_credentials" and self.request.user.owning_shop_id:
+            return User.objects.filter(owning_shop_id=self.request.user.owning_shop_id)
         return User.objects.filter(pk=self.request.user.pk)
 
     def get_serializer_class(self):
@@ -103,7 +105,7 @@ class UserViewSet(viewsets.ModelViewSet):
         elif self.action == "password_change":
             classes = [IsAuthenticated]
         elif self.action == "reset_credentials":
-            classes = [IsMainSupplierAdmin, PasswordChangeGate]
+            classes = [IsAuthenticated, PasswordChangeGate]
         else:
             classes = [IsAuthenticated, PasswordChangeGate]
         return [permission() for permission in classes]
@@ -147,10 +149,9 @@ class UserViewSet(viewsets.ModelViewSet):
     )
     def reset_credentials(self, request, pk=None):
         user = self.get_object()
-        temporary_password = generate_initial_password(user)
-        set_password_and_revoke_sessions(
-            user, temporary_password, must_change=True
-        )
+        from ..services.user_lifecycle import reset_user_credentials
+
+        temporary_password = reset_user_credentials(request.user, user)
         response = Response(
             {"user_code": user.user_code, "temporary_password": temporary_password},
             status=status.HTTP_200_OK,

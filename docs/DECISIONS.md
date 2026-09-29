@@ -102,19 +102,27 @@ Company: BiRKy. Technical/internal project: SGTP. Customer-facing product brand:
 
 ## 2026-09-29 — Approve Phase 3 global identity, membership authority, and Work Function model
 
-This business architecture rebaseline records approved target behavior. At decision time it did not claim implementation. T3-04A identity and T3-04B membership/Admin safeguards are published; no Work Function model exists. See `docs/BUSINESS_RULES.md` and Phase 3 tasks T3-04A–T3-04C for ownership.
+This historical business architecture rebaseline records approved target behavior at that time; its multi-Shop global User assumption was later superseded by the T3-04B User-Scope decision below. See `docs/BUSINESS_RULES.md` and `docs/PROJECT_STATE.md` for current rules and implementation state.
 
 - **Permanent User ID:** Email cannot be universal because ordinary Shop employees may not have or need email. Every global User receives a permanent, system-generated, globally unique, human-usable User ID, while UUID remains the internal database identity. The ID is role-, Shop-, and brand-neutral.
-- **One identity across Shops:** The same person may work in multiple Shops. Duplicate accounts would split credentials, audit attribution, and history. One global User therefore has separate Shop membership identities, each with its own role/lifecycle.
+- **One identity across Shops (SUPERSEDED):** Historical target allowed the same global User to work in multiple Shops. This was superseded by the later Shop-owned ordinary-account decision below.
 - **Access Role vs Work Function:** Authority and the work a person performs are distinct. V1 access roles are ADMIN, STAFF, VIEWER; no OWNER role is introduced. TAILOR, SALESMAN, CASHIER, and CUTTER are not access roles.
-- **Function per membership:** The same global User may perform different work in different Shops. A Shop membership may have zero or multiple controlled Work Functions; functions do not grant API permissions.
+- **Function per membership:** A Shop-owned User's membership may have zero or multiple controlled Work Functions; functions do not grant API permissions. A real-world person working in another Shop has a separate account and membership there.
 - **Fixed V1 workflow, flexible people:** The approved workflow remains stable; Shops vary in who performs each stage. No per-Shop workflow builder is added.
-- **Admin safety:** Each Shop maintains one or two active ADMIN memberships. Main Supplier controls ADMIN hierarchy and global identity; Shop Admins manage only permitted non-ADMIN membership operations and Shop-local Work Functions. Shop creation requires a valid first ADMIN. Global deactivation cannot leave any Shop without an active ADMIN.
+- **Admin safety:** Each Shop maintains one or two active ADMIN memberships. Main Supplier controls ADMIN hierarchy and global account administration; Shop Admins manage only permitted same-Shop non-ADMIN accounts and Shop-local Work Functions. Shop creation requires a valid first ADMIN account. User deactivation cannot leave the owning Shop without an active ADMIN.
 - **Contact and recovery:** Normal Users need User ID/password and may omit email/phone. Active Shop ADMIN and Main Supplier accounts require both. Shop Admins cannot reset a global password; normal users without email recovery use controlled Main Supplier/global-account reset.
 - **Shop policy resolved:** Ordinary Users see only authorized Shops. Main Supplier alone manages Shop lifecycle/settings; deactivation preserves data/memberships, and ordinary Shop DELETE is not a V1 operation. `max_users` cannot be reduced below current user_count.
 - **Migration safety:** Later remediation must preserve UUIDs, password hashes, existing emails, memberships, and approved session semantics; generate unique User IDs without fabricating contacts or duplicating accounts. Migration strategy must be based on repository/data analysis in the implementation task.
 
 These decisions supersede conflicting earlier target assumptions, including required email, globally discoverable Shops, unresolved Shop deletion semantics, and unrestricted max_users reduction. They do not authorize implementation or alter T3-03/T3-04 context/isolation contracts.
+
+## 2026-09-29 — Approve T3-04B Shop-owned ordinary accounts
+
+- Each ordinary account belongs permanently to exactly one Shop. The same real-world person may have separate independent accounts in different Shops, with separate UUIDs, User IDs, credentials, and histories.
+- Do not attach an existing account to another Shop. Main Supplier accounts remain global and have no owning Shop. Email and phone remain globally unique when supplied.
+- Shop creation atomically creates its first Shop-owned ADMIN account and membership. Main Supplier may create any approved Shop role; a Shop ADMIN may create only STAFF/VIEWER in their own Shop and reset only current same-Shop STAFF/VIEWER credentials.
+- Existing multi-Shop or unowned ordinary-account data must be preflighted. Migration stops with actual affected identifiers; do not merge accounts or fabricate ownership.
+- This decision supersedes only the multi-Shop global User identity and account-attachment assumptions above. It does not authorize T3-04C or otherwise change role names, Shop isolation, or approved ADMIN lifecycle rules.
 
 ## 2026-09-29 — Approve T3-04A display-name rule
 

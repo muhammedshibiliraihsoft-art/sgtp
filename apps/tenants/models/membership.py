@@ -98,6 +98,16 @@ class TenantMember(BaseModel):
                 raise ValidationError(
                     {"tenant": "Cannot add members to an inactive Shop."}
                 )
+        if (
+            self.user_id
+            and self.tenant_id
+            and not self.user.is_superuser
+            and self.user.owning_shop_id is not None
+            and self.user.owning_shop_id != self.tenant_id
+        ):
+            raise ValidationError(
+                {"user": "Membership Shop must match the User's owning Shop."}
+            )
 
     def save(self, *args, **kwargs):
         if not self._state.adding and self.is_active:

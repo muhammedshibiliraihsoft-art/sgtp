@@ -1,9 +1,11 @@
 from django.test import TransactionTestCase
 from django.contrib.auth import get_user_model
-from rest_framework.test import APIClient
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
 import threading
 from django.db import connection
+from apps.tenants.services.shop_accounts import create_shop_account
+from apps.tenants.models import ShopRole
 
 User = get_user_model()
 
@@ -16,25 +18,31 @@ class T302ConcurrencyTests(TransactionTestCase):
 
     def test_concurrent_capacity_race(self):
         """F-06: Real concurrency proof. Verify final membership count never exceeds max_users."""
-        # Create users to be added concurrently
-        u1 = User.objects.create_user(email="u1@test.com", password="pw", first_name='Test')
-        u2 = User.objects.create_user(email="u2@test.com", password="pw", first_name='Test')
-        u3 = User.objects.create_user(email="u3@test.com", password="pw", first_name='Test')
-        users = [u1, u2, u3]
-        
-        def create_membership(user, results_list, idx):
+        gate = threading.Barrier(3)
+
+        def create_account(index, results_list):
             # Close connection so it uses a new one in the thread
             connection.close()
-            client = APIClient()
-            client.force_authenticate(user=self.user)
-            r = client.post("/api/v1/memberships/", {'tenant': self.shop.id, 'user': user.id})
-            results_list[idx] = r.status_code
+            gate.wait(timeout=10)
+            try:
+                create_shop_account(
+                    actor=self.user,
+                    shop_id=self.shop.pk,
+                    role=ShopRole.STAFF,
+                    account_data={
+                        "email": f"capacity{index}@test.com",
+                        "first_name": f"Staff{index}",
+                    },
+                )
+                results_list[index] = status.HTTP_201_CREATED
+            except ValidationError:
+                results_list[index] = status.HTTP_400_BAD_REQUEST
             connection.close()
 
         threads = []
         results = [None, None, None]
-        for i, u in enumerate(users):
-            t = threading.Thread(target=create_membership, args=(u, results, i))
+        for i in range(3):
+            t = threading.Thread(target=create_account, args=(i, results))
             threads.append(t)
             t.start()
             

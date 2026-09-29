@@ -1,6 +1,4 @@
 from rest_framework import serializers
-from apps.accounts.models import User
-
 from ..models import Tenant
 from .membership import TenantMemberSerializer
 
@@ -51,16 +49,28 @@ class TenantAdminSerializer(TenantSerializer):
         ]
 
 
+class FirstShopAdminSerializer(serializers.Serializer):
+    first_name = serializers.CharField(required=True, allow_blank=False, max_length=30)
+    last_name = serializers.CharField(required=False, allow_blank=True, max_length=30)
+    email = serializers.EmailField(required=True)
+    phone = serializers.CharField(required=True, allow_blank=False)
+
+    def to_internal_value(self, data):
+        if "is_active" in data or "owning_shop" in data or "shop" in data:
+            raise serializers.ValidationError(
+                {"detail": "Account state and Shop ownership are server-controlled."}
+            )
+        return super().to_internal_value(data)
+
+
 class TenantCreateSerializer(TenantAdminSerializer):
     """Serializer for creating tenants with required fields."""
 
-    first_admin_user = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.all(), write_only=True
-    )
+    first_admin = FirstShopAdminSerializer(write_only=True, required=True)
     is_active = serializers.BooleanField(required=False, default=True)
 
     class Meta(TenantAdminSerializer.Meta):
-        fields = TenantAdminSerializer.Meta.fields + ["first_admin_user"]
+        fields = TenantAdminSerializer.Meta.fields + ["first_admin"]
         extra_kwargs = {
             "name": {"required": True},
             "slug": {"required": True},

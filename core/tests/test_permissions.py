@@ -14,6 +14,7 @@ from apps.tenants.context_views import ShopContextMixin
 from apps.tenants.models import ShopRole, Supplier, Tenant, TenantMember
 from backend.core.models import BaseModelWithTenant
 from core.permissions import DenyAll, IsOwner, IsTenantMember
+from apps.accounts.tests.factories import create_test_user
 
 User = get_user_model()
 
@@ -79,14 +80,13 @@ class PermissionsAndScopingTest(TestCase):
         self.supplier = Supplier.objects.get(singleton_lock=True)
         self.shop_a = self.make_shop("Shop A", "proof-shop-a")
         self.shop_b = self.make_shop("Shop B", "proof-shop-b")
-        self.user1 = User.objects.create_user(email="user1@test.com", password="pw", first_name='Test')
-        self.user2 = User.objects.create_user(email="user2@test.com", password="pw", first_name='Test')
+        self.user1 = create_test_user(owning_shop=self.shop_a, email="user1@test.com", password="pw", first_name='Test')
+        self.user2 = create_test_user(owning_shop=self.shop_a, email="user2@test.com", password="pw", first_name='Test')
         self.main_supplier = User.objects.create_superuser(
             email="main@test.com", password="pw",
             first_name='Main', phone='+96550000000',
         )
         self.member(self.user1, self.shop_a, ShopRole.ADMIN)
-        self.member(self.user1, self.shop_b, ShopRole.VIEWER)
         self.member(self.user2, self.shop_a, ShopRole.STAFF)
         self.obj_a = DummyTestModel.objects.create(
             tenant=self.shop_a, owner_id=self.user1.pk
@@ -123,7 +123,7 @@ class PermissionsAndScopingTest(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_foreign_object_uuid_returns_404_for_multishop_user(self):
+    def test_foreign_object_uuid_returns_404_for_shop_scoped_user(self):
         request = self.request(self.user1, self.shop_a)
         response = DummyTestView.as_view()(
             request, shop_id=self.shop_a.pk, pk=self.obj_b.pk

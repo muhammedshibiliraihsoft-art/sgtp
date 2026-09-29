@@ -8,6 +8,7 @@ from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from rest_framework import status
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
+from .factories import create_test_user
 
 User = get_user_model()
 
@@ -17,7 +18,7 @@ class AuthLifecycleTest(TestCase):
         # APIClient explicitly sets enforce_csrf_checks=True for these tests
         # We want to test that Django CsrfViewMiddleware correctly rejects/allows our requests.
         self.client = APIClient(enforce_csrf_checks=True)
-        self.user = User.objects.create_user(
+        self.user = create_test_user(
             email='lifecycle@example.com',
             password='testpass123',
             first_name='Test',

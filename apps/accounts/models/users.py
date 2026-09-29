@@ -24,6 +24,15 @@ class User(TimeStampedUUIDModel, AbstractBaseUser, PermissionsMixin):
         DARK = 'dark', 'Dark'
 
     user_code = models.CharField(max_length=18, unique=True, editable=False)
+    owning_shop = models.ForeignKey(
+        "tenants.Tenant",
+        null=True,
+        blank=True,
+        editable=False,
+        on_delete=models.PROTECT,
+        related_name="owned_users",
+        help_text="Immutable owning Shop for ordinary accounts; null for Main Supplier accounts.",
+    )
     email = models.EmailField(blank=True, null=True, unique=True)
     phone = models.CharField(max_length=16, blank=True, null=True)
     first_name = models.CharField(max_length=30)
@@ -99,6 +108,12 @@ class User(TimeStampedUUIDModel, AbstractBaseUser, PermissionsMixin):
         self.last_name = (self.last_name or "").strip()
         if not self.first_name:
             raise ValidationError({"first_name": "First name is required."})
+        if self.is_superuser and self.owning_shop_id is not None:
+            raise ValidationError(
+                {"owning_shop": "Main Supplier accounts are not Shop-owned accounts."}
+            )
+        if not self.is_superuser and self.owning_shop_id is None:
+            raise ValidationError({"owning_shop": "Ordinary accounts require a Shop."})
         if self.is_superuser and (not self.email or not self.phone):
             raise ValidationError("Main Supplier accounts require email and phone.")
         if self.pk:
@@ -122,11 +137,15 @@ class User(TimeStampedUUIDModel, AbstractBaseUser, PermissionsMixin):
         adding = self._state.adding
 
         if self.pk and not adding:
-            previous_code = type(self).objects.filter(pk=self.pk).values_list(
-                "user_code", flat=True
+            previous = type(self).objects.filter(pk=self.pk).values_list(
+                "user_code", "owning_shop_id"
             ).first()
+            previous_code = previous[0] if previous else None
+            previous_shop_id = previous[1] if previous else None
             if previous_code and self.user_code != previous_code:
                 raise ValidationError({"user_code": "User ID is immutable."})
+            if previous_shop_id and self.owning_shop_id != previous_shop_id:
+                raise ValidationError({"owning_shop": "User Shop ownership is immutable."})
         self.email = (self.email or "").strip().lower() or None
         from ..phone_numbers import InvalidUserPhone, normalize_user_phone
 

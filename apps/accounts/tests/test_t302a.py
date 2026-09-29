@@ -11,6 +11,7 @@ from rest_framework.test import APIClient
 from apps.accounts.models import User
 from apps.accounts.preferences import resolve_locale
 from apps.tenants.models import Supplier, Tenant
+from .factories import create_test_user
 
 
 class T302AAccountTests(TestCase):
@@ -23,7 +24,7 @@ class T302AAccountTests(TestCase):
         )
 
     def test_phone_login_uses_same_user_and_uuid(self):
-        user = User.objects.create_user(
+        user = create_test_user(
             email="phone@example.test",
             password="ExistingPass-934!",
             phone="+96550000000",
@@ -40,19 +41,19 @@ class T302AAccountTests(TestCase):
         self.assertIn("refresh", response.cookies)
 
     def test_phone_is_unique_and_optional_for_existing_users(self):
-        user = User.objects.create_user(
+        user = create_test_user(
             email="no-phone@example.test", password="ExistingPass-934!",
             first_name='Test',
         )
         self.assertIsNone(user.phone)
-        User.objects.create_user(
+        create_test_user(
             email="phone-one@example.test",
             password="ExistingPass-934!",
             phone="+96550000000",
             first_name="Test",
         )
         with self.assertRaises(IntegrityError), transaction.atomic():
-            User.objects.create_user(
+            create_test_user(
                 email="phone-two@example.test",
                 password="ExistingPass-934!",
                 phone="+96550000000",
@@ -68,7 +69,7 @@ class T302AAccountTests(TestCase):
         )
 
     def test_password_reset_token_expires(self):
-        user = User.objects.create_user(
+        user = create_test_user(
             email="expired@example.test", password="ExistingPass-934!",
             first_name='Test',
         )
@@ -81,7 +82,7 @@ class T302AAccountTests(TestCase):
             self.assertFalse(generator.check_token(user, token))
 
     def test_admin_controls_phone_lifecycle_and_profile_preferences(self):
-        user = User.objects.create_user(
+        user = create_test_user(
             email="lifecycle-phone@example.test", password="ExistingPass-934!",
             first_name='Test',
         )
@@ -117,8 +118,13 @@ class T302AAccountTests(TestCase):
 
     def test_admin_created_initial_password_is_one_time_and_gated(self):
         self.client.force_authenticate(user=self.admin)
+        supplier, _ = Supplier.objects.get_or_create(singleton_lock=True)
+        shop = Tenant.objects.create(
+            supplier=supplier, name="Account Shop", slug="t302a-account-shop", max_users=5
+        )
         response = self.client.post(
             "/api/v1/auth/users/", {"email": "new@example.test", "first_name": "New"}
+            | {"shop": str(shop.pk), "role": "STAFF"},
         )
         self.assertEqual(response.status_code, 201, response.data)
         self.assertEqual(response["Cache-Control"], "no-store")
@@ -159,7 +165,7 @@ class T302AAccountTests(TestCase):
         PASSWORD_RESET_URL="https://frontend.example.test/reset",
     )
     def test_email_reset_is_generic_single_use_and_revokes_sessions(self):
-        user = User.objects.create_user(
+        user = create_test_user(
             email="reset@example.test", password="ExistingPass-934!",
             first_name='Test',
         )
@@ -230,10 +236,6 @@ class T302AShopSettingsTests(TestCase):
     def setUp(self):
         cache.clear()
         self.client = APIClient()
-        self.user = User.objects.create_user(
-            email="shop-reader@example.test", password="ExistingPass-934!",
-            first_name='Test',
-        )
         self.admin = User.objects.create_superuser(
             email="shop-admin@example.test", password="AdminPass-934!",
             first_name='Main', phone='+96550000001',
@@ -248,6 +250,11 @@ class T302AShopSettingsTests(TestCase):
             default_locale="ar-KW",
             default_timezone="Asia/Kuwait",
             default_currency="KWD",
+        )
+        self.user = create_test_user(
+            owning_shop=self.shop,
+            email="shop-reader@example.test", password="ExistingPass-934!",
+            first_name='Test',
         )
 
     def test_regular_user_global_reads_do_not_expose_new_shop_settings(self):

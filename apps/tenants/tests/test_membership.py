@@ -5,6 +5,7 @@ from django.db import IntegrityError
 from django.contrib.auth import get_user_model
 
 from apps.tenants.models import Tenant, Supplier, TenantMember, ShopRole
+from apps.accounts.tests.factories import create_test_user
 
 User = get_user_model()
 
@@ -17,7 +18,7 @@ class TenantMembershipTest(TestCase):
             max_users=10,
             supplier=self.supplier
         )
-        self.user = User.objects.create_user(
+        self.user = create_test_user(owning_shop=self.tenant,
             email="member@test.com", 
             password="testpass",
             first_name='Test',
@@ -51,7 +52,7 @@ class TenantMembershipTest(TestCase):
 
     def test_cannot_add_inactive_user(self):
         """Test that inactive users cannot be added to a shop"""
-        inactive_user = User.objects.create_user(
+        inactive_user = create_test_user(owning_shop=self.tenant,
             email="inactive@test.com", 
             password="testpass",
             is_active=False,

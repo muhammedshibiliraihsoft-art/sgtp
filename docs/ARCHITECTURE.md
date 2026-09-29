@@ -115,9 +115,11 @@ Docker        -> development container and production web/db services
 - Generated account credentials are one-time response data with `Cache-Control: no-store`; first-login password change gates normal authenticated API operations. Password recovery is generic to the caller and uses expiring single-use Django reset tokens delivered by configured email. Plaintext passwords/reset tokens are not written to application storage or audit records.
 - Shop default settings are serialized only on Main Supplier Admin reads/writes. Existing broad authenticated Shop reads retain their previous scope but omit the new settings fields; this does not implement T3-03 context or change Shop visibility policy.
 
-### Approved identity and staffing target — implementation pending
+### Identity and staffing architecture
 
-- One global User UUID may be linked to memberships in multiple Shops. `TenantMember` stores the per-Shop role and lifecycle; the published T3-04B remediation enforces identity immutability, ADMIN cardinality/authority, lifecycle, capacity, and global deactivation safeguards.
+- Each ordinary User has one immutable `owning_shop`; its membership role and lifecycle belong to that Shop. The same real-world person may have independent accounts in different Shops, but an account cannot be shared or reassigned. Main Supplier accounts remain global with no owning Shop.
+- `TenantMember` references the ordinary account's owning Shop, and the database guards ownership/membership consistency. Shop creation atomically creates a new first ADMIN account and membership. Main Supplier may create any Shop role; a Shop ADMIN may create STAFF/VIEWER and reset current same-Shop STAFF/VIEWER credentials only.
+- Existing T3-04B membership/Admin safeguards remain in force. This User-Scope correction is local and unpublished; see `docs/PROJECT_STATE.md` and `docs/HANDOFF.md` for current validation.
 - Every User receives permanent `user_code` (human User ID); UUID remains the internal key/JWT `user_id`. Normal-user email/phone are optional; active Shop ADMIN/Main Supplier accounts require both. T3-04A and the T3-04B remediation are published; the latter enforces membership promotion/lifecycle/cardinality safeguards.
 - Access Role (`ADMIN`, `STAFF`, `VIEWER`) is distinct from membership-scoped Work Functions. Each Shop permits one to two active ADMIN memberships; Main Supplier manages this hierarchy. Shop creation establishes its first ADMIN, and global deactivation must preserve at least one active ADMIN in every affected Shop. Work Functions remain T3-04C scope.
 - Work Functions are zero-to-many assignments on a Shop membership, from the approved controlled V1 catalog. They describe work eligibility, not authorization. Shop ADMINs manage functions only within their own Shop. T3-04C owns this foundation; Phase 4 owns workflow-stage mapping and work assignment.
@@ -141,7 +143,7 @@ The current `User` model uses email as Django's `USERNAME_FIELD` for Admin/CLI c
 
 - Object-level permission primitives include `IsOwner`, `IsTenantMember`, and `DenyAll`. `IsTenantMember` requires trusted T3-03 context and binds an object to the selected Shop, including for Main Supplier requests.
 - `TenantScopedMixin` now requires authenticated `request.shop_context`, checks actor, URL Shop ID, and the derived `request.tenant_id` alias for consistency, and filters by the trusted Shop. Missing required context/configuration fails closed; create/update ownership is saved from the authorized Shop.
-- Actual User-Shop membership logic is modeled via `TenantMember` and `ShopRolePolicy`. T3-04 implements and tests reusable isolation primitives using a temporary test-only model; no production business-resource endpoints currently exist, so each later Shop-owned endpoint must adopt these primitives and prove its own isolation.
+- Actual User-Shop account ownership and membership logic is modeled via `User.owning_shop`, `TenantMember`, and `ShopRolePolicy`. The local T3-04B User-Scope change adds immutable Shop ownership and same-Shop membership enforcement; each later Shop-owned endpoint must still adopt reusable isolation primitives and prove its own isolation.
 
 ## API Security and Reliability
 

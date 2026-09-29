@@ -98,8 +98,18 @@ def create_membership(actor, shop_id, user_id, role):
             raise ValidationError({"tenant": "Cannot assign to an inactive Shop."})
 
         user = _locked_user(user_id)
+        if user.owning_shop_id != shop.pk:
+            raise ValidationError(
+                {"user": "This account is not owned by the selected Shop."}
+            )
         if not user.is_active:
             raise ValidationError({"user": "Cannot assign an inactive user."})
+        if not TenantMember.objects.all_with_deleted().filter(
+            user_id=user.pk, tenant_id=shop.pk
+        ).exists():
+            raise ValidationError(
+                "Create the account and its first membership atomically through the Shop account flow."
+            )
         if TenantMember.objects.filter(
             user_id=user.pk, tenant_id=shop.pk, deleted__isnull=True
         ).exists():
@@ -295,8 +305,8 @@ def undo_remove_membership(actor, membership_id):
         return membership
 
 
-def create_shop_with_first_admin(actor, shop_data, first_admin_user_id):
-    """Atomically create an active Shop and its valid first ADMIN."""
+def create_shop_with_first_admin(actor, shop_data, first_admin_data):
+    """Atomically create an active Shop and a new, Shop-owned first ADMIN."""
     with transaction.atomic():
         current_actor = User.objects.filter(
             pk=getattr(actor, "pk", None), is_active=True
@@ -312,18 +322,15 @@ def create_shop_with_first_admin(actor, shop_data, first_admin_user_id):
             )
         if data.get("max_users", 0) < 1:
             raise ValidationError({"max_users": "Shop capacity must be at least 1."})
-        # The Shop is not yet present, so lock the selected User first. Global
-        # deactivation uses Shop→User and rechecks its Shop set after locking User.
-        user = _locked_user(first_admin_user_id)
-        validate_admin_grade_user(user)
         supplier = Supplier.objects.get(singleton_lock=True)
         shop = Tenant(supplier=supplier, created_by=actor, is_active=True, **data)
         shop.save()
-        TenantMember.objects.create(
-            tenant=shop,
-            user=user,
+        from .shop_accounts import create_shop_account
+
+        user, initial_password = create_shop_account(
+            actor=actor,
+            shop_id=shop.pk,
             role=ShopRole.ADMIN,
-            is_active=True,
-            created_by=actor,
+            account_data=first_admin_data,
         )
-        return shop
+        return shop, user, initial_password

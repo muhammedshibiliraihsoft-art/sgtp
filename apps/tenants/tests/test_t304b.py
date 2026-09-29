@@ -11,6 +11,7 @@ from apps.accounts.services.user_lifecycle import deactivate_global_user
 from apps.tenants.admin import TenantAdmin, TenantMemberAdmin
 from apps.tenants.models import ShopRole, Supplier, Tenant, TenantMember
 from apps.tenants.services.membership import change_membership_role
+from apps.accounts.tests.factories import create_test_user
 
 
 class T304BRemediationTests(TestCase):
@@ -25,30 +26,33 @@ class T304BRemediationTests(TestCase):
         self.client = APIClient()
         self.client.force_authenticate(self.main)
 
-    def user(self, email, **kwargs):
+    def user(self, email, *, shop=None, **kwargs):
         kwargs.setdefault("first_name", "Tailor")
         kwargs.setdefault("phone", f"+965500000{User.objects.count() + 2:02d}")
-        return User.objects.create_user(email=email, password="pw", **kwargs)
+        return create_test_user(owning_shop=shop, email=email, password="pw", **kwargs)
 
     def shop(self, slug, **kwargs):
         return Tenant.objects.create(
             supplier=self.supplier, name=slug, slug=slug, max_users=5, **kwargs
         )
 
-    def create_shop_payload(self, slug, first_admin, **kwargs):
+    def create_shop_payload(self, slug, first_admin=None, **kwargs):
         payload = {
             "name": slug,
             "slug": slug,
             "max_users": 3,
-            "first_admin_user": str(first_admin.pk),
+            "first_admin": first_admin or {
+                "first_name": "First",
+                "email": f"{slug}@example.test",
+                "phone": f"+965500000{User.objects.count() + 2:02d}",
+            },
         }
         payload.update(kwargs)
         return payload
 
     def test_shop_creation_commits_shop_and_first_admin_together(self):
-        user = self.user("first@example.test")
         response = self.client.post(
-            "/api/v1/tenants/", self.create_shop_payload("new-shop", user)
+            "/api/v1/tenants/", self.create_shop_payload("new-shop"), format="json"
         )
         self.assertEqual(response.status_code, 201, response.data)
         shop = Tenant.objects.get(slug="new-shop")
@@ -60,46 +64,58 @@ class T304BRemediationTests(TestCase):
             1,
         )
         self.assertNotIn("first_admin_user", response.data)
+        membership = TenantMember.objects.get(tenant=shop, role=ShopRole.ADMIN)
+        self.assertEqual(membership.user.owning_shop_id, shop.pk)
+        self.assertEqual(response["Cache-Control"], "no-store")
 
     def test_shop_creation_rejects_invalid_first_admin_without_orphan(self):
-        user = self.user("no-phone@example.test", phone="")
+        first_admin = {
+            "first_name": "No phone", "email": "no-phone@example.test", "phone": ""
+        }
         response = self.client.post(
-            "/api/v1/tenants/", self.create_shop_payload("invalid-shop", user)
+            "/api/v1/tenants/",
+            self.create_shop_payload("invalid-shop", first_admin),
+            format="json",
         )
         self.assertEqual(response.status_code, 400, response.data)
         self.assertFalse(Tenant.objects.filter(slug="invalid-shop").exists())
 
     def test_shop_creation_rejects_missing_email_and_inactive_first_admin(self):
-        no_email = self.user(None)
+        no_email = {"first_name": "No email", "email": "", "phone": "+96550000029"}
         response = self.client.post(
-            "/api/v1/tenants/", self.create_shop_payload("no-email-shop", no_email)
+            "/api/v1/tenants/",
+            self.create_shop_payload("no-email-shop", no_email),
+            format="json",
         )
         self.assertEqual(response.status_code, 400)
         self.assertFalse(Tenant.objects.filter(slug="no-email-shop").exists())
 
-        inactive = self.user("inactive-first-admin@example.test", is_active=False)
         response = self.client.post(
             "/api/v1/tenants/",
-            self.create_shop_payload("inactive-admin-shop", inactive),
+            self.create_shop_payload("inactive-admin-shop", {
+                "first_name": "Inactive", "email": "inactive-first-admin@example.test",
+                "phone": "+96550000030", "is_active": False,
+            }),
+            format="json",
         )
         self.assertEqual(response.status_code, 400)
         self.assertFalse(Tenant.objects.filter(slug="inactive-admin-shop").exists())
 
     def test_shop_creation_requires_first_admin_and_valid_capacity(self):
         payload = {"name": "missing-admin", "slug": "missing-admin", "max_users": 3}
-        response = self.client.post("/api/v1/tenants/", payload)
+        response = self.client.post("/api/v1/tenants/", payload, format="json")
         self.assertEqual(response.status_code, 400)
-        payload["first_admin_user"] = str(self.user("cap@example.test").pk)
+        payload["first_admin"] = self.create_shop_payload("cap-shop")["first_admin"]
         payload["max_users"] = 0
-        response = self.client.post("/api/v1/tenants/", payload)
+        response = self.client.post("/api/v1/tenants/", payload, format="json")
         self.assertEqual(response.status_code, 400)
         self.assertFalse(Tenant.objects.filter(slug="missing-admin").exists())
 
     def test_inactive_shop_creation_rejected_and_admin_add_is_disabled(self):
-        user = self.user("inactive-shop@example.test")
         response = self.client.post(
             "/api/v1/tenants/",
-            self.create_shop_payload("inactive-shop", user, is_active=False),
+            self.create_shop_payload("inactive-shop", is_active=False),
+            format="json",
         )
         self.assertEqual(response.status_code, 400)
         tenant_admin = TenantAdmin(Tenant, admin.site)
@@ -110,8 +126,8 @@ class T304BRemediationTests(TestCase):
         self.assertFalse(member_admin.has_delete_permission(None))
 
     def test_global_deactivation_rejects_last_admin_even_in_inactive_shop(self):
-        user = self.user("sole-admin@example.test")
         shop = self.shop("inactive-admin-shop")
+        user = self.user("sole-admin@example.test", shop=shop)
         TenantMember.objects.create(tenant=shop, user=user, role=ShopRole.ADMIN)
         shop.is_active = False
         shop.save(update_fields=["is_active"])
@@ -124,8 +140,8 @@ class T304BRemediationTests(TestCase):
         self,
     ):
         shop = self.shop("inactive-shop-admin-management")
-        demoted_user = self.user("inactive-shop-demoted@example.test")
-        remaining_user = self.user("inactive-shop-remaining@example.test")
+        demoted_user = self.user("inactive-shop-demoted@example.test", shop=shop)
+        remaining_user = self.user("inactive-shop-remaining@example.test", shop=shop)
         demoted = TenantMember.objects.create(
             tenant=shop, user=demoted_user, role=ShopRole.ADMIN
         )
@@ -150,46 +166,47 @@ class T304BRemediationTests(TestCase):
         )
 
     def test_global_deactivation_requires_main_supplier_authority(self):
-        target = self.user("staff-target@example.test")
         shop = self.shop("staff-shop")
-        actor = self.user("shop-admin@example.test")
+        target = self.user("staff-target@example.test", shop=shop)
+        actor = self.user("shop-admin@example.test", shop=shop)
         TenantMember.objects.create(tenant=shop, user=actor, role=ShopRole.ADMIN)
         with self.assertRaises(PermissionDenied):
             deactivate_global_user(actor, target)
         target.refresh_from_db()
         self.assertTrue(target.is_active)
 
-    def test_global_deactivation_of_admin_in_multiple_shops_is_atomic(self):
-        target = self.user("multi-admin@example.test")
+    def test_different_shop_accounts_have_independent_admin_lifecycle(self):
         first = self.shop("multi-a")
         second = self.shop("multi-b")
+        target = self.user("multi-admin-a@example.test", shop=first)
+        other = self.user("multi-admin-b@example.test", shop=second)
         TenantMember.objects.create(tenant=first, user=target, role=ShopRole.ADMIN)
-        TenantMember.objects.create(tenant=second, user=target, role=ShopRole.ADMIN)
-        # A second effective ADMIN protects only the first Shop; the second has a sole ADMIN.
+        TenantMember.objects.create(tenant=second, user=other, role=ShopRole.ADMIN)
         TenantMember.objects.create(
             tenant=first,
-            user=self.user("other-admin@example.test"),
+            user=self.user("other-admin@example.test", shop=first),
             role=ShopRole.ADMIN,
         )
-        with self.assertRaises(ValidationError):
-            deactivate_global_user(self.main, target)
+        deactivate_global_user(self.main, target)
         target.refresh_from_db()
-        self.assertTrue(target.is_active)
+        other.refresh_from_db()
+        self.assertFalse(target.is_active)
+        self.assertTrue(other.is_active)
 
     def test_global_deactivation_allowed_for_second_admin_and_non_admin_user(self):
-        target = self.user("second-admin@example.test")
         shop = self.shop("two-admin-shop")
+        target = self.user("second-admin@example.test", shop=shop)
         TenantMember.objects.create(tenant=shop, user=target, role=ShopRole.ADMIN)
         TenantMember.objects.create(
             tenant=shop,
-            user=self.user("retained-admin@example.test"),
+            user=self.user("retained-admin@example.test", shop=shop),
             role=ShopRole.ADMIN,
         )
         deactivate_global_user(self.main, target)
         target.refresh_from_db()
         self.assertFalse(target.is_active)
 
-        staff = self.user("staff-only@example.test")
+        staff = self.user("staff-only@example.test", shop=shop)
         deactivate_global_user(self.main, staff)
         staff.refresh_from_db()
         self.assertFalse(staff.is_active)
@@ -197,8 +214,8 @@ class T304BRemediationTests(TestCase):
     def test_user_admin_cannot_bypass_global_deactivation_invariant(self):
         from apps.accounts.admin import UserAdmin
 
-        target = self.user("admin-ui-sole@example.test")
         shop = self.shop("admin-ui-sole-shop")
+        target = self.user("admin-ui-sole@example.test", shop=shop)
         TenantMember.objects.create(tenant=shop, user=target, role=ShopRole.ADMIN)
         target.is_active = False
         request = RequestFactory().post("/admin/accounts/user/")

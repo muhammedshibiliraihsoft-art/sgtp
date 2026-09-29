@@ -8,6 +8,7 @@ from rest_framework import status
 from unittest import mock
 
 from apps.tenants.models import Tenant, Supplier, TenantMember, ShopRole
+from apps.accounts.tests.factories import create_test_user
 
 User = get_user_model()
 
@@ -25,10 +26,10 @@ class T302RemediationTests(TestCase):
         )
 
         # Identity Users
-        self.user_1 = User.objects.create_user(
+        self.user_1 = create_test_user(owning_shop=self.shop,
             email="user1@test.com", password="pw", first_name="Muhammed"
         )
-        self.user_2 = User.objects.create_user(
+        self.user_2 = create_test_user(owning_shop=self.shop,
             email="user2@test.com", password="pw", first_name="Muhammed"
         )
 
@@ -40,8 +41,8 @@ class T302RemediationTests(TestCase):
         self.assertEqual(self.user_1.first_name, self.user_2.first_name)
 
         # Cannot supply ID
-        with self.assertRaises(Exception):
-            User.objects.create_user(
+        with self.assertRaises(IntegrityError):
+            create_test_user(owning_shop=self.shop,
                 id=self.user_1.id,
                 email="duplicate@test.com",
                 password="pw",
@@ -185,9 +186,9 @@ class T302RemediationTests(TestCase):
     def test_capacity_counts(self):
         """29, 30, 31, 32. user_count includes ACTIVE and INACTIVE, excludes REMOVED."""
         TenantMember.objects.create(tenant=self.shop, user=self.user_1, is_active=True)
-        u3 = User.objects.create_user(email="u3@test.com", first_name="Test")
+        u3 = create_test_user(owning_shop=self.shop, email="u3@test.com", first_name="Test")
         TenantMember.objects.create(tenant=self.shop, user=u3, is_active=False)
-        u4 = User.objects.create_user(email="u4@test.com", first_name="Test")
+        u4 = create_test_user(owning_shop=self.shop, email="u4@test.com", first_name="Test")
         mem_rem = TenantMember.objects.create(
             tenant=self.shop, user=u4, is_active=False
         )
@@ -203,8 +204,8 @@ class T302RemediationTests(TestCase):
         )
         mem.delete()
 
-        u3 = User.objects.create_user(email="u3@test.com", first_name="Test")
-        u4 = User.objects.create_user(email="u4@test.com", first_name="Test")
+        u3 = create_test_user(owning_shop=self.shop, email="u3@test.com", first_name="Test")
+        u4 = create_test_user(owning_shop=self.shop, email="u4@test.com", first_name="Test")
         TenantMember.objects.create(tenant=self.shop, user=u3, is_active=True)
         TenantMember.objects.create(tenant=self.shop, user=u4, is_active=True)
 
@@ -231,8 +232,8 @@ class T302RemediationTests(TestCase):
         )
         mem.delete()
 
-        u3 = User.objects.create_user(email="u3@test.com", first_name="Test")
-        u4 = User.objects.create_user(email="u4@test.com", first_name="Test")
+        u3 = create_test_user(owning_shop=self.shop, email="u3@test.com", first_name="Test")
+        u4 = create_test_user(owning_shop=self.shop, email="u4@test.com", first_name="Test")
         TenantMember.objects.create(tenant=self.shop, user=u3, is_active=True)
         mem_4 = TenantMember.objects.create(tenant=self.shop, user=u4, is_active=False)
 
@@ -273,31 +274,21 @@ class T302RemediationTests(TestCase):
 
     def test_race_condition_protection(self):
         """37. Capacity race behavior is protected."""
-        self.client.force_authenticate(
-            user=User.objects.create_superuser(
-                email="admin@test.com",
-                password="pw",
-                first_name="Main",
-                phone="+96550000006",
-            )
-        )
-        u3 = User.objects.create_user(email="u3@test.com", first_name="Test")
-        u4 = User.objects.create_user(email="u4@test.com", first_name="Test")
-        u5 = User.objects.create_user(email="u5@test.com", first_name="Test")
+        from apps.tenants.services.shop_accounts import create_shop_account
 
-        # Max users = 2
-        r1 = self.client.post(
-            "/api/v1/memberships/", {"tenant": self.shop.id, "user": u3.id}
+        main = User.objects.create_superuser(
+            email="admin@test.com", password="pw", first_name="Main", phone="+96550000006"
         )
-        self.assertEqual(r1.status_code, status.HTTP_201_CREATED)
-        r2 = self.client.post(
-            "/api/v1/memberships/", {"tenant": self.shop.id, "user": u4.id}
-        )
-        self.assertEqual(r2.status_code, status.HTTP_201_CREATED)
-        r3 = self.client.post(
-            "/api/v1/memberships/", {"tenant": self.shop.id, "user": u5.id}
-        )
-        self.assertEqual(r3.status_code, status.HTTP_400_BAD_REQUEST)
+        for index in range(2):
+            create_shop_account(
+                main, self.shop.pk, ShopRole.STAFF,
+                {"first_name": f"Capacity{index}", "email": f"capacity{index}@test.com"},
+            )
+        with self.assertRaises(Exception):
+            create_shop_account(
+                main, self.shop.pk, ShopRole.STAFF,
+                {"first_name": "Full", "email": "capacity-full@test.com"},
+            )
 
     def test_patch_user_identity_spoofing_denied(self):
         """Identity spoofing on update is denied."""
@@ -396,101 +387,20 @@ class T302RemediationTests(TestCase):
         self.assertIn("Cannot remove an active membership", str(ctx2.exception))
 
     def test_unauthorized_user_assignment_denied(self):
-        """F-07: Authorized and unauthorized user assignment."""
-        # A. Main Supplier assigning an existing user
-        u_target1 = User.objects.create_user(
-            email="t1@test.com", password="pw", first_name="Test"
+        """First Shop membership cannot be created by attaching a separate User ID."""
+        main = User.objects.create_superuser(
+            email="admin@test.com", password="pw", first_name="Main", phone="+96550000009"
         )
-        self.client.force_authenticate(
-            user=User.objects.create_superuser(
-                email="admin@test.com",
-                password="pw",
-                first_name="Main",
-                phone="+96550000009",
-            )
+        existing = create_test_user(
+            owning_shop=self.shop, email="existing@test.com", password="pw", first_name="Test"
         )
-        r_sup = self.client.post(
+        self.client.force_authenticate(user=main)
+        response = self.client.post(
             "/api/v1/memberships/",
-            {"tenant": self.shop.id, "user": u_target1.id, "role": ShopRole.VIEWER},
+            {"tenant": self.shop.pk, "user": existing.pk, "role": ShopRole.STAFF},
         )
-        self.assertEqual(r_sup.status_code, status.HTTP_201_CREATED)  # Authorized
-
-        # Shop Admin (Shop 1)
-        u_admin = User.objects.create_user(
-            email="admin_shop@test.com", password="pw", first_name="Test"
-        )
-        TenantMember.objects.create(tenant=self.shop, user=u_admin, role=ShopRole.ADMIN)
-
-        # B. Shop Admin assigning an existing user to own Shop
-        u_target2 = User.objects.create_user(
-            email="t2@test.com", password="pw", first_name="Test"
-        )
-        self.client.force_authenticate(user=u_admin)
-        r_adm = self.client.post(
-            "/api/v1/memberships/",
-            {"tenant": self.shop.id, "user": u_target2.id, "role": ShopRole.VIEWER},
-        )
-        # Note: default max_users is 2 for self.shop, wait! We created mem=1(target1), admin=1(u_admin), target2=1. We will hit limit?
-        # Let's adjust shop capacity before this test.
-        self.shop.max_users = 10
-        self.shop.save()
-        r_adm = self.client.post(
-            "/api/v1/memberships/",
-            {"tenant": self.shop.id, "user": u_target2.id, "role": ShopRole.VIEWER},
-        )
-        self.assertEqual(r_adm.status_code, status.HTTP_201_CREATED)  # Authorized
-
-        # C. Shop Admin assigning into another Shop
-        shop2 = Tenant.objects.create(
-            name="Shop 2", slug="shop-2", supplier=self.supplier, max_users=10
-        )
-        u_target3 = User.objects.create_user(
-            email="t3@test.com", password="pw", first_name="Test"
-        )
-        r_adm_other = self.client.post(
-            "/api/v1/memberships/",
-            {"tenant": shop2.id, "user": u_target3.id, "role": ShopRole.VIEWER},
-        )
-        self.assertEqual(r_adm_other.status_code, status.HTTP_403_FORBIDDEN)  # Denied
-
-        # Create a STAFF user (Shop 1)
-        u_staff = User.objects.create_user(
-            email="staff@test.com", password="pw", first_name="Test"
-        )
-        TenantMember.objects.create(tenant=self.shop, user=u_staff, role=ShopRole.STAFF)
-
-        # D. Staff attempting assignment
-        self.client.force_authenticate(user=u_staff)
-        r_staff = self.client.post(
-            "/api/v1/memberships/",
-            {"tenant": self.shop.id, "user": u_target3.id, "role": ShopRole.VIEWER},
-        )
-        self.assertEqual(r_staff.status_code, status.HTTP_403_FORBIDDEN)  # Denied
-
-        # E. Viewer attempting assignment
-        u_viewer = User.objects.create_user(
-            email="viewer@test.com", password="pw", first_name="Test"
-        )
-        TenantMember.objects.create(
-            tenant=self.shop, user=u_viewer, role=ShopRole.VIEWER
-        )
-        self.client.force_authenticate(user=u_viewer)
-        r_viewer = self.client.post(
-            "/api/v1/memberships/",
-            {"tenant": self.shop.id, "user": u_target3.id, "role": ShopRole.VIEWER},
-        )
-        self.assertEqual(r_viewer.status_code, status.HTTP_403_FORBIDDEN)  # Denied
-
-        # F. Unauthorized user attempting assignment
-        u_unauth = User.objects.create_user(
-            email="unauth@test.com", password="pw", first_name="Test"
-        )
-        self.client.force_authenticate(user=u_unauth)
-        r_unauth = self.client.post(
-            "/api/v1/memberships/",
-            {"tenant": self.shop.id, "user": u_target3.id, "role": ShopRole.VIEWER},
-        )
-        self.assertEqual(r_unauth.status_code, status.HTTP_403_FORBIDDEN)  # Denied
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(TenantMember.objects.filter(user=existing).count(), 0)
 
     def test_reactivation_capacity(self):
         """13, 14. Reactivation capacity enforcement (A-F)."""
@@ -526,7 +436,7 @@ class T302RemediationTests(TestCase):
 
         # E. Consumed capacity correctly incremented (mem + mem2 = 2, max=2)
         # B. Reactivation succeeds: inactive memberships already consume capacity.
-        u4 = User.objects.create_user(email="u4@test.com", first_name="Test")
+        u4 = create_test_user(owning_shop=self.shop, email="u4@test.com", first_name="Test")
         mem3 = TenantMember(tenant=self.shop, user=u4, is_active=False)
         mem3.save()  # Manually bypass serializer check. user_count is now 3.
 

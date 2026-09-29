@@ -15,7 +15,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from ..models import User
 from ..identity import USER_CODE_PATTERN, normalize_email
 from ..phone_numbers import InvalidUserPhone, normalize_user_phone
-from ..security import generate_initial_password
+from apps.tenants.models import Tenant
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -121,10 +121,18 @@ class UserCreateSerializer(serializers.ModelSerializer):
     phone = serializers.CharField(
         required=False, allow_blank=True, allow_null=True, write_only=True
     )
+    shop = serializers.PrimaryKeyRelatedField(
+        queryset=Tenant.objects.all(),
+        required=True,
+        write_only=True,
+    )
+    role = serializers.ChoiceField(
+        choices=("ADMIN", "STAFF", "VIEWER"), required=True, write_only=True
+    )
 
     class Meta:
         model = User
-        fields = ("user_code", "email", "first_name", "last_name", "phone")
+        fields = ("user_code", "email", "first_name", "last_name", "phone", "shop", "role")
         read_only_fields = ("user_code",)
 
     def validate_email(self, value):
@@ -151,17 +159,42 @@ class UserCreateSerializer(serializers.ModelSerializer):
         return normalized
 
     def create(self, validated_data):
-        self.initial_password = generate_initial_password(
-            User(
-                email=validated_data.get("email"),
-                first_name=validated_data.get("first_name", ""),
-                last_name=validated_data.get("last_name", ""),
-            )
+        from apps.tenants.services.shop_accounts import create_shop_account
+
+        shop = validated_data.pop("shop")
+        role = validated_data.pop("role")
+        user, self.initial_password = create_shop_account(
+            actor=self.context["request"].user,
+            shop_id=shop.pk,
+            role=role,
+            account_data=validated_data,
         )
-        user = User.objects.create_user(
-            password=self.initial_password,
-            must_change_password=True,
-            **validated_data,
+        return user
+
+
+class ShopUserCreateSerializer(UserCreateSerializer):
+    shop = None
+
+    class Meta(UserCreateSerializer.Meta):
+        fields = ("user_code", "email", "first_name", "last_name", "phone", "role")
+
+    def to_internal_value(self, data):
+        if "shop" in data or "tenant" in data or "owning_shop" in data:
+            raise serializers.ValidationError(
+                {"shop": "Shop is determined by the authorized URL context."}
+            )
+        return super().to_internal_value(data)
+
+    def create(self, validated_data):
+        from apps.tenants.services.shop_accounts import create_shop_account
+
+        role = validated_data.pop("role")
+        context = self.context["shop_context"]
+        user, self.initial_password = create_shop_account(
+            actor=self.context["request"].user,
+            shop_id=context.shop.pk,
+            role=role,
+            account_data=validated_data,
         )
         return user
 

@@ -15,7 +15,7 @@ class ShopContextAPITests(APITestCase):
         self.supplier = Supplier.objects.get(singleton_lock=True)
         self.shop_a = self.make_shop("Shop A", "shop-a")
         self.shop_b = self.make_shop("Shop B", "shop-b")
-        self.user = self.make_user("member@example.test")
+        self.user = self.make_user("member@example.test", owning_shop=self.shop_a)
 
     def make_shop(self, name, slug, *, active=True):
         return Tenant.objects.create(
@@ -26,8 +26,9 @@ class ShopContextAPITests(APITestCase):
             is_active=active,
         )
 
-    @staticmethod
-    def make_user(email, *, superuser=False, password_change=False):
+    def make_user(self, email, *, superuser=False, password_change=False, owning_shop=None):
+        if not superuser and owning_shop is None:
+            owning_shop = self.shop_a
         return User.objects.create_user(
             email=email,
             password="Safe-Test-Password-293!",
@@ -36,6 +37,7 @@ class ShopContextAPITests(APITestCase):
             must_change_password=password_change,
             first_name="Test",
             phone="+96550000999" if superuser else None,
+            owning_shop=owning_shop,
         )
 
     def authenticate(self, user, *, auth_version=None):
@@ -79,7 +81,7 @@ class ShopContextAPITests(APITestCase):
     def test_active_membership_all_roles_can_enter_context(self):
         for index, role in enumerate(ShopRole.values):
             with self.subTest(role=role):
-                user = self.make_user(f"role-{index}@example.test")
+                user = self.make_user(f"role-{index}@example.test", owning_shop=self.shop_a)
                 TenantMember.objects.create(
                     tenant=self.shop_a, user=user, role=role, is_active=True
                 )
@@ -99,7 +101,7 @@ class ShopContextAPITests(APITestCase):
         )
         TenantMember.objects.create(
             tenant=self.shop_b,
-            user=self.make_user("other-member@example.test"),
+            user=self.make_user("other-member@example.test", owning_shop=self.shop_b),
             role=ShopRole.STAFF,
             is_active=True,
         )
@@ -233,7 +235,7 @@ class ShopContextAPITests(APITestCase):
         TenantMember.objects.create(
             tenant=self.shop_a, user=self.user, role=ShopRole.ADMIN
         )
-        second_user = self.make_user("second@example.test")
+        second_user = self.make_user("second@example.test", owning_shop=self.shop_b)
         TenantMember.objects.create(
             tenant=self.shop_b, user=second_user, role=ShopRole.VIEWER
         )
@@ -246,16 +248,23 @@ class ShopContextAPITests(APITestCase):
         self.assertEqual(first.data["role"], ShopRole.ADMIN)
         self.assertEqual(second.data["role"], ShopRole.VIEWER)
 
-    def test_user_with_multiple_shop_roles_gets_role_for_selected_path(self):
+    def test_user_cannot_hold_multiple_shop_roles_but_separate_accounts_can(self):
         TenantMember.objects.create(
             tenant=self.shop_a, user=self.user, role=ShopRole.ADMIN
         )
+        from django.core.exceptions import ValidationError
+
+        with self.assertRaises(ValidationError):
+            TenantMember.objects.create(
+                tenant=self.shop_b, user=self.user, role=ShopRole.VIEWER
+            )
+        other_user = self.make_user("same-person@example.test", owning_shop=self.shop_b)
         TenantMember.objects.create(
-            tenant=self.shop_b, user=self.user, role=ShopRole.VIEWER
+            tenant=self.shop_b, user=other_user, role=ShopRole.VIEWER
         )
 
         first = self.request_context(self.user, self.shop_a.pk)
-        second = self.request_context(self.user, self.shop_b.pk)
+        second = self.request_context(other_user, self.shop_b.pk)
 
         self.assertEqual(first.data["role"], ShopRole.ADMIN)
         self.assertEqual(second.data["role"], ShopRole.VIEWER)
