@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-09-29 — T3-04B Remediation publication checkpoint
+
+- Restored the T3-04B transactional membership and global User-lifecycle services on the verified post-revert `main` baseline. Shop creation commits with exactly one active first ADMIN; membership User/Shop identity is immutable; ADMIN hierarchy/cardinality, locked User validation, global deactivation invariants, undo ordering, and approved capacity/reactivation rules are enforced in services.
+- Disabled direct Django Admin Shop creation and membership writes; routed User Admin deactivation through the global lifecycle service. Updated inactive-Shop Shop Admin denial to 403, corrected exact normalized undo error assertions, and updated reactivation-at-capacity expectations.
+- Added Shop creation, ADMIN/User lifecycle, Django Admin, multi-Shop, and PostgreSQL separate-connection race regression tests. No migration, dependency change, T3-04C, T3-05, or later-phase implementation.
+- Local validation before publication: focused remediation 77 passed; T3-04A/T3-03/membership/migration regressions 39 passed; full PostgreSQL-backed suite 183 passed (113 warnings); validator 183 discovered and 14 validator tests passed; Django/deployment checks, OpenAPI, Black, Flake8, and diff check passed. Require Project State Validation SUCCESS for the exact publication SHA before T3-04C.
+
 ## 2026-09-29 — T3-04A Global Identity / User-ID / Authentication
 
 - Implemented the confirmed global identity foundation locally: generated permanent User ID, canonical optional email/phone identity for normal users, required trimmed first name, alias-based authentication, contact safeguards, controlled credential reset, and hard-delete denial.

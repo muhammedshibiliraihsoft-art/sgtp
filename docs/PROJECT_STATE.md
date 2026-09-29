@@ -4,11 +4,12 @@
 
 - Phase 1 and Phase 2 are complete.
 - Phase 3 is ACTIVE; activation was explicitly confirmed with `CONFIRM PHASE 3`.
-- Completed Phase 3 tasks: T3-01, T3-02, T3-02-REMEDIATION, T3-02A, T3-03, T3-04, and T3-04A (local implementation; validation recorded below).
-- Current task: T3-04A — implementation and local validation are complete; not committed or pushed.
+- Completed Phase 3 tasks include T3-01, T3-02, T3-02-REMEDIATION, T3-02A, T3-03, T3-04, T3-04A, and T3-04B-REMEDIATION-01.
+- Current gate: verify Project State Validation SUCCESS for the exact T3-04B remediation publication SHA before any next task.
 - T3-04 is COMPLETE, COMMITTED, and PUSHED on `main`. Live verification on 2026-09-29: local `HEAD`, `origin/main`, and remote `refs/heads/main` matched; derive the current SHA from Git.
-- T3-04A was explicitly confirmed and implemented locally. T3-04B, T3-04C, T3-05, and T3-05A have not started and are not authorized.
-- Published baseline CI evidence remains historical for the pre-T3-04A commit; this local T3-04A change has not been pushed and has no CI result.
+- T3-04A is published at `304e6ec4a6811b0153db4dea1417d24affa11bec`; its GitHub CI passed.
+- Initial T3-04B publication `5e3b1714289e7b5660e1a54d6cb2752b64d54683` failed GitHub Actions Run #36545855022 and was reverted. T3-04B-REMEDIATION-01 is published as the corrective checkpoint; its exact-SHA GitHub Actions result is a required gate before T3-04C.
+- T3-04B-REMEDIATION-01 was explicitly confirmed, implemented, and locally validated. T3-04C, T3-05, T3-05A, and Phase 4 remain unstarted and unauthorized.
 
 - Project root: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp`
 - Remote: `https://github.com/muhammedshibiliraihsoft-art/sgtp.git`
@@ -17,21 +18,22 @@
 - Target status: SGTP V1 is explicitly defined in `docs/PRODUCT_DEFINITION.md`
 - Starter foundation: exists in the cloned SGTP repository.
 - Phase 1 implementation: **Historical - Complete.**
-- Confirmation status: T3-04A was explicitly confirmed and is implemented locally. No subsequent task is confirmed; T3-04B requires its own task plan and exact confirmation.
+- Confirmation status: T3-04B-REMEDIATION-01 was explicitly confirmed. No subsequent task is confirmed; T3-04C requires green CI for the exact T3-04B publication SHA plus its own task plan and exact confirmation.
 - Detailed phase playbooks: 01-10 present.
 - Later-phase decisions: Tenant context is approved as URL-path based (`/shops/{shop_id}/...`), and Related Person billing is owned by the Primary Client.
 - T3-05A (Staging Backend Foundation) and F7-01A (Staging Frontend & Client Review Checkpoint) remain planned only. T3-02A implemented the account/preference data and API foundation; frontend localization, RTL/LTR layout, and full Light/Dark/System UI remain Phase 7 work.
-- At T3-02A completion, email was required and optional unique E.164 phone could authenticate the same UUID account. T3-04A now makes normal-user email and phone optional locally while retaining Main Supplier-controlled global account creation, no-store initial credentials, email reset, session revocation, locale/appearance preferences, and Shop defaults.
-- T3-04A implemented locally: permanent User ID, optional normal-user email/phone, required first name, admin-grade account contact safeguards, alias login, controlled global reset, and User hard-delete denial. T3-04B/C and T3-05 targets—ADMIN lifecycle/cardinality, Work Functions, Shop visibility/lifecycle APIs, and capacity enforcement—remain unimplemented.
+- At T3-02A completion, email was required and optional unique E.164 phone could authenticate the same UUID account. T3-04A subsequently made normal-user email and phone optional while retaining Main Supplier-controlled global account creation, no-store initial credentials, email reset, session revocation, locale/appearance preferences, and Shop defaults.
+- T3-04A implements the published permanent User ID, optional normal-user email/phone, required first name, admin-grade contact safeguards, alias login, controlled global reset, and User hard-delete denial. Published T3-04B remediation enforces membership/Admin lifecycle and cardinality invariants; T3-04C Work Functions and T3-05 Shop visibility/lifecycle API work remain unimplemented.
 - T3-02A and T3-03 historical CI records remain below. The published T3-04 baseline and the later T3-REBASELINE-01 documentation checkpoint passed GitHub Actions Project State Validation (runs #36511111586 and #36524789793 respectively).
 
-## Current Verification Results
+## Verification history
 
-- Focused identity/authentication suite: 29 passed; T3-02A compatibility regression: 10 passed. Full application suite: 167 passed (155 warnings), using the local PostgreSQL test database.
-- Repository validator: PASS (167 tests discovered); validator tests: 14 passed. Django system and production deployment checks: PASS; migration drift check: no changes detected; OpenAPI schema validation: PASS; `git diff --check`: PASS.
-- Local PostgreSQL preflight: 0 Users, 0 superusers, 0 Shops, 0 unusable names, 0 blank emails, and 0 case-insensitive email duplicate groups. The database was at the pre-feature migrations; after preflight, the normal migration command applied the tenant prerequisites and `accounts.0004_t304a_global_identity` successfully. Migration regression test preserves representative UUID/password/membership/audit references.
-- Black and Flake8 checks: PASS for all six newly added Python modules. A broader Flake8 run over touched legacy files still reports style/unused-import findings; the whole touched-file lint scope is therefore not clean.
-- Local T3-04A changes are uncommitted and unpushed; GitHub CI has not run for them. An earlier full-suite attempt was interrupted by a stopped local PostgreSQL process; after restarting the existing database without resetting it, the complete 167-test suite passed.
+- T3-04B remediation focused suite: 77 passed, including exact immutable-identity/error-envelope assertions and Shop/Admin lifecycle cases.
+- PostgreSQL-backed full application suite: 183 passed (113 warnings), including separate-connection tests for concurrent promotions, demotion versus global deactivation, and first-ADMIN creation versus User deactivation.
+- Regression suite for T3-04A identity/authentication, T3-03 Shop context, membership and migration behavior: 39 passed.
+- Repository validator: PASS (183 tests discovered); validator tests: 14 passed. Django system check and `DJANGO_ENV=prod` deployment check: PASS. OpenAPI schema validation: PASS. Black and Flake8 for changed Python files: PASS; `git diff --check`: PASS.
+- `makemigrations --check --dry-run`: PASS against the available local PostgreSQL `devdb`; no model changes or migration-history warnings.
+- The initial T3-04B commit remains historical failed evidence and was reverted before this correction. Confirm the Project State Validation result for the exact T3-04B publication SHA before proceeding.
 
 ### Latest T3-02A Verification
 
@@ -139,7 +141,7 @@
 - CI retains project-state validation and is configured to run the application suite, Django system checks, and migration checks with PostgreSQL. The GitHub Actions run for the reviewed baseline successfully passed all checks, including the application suite, Django system checks, and PostgreSQL integration. Remote CI confirmation is fully green and the PostgreSQL connectivity issue is resolved.
 - Production compose now propagates `DJANGO_CORS_ALLOWED_ORIGINS` without inventing a deployment origin.
 - No migrations were required or changed.
-- Remaining decisions include Shop Admin settings authority (not granted), currency changes after financial history, and later items listed in `docs/DECISIONS.md`. T3-04A identity is implemented locally; membership/Admin invariants and Work Functions remain T3-04B/C, with Shop API/Admin enforcement in T3-05.
+- Remaining decisions include Shop Admin settings authority (not granted), currency changes after financial history, and later items listed in `docs/DECISIONS.md`. T3-04A identity and T3-04B membership/Admin invariants are published; T3-04C Work Functions remain unimplemented, and broader Shop API visibility/lifecycle enforcement remains T3-05.
 
 ### Phase 3+ Deferred Implementations
 

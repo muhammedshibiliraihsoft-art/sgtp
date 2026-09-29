@@ -1,86 +1,128 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Tenant, Supplier
+from .models import Supplier, Tenant, TenantMember
 
 
 @admin.register(Supplier)
 class SupplierAdmin(admin.ModelAdmin):
-    list_display = ['name', 'is_active', 'created_at']
-    readonly_fields = ['id', 'singleton_lock', 'created_at', 'updated_at']
+    list_display = ["name", "is_active", "created_at"]
+    readonly_fields = ["id", "singleton_lock", "created_at", "updated_at"]
 
 
 @admin.register(Tenant)
 class TenantAdmin(admin.ModelAdmin):
     list_display = [
-        'name', 'slug', 'supplier', 'domain', 'is_active_display',
-        'user_count_display', 'max_users', 'created_at'
+        "name",
+        "slug",
+        "supplier",
+        "domain",
+        "is_active_display",
+        "user_count_display",
+        "max_users",
+        "created_at",
     ]
-    list_filter = ['supplier', 'is_active', 'created_at', 'max_users']
-    search_fields = ['name', 'slug', 'domain', 'contact_email']
-    prepopulated_fields = {'slug': ('name',)}
-    readonly_fields = ['id', 'created_at', 'updated_at', 'user_count_display']
-    
+    list_filter = ["supplier", "is_active", "created_at", "max_users"]
+    search_fields = ["name", "slug", "domain", "contact_email"]
+    prepopulated_fields = {"slug": ("name",)}
+    readonly_fields = ["id", "created_at", "updated_at", "user_count_display"]
+
+    def has_add_permission(self, request):
+        # Shop creation must atomically assign its first ADMIN through the service.
+        return False
+
     fieldsets = (
-        ('Basic Information', {
-            'fields': ('supplier', 'name', 'slug', 'domain', 'is_active')
-        }),
-        ('Limits & Settings', {
-            'fields': ('max_users',)
-        }),
-        ('Contact Information', {
-            'fields': ('contact_email', 'contact_phone')
-        }),
-        ('Address', {
-            'fields': (
-                'address_line1', 'address_line2', 'city', 
-                'state', 'postal_code', 'country'
-            ),
-            'classes': ('collapse',)
-        }),
-        ('Metadata', {
-            'fields': ('id', 'created_at', 'updated_at', 'user_count_display'),
-            'classes': ('collapse',)
-        })
+        (
+            "Basic Information",
+            {"fields": ("supplier", "name", "slug", "domain", "is_active")},
+        ),
+        ("Limits & Settings", {"fields": ("max_users",)}),
+        ("Contact Information", {"fields": ("contact_email", "contact_phone")}),
+        (
+            "Address",
+            {
+                "fields": (
+                    "address_line1",
+                    "address_line2",
+                    "city",
+                    "state",
+                    "postal_code",
+                    "country",
+                ),
+                "classes": ("collapse",),
+            },
+        ),
+        (
+            "Metadata",
+            {
+                "fields": ("id", "created_at", "updated_at", "user_count_display"),
+                "classes": ("collapse",),
+            },
+        ),
     )
-    
+
     def is_active_display(self, obj):
         if obj.is_active:
             return format_html('<span style="color: green;">✓ Active</span>')
         return format_html('<span style="color: red;">✗ Inactive</span>')
-    is_active_display.short_description = 'Status'
-    
+
+    is_active_display.short_description = "Status"
+
     def user_count_display(self, obj):
         count = obj.user_count
         max_users = obj.max_users
         if count >= max_users:
-            color = 'red'
+            color = "red"
         elif count >= max_users * 0.8:
-            color = 'orange'
+            color = "orange"
         else:
-            color = 'green'
+            color = "green"
         return format_html(
-            '<span style="color: {};">{}/{}</span>', 
-            color, count, max_users
+            '<span style="color: {};">{}/{}</span>', color, count, max_users
         )
-    user_count_display.short_description = 'Users'
-    
-    def get_queryset(self, request):
-        return super().get_queryset(request).select_related('supplier')
 
-from .models import TenantMember
+    user_count_display.short_description = "Users"
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("supplier")
+
 
 class TenantMemberInline(admin.TabularInline):
     model = TenantMember
-    extra = 1
-    autocomplete_fields = ['user']
+    extra = 0
+    autocomplete_fields = ["user"]
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
 
 # Add the inline to TenantAdmin
 TenantAdmin.inlines = [TenantMemberInline]
 
+
 @admin.register(TenantMember)
 class TenantMemberAdmin(admin.ModelAdmin):
-    list_display = ['user', 'tenant', 'role', 'is_active', 'created_at']
-    list_filter = ['role', 'is_active', 'tenant']
-    search_fields = ['user__email', 'user__first_name', 'user__last_name', 'tenant__name']
-    autocomplete_fields = ['tenant', 'user']
-    readonly_fields = ['id', 'created_at', 'updated_at']
+    list_display = ["user", "tenant", "role", "is_active", "created_at"]
+    list_filter = ["role", "is_active", "tenant"]
+    search_fields = [
+        "user__email",
+        "user__first_name",
+        "user__last_name",
+        "tenant__name",
+    ]
+    autocomplete_fields = ["tenant", "user"]
+    readonly_fields = ["id", "created_at", "updated_at", "role", "is_active", "deleted"]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

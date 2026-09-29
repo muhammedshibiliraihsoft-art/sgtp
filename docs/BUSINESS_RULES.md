@@ -247,43 +247,43 @@ These rules are approved target behavior, not claims about current code. Impleme
 
 ### BR-ACC-003 — One Global User Across Shops
 **Status:** CONFIRMED
-**Rule:** One person has one global User UUID and may hold separate memberships in multiple Shops. Role and lifecycle belong to each membership. Duplicate User accounts must not be created merely because a person works in another Shop. UUID-preserving identity implementation is local in T3-04A; membership compatibility remains T3-04B validation.
+**Rule:** One person has one global User UUID and may hold separate memberships in multiple Shops. Role and lifecycle belong to each membership. Duplicate User accounts must not be created merely because a person works in another Shop. UUID-preserving identity implementation is published in T3-04A; membership compatibility is published in T3-04B remediation.
 
 ### BR-ACC-004 — Permanent Human-Usable User ID
 **Status:** CONFIRMED
-**Rule:** Every User has a system-generated, globally unique, permanent, role-neutral and Shop-neutral User ID. It is the universal human-usable login identifier and must not encode mutable role, Shop, or brand meaning. Preserve UUID as internal database identity. Implemented locally by T3-04A; existing-user migration is guarded by a name/contact/email preflight.
+**Rule:** Every User has a system-generated, globally unique, permanent, role-neutral and Shop-neutral User ID. It is the universal human-usable login identifier and must not encode mutable role, Shop, or brand meaning. Preserve UUID as internal database identity. T3-04A is published; existing-user migration is guarded by a name/contact/email preflight.
 
 ### BR-ACC-005 — Normal User Contact Optionality
 **Status:** CONFIRMED
-**Rule:** A normal Shop User requires User ID and password; email and phone are optional. Registered email or phone may be an alternative login identifier for the same UUID. Never fabricate contact data. Implemented locally by T3-04A.
+**Rule:** A normal Shop User requires User ID and password; email and phone are optional. Registered email or phone may be an alternative login identifier for the same UUID. Never fabricate contact data. T3-04A is published.
 
 ### BR-ACC-006 — Admin-Grade Account Contacts
 **Status:** CONFIRMED
-**Rule:** An active Shop ADMIN and the Main Supplier/Main Admin require User ID, password, email, and phone. T3-04A implements Main Supplier account validation and prevents required-contact removal while a User has an active ADMIN membership. Promotion to active Shop ADMIN must be rejected unless contacts satisfy this rule; that membership lifecycle enforcement remains T3-04B. No OTP/SMS/WhatsApp/2FA provider is implied.
+**Rule:** An active Shop ADMIN and the Main Supplier/Main Admin require User ID, password, email, and phone. T3-04A implements Main Supplier account validation and prevents required-contact removal while a User has an active ADMIN membership. T3-04B enforces the contact rule on Shop creation, ADMIN promotion/reactivation, and global User lifecycle. No OTP/SMS/WhatsApp/2FA provider is implied.
 
 ### BR-ACC-007 — Global Account and Credential Authority
 **Status:** CONFIRMED
-**Rule:** Public signup remains disabled. Main Supplier/global account administration controls global User creation and credential reset. Shop Admins may manage permitted membership records but cannot create global User accounts, enumerate the global User directory, or reset another User's global password. Exact User-ID lookup for membership addition returns only User ID and display name; this remains T3-05. T3-04A implements the account creation/reset foundation locally.
+**Rule:** Public signup remains disabled. Main Supplier/global account administration controls global User creation and credential reset. Shop Admins may manage permitted membership records but cannot create global User accounts, enumerate the global User directory, or reset another User's global password. Exact User-ID lookup for membership addition returns only User ID and display name; this remains T3-05. The account creation/reset foundation is published in T3-04A.
 
 ### BR-ACC-008 — Human Display Name
 **Status:** CONFIRMED
-**Rule:** `first_name` is required and nonblank after trimming; `last_name` is optional. Display name is `first_name` or `first_name + " " + last_name` when present. Do not add a separate `display_name` field or use email, phone, UUID, or User ID as a normal display fallback. Preflight existing users and never fabricate names. Implemented locally by T3-04A; migration stops if existing rows lack a usable first name.
+**Rule:** `first_name` is required and nonblank after trimming; `last_name` is optional. Display name is `first_name` or `first_name + " " + last_name` when present. Do not add a separate `display_name` field or use email, phone, UUID, or User ID as a normal display fallback. Preflight existing users and never fabricate names. T3-04A is published; migration stops if existing rows lack a usable first name.
 
 ### BR-MEM-008 — Membership-Scoped Access Role
 **Status:** CONFIRMED
-**Rule:** One global User may have one membership per Shop and different access roles per Shop. V1 access roles are ADMIN, STAFF, and VIEWER. Do not add OWNER or use business jobs such as TAILOR, SALESMAN, CASHIER, or CUTTER as access roles. Implementation/compatibility validation is pending T3-04B.
+**Rule:** One global User may have one membership per Shop and different access roles per Shop. V1 access roles are ADMIN, STAFF, and VIEWER. Do not add OWNER or use business jobs such as TAILOR, SALESMAN, CASHIER, or CUTTER as access roles. T3-04B remediation implements and tests the role/membership rules.
 
 ### BR-MEM-009 — Active Shop ADMIN Cardinality
 **Status:** CONFIRMED
-**Rule:** Each Shop must have at least one and no more than two ACTIVE ADMIN memberships. Inactive or removed memberships do not consume an active-ADMIN slot. Any operation leaving zero or three active ADMINs is invalid. Implementation is pending T3-04B.
+**Rule:** Each Shop must have at least one and no more than two ACTIVE ADMIN memberships. Inactive or removed memberships do not consume an active-ADMIN slot. Any operation leaving zero or three active ADMINs is invalid. T3-04B remediation enforces this invariant.
 
 ### BR-MEM-010 — ADMIN Authority and Shop Creation
 **Status:** CONFIRMED
-**Rule:** Main Supplier manages ADMIN assignment, promotion, demotion and removal, while preserving the 1–2 active ADMIN invariant. Shop Admins cannot change another membership's ADMIN authority. Shop creation must atomically establish its first valid ADMIN before the Shop enters normal operation. Shop Admins may manage permitted non-ADMIN memberships and Work Functions only within their own Shop. Implementation is pending T3-04B/T3-04C.
+**Rule:** Main Supplier manages ADMIN assignment, promotion, demotion and removal, while preserving the 1–2 active ADMIN invariant. Shop Admins cannot change another membership's ADMIN authority. Shop creation must atomically establish its first valid ADMIN before the Shop enters normal operation. Shop Admins may manage permitted non-ADMIN memberships and Work Functions only within their own Shop. ADMIN lifecycle and first-ADMIN safeguards are implemented locally by T3-04B; Work Functions remain T3-04C.
 
 ### BR-MEM-011 — Global User Deactivation Guard
 **Status:** CONFIRMED
-**Rule:** Reject global User deactivation if it would leave any Shop with zero active ADMIN memberships. Establish a replacement ADMIN first. Global hard deletion is not an ordinary V1 management action; preserve history through deactivation. Implementation is pending T3-04A/T3-04B.
+**Rule:** Reject global User deactivation if it would leave any Shop with zero active ADMIN memberships. Establish a replacement ADMIN first. Global hard deletion is not an ordinary V1 management action; preserve history through deactivation. The safeguard is implemented locally by T3-04B remediation; no global hard-delete behavior is added.
 
 ### BR-MEM-012 — Membership Capacity Lower Bound
 **Status:** CONFIRMED

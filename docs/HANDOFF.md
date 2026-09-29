@@ -4,21 +4,27 @@
 
 Phase 3 is ACTIVE; activation was explicitly confirmed with `CONFIRM PHASE 3`.
 
-Completed foundation tasks: T3-01, T3-02, T3-02-REMEDIATION, T3-02A, T3-03, and T3-04. T3-04 is committed/pushed; verified `main`, `origin/main`, and remote `main` match; derive the current SHA from Git.
-CI evidence: GitHub Actions Project State Validation succeeded for the published baseline (run #36511111586).
+Completed foundation tasks: T3-01, T3-02, T3-02-REMEDIATION, T3-02A, T3-03, and T3-04. T3-04A is published at `304e6ec4a6811b0153db4dea1417d24affa11bec` with green CI. Initial T3-04B commit `5e3b1714289e7b5660e1a54d6cb2752b64d54683` failed Run #36545855022 and was reverted. The T3-04B remediation is published by this checkpoint; verify Project State Validation SUCCESS for its exact SHA before T3-04C.
 
 ## Current task
 
-T3-04A — implementation and local validation are complete. Task was explicitly confirmed. No commit or push has been made; there is no CI result for this diff.
+T3-04B-REMEDIATION-01 — explicitly confirmed and published. Require successful Project State Validation for the exact publication SHA before continuing.
 
 ## Current state and next gate
 
-- T3-04A implements permanent generated `user_code`, optional email/phone for normal Users, required trimmed `first_name`, unified User ID/email/phone login, controlled Main Supplier credential reset, account contact safeguards, and global User hard-delete denial.
-- UUID remains the internal database and JWT `user_id` identity. Existing membership and audit references are preserved. T3-04B/C and T3-05 behavior is not implemented.
+- T3-04A's published generated `user_code`, optional normal-user email/phone, required trimmed `first_name`, alias login, controlled credential reset, contact safeguards, and User hard-delete denial remain in place; UUID remains the database/JWT `user_id` identity.
+- T3-04B remediation routes membership changes through transactional services; enforces immutable membership User/Shop identity, atomic Shop + first ADMIN creation, ADMIN 1–2 cardinality, global User-deactivation authority/invariants, lifecycle rules, safe Django Admin paths, and approved capacity semantics. No migration was added.
 - Approved ordinary-Shop visibility, Shop deactivation/no-delete, and max_users lower-bound rules are pending T3-05 implementation.
-- Next candidate: T3-04B — membership/Admin invariants. It is not confirmed or authorized; do not begin automatically.
+- T3-04C, T3-05, T3-05A, and Phase 4 remain unstarted and unauthorized. Any next task requires its own plan and exact confirmation.
 
-## Tests and checks
+## Current T3-04B remediation validation
+
+- Focused remediation suite: 77 passed; T3-04A identity/authentication, T3-03 context, membership, and migration regressions: 39 passed.
+- Full PostgreSQL-backed pytest suite: 183 passed (113 warnings). Separate-connection PostgreSQL races for dual promotion, demotion/global deactivation, and first-ADMIN creation/global User deactivation all passed.
+- Repository validator: PASS (183 discovered); validator tests: 14 passed. Django system/deployment checks, OpenAPI schema validation, Black, Flake8, and `git diff --check`: PASS.
+- `makemigrations --check --dry-run`: no model changes detected. GitHub Actions has not run for this local remediation. No commit or push was made.
+
+## Historical T3-04A tests and checks
 
 - Focused identity/authentication suite: 29 passed; T3-02A compatibility regressions: 10 passed. Full pytest suite: 167 passed (155 warnings) against the local PostgreSQL test database. One earlier run was interrupted by the stopped local PostgreSQL process; the existing service was restarted without resetting its data, and a clean complete rerun passed.
 - Repository validator: PASS (167 tests discovered); validator tests: 14 passed. `manage.py check` and `DJANGO_ENV=prod manage.py check --deploy`: PASS; `makemigrations --check --dry-run`: no changes detected; OpenAPI validation: PASS; `git diff --check`: PASS.
@@ -130,7 +136,7 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 ## Phase 3+ Deferred Implementations
 
 - `BaseModelWithTenant.tenant` remains nullable. T3-03 establishes request context and T3-04 provides reusable query/object isolation primitives; future concrete Shop-owned endpoints must adopt and verify those primitives.
-- The starter is not yet the target product: Clients, Related Persons, Designs, Measurements, Materials, production stages, billing, reports/PDFs, frontend, persistent storage, workers, complete audit capture, monitoring, and end-to-end validation remain unimplemented. T3-03's pushed baseline passed GitHub Actions run #19. T3-04 is complete and published (current evidence is in the handoff header); T3-04A is implemented and validated locally but unpublished; T3-04B/C, T3-05, and later work remain unimplemented and individually gated.
+- The starter is not yet the target product: Clients, Related Persons, Designs, Measurements, Materials, production stages, billing, reports/PDFs, frontend, persistent storage, workers, complete audit capture, monitoring, and end-to-end validation remain unimplemented. T3-03's pushed baseline passed GitHub Actions run #19. T3-04, T3-04A, and T3-04B remediation are published; T3-04C, T3-05, and later work remain unimplemented and individually gated.
 - The target requires React/Vite/Tailwind, but the starter has only an empty `frontend/` placeholder. English/ar-KW/Bangla/Urdu localization, RTL/LTR, and Light/Dark/System are planned V1 requirements, not implemented.
 - Tenant context is implemented as URL-path based (`/api/v1/shops/{shop_id}/...`); T3-04 primitives are available, and each future Shop-owned endpoint must apply them to queries and objects.
 - Related Person billing ownership is approved as Primary Client ownership and must be implemented/tested in Phase 5.
