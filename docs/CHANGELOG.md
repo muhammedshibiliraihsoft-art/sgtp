@@ -1,10 +1,15 @@
 # Changelog
 
+## 2026-09-30 — T3-05A custom-domain deferment and live staging state
+
+- Recorded the approved operational decision that BiRKy does not currently control `birky.com`: `https://birky-staging-api.onrender.com` is the active T3-05A backend; `https://api-staging.birky.com` and `https://staging.birky.com` are reserved/planned targets only. Removed the unowned custom API domain from the repository's Render Blueprint configuration without changing host validation, CORS/CSRF policy, resource plans, or deployment behavior.
+- Recorded observed Render resources and live deployment in the environment, project-state, handoff, architecture, security, Phase 3 playbook, and staging runbook. Authentication lifecycle/cookie and Shop-isolation checks remain pending; T3-05A is still in progress.
+
 ## 2026-09-30 — T3-05A Staging Backend Foundation (published; CI green)
 
 - Prepared an explicit secure staging settings profile, PostgreSQL URL support, Render Blueprint with manual deployment and isolated Free PostgreSQL, bounded database startup readiness, provider PORT/Gunicorn configuration, CSRF bootstrap, guarded staging reset command, smoke checker, and staging runbook.
 - Local PostgreSQL-backed application suite: 255 passed; staging-focused tests: 28 passed; auth/CSRF lifecycle regressions: 7 passed; validator tests: 23 passed. Staging Django/deploy checks, migration drift, OpenAPI (zero errors), Black, Flake8, and `git diff --check` passed. Docker build and disposable local PostgreSQL-backed container smoke passed.
-- Black/Flake8 passed for new staging and validator Python modules; whole-file checks of touched legacy files report existing style findings and no broad reformat was applied. Published as `9af6424116ebba12896d90d032c36bd25328a4d0`; Project State Validation run `36652187336` succeeded for that exact SHA. No application business models or migrations, dependency changes, frontend, worker, storage, or Production resources were added. No Render account/resource, DNS/TLS, or live staging deployment has been verified or performed.
+- Black/Flake8 passed for new staging and validator Python modules; whole-file checks of touched legacy files report existing style findings and no broad reformat was applied. Published as `9af6424116ebba12896d90d032c36bd25328a4d0`; Project State Validation run `36652187336` succeeded for that exact SHA. No application business models or migrations, dependency changes, frontend, worker, storage, or Production resources were added. At that repository-publication checkpoint, no Render account/resource, DNS/TLS, or live staging deployment had been verified or performed.
 
 ## 2026-09-30 — T3-05 Back-office / Shop API and Admin hardening (published; CI green)
 

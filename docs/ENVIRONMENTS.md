@@ -18,8 +18,11 @@ Each deployment or environment change remains subject to the project's phase/tas
 
 | Purpose | Hostname |
 |---|---|
-| Staging frontend | `staging.birky.com` |
-| Staging backend/API | `api-staging.birky.com` |
+| Active staging backend/API | `birky-staging-api.onrender.com` |
+| Reserved future staging backend/API | `api-staging.birky.com` |
+| Planned staging frontend (not provisioned) | `staging.birky.com` |
+
+BiRKy does not currently own/control `birky.com`. The custom API hostname is reserved only and is not configured, DNS-verified, or TLS-verified. The Render provider hostname is the current operational T3-05A backend URL.
 
 ### Production Domains (reserved, not provisioned)
 
@@ -43,7 +46,7 @@ Staging is the single shared non-production deployment environment. It serves tw
 During development, Staging may be used for:
 
 - stable accepted checkpoints
-- client progress review at `staging.birky.com`
+- backend integration validation at `https://birky-staging-api.onrender.com`; client review at `staging.birky.com` awaits a provisioned frontend and controlled domain
 - integration validation
 - browser testing (auth, cookies, CSRF, CORS, locale, RTL, theme)
 - API/frontend integration
@@ -68,15 +71,15 @@ Phase 9 does NOT create a second Staging environment. Early development use is N
 
 ### Staging Backend Foundation (T3-05A in progress)
 
-- Repository configuration exists in `render.yaml` and `docs/runbooks/STAGING_BACKEND.md`; this does not prove Render account connectivity, resource provisioning, DNS/TLS, or a live deployment.
+- Render resources and a live backend deployment are verified; the active URL is `https://birky-staging-api.onrender.com`. See `docs/runbooks/STAGING_BACKEND.md` for the exact observed resource/deploy evidence and remaining checks.
 - Intended Render Web Service and isolated PostgreSQL use the Free plan in Frankfurt, with manual deploys from CI-green `main` checkpoints. Free Postgres is temporary (1 GB, 30-day expiry, no backups); free web services sleep after inactivity and use ephemeral filesystems. Free usage overages may be billable; inspect account usage/cost before provisioning and do not approve paid upgrades/add-ons without explicit approval.
 - Staging secrets are generated/stored by Render, distinct from local/Production; use synthetic data only. Staging email reset delivery is disabled; the host-only CSRF flow is protected and exact-origin CORS/CSRF are configured.
-- Do not claim the environment operational until the isolated DB, migration, HTTPS domain, health/readiness, auth/CSRF/CORS, and Shop-isolation smoke checks have been verified.
-- See the runbook for manual deployment, reset, recovery, DNS, and temporary-plan limitations. No automatic deployment for every commit.
+- `api-staging.birky.com` is a reserved future target only because BiRKy does not currently control `birky.com`; custom DNS/TLS is deferred and is not a blocker for the provider-hosted backend. The staging frontend at `staging.birky.com` is not provisioned; full real-browser frontend/backend integration remains deferred.
+- T3-05A remains in progress until the remaining authentication/CSRF-cookie and Shop-isolation checks are verified. Application auto-deploy remains off; see the runbook for evidence, reset/recovery, and temporary-plan limitations.
 
 ### Staging Frontend & Client Review Checkpoint (planned F7-01A)
 
-- Frontend at `staging.birky.com` connected to staging backend at `api-staging.birky.com`
+- Future frontend at `staging.birky.com` connected to the active provider backend or, after domain control is established, the reserved `api-staging.birky.com`
 - Visible `STAGING — NOT PRODUCTION` indicator; record accepted checkpoint/short SHA
 - Browser-verify login, refresh, logout, cookies (SameSite/Secure/HttpOnly), CSRF, Origin, and credentialed CORS
 - Use demo/test data and environment-specific configuration; do not add real customer data
@@ -107,7 +110,7 @@ Public product name/domains/hostnames and unresolved business policies require h
 
 ## Auth / Cookie / CSRF Requirements
 
-Because staging frontend and API use separate subdomains (`staging.birky.com` and `api-staging.birky.com`), the roadmap explicitly requires browser validation of:
+For the planned custom-domain frontend/API pair (`staging.birky.com` and `api-staging.birky.com`), the roadmap requires browser validation of:
 
 - refresh cookie delivery
 - Secure flag

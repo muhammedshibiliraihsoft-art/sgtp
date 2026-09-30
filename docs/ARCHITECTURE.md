@@ -69,7 +69,7 @@ This is the approved target structure. The root-level `core/`, `apps/accounts/`,
 
 ### T3-05A staging backend foundation (implementation in progress)
 
-The repository now defines an explicit `DJANGO_ENV=staging` settings module, a Render Blueprint for a manually deployed, isolated staging API/PostgreSQL pair, bounded startup readiness/migration behavior, and safe health/CSRF bootstrap support. Render resources, DNS/TLS, and an operational deployment are not claimed until verified through the provider. The Free plan is temporary and non-durable; see `docs/runbooks/STAGING_BACKEND.md` for its current limitations and gates. No Production or business module is part of this work.
+The repository defines an explicit `DJANGO_ENV=staging` settings module and a Render Blueprint for a manually deployed, isolated staging API/PostgreSQL pair, with bounded startup readiness/migration behavior and safe health/CSRF bootstrap support. As of 2026-09-30, the Free Frankfurt Docker API and PostgreSQL 15 resources are provisioned and the API is live at `https://birky-staging-api.onrender.com`; authenticated and isolation verification remains in progress. `api-staging.birky.com` is a reserved future target only because BiRKy does not currently control the domain; its DNS/TLS are deferred. The Free plan is temporary and non-durable; see `docs/runbooks/STAGING_BACKEND.md`. No Production or business module is part of this work.
 
 ## Verified starter architecture
 

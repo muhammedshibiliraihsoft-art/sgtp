@@ -8,8 +8,6 @@ services:
     dockerContext: .
     autoDeployTrigger: "off"
     healthCheckPath: /api/health/ready/
-    domains:
-      - api-staging.birky.com
     envVars:
       - key: DJANGO_ENV
         value: staging
