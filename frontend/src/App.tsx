@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import {
   ArrowRight, Bell, ChevronDown, CircleHelp,
   ClipboardList, Globe2, LayoutDashboard,
-  Moon, MoreHorizontal, Plus, Search, Settings2, Sun,
+  Moon, MoreHorizontal, Plus, Search, Settings2, LogOut, ChevronUp, Sun,
   UsersRound, Scissors, CreditCard, BarChart3, Users,
   Wand2, Store, Sliders, Shirt, PackageOpen, LayoutGrid, X, Clock, ChevronRight
 } from 'lucide-react'
@@ -182,11 +182,33 @@ function LoginPage() {
 
 function DesktopSidebar() {
   const { t } = useTranslation()
+  const [isAccountOpen, setIsAccountOpen] = useState(false)
+  const accountRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (accountRef.current && !accountRef.current.contains(event.target as Node)) {
+        setIsAccountOpen(false)
+      }
+    }
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') setIsAccountOpen(false)
+    }
+    if (isAccountOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener('keydown', handleEscape)
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [isAccountOpen])
+
   return (
     <aside className="desktop-sidebar">
-      <Link to="/" style={{ textDecoration: "none" }}><BrandLogo layout="sidebar" /></Link>
+      <div style={{ height: '24px' }}></div>
 
-      <nav style={{ marginTop: '32px', flex: 1 }} aria-label="Main navigation">
+      <nav style={{ flex: 1 }} aria-label="Main navigation">
         <NavLink to="/" end className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><LayoutDashboard size={18} /> {t('nav.dashboard')}</NavLink>
         <NavLink to="/work" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Scissors size={18} /> {t('nav.work')}</NavLink>
         <div className="nav-link-desktop nav-disabled" aria-disabled="true"><ClipboardList size={18} /> {t('nav.orders')}</div>
@@ -194,26 +216,59 @@ function DesktopSidebar() {
         <div className="nav-link-desktop nav-disabled" aria-disabled="true"><CreditCard size={18} /> {t('nav.billing')}</div>
       </nav>
 
-      <div style={{ paddingBottom: '16px' }}>
-        <div className="nav-link-desktop nav-disabled" aria-disabled="true"><Settings2 size={18} /> Settings</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--color-border)' }}>
-          <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--color-primary-soft)', color: 'var(--color-primary)', display: 'grid', placeItems: 'center', fontSize: '12px', fontWeight: 'bold' }}>AR</div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: '12px', fontWeight: 600 }}>Ahammed Rafi</span>
-            <span style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>Shop Admin</span>
+      <div className="account-container" ref={accountRef}>
+        <button 
+          className="account-trigger"
+          onClick={() => setIsAccountOpen(!isAccountOpen)}
+          aria-expanded={isAccountOpen}
+          aria-label="Account menu"
+        >
+          <div className="account-avatar glass-effect">AR</div>
+          <span className="account-shop-name">Modern Tailors</span>
+          <ChevronUp size={14} style={{ transform: isAccountOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+        </button>
+        
+        {isAccountOpen && (
+          <div className="account-popover">
+            <div className="popover-header">
+              <span className="popover-shop-primary">Modern Tailors</span>
+              <span className="popover-user-secondary">Ahammed Rafi</span>
+              <span className="popover-role-subtle">ADMIN</span>
+            </div>
+            <div className="popover-actions">
+              <button className="popover-action"><Settings2 size={14} /> Settings</button>
+              <button className="popover-action"><LogOut size={14} /> Sign out</button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </aside>
   )
 }
 
 function TopHeader({ theme, setTheme, palette, setPalette }: { theme: Theme, setTheme: (v: Theme) => void, palette: Palette, setPalette: (v: Palette) => void }) {
+  const location = useLocation()
+  
+  const getPageContext = () => {
+    if (location.pathname === '/work') return { main: 'Work' }
+    if (location.pathname === '/') return { main: 'Dashboard' }
+    if (location.pathname.startsWith('/orders')) return { main: 'Orders' }
+    if (location.pathname.startsWith('/clients')) return { main: 'Clients' }
+    if (location.pathname.startsWith('/billing')) return { main: 'Billing' }
+    return { main: 'Dashboard' }
+  }
+  
+  const ctx = getPageContext()
+
   return (
     <header className="topbar">
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <BrandLogo layout="header" className="header-mobile-only" />
-        <span style={{ fontSize: '14px', fontWeight: 600 }}>Modern Tailors <ChevronDown size={14} style={{ display: 'inline' }} /></span>
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        <Link to="/" style={{ display: 'flex', textDecoration: 'none' }}>
+          <BrandLogo layout="header" />
+        </Link>
+        <div className="page-context">
+          <span className="page-context-main">{ctx.main}</span>
+        </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         <div className="search-box header-desktop-only">
@@ -226,11 +281,10 @@ function TopHeader({ theme, setTheme, palette, setPalette }: { theme: Theme, set
           <ThemeMenu theme={theme} onChange={setTheme} />
           <PaletteMenu palette={palette} onChange={setPalette} />
         </div>
-        <button className="icon-button" aria-label="Notifications" disabled style={{ position: 'relative' }}>
+        <button className="icon-button glass-effect" aria-label="Notifications" disabled style={{ position: 'relative' }}>
           <Bell size={18} />
           <span style={{ position: 'absolute', top: '6px', right: '6px', width: '6px', height: '6px', borderRadius: '50%', background: 'var(--color-danger)' }} />
         </button>
-        <div className="header-mobile-only" style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--color-primary-soft)', color: 'var(--color-primary)', display: 'grid', placeItems: 'center', fontSize: '12px', fontWeight: 'bold' }}>AR</div>
       </div>
     </header>
   )
