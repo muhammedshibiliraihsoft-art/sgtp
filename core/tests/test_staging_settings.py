@@ -65,7 +65,7 @@ def run_settings(extra=None, remove=()):
 
 
 def test_staging_settings_are_secure_and_accept_only_approved_origins():
-    result = run_settings({"RENDER_EXTERNAL_HOSTNAME": "sgtp-staging-api.onrender.com"})
+    result = run_settings({"RENDER_EXTERNAL_HOSTNAME": "birky-staging-api.onrender.com"})
 
     assert result.returncode == 0, result.stderr
     settings = json.loads(result.stdout)
@@ -73,7 +73,7 @@ def test_staging_settings_are_secure_and_accept_only_approved_origins():
     assert settings["debug"] is False
     assert settings["hosts"] == [
         "api-staging.birky.com",
-        "sgtp-staging-api.onrender.com",
+        "birky-staging-api.onrender.com",
     ]
     assert settings["cors"] == ["https://staging.birky.com"]
     assert settings["cors_all"] is False

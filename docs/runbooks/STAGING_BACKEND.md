@@ -10,7 +10,7 @@ Target frontend (later F7-01A): `https://staging.birky.com`
 ## Intended infrastructure
 
 - Provider: Render Web Service using the repository Dockerfile and an isolated Render PostgreSQL resource.
-- Resource names: `sgtp-staging-api` and `sgtp-staging-db`.
+- Resource names: `birky-staging-api` and `birky-staging-db`.
 - Repository branch: `main`; auto-deploy is explicitly off. Deploy only an intentionally accepted, exact-SHA GitHub-CI-green checkpoint, manually.
 - Region: Frankfurt for web and database co-location and proximity to the approved Kuwait-oriented timezone configuration. This is an operational latency choice, not a legal data-residency commitment. Render does not support changing a resource's region in place.
 - Database: PostgreSQL 15, separate staging resource, `sgtp_staging` database name, internal connection string, no public IP allow-list entries.
