@@ -36,6 +36,25 @@ python manage.py migrate --noinput
 echo "[${DJANGO_ENV:-unknown}] Collecting static files..."
 python manage.py collectstatic --noinput
 
+# A one-time, explicitly enabled staging fixture hook. The Django command
+# independently enforces environment, database, secret, and confirmation guards.
+case "${STAGING_SMOKE_BOOTSTRAP_ENABLED:-false}" in
+  true|TRUE|True)
+    if [ "${DJANGO_ENV:-}" != "staging" ]; then
+      echo "Staging smoke bootstrap cannot run outside DJANGO_ENV=staging." >&2
+      exit 1
+    fi
+    echo "[staging] Creating guarded synthetic smoke-test fixture..."
+    python manage.py bootstrap_staging_smoke --confirm-staging-bootstrap
+    ;;
+  false|FALSE|False|'')
+    ;;
+  *)
+    echo "Invalid STAGING_SMOKE_BOOTSTRAP_ENABLED value; expected true or false." >&2
+    exit 1
+    ;;
+esac
+
 # Start Gunicorn
 echo "[${DJANGO_ENV:-unknown}] Starting Gunicorn..."
 exec "$@"
