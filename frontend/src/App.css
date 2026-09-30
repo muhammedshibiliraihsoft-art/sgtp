@@ -540,3 +540,9 @@
 .glass-effect:hover {
   background: color-mix(in srgb, currentColor 12%, transparent) !important;
 }
+
+
+/* Dark mode logo invert */
+:root[data-theme="dark"] .brand-logo-img {
+  filter: brightness(0) invert(1);
+}
