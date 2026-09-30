@@ -1,130 +1,431 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Link, NavLink, Route, Routes, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
-  ArrowDown, ArrowLeft, ArrowRight, Bell, ChevronDown, CircleHelp,
-  ClipboardList, FileText, Globe2, LayoutDashboard,
-  Moon, MoreHorizontal, Plus, Search, Settings2, ShieldCheck, Sun,
-  UsersRound, WandSparkles,
+  ArrowRight, Bell, ChevronDown, CircleHelp,
+  ClipboardList, Globe2, LayoutDashboard,
+  Moon, MoreHorizontal, Plus, Search, Settings2, Sun,
+  UsersRound, Scissors, CreditCard, BarChart3, Users,
+  Wand2, Store, Sliders, Shirt, PackageOpen, LayoutGrid, X, Clock, ChevronRight
 } from 'lucide-react'
 import './App.css'
+import { BrandLogo } from './components/BrandLogo'
+
 
 type Theme = 'light' | 'dark' | 'system'
 const themeKey = 'sgtp-theme'
+export type Palette = 'blue' | 'indigo' | 'violet' | 'teal' | 'emerald' | 'navy' | 'rose' | 'amber'
+const paletteKey = 'sgtp-palette'
+
+
+
+
+function usePalette() {
+  const [palette, setPalette] = useState<Palette>(() => {
+    const stored = localStorage.getItem(paletteKey) as Palette
+    return stored || 'blue'
+  })
+  useEffect(() => {
+    document.documentElement.dataset.palette = palette
+    localStorage.setItem(paletteKey, palette)
+  }, [palette])
+  return [palette, setPalette] as const
+}
+
+
 
 function useTheme() {
   const [theme, setTheme] = useState<Theme>(() => {
     const stored = localStorage.getItem(themeKey)
     return stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'system'
   })
+
+  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(() => {
+    if (theme !== 'system') return theme as 'light' | 'dark'
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  })
+
   useEffect(() => {
     const media = window.matchMedia('(prefers-color-scheme: dark)')
     const apply = () => {
-      document.documentElement.dataset.theme = theme === 'system' ? (media.matches ? 'dark' : 'light') : theme
+      const resolved = theme === 'system' ? (media.matches ? 'dark' : 'light') : theme
+      document.documentElement.dataset.theme = resolved
+      setResolvedTheme(resolved)
     }
     apply()
     media.addEventListener('change', apply)
     localStorage.setItem(themeKey, theme)
     return () => media.removeEventListener('change', apply)
   }, [theme])
-  return [theme, setTheme] as const
+
+  return [theme, setTheme, resolvedTheme] as const
+}
+
+function CustomSelect({ value, options, onChange, icon, ariaLabel }: { value: string, options: {value: string, label: string}[], onChange: (val: string) => void, icon?: React.ReactNode, ariaLabel: string }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (ref.current && !ref.current.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  const selectedOption = options.find(o => o.value === value)
+
+  return (
+    <div ref={ref} className="custom-select">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        aria-label={ariaLabel}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        className="select-trigger"
+      >
+        {icon}
+        <span className="select-value">{selectedOption ? selectedOption.label : value}</span>
+        <ChevronDown size={13} aria-hidden="true" />
+      </button>
+
+      {isOpen && (
+        <ul className="select-popover" role="listbox">
+          {options.map(option => (
+            <li
+              key={option.value}
+              role="option"
+              aria-selected={option.value === value}
+              className={`select-option ${option.value === value ? 'selected' : ''}`}
+              onClick={() => {
+                onChange(option.value)
+                setIsOpen(false)
+              }}
+            >
+              {option.label}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
 }
 
 function LanguageMenu() {
   const { i18n } = useTranslation()
   const options = [
-    { code: 'en', label: 'English' }, { code: 'ar-KW', label: 'العربية' },
-    { code: 'bn', label: 'বাংলা' }, { code: 'ur', label: 'اردو' },
+    { value: 'en', label: 'English' }, { value: 'ar-KW', label: 'العربية' },
+    { value: 'bn', label: 'বাংলা' }, { value: 'ur', label: 'اردو' },
   ]
-  return <label className="select-control language-control">
-    <Globe2 size={15} aria-hidden="true" />
-    <select aria-label="Language" value={i18n.resolvedLanguage || 'en'} onChange={(event) => void i18n.changeLanguage(event.target.value)}>
-      {options.map((option) => <option key={option.code} value={option.code}>{option.label}</option>)}
-    </select><ChevronDown size={13} aria-hidden="true" />
-  </label>
+  return <CustomSelect
+    value={i18n.resolvedLanguage || 'en'}
+    options={options}
+    onChange={(val) => void i18n.changeLanguage(val)}
+    icon={<Globe2 size={15} />}
+    ariaLabel="Language"
+  />
 }
 
 function ThemeMenu({ theme, onChange }: { theme: Theme; onChange: (value: Theme) => void }) {
-  return <label className="select-control theme-control">
-    {theme === 'dark' ? <Moon size={15} aria-hidden="true" /> : <Sun size={15} aria-hidden="true" />}
-    <select aria-label="Color theme" value={theme} onChange={(event) => onChange(event.target.value as Theme)}>
-      <option value="light">Light</option><option value="dark">Dark</option><option value="system">System</option>
-    </select><ChevronDown size={13} aria-hidden="true" />
-  </label>
+  const options = [
+    { value: 'light', label: 'Light' },
+    { value: 'dark', label: 'Dark' },
+    { value: 'system', label: 'System' }
+  ]
+  return <CustomSelect
+    value={theme}
+    options={options}
+    onChange={(val) => onChange(val as Theme)}
+    icon={theme === 'dark' ? <Moon size={15} /> : <Sun size={15} />}
+    ariaLabel="Color theme"
+  />
 }
 
-function LoginPage() {
+function PaletteMenu({ palette, onChange }: { palette: Palette; onChange: (value: Palette) => void }) {
+  const options = [
+    { value: 'blue', label: 'Blue' }, { value: 'indigo', label: 'Indigo' },
+    { value: 'violet', label: 'Violet' }, { value: 'teal', label: 'Teal' },
+    { value: 'emerald', label: 'Emerald' }, { value: 'navy', label: 'Navy' },
+    { value: 'rose', label: 'Rose' }, { value: 'amber', label: 'Amber' }
+  ]
+  return <CustomSelect
+    value={palette}
+    options={options}
+    onChange={(val) => onChange(val as Palette)}
+    ariaLabel="Palette"
+  />
+}
+
+
+function LoginPage({ palette, resolvedTheme }: { palette: Palette, resolvedTheme: 'light' | 'dark' }) {
   const { t } = useTranslation()
   const [currentYear] = useState(() => new Date().getFullYear())
   const [notice, setNotice] = useState('')
   return <main className="login-page">
     <div className="login-art" aria-hidden="true"><div className="art-mark">s<span>.</span></div><div className="art-stitch" /><p>Crafted with care.<br />Run with clarity.</p><span className="art-caption">SUPPLIER · GARMENT · TAILOR PLATFORM</span></div>
     <section className="login-panel">
-      <Link className="brand" to="/" aria-label="SGTP home"><span className="brand-mark">s</span><span>SGTP<span className="brand-dot">.</span></span></Link>
-      <div className="login-content"><span className="eyebrow">YOUR WORKSPACE, IN GOOD ORDER</span><h1>{t('welcomeBack')}</h1><p className="muted">Sign in to continue to your tailoring workspace.</p>
+      <Link to="/" style={{ textDecoration: "none" }}><BrandLogo palette={palette} resolvedTheme={resolvedTheme} /></Link>
+      <div className="login-content"><h1>{t('welcomeBack')}</h1><p className="muted" style={{ marginBottom: '30px' }}>Sign in to continue to your tailoring workspace.</p>
         <form onSubmit={(event) => { event.preventDefault(); setNotice('Authentication is not connected in this foundation preview.') }}>
           <label className="field-label" htmlFor="identifier">Email or phone</label><input id="identifier" autoComplete="username" placeholder="Enter your account identifier" />
-          <div className="password-label"><label className="field-label" htmlFor="password">Password</label><button className="text-button" type="button" disabled>Forgot password?</button></div><input id="password" type="password" autoComplete="current-password" placeholder="Enter your password" />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><label className="field-label" htmlFor="password">Password</label><button className="icon-button" style={{ width: 'auto', fontSize: '12px', color: 'var(--color-primary)' }} type="button" disabled>Forgot?</button></div><input id="password" type="password" autoComplete="current-password" placeholder="Enter your password" />
           <button className="primary-button sign-in" type="submit">Sign in <ArrowRight size={16} /></button>
-          {notice && <p className="preview-notice" role="status">{notice}</p>}
-        </form><div className="login-security"><ShieldCheck size={16} /> Sign-in will use approved SGTP authentication</div>
-      </div><footer className="login-footer"><span>© {currentYear} SGTP</span><span className="quiet-button"><CircleHelp size={15} /> Help</span></footer>
+          {notice && <p style={{ marginTop: '8px', padding: '8px', background: 'var(--color-warning-soft)', borderRadius: '8px', fontSize: '11px', color: 'var(--color-warning)' }} role="status">{notice}</p>}
+        </form>
+      </div><footer style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--color-text-muted)' }}><span>© {currentYear} SGTP</span><span>Help</span></footer>
     </section>
   </main>
 }
 
-function Workspace() {
-  const [theme, setTheme] = useTheme()
-  const location = useLocation()
-  const isLogin = location.pathname === '/login'
-  if (isLogin) return <LoginPage />
-  return <div className="app-shell">
-    <aside className="sidebar">
-      <Link className="brand sidebar-brand" to="/" aria-label="SGTP home"><span className="brand-mark">s</span><span>SGTP<span className="brand-dot">.</span></span></Link>
-      <div className="shop-switcher" aria-label="Sample workspace"><span className="shop-avatar">S</span><span className="shop-copy"><strong>Sample workspace</strong><small>Preview only · no Shop selection</small></span></div>
-      <div className="side-label">WORKSPACE</div>
-      <nav className="primary-nav" aria-label="Main navigation">
-        <NavLink to="/" end className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}><LayoutDashboard size={17} />Overview</NavLink>
-        <div className="nav-link nav-disabled" aria-disabled="true" title="Business screens are not part of this foundation task"><UsersRound size={17} />People<span className="nav-soon">Later</span></div>
-        <div className="nav-link nav-disabled" aria-disabled="true"><ClipboardList size={17} />Work</div>
-        <div className="nav-link nav-disabled" aria-disabled="true"><FileText size={17} />Records</div>
+function DesktopSidebar({ palette, resolvedTheme }: { palette: Palette, resolvedTheme: 'light' | 'dark' }) {
+  const { t } = useTranslation()
+  return (
+    <aside className="desktop-sidebar">
+      <Link to="/" style={{ textDecoration: "none" }}><BrandLogo palette={palette} resolvedTheme={resolvedTheme} /></Link>
+
+      <nav style={{ marginTop: '32px', flex: 1 }} aria-label="Main navigation">
+        <NavLink to="/" end className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><LayoutDashboard size={18} /> {t('nav.dashboard')}</NavLink>
+        <NavLink to="/work" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Scissors size={18} /> {t('nav.work')}</NavLink>
+        <div className="nav-link-desktop nav-disabled" aria-disabled="true"><ClipboardList size={18} /> {t('nav.orders')}</div>
+        <div className="nav-link-desktop nav-disabled" aria-disabled="true"><UsersRound size={18} /> {t('nav.clients')}</div>
+        <div className="nav-link-desktop nav-disabled" aria-disabled="true"><CreditCard size={18} /> {t('nav.billing')}</div>
       </nav>
-      <div className="sidebar-bottom"><div className="nav-link nav-disabled" aria-disabled="true"><Settings2 size={17} />Preferences</div><div className="nav-link nav-disabled" aria-disabled="true"><CircleHelp size={17} />Help & support</div>
-        <div className="profile-wrap"><div className="profile-button"><span className="profile-avatar">P</span><span className="profile-copy"><strong>Preview account</strong><small>No live session</small></span></div><Link className="preview-signin" to="/login">Sign-in preview</Link></div>
+
+      <div style={{ paddingBottom: '16px' }}>
+        <div className="nav-link-desktop nav-disabled" aria-disabled="true"><Settings2 size={18} /> Settings</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--color-border)' }}>
+          <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--color-primary-soft)', color: 'var(--color-primary)', display: 'grid', placeItems: 'center', fontSize: '12px', fontWeight: 'bold' }}>AR</div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: '12px', fontWeight: 600 }}>Ahammed Rafi</span>
+            <span style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>Shop Admin</span>
+          </div>
+        </div>
       </div>
     </aside>
-    <main className="main-area">
-      <header className="topbar"><div className="breadcrumbs"><span>Workspace</span><span className="crumb-slash">/</span><strong>Overview</strong></div><div className="top-actions"><div className="search-box"><Search size={15} /><input aria-label="Search (preview only)" placeholder="Search preview only" disabled /><kbd>⌘ K</kbd></div><LanguageMenu /><ThemeMenu theme={theme} onChange={setTheme} /><button className="icon-button notification-button" aria-label="Notifications (preview only)" disabled><Bell size={17} /></button></div></header>
-      <div className="content-wrap">
-        <Routes><Route path="*" element={<Overview />} /></Routes>
+  )
+}
+
+function TopHeader({ theme, setTheme, palette, setPalette }: { theme: Theme, setTheme: (v: Theme) => void, palette: Palette, setPalette: (v: Palette) => void }) {
+  return (
+    <header className="topbar">
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <Store size={20} className="header-mobile-only" />
+        <span style={{ fontSize: '14px', fontWeight: 600 }}>Modern Tailors <ChevronDown size={14} style={{ display: 'inline' }} /></span>
       </div>
-    </main>
-  </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div className="search-box header-desktop-only">
+          <Search size={14} />
+          <input aria-label="Search" placeholder="Search orders, clients..." disabled />
+        </div>
+        <button className="icon-button header-mobile-only" aria-label="Search"><Search size={18} /></button>
+        <div className="header-desktop-only" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+          <LanguageMenu />
+          <ThemeMenu theme={theme} onChange={setTheme} />
+          <PaletteMenu palette={palette} onChange={setPalette} />
+        </div>
+        <button className="icon-button" aria-label="Notifications" disabled style={{ position: 'relative' }}>
+          <Bell size={18} />
+          <span style={{ position: 'absolute', top: '6px', right: '6px', width: '6px', height: '6px', borderRadius: '50%', background: 'var(--color-danger)' }} />
+        </button>
+        <div className="header-mobile-only" style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--color-primary-soft)', color: 'var(--color-primary)', display: 'grid', placeItems: 'center', fontSize: '12px', fontWeight: 'bold' }}>AR</div>
+      </div>
+    </header>
+  )
 }
 
-function Overview() {
+function BottomNavigation({ onMoreClick }: { onMoreClick: () => void }) {
   const { t } = useTranslation()
-  const { i18n } = useTranslation()
-  const [today] = useState(() => new Date())
-  const ForwardIcon = i18n.dir() === 'rtl' ? ArrowLeft : ArrowRight
-  return <div className="overview-page">
-    <div className="welcome-row"><div><div className="eyebrow date-line">{new Intl.DateTimeFormat(i18n.resolvedLanguage || 'en', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).format(today).toLocaleUpperCase(i18n.resolvedLanguage || 'en')} <span>·</span> WORKSPACE PREVIEW</div><h1>{t('goodMorning')}<span className="wave">✳</span></h1><p className="muted">A calm place to bring every detail together.</p></div><Link className="primary-button" to="/login"><Plus size={16} /> Get started</Link></div>
-    <div className="preview-banner"><span className="banner-icon"><WandSparkles size={17} /></span><div><strong>Foundation preview</strong><p>This shell is ready for approved workflows. No live business data or backend actions are connected.</p></div><button className="banner-dismiss" aria-label="Dismiss preview notice">×</button></div>
-    <section className="section-block"><div className="section-heading"><div><h2>At a glance</h2><p>Workspace indicators will appear here when approved data contracts are available.</p></div><button className="subtle-button" disabled>This week <ArrowDown size={14} /></button></div>
-      <div className="metrics-grid"><Metric label="Active work" value="—" note="Waiting for connection" symbol="01"/><Metric label="Ready for pickup" value="—" note="Waiting for connection" symbol="02"/><Metric label="People" value="—" note="Waiting for connection" symbol="03"/><Metric label="To collect" value="—" note="Financial data not connected" symbol="04"/></div>
-    </section>
-    <section className="lower-grid"><div className="panel activity-panel"><div className="panel-heading"><div><h2>Recent activity</h2><p>Keep up with what is happening.</p></div><button className="icon-button" aria-label="More activity options"><MoreHorizontal size={18}/></button></div><div className="empty-state"><div className="empty-illustration"><span className="empty-ring ring-one"/><span className="empty-ring ring-two"/><ClipboardList size={23}/></div><strong>Your activity will show up here</strong><p>Once connected, recent workspace updates will appear in this space.</p></div></div>
-      <div className="panel setup-panel"><div className="panel-heading"><div><h2>Workspace setup</h2><p>A considered start, at your pace.</p></div><span className="setup-count">0 / 3</span></div><div className="setup-list"><SetupItem title="Set up your profile" description="Add the details your team needs."/><SetupItem title="Choose your preferences" description="Language, appearance and more."/><SetupItem title="Invite your team" description="Team access is not connected yet." locked/></div><button className="setup-link">Explore preferences <ForwardIcon size={15}/></button></div></section>
-    <footer className="content-footer"><span>Built for the craft.</span><span><span className="footer-dot"/> Secure workspace preview</span></footer>
+  return (
+    <nav className="bottom-nav">
+      <NavLink to="/" end className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}><LayoutDashboard size={20} />{t('nav.dashboard')}</NavLink>
+      <NavLink to="/work" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}><Scissors size={20} />{t('nav.work')}</NavLink>
+      <div className="nav-item nav-disabled" aria-disabled="true"><ClipboardList size={20} />{t('nav.orders')}</div>
+      <div className="nav-item nav-disabled" aria-disabled="true"><UsersRound size={20} />{t('nav.clients')}</div>
+      <button className="nav-item" onClick={onMoreClick}><MoreHorizontal size={20} />{t('nav.more')}</button>
+    </nav>
+  )
+}
+
+function MoreSheet({ isOpen, onClose, theme, setTheme }: { isOpen: boolean, onClose: () => void, theme: Theme, setTheme: (v: Theme) => void }) {
+  const { t } = useTranslation()
+  if (!isOpen) return null;
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', background: 'rgba(0,0,0,0.4)' }} onClick={onClose}>
+      <div style={{ background: 'var(--color-surface)', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '24px', paddingBottom: 'calc(24px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column', gap: '24px', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+        <div style={{ width: '36px', height: '4px', borderRadius: '2px', background: 'var(--color-border)', margin: '0 auto' }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 style={{ fontSize: '20px', fontWeight: 600, margin: 0 }}>{t('nav.more')}</h2>
+          <button className="icon-button" onClick={onClose}><X size={20} /></button>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><CreditCard size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('more.billing')}</span></div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><BarChart3 size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('more.reports')}</span></div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><Users size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('more.members')}</span></div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><LayoutGrid size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('more.workFunctions')}</span></div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><Settings2 size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('more.settings')}</span></div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><Store size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('more.shopProfile')}</span></div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><Sliders size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('more.preferences')}</span></div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><CircleHelp size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('more.help')}</span></div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px', paddingTop: '16px', borderTop: '1px solid var(--color-border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--color-primary-soft)', color: 'var(--color-primary)', display: 'grid', placeItems: 'center', fontSize: '14px', fontWeight: 'bold' }}>AR</div>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: '14px', fontWeight: 600 }}>Ahammed Rafi</span>
+              <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Shop Admin</span>
+            </div>
+          </div>
+          <button className="icon-button" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+             {theme === 'dark' ? <Moon size={20} /> : <Sun size={20} />}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function WorkPreviewPage() {
+  const { t } = useTranslation()
+  const visibleCount = 2
+
+  const renderCard = (id: string, name: string, user: string, badge: string, badgeType: string) => (
+    <div key={id} className="work-card">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <div style={{ color: 'var(--color-primary)', paddingTop: '4px' }}><Shirt size={24} strokeWidth={1.5} /></div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{id}</span>
+            <strong style={{ fontSize: '13px', fontWeight: 600 }}>{name}</strong>
+            <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px' }}>{user}</span>
+          </div>
+        </div>
+        <button className="icon-button" style={{ width: '24px', height: '24px' }}><MoreHorizontal size={16} /></button>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+        <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 600 }} className={`badge-${badgeType}`}>{badge}</span>
+        <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'var(--color-surface-subtle)', display: 'grid', placeItems: 'center', fontSize: '9px', fontWeight: 'bold', color: 'var(--color-text-muted)' }}>AB</div>
+      </div>
+    </div>
+  )
+
+  const MOCK_STAGES = {
+    cutting: { title: t('work.stages.cutting'), icon: <Scissors size={18} />, total: 8, records: [{ id: '#ORD-1024', name: "Men's Shirt", user: 'Fathima', badge: 'New', badgeType: 'new' }, { id: '#ORD-1021', name: "Kids Frock", user: 'Sameera', badge: 'New', badgeType: 'new' }, { id: '#ORD-1018', name: "Dress", user: 'Ali', badge: 'New', badgeType: 'new' }] },
+    stitching: { title: t('work.stages.stitching'), icon: <Wand2 size={18} />, total: 7, records: [{ id: '#ORD-1015', name: "Abaya", user: 'Shahana', badge: 'Active', badgeType: 'active' }, { id: '#ORD-1011', name: "Kurta", user: 'Faisal', badge: 'Active', badgeType: 'active' }, { id: '#ORD-1009', name: "Pants", user: 'Zara', badge: 'Active', badgeType: 'active' }] },
+    finishing: { title: t('work.stages.finishing'), icon: <LayoutGrid size={18} />, total: 5, records: [{ id: '#ORD-1007', name: "Wedding Dress", user: 'Ramees', badge: 'Review', badgeType: 'review' }, { id: '#ORD-1004', name: "Shirt", user: 'Junaid', badge: 'Review', badgeType: 'review' }, { id: '#ORD-1002', name: "Suit", user: 'Tariq', badge: 'Review', badgeType: 'review' }] },
+    ready: { title: t('work.stages.ready'), icon: <PackageOpen size={18} />, total: 4, records: [{ id: '#ORD-0991', name: "Thobe", user: 'Ibrahim', badge: 'Ready', badgeType: 'ready' }, { id: '#ORD-0987', name: "Saree Blouse", user: 'Naseema', badge: 'Ready', badgeType: 'ready' }, { id: '#ORD-0985', name: "Jacket", user: 'Omar', badge: 'Ready', badgeType: 'ready' }] }
+  }
+
+  const renderStage = (key: keyof typeof MOCK_STAGES) => {
+    const stage = MOCK_STAGES[key]
+    const visibleRecords = stage.records.slice(0, visibleCount)
+    const remaining = stage.total - visibleRecords.length
+
+    return (
+      <div className="work-column">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 600, color: 'var(--color-primary)' }}>{stage.icon} {stage.title}</div>
+          <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-muted)' }}>{stage.total}</span>
+        </div>
+        {visibleRecords.map(r => renderCard(r.id, r.name, r.user, r.badge, r.badgeType))}
+        {remaining > 0 && (
+          <button className="more-affordance" aria-label={`Show ${remaining} more ${stage.title} records`}>
+            <div className="more-affordance-icon">
+              <Plus size={14} strokeWidth={2.5} />
+            </div>
+            <span className="more-affordance-text">{t('work.more', { count: remaining })}</span>
+            <ChevronRight size={14} className="more-affordance-chevron" />
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div className="content-wrap">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+        <div>
+          <h1 style={{ fontSize: '32px', fontWeight: 600, margin: '0 0 8px 0', letterSpacing: '-0.5px' }}>{t('work.title')}</h1>
+          <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '14px' }}>{t('work.subtitle')}</p>
+        </div>
+        <button className="primary-button"><Plus size={16} /> {t('work.newOrder')}</button>
+      </div>
+
+      <div className="phone-stage-selector">
+        {(Object.keys(MOCK_STAGES) as Array<keyof typeof MOCK_STAGES>).map(key => {
+          const stage = MOCK_STAGES[key]
+          return (
+            <button key={key} className="phone-stage-card" aria-label={`${stage.title}, ${stage.total} items`}>
+              <div className="stage-icon-wrap">{stage.icon}</div>
+              <div className="stage-info">
+                <span className="stage-title">{stage.title}</span>
+                <span className="stage-count">{stage.total}</span>
+              </div>
+            </button>
+          )
+        })}
+      </div>
+
+      <div className="metrics-grid">
+        <div className="metric-card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)', fontSize: '13px', fontWeight: 500 }}><ClipboardList size={16} /> {t('work.metrics.newOrders')}</div>
+          <span className="metric-value">24</span>
+          <span className="metric-note">Across your pipeline</span>
+        </div>
+        <div className="metric-card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-info)', fontSize: '13px', fontWeight: 500 }}><Settings2 size={16} /> {t('work.metrics.inProgress')}</div>
+          <span className="metric-value">8</span>
+          <span className="metric-note">Currently in production</span>
+        </div>
+        <div className="metric-card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-success)', fontSize: '13px', fontWeight: 500 }}><PackageOpen size={16} /> {t('work.metrics.ready')}</div>
+          <span className="metric-value">12</span>
+          <span className="metric-note">This week</span>
+        </div>
+        <div className="metric-card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-warning)', fontSize: '13px', fontWeight: 500 }}><Clock size={16} /> {t('work.metrics.overdue')}</div>
+          <span className="metric-value">3</span>
+          <span className="metric-note">Needs attention</span>
+        </div>
+      </div>
+
+      <div className="work-board">
+        {renderStage('cutting')}
+        {renderStage('stitching')}
+        {renderStage('finishing')}
+        {renderStage('ready')}
+      </div>
+    </div>
+  )
+}
+
+function Workspace() {
+  const [theme, setTheme, resolvedTheme] = useTheme()
+  const [palette, setPalette] = usePalette()
+  const location = useLocation()
+  const [isMoreOpen, setIsMoreOpen] = useState(false)
+  const isLogin = location.pathname === '/login'
+
+  useEffect(() => { setIsMoreOpen(false) }, [location.pathname])
+
+  if (isLogin) return <LoginPage palette={palette} resolvedTheme={resolvedTheme} />
+
+  return <div className="app-shell">
+    <DesktopSidebar palette={palette} resolvedTheme={resolvedTheme} />
+    <main className="main-area">
+      <TopHeader theme={theme} setTheme={setTheme} palette={palette} setPalette={setPalette} />
+      <Routes>
+        <Route path="/work" element={<WorkPreviewPage />} />
+        <Route path="*" element={<div className="content-wrap"><h1 style={{fontSize:'24px'}}>{location.pathname === '/' ? 'Dashboard' : 'Preview'}</h1><p style={{color:'var(--color-text-muted)'}}>Navigate to Work to see the layout.</p><Link to="/work" style={{color:'var(--color-primary)'}}>Go to Work</Link></div>} />
+      </Routes>
+    </main>
+    <BottomNavigation onMoreClick={() => setIsMoreOpen(true)} />
+    <MoreSheet isOpen={isMoreOpen} onClose={() => setIsMoreOpen(false)} theme={theme} setTheme={setTheme} />
   </div>
-}
-
-function Metric({ label, value, note, symbol }: { label: string; value: string; note: string; symbol: string }) {
-  return <article className="metric-card"><div className="metric-top"><span>{label}</span><span className="metric-symbol">{symbol}</span></div><strong className="metric-value">{value}</strong><span className="metric-note">{note}</span></article>
-}
-
-function SetupItem({ title, description, locked = false }: { title: string; description: string; locked?: boolean }) {
-  return <div className={`setup-item${locked ? ' setup-locked' : ''}`}><span className="setup-check">{locked ? <ShieldCheck size={14}/> : <span/>}</span><span className="setup-copy"><strong>{title}</strong><small>{description}</small></span><ArrowRight size={15} className="setup-arrow"/></div>
 }
 
 export default function App() {

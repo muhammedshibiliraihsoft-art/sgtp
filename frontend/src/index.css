@@ -1,46 +1,186 @@
 @import "tailwindcss";
 
 :root {
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  color: #232620;
-  background: #f8f8f5;
+  /* Locale-aware typography architecture */
+  --font-sans-en: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-sans-ar: "Noto Sans Arabic", var(--font-sans-en);
+  --font-sans-bn: "Noto Sans Bengali", var(--font-sans-en);
+  --font-sans-ur: "Noto Nastaliq Urdu", "Noto Sans Arabic", var(--font-sans-en);
+  --font-sans-ml: "Noto Sans Malayalam", var(--font-sans-en);
+
+  font-family: var(--font-sans-en);
+  color: var(--color-text);
+  background: var(--color-canvas);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-optical-sizing: auto;
   font-weight: 400;
-  --canvas: #f8f8f5;
-  --surface: #fff;
-  --surface-soft: #f5f6f2;
-  --ink: #232620;
-  --muted: #85887f;
-  --line: #eceee8;
-  --accent: #416b52;
-  --accent-dark: #34573f;
-  --accent-soft: #edf3ed;
-  --warm: #f5eee4;
-  --shadow: 0 8px 30px rgb(28 39 28 / 4%);
+
+  /* Default Preset: Blue */
+  --theme-primary-base: #2563eb;
+  --theme-primary-fg: #ffffff;
+  --theme-secondary-base: #475569;
 }
 
+/* Curated Theme Presets */
+:root[data-palette="indigo"] {
+  --theme-primary-base: #4f46e5;
+  --theme-primary-fg: #ffffff;
+  --theme-secondary-base: #475569;
+}
+:root[data-palette="blue"] {
+  --theme-primary-base: #2563eb;
+  --theme-primary-fg: #ffffff;
+  --theme-secondary-base: #475569;
+}
+:root[data-palette="violet"] {
+  --theme-primary-base: #7c3aed;
+  --theme-primary-fg: #ffffff;
+  --theme-secondary-base: #475569;
+}
+:root[data-palette="teal"] {
+  --theme-primary-base: #0d9488;
+  --theme-primary-fg: #ffffff;
+  --theme-secondary-base: #334155;
+}
+:root[data-palette="emerald"] {
+  --theme-primary-base: #059669;
+  --theme-primary-fg: #ffffff;
+  --theme-secondary-base: #334155;
+}
+:root[data-palette="navy"] {
+  --theme-primary-base: #1e3a8a;
+  --theme-primary-fg: #ffffff;
+  --theme-secondary-base: #475569;
+}
+:root[data-palette="rose"] {
+  --theme-primary-base: #e11d48;
+  --theme-primary-fg: #ffffff;
+  --theme-secondary-base: #52525b;
+}
+:root[data-palette="amber"] {
+  --theme-primary-base: #d97706;
+    --theme-primary-fg: #451a03;
+  --theme-secondary-base: #52525b;
+}
+
+/* Light Theme Derived Architecture */
+:root {
+  --color-primary: var(--theme-primary-base);
+  --color-primary-hover: color-mix(in oklab, var(--theme-primary-base), #000 15%);
+  --color-primary-pressed: color-mix(in oklab, var(--theme-primary-base), #000 25%);
+  --color-primary-soft: color-mix(in oklab, var(--theme-primary-base) 10%, #ffffff);
+  --color-primary-border: color-mix(in oklab, var(--theme-primary-base) 30%, #ffffff);
+  --color-primary-foreground: var(--theme-primary-fg);
+
+  --color-secondary: var(--theme-secondary-base);
+  --color-secondary-hover: color-mix(in oklab, var(--theme-secondary-base), #000 15%);
+  --color-secondary-soft: color-mix(in oklab, var(--theme-secondary-base) 10%, #ffffff);
+
+  /* Tinted Surfaces */
+  --color-canvas: color-mix(in oklch, var(--theme-primary-base) 2%, #f1f5f9);
+  --color-sidebar: color-mix(in oklch, var(--theme-primary-base) 4%, #f8fafc);
+  --color-header: color-mix(in oklch, var(--theme-primary-base) 1%, #ffffff);
+  --color-surface: color-mix(in oklch, var(--theme-primary-base) 1%, #ffffff); /* Near white */
+  --color-surface-subtle: color-mix(in oklch, var(--theme-primary-base) 8%, #f1f5f9);
+  --color-surface-raised: #ffffff;
+
+  /* Typography */
+  --color-text: color-mix(in oklch, var(--theme-primary-base) 25%, #0f172a);
+  --color-text-muted: color-mix(in oklch, var(--theme-primary-base) 15%, #64748b);
+  --color-text-disabled: #94a3b8;
+
+  /* Borders and UI */
+  --color-border: color-mix(in oklch, var(--theme-primary-base) 10%, #e2e8f0);
+  --color-focus: color-mix(in oklab, var(--theme-primary-base) 50%, transparent);
+
+  /* Status Semantic Colors (Unchanged by brand hue) */
+  --color-success: #16a34a;
+  --color-success-soft: #dcfce7;
+  --color-warning: #ea580c;
+  --color-warning-soft: #ffedd5;
+  --color-danger: #dc2626;
+  --color-danger-soft: #fee2e2;
+  --color-info: #0284c7;
+  --color-info-soft: #e0f2fe;
+
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.02), 0 2px 6px 0 rgb(0 0 0 / 0.02);
+}
+
+/* Dark Theme Derived Architecture */
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --canvas: #171a17;
-  --surface: #202420;
-  --surface-soft: #272c27;
-  --ink: #eef0eb;
-  --muted: #a1a79d;
-  --line: #343a34;
-  --accent: #a3c6a9;
-  --accent-dark: #bed9c2;
-  --accent-soft: #2c382e;
-  --warm: #373027;
-  --shadow: 0 8px 30px rgb(0 0 0 / 14%);
+
+  --color-primary: color-mix(in oklab, var(--theme-primary-base) 80%, #fff);
+  --color-primary-hover: color-mix(in oklab, var(--theme-primary-base) 60%, #fff);
+  --color-primary-pressed: color-mix(in oklab, var(--theme-primary-base) 40%, #fff);
+  --color-primary-soft: color-mix(in oklab, var(--theme-primary-base) 20%, #000);
+  --color-primary-border: color-mix(in oklab, var(--theme-primary-base) 40%, #000);
+  --color-primary-foreground: #020617; /* Dark text for lightened primary in dark mode */
+
+  --color-secondary: color-mix(in oklab, var(--theme-secondary-base) 80%, #fff);
+  --color-secondary-hover: color-mix(in oklab, var(--theme-secondary-base) 60%, #fff);
+  --color-secondary-soft: color-mix(in oklab, var(--theme-secondary-base) 20%, #000);
+
+  /* Tinted Surfaces */
+  --color-canvas: color-mix(in oklch, var(--theme-primary-base) 6%, #030712);
+  --color-sidebar: color-mix(in oklch, var(--theme-primary-base) 10%, #0f172a);
+  --color-header: color-mix(in oklch, var(--theme-primary-base) 8%, #0f172a);
+  --color-surface: color-mix(in oklch, var(--theme-primary-base) 12%, #1e293b);
+  --color-surface-subtle: color-mix(in oklch, var(--theme-primary-base) 16%, #1e293b);
+  --color-surface-raised: color-mix(in oklch, var(--theme-primary-base) 16%, #334155);
+
+  /* Typography */
+  --color-text: color-mix(in oklch, var(--theme-primary-base) 10%, #f8fafc);
+  --color-text-muted: color-mix(in oklch, var(--theme-primary-base) 20%, #94a3b8);
+  --color-text-disabled: #475569;
+
+  /* Borders and UI */
+  --color-border: color-mix(in oklch, var(--theme-primary-base) 18%, #334155);
+  --color-focus: color-mix(in oklab, var(--theme-primary-base) 50%, transparent);
+
+  /* Status Semantic Colors */
+  --color-success: #22c55e;
+  --color-success-soft: #14532d;
+  --color-warning: #f97316;
+  --color-warning-soft: #7c2d12;
+  --color-danger: #ef4444;
+  --color-danger-soft: #7f1d1d;
+  --color-info: #38bdf8;
+  --color-info-soft: #0c4a6e;
+
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+  --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.15), 0 2px 6px 0 rgb(0 0 0 / 0.1);
 }
 
+/* Special contrast fix for amber in dark mode */
+:root[data-theme="dark"][data-palette="amber"] {
+  --color-primary: color-mix(in oklab, var(--theme-primary-base) 70%, #fff);
+  --color-primary-foreground: #451a03;
+}
+
+/* Locale Typography Applications */
+:root[lang="ar-KW"] { font-family: var(--font-sans-ar); }
+:root[lang="bn"] { font-family: var(--font-sans-bn); }
+:root[lang="ur"] { font-family: var(--font-sans-ur); line-height: 1.8; }
+:root[lang="ml"] { font-family: var(--font-sans-ml); }
+
 * { box-sizing: border-box; }
-body { min-width: 360px; min-height: 100vh; margin: 0; background: var(--canvas); }
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background: var(--color-canvas);
+}
 button, input, select { font: inherit; }
 button { color: inherit; }
-button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid #a9c8ad; outline-offset: 3px; }
-::selection { color: #203c29; background: #d7e8d8; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+::selection { color: var(--color-primary-foreground); background: var(--color-primary); }

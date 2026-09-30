@@ -9,3 +9,7 @@
 - Preserve English, ar-KW, Bangla, and Urdu locale support; Arabic/Urdu use RTL and English/Bangla use LTR. Light/Dark/System are presentation preferences only.
 - Do not add secrets to Vite `VITE_*` values; these are public client-side build variables.
 - Keep all frontend implementation and frontend tests under `/frontend`; do not modify backend code/tests, migrations, deployment, or root application configuration in this track.
+
+- The Cloudflare Pages client-preview deployment remains frontend-only. Never place backend secrets in `VITE_*` environment variables.
+- The existence of the client preview does not authorize business/API implementation.
+- Canonical root repository documentation (`docs/`) must not be edited from this frontend branch.

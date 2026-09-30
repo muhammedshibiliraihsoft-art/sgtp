@@ -10,11 +10,27 @@ export type Result<T> =
   | { ok: true; data: T }
   | { ok: false; error: ApiProblem }
 
+export type ShopRole = 'ADMIN' | 'STAFF' | 'VIEWER' | null
+export type WorkFunction = 'SALES' | 'MEASUREMENT' | 'CUTTING' | 'STITCHING' | 'FINISHING' | 'QC' | 'CASHIER'
+export type Locale = 'en' | 'ar-KW' | 'bn' | 'ur'
+export type Appearance = 'system' | 'light' | 'dark'
+
 export type AuthenticatedUser = {
-  id: string
+  id: string // UUID
+  userCode: string // human-facing User ID
+  email: string | null
   firstName: string
   lastName?: string
-  role: 'MAIN_SUPPLIER' | 'SHOP_ADMIN' | 'STAFF'
+  isActive: boolean
+  dateJoined: string
+  phone: string | null
+  preferredLocale: Locale
+  appearancePreference: Appearance
+  mustChangePassword: boolean
+
+  // Shop context
+  role: ShopRole
+  isMainSupplier: boolean
   owningShopId?: string
 }
 
@@ -26,5 +42,17 @@ export interface AuthAdapter {
 
 export interface ShopContextAdapter {
   /** Ordinary account context is resolved by the backend, never user-selected. */
-  currentShop(): Promise<Result<{ id: string; name: string } | null>>
+  currentShop(): Promise<Result<{ id: string; name: string; isMainSupplier: boolean; role: ShopRole } | null>>
+}
+
+export type MockWorkRecord = {
+  id: string
+  title: string
+  customerName: string
+  status: string
+  statusType: 'new' | 'active' | 'review' | 'ready'
+}
+
+export interface MockWorkAdapter {
+  getWorkPreview(stage: string): Promise<Result<{ records: MockWorkRecord[], total: number }>>
 }

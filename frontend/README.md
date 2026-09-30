@@ -2,34 +2,35 @@
 
 This isolated React/Vite shell is a preparation track, not Phase 7 completion. It contains no live business workflows and is not connected to authentication or business APIs.
 
-Currently, two official plugins are available:
+## Cloudflare Pages Client Preview
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+**A. PURPOSE**
+This Cloudflare deployment is a temporary client-preview environment intended solely for UX and visual design reviews (themes, navigation, layout).
 
-## React Compiler
+**B. SOURCE BRANCH**
+The preview is deployed *exclusively* from `frontend/parallel-foundation`.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+**C. BUILD SETTINGS**
+- **Root Directory:** `frontend`
+- **Build Command:** `npm run build`
+- **Build Output Directory:** `dist`
+- **Node Version:** `20` (specified in `.node-version`)
 
-## Expanding the Oxlint configuration
+**D. SCOPE & LIMITATIONS**
+The preview demonstrates current frontend UX/design ONLY. It is not full Phase 7 completion. It does not imply unfinished backend APIs are implemented.
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+**E. MOCK BOUNDARY**
+Current unfinished Work/business functionality remains safely behind mock adapters. No live production endpoints are connected.
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
+**F. SECURITY**
+Never place secrets, database credentials, or private API keys in `VITE_*` values. Browser frontend environment values are inherently public.
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+**G. CANONICAL OWNERSHIP**
+`main` remains the canonical backend/integration branch. The preview branch is strictly isolated.
+
+**H. DEPLOYMENT FLOW**
+Frontend branch → Validation (typecheck/lint/test) → Reviewed commit → Push to origin → Cloudflare client preview deployment triggers.
+(Do not merge to `main` for preview updates.)
 
 ## SGTP foundation scope
 
@@ -37,5 +38,6 @@ See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rule
 - Responsive sign-in and workspace-preview shells; no public registration, live session, or business operations.
 - English, `ar-KW`, Bangla, and Urdu locale support. Arabic and Urdu are RTL; English and Bangla are LTR. English is fallback.
 - Light, Dark, and System appearance preference; typed adapter/result contracts are not live endpoints or authorization logic.
+- Intentional `_headers` ensures the temporary preview is not indexed by search engines (`X-Robots-Tag: noindex, nofollow`).
 
-Run `npm ci`, `npm run dev`, `npm run typecheck`, `npm run lint`, `npm test`, and `npm run build`. Never put secrets in `VITE_*` values; they are exposed to browser code. Ordinary Users have one backend-resolved owning Shop. Do not add a normal-user Shop selector. Read repository and frontend `AGENTS.md` before continuing.
+Run `npm ci`, `npm run dev`, `npm run typecheck`, `npm run lint`, `npm test`, and `npm run build`. Ordinary Users have one backend-resolved owning Shop. Do not add a normal-user Shop selector. Read repository and frontend `AGENTS.md` before continuing.
