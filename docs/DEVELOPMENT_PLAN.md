@@ -91,9 +91,9 @@ This amendment adds requirements and checkpoints without changing the ten-phase 
 
 #### Parallel Frontend Foundation Track (pre-Phase-7 preparation)
 
-Frontend preparation may proceed in parallel with Phase 3 backend work on `frontend/parallel-foundation` in a dedicated worktree, using the same SGTP repository. This isolated track may establish React/Vite/Tailwind/TypeScript tooling, application and layout shells, reusable UI foundations, responsive/accessibility defaults, locale and RTL/LTR infrastructure, Light/Dark/System theme infrastructure, and mock-first API/service boundaries based only on published contracts. It must not implement unimplemented business workflows or invent backend APIs, permissions, Shop selection rules, or business behavior.
+The isolated preparation track was approved to proceed in parallel with Phase 3 backend work on `frontend/parallel-foundation` in a dedicated worktree, using the same SGTP repository. It is currently parked under the approved resequencing. When separately resumed, it may establish React/Vite/Tailwind/TypeScript tooling, application and layout shells, reusable UI foundations, responsive/accessibility defaults, locale and RTL/LTR infrastructure, Light/Dark/System theme infrastructure, and mock-first API/service boundaries based only on published contracts. It must not implement unimplemented business workflows or invent backend APIs, permissions, Shop selection rules, or business behavior.
 
-This track is explicitly not F7-01, does not complete Phase 7, and does not change the formal task/dependency order below: F7-01 and F7-01A remain sequenced after T3-05A as already approved. Canonical cross-project documentation remains main-owned; frontend-specific working guidance belongs under `frontend/`. Sync backend changes from `main` into the frontend branch using reviewed, normal merges; do not routinely merge unfinished frontend work back to `main`.
+This track is active and explicitly executes integration of all existing backend features immediately. The previous ruling that formal F7-01/F7-01A must strictly follow Phase 6 has been superseded. Frontend implementation operates under the UI Reference Gate constraint (do not invent unapproved UI) and the Contract-First constraint (do not invent backend contracts). Sync backend changes from `main` into the frontend branch using normal merges.
 
 - **Phase 4:** Shop-scoped Client quick search by name/normalized phone/stable ID (Work number when available); duplicate warning without silent merge; measurement templates, immutable history and comparison; private design-reference gallery; Normal/Urgent/Very Urgent Work priority; derived delivery-date indicators. No Client tags in V1. Date thresholds/cutoffs remain unresolved. Staffing/authorization context uses access role, authorized Shop context, eligible Work Function, optional specific membership/User assignment, and explicit service policy. No per-Shop workflow builder; stage/function mapping is decided in its Phase 4 task, with no new function invented in advance.
 - **Phase 5:** advance/deposit, partial and final payments; Decimal-safe, idempotent financial services; outstanding balances; Primary Client billing ownership for Related Person work; linked receipts/invoices/reports with per-document language override; English, Arabic RTL, Bangla and Urdu PDF validation; private object storage, observable jobs, audit events, backup and actual restore verification. Refund, overpayment, allocation and retention choices remain unresolved unless already approved.
@@ -105,10 +105,16 @@ This track is explicitly not F7-01, does not complete Phase 7, and does not chan
 
 Environment progression is `LOCAL → STAGING → PRODUCTION`. Do not deploy unfinished commits automatically or treat client feedback as implementation authorization. See `docs/ENVIRONMENTS.md`.
 
-### Frontend timing adjustment
+### Contract-First Paired Delivery (FRONTEND-DELIVERY-LOCK-01)
 
-F7-01 and F7-01A are allowed to execute immediately after T3-05A in the overall dependency sequence:
+The prior `PHASE4-RESEQUENCE-01` strict sequencing (Phase 4 → 5 → 6 strictly before Phase 7 frontend) has been superseded by the **Contract-First Paired Delivery** strategy.
 
-`T3-01 (complete) → T3-02 (complete) → T3-02-REMEDIATION (closed) → T3-02A → T3-03 → T3-04 → T3-04A → T3-04B → T3-04C → T3-05 → T3-05A → F7-01 → F7-01A → Phase 4 → Phase 5 → Phase 6 → F7-02 → F7-03 → F7-04 → F7-05 → Phase 8 → Phase 9 → Phase 10`.
+The current approved overall dependency sequence is:
 
-This gives the client a usable staging shell earlier, validates authentication/i18n/theme integration early, and reduces frontend/backend contract surprises. F7-02–F7-05 remain later frontend implementation tasks unless separately re-planned.
+1. **Frontend Foundation Integration:** Implement frontend functionality for all features already supported by the current backend.
+   *(Login/Auth → Shared Auth Layout → Profile/Preferences → Shop Context → Team/Members → Work Functions → Main Supplier Settings)*
+2. **Phase 4 Paired Delivery:** Backend contract accepted → Corresponding frontend slice. (e.g., T4-01 API → T4-01 UI).
+3. **Phase 5 Paired Delivery:** Billing/Reports backend contract accepted → Corresponding frontend slice.
+4. **Phase 6 & Beyond:** Infrastructure, Integrations, and Release Operations follow.
+
+The `frontend/parallel-foundation` branch remains active as the authenticated visual/layout reference. The real Dashboard must be built strictly last.

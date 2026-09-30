@@ -9,7 +9,7 @@ Give shops an operational record from client request to completed garment work.
 ## 4. Technical Purpose
 Create normalized entities, service-layer rules, state transitions, constraints, indexes, and concurrency protection.
 ## 5. Preconditions
-Phase 3 T3-04A–T3-04C identity/membership/Work-Function prerequisites and T3-05 Shop/API/Admin hardening accepted; T3-04 isolation DoD passed; T3-05A staging foundation accepted; F7-01/F7-01A checkpoints accepted per the approved dependency sequence; explicit `CONFIRM PHASE 4`; all required documents read.
+Phase 3 T3-04A–T3-04C identity/membership/Work-Function prerequisites and T3-05 Shop/API/Admin hardening accepted; T3-04 isolation DoD passed; T3-05A staging foundation accepted. Pre-Phase 4 frontend integration of existing backend contracts must be complete. Explicit `CONFIRM PHASE 4`; all required documents read. Phase 4 will use Contract-First Paired Delivery (Backend API followed by Frontend slice).
 ## 6. Dependencies
 Shop context/membership, permissions, shared models, PostgreSQL.
 ## 7. Current Repository Assumptions

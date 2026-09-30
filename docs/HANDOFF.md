@@ -10,14 +10,14 @@ Completed foundation tasks include T3-01–T3-04B-USER-SCOPE, T3-04C, and T3-05.
 
 T3-05A — Staging Backend Foundation — is COMPLETE, committed, pushed, exact-SHA CI-green, and live-verified. Active backend: `https://birky-staging-api.onrender.com`. The existing synthetic Main Supplier/Shop A/Shop B fixture was preserved. Live verification passed for login/cookie contract, CSRF, refresh rotation/reuse rejection, logout cookie clearing/post-logout rejection, bidirectional Shop endpoint/object isolation, and Main Supplier visibility on approved surfaces. Temporary credential variables are blank; bootstrap and rotation flags are false. Final cleanup deployment is live and health endpoints pass. `api-staging.birky.com` DNS/TLS and frontend browser integration remain deferred. Derive current `HEAD` from Git.
 
-Implementation commit `b29a897897d35ec9163c510456bd9197b8a4f6e1` passed exact-SHA GitHub Actions Project State Validation run `36667104952` (294 application tests). Final docs sync and its CI are pending.
+The documentation-only roadmap task `FRONTEND-DELIVERY-LOCK-01` is complete. It formally supersedes `PHASE4-RESEQUENCE-01` and introduces **Contract-First Paired Delivery**. The next roadmap gate is to execute frontend integration for all currently existing backend functionality (Auth, Layout, Profile, Shop, Members, Work Functions) on `frontend/parallel-foundation`. Phase 4 tasks will then follow a domain-by-domain paired strategy.
 
 Derive current `HEAD`/`main` from Git rather than storing a current SHA in this handoff. T3-05A is complete; do not begin another task or Phase 4 without its own plan and explicit confirmation. Do not modify/merge frontend work. No Production deployment is allowed.
 
 ## Current state and next gate
 
 - Parallel development rule: `main` remains the backend/current integration source and canonical documentation owner. Frontend foundation work uses `frontend/parallel-foundation` in sibling worktree `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp-frontend`, with application source only under `/frontend`. Do not edit frontend source in the main worktree or repeatedly edit canonical docs from the frontend branch.
-- The early Parallel Frontend Foundation Track is preparation only, not F7-01 or Phase 7 completion. F7-01/F7-01A remain after T3-05A. Use mock adapters for unstable APIs and preserve backend authorization as the sole authority. Periodically merge `origin/main` into the frontend branch; do not routinely merge unfinished frontend work into main.
+- The Parallel Frontend Foundation Track (`frontend/parallel-foundation`) is active. The existing Work page serves as the authenticated visual/layout reference but its data remains mocked until the T4-04 API exists. No final UI may be implemented without an approved visual reference (UI REFERENCE GATE).
 - Ordinary accounts are Shop-owned and must not receive a post-login multi-Shop selector. Main Supplier cross-Shop UX must rely on an authorized backend contract.
 
 - T3-04A's published generated `user_code`, optional normal-user email/phone, required trimmed `first_name`, alias login, controlled credential reset, contact safeguards, and User hard-delete denial remain in place; UUID remains the database/JWT `user_id` identity.

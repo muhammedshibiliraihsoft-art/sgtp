@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-09-30 — PHASE4-RESEQUENCE-01 roadmap dependency update
+
+- Parked the existing parallel frontend foundation without touching, deleting, resetting, or merging its branch/worktree. Formal frontend work remains gated until the later sequence and individual confirmations.
+- Documentation/roadmap only. Phase 4 was not activated; T4-01, F7-01, F7-01A, application code, and frontend source were not started or changed.
+
 ## 2026-09-30 — T3-05A final staging verification and closure
 
 - Added a fail-closed command for rotating credentials of only the already-existing deterministic staging smoke identities, with staging/database/explicit-confirmation guards and fixture integrity checks. The fixture itself was preserved; no Users/Shops/memberships/Work Functions were recreated or changed.
