@@ -9,7 +9,7 @@
 - T3-04 is COMPLETE, COMMITTED, and PUSHED on `main`. Live verification on 2026-09-29: local `HEAD`, `origin/main`, and remote `refs/heads/main` matched; derive the current SHA from Git.
 - T3-04A is published at `304e6ec4a6811b0153db4dea1417d24affa11bec`; its GitHub CI passed.
 - Initial T3-04B publication `5e3b1714289e7b5660e1a54d6cb2752b64d54683` failed GitHub Actions Run #36545855022 and was reverted. T3-04B-REMEDIATION-01 was published as the corrective checkpoint; T3-04B-USER-SCOPE is now published with its exact-SHA CI gate green.
-- T3-04B-REMEDIATION-01, T3-04B-USER-SCOPE, T3-04C, and T3-05 are explicitly confirmed, implemented, validated, and published. T3-04C exact-SHA CI passed in run `36605653294`; T3-05 is published as commit `3d21a0943006cd866bc19bc728cbec05daae1630`, and exact-SHA Project State Validation run `36614638187` succeeded. T3-05A repository implementation and local validation are complete; publication and exact-SHA GitHub Actions verification remain pending. Render resources, DNS/TLS, and live staging deployment are not yet verified; Phase 4 remains unstarted.
+- T3-04B-REMEDIATION-01, T3-04B-USER-SCOPE, T3-04C, and T3-05 are explicitly confirmed, implemented, validated, and published. T3-04C exact-SHA CI passed in run `36605653294`; T3-05 is published as commit `3d21a0943006cd866bc19bc728cbec05daae1630`, and exact-SHA Project State Validation run `36614638187` succeeded. T3-05A repository implementation/local validation is published at `9af6424116ebba12896d90d032c36bd25328a4d0`; exact-SHA Project State Validation run `36652187336` succeeded. Render resources, DNS/TLS, and live staging deployment are not yet verified; Phase 4 remains unstarted.
 - The Parallel Frontend Foundation Track is an approved pre-Phase-7 preparation lane, separate from Phase 7/F7-01 completion and its formal dependencies. Its frontend source belongs in an isolated frontend branch/worktree; `main` remains the canonical backend/integration branch and owner of cross-project documentation. Unimplemented APIs/business workflows must remain behind mock adapters.
 
 - Project root: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp`
@@ -33,7 +33,7 @@
 - T3-05A local PostgreSQL-backed application suite: 255 passed; repository validator PASS (255 discovered); validator tests: 23 passed.
 - Staging-focused tests: 28 passed; authentication/CSRF lifecycle regressions: 7 passed. Staging Django check and `check --deploy` exited successfully; migration drift: no changes. OpenAPI validation: zero errors, with existing serializer/type-hint and enum warnings.
 - Black and Flake8 passed for new staging and validator Python modules. Whole-file checks of touched legacy files still report existing formatting/lint findings; no broad reformat was applied. Docker image build and disposable local Docker/PostgreSQL smoke passed: migrations and static collection completed; liveness/readiness/CSRF bootstrap returned HTTP 200. `git diff --check` passed.
-- These are local results before publication. GitHub Actions for T3-05A has not yet run. Render account/resource access, DNS/TLS, and live staging deployment remain unverified and unperformed.
+- GitHub Actions Project State Validation run `36652187336` completed SUCCESS for the published T3-05A implementation commit. Render account/resource access, DNS/TLS, and live staging deployment remain unverified and unperformed.
 
 ## Verification history
 
