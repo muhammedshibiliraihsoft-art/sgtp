@@ -66,12 +66,13 @@ When Phase 9 begins, the same Staging environment becomes the formal release-can
 
 Phase 9 does NOT create a second Staging environment. Early development use is NOT sufficient evidence for Phase 9 completion.
 
-### Staging Backend Foundation (planned T3-05A)
+### Staging Backend Foundation (T3-05A in progress)
 
-- Render staging backend connected to isolated staging PostgreSQL
-- Demo/test data, separate credentials/configuration, HTTPS, health/readiness checks, safe reset and explicit non-production identity
-- No production secrets, customer data, or automatic deployment of every unfinished commit
-- Verify environment/host/CORS configuration, migrations, logs, smoke tests and isolation
+- Repository configuration exists in `render.yaml` and `docs/runbooks/STAGING_BACKEND.md`; this does not prove Render account connectivity, resource provisioning, DNS/TLS, or a live deployment.
+- Intended Render Web Service and isolated PostgreSQL use the Free plan in Frankfurt, with manual deploys from CI-green `main` checkpoints. Free Postgres is temporary (1 GB, 30-day expiry, no backups); free web services sleep after inactivity and use ephemeral filesystems. Free usage overages may be billable; inspect account usage/cost before provisioning and do not approve paid upgrades/add-ons without explicit approval.
+- Staging secrets are generated/stored by Render, distinct from local/Production; use synthetic data only. Staging email reset delivery is disabled; the host-only CSRF flow is protected and exact-origin CORS/CSRF are configured.
+- Do not claim the environment operational until the isolated DB, migration, HTTPS domain, health/readiness, auth/CSRF/CORS, and Shop-isolation smoke checks have been verified.
+- See the runbook for manual deployment, reset, recovery, DNS, and temporary-plan limitations. No automatic deployment for every commit.
 
 ### Staging Frontend & Client Review Checkpoint (planned F7-01A)
 

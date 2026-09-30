@@ -22,7 +22,9 @@ PHASE_STATUS_RE = re.compile(
     r"(?P<status>complete|completed|active|in progress|not started)\b",
     re.IGNORECASE,
 )
-TASK_RE = re.compile(r"\b(?:PRE-P3-\d{2}|[A-Z]\d{1,2}-\d{2})\b")
+TASK_RE = re.compile(
+    r"\b(?:PRE-P3-\d{2}(?:-[A-Z0-9]+)*|" r"[A-Z]\d{1,2}-\d{2}[A-Z]?(?:-[A-Z0-9]+)*)\b"
+)
 TEST_COUNT_RE = re.compile(
     r"\b(?P<count>\d+)\s+tests?\s+(?:verified\s+)?" r"(?:pass|passed|passing|green)\b",
     re.IGNORECASE,
@@ -318,7 +320,7 @@ class ProjectStateValidator:
     def check_duplicate_current_state(self) -> None:
         relative = "docs/PROJECT_STATE.md"
         headings = re.findall(
-            r"^##\s+(Status|Current Verification Results|Implementation Status)\s*$",
+            r"^##\s+(Status|Implementation Status)\s*$",
             self.read(relative),
             re.IGNORECASE | re.MULTILINE,
         )

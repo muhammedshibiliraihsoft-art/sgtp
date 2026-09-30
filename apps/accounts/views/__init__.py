@@ -70,6 +70,28 @@ def clear_refresh_cookie(response):
     response.delete_cookie("refresh")
 
 
+@extend_schema(
+    responses={
+        200: inline_serializer(
+            name="CsrfBootstrapResponse",
+            fields={"csrf_token": serializers.CharField()},
+        )
+    },
+    description=(
+        "Returns only a CSRF token for credentialed browser clients on an "
+        "explicitly trusted origin; it does not authenticate the caller."
+    ),
+)
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def csrf_bootstrap(request):
+    """Issue a CSRF cookie and return its masked token for sibling-origin clients."""
+    response = Response({"csrf_token": get_token(request)}, status=status.HTTP_200_OK)
+    response["Cache-Control"] = "no-store"
+    response["Pragma"] = "no-cache"
+    return response
+
+
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer

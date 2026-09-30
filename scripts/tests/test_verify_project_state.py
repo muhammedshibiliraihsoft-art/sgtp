@@ -91,6 +91,20 @@ class ValidatorTests(unittest.TestCase):
         self.assertTrue(result.ok, result.errors)
         self.assertEqual(result.facts["current_task"], "B2-05")
 
+    def test_letter_suffixed_task_id_is_preserved(self):
+        state = VALID_STATE.replace("B2-05", "T3-05A")
+        handoff = VALID_HANDOFF.replace("B2-05", "T3-05A")
+        result = self.validator(make_repo(state, handoff)).run()
+        self.assertTrue(result.ok, result.errors)
+        self.assertEqual(result.facts["current_task"], "T3-05A")
+
+    def test_compound_task_id_is_preserved(self):
+        state = VALID_STATE.replace("B2-05", "T3-04B-USER-SCOPE")
+        handoff = VALID_HANDOFF.replace("B2-05", "T3-04B-USER-SCOPE")
+        result = self.validator(make_repo(state, handoff)).run()
+        self.assertTrue(result.ok, result.errors)
+        self.assertEqual(result.facts["current_task"], "T3-04B-USER-SCOPE")
+
     def test_phase_three_active_with_matching_activation_records_is_accepted(self):
         result = self.validator(make_repo(ACTIVE_STATE, ACTIVE_HANDOFF)).run()
         self.assertTrue(result.ok, result.errors)
@@ -180,6 +194,15 @@ class ValidatorTests(unittest.TestCase):
             )
         )
         self.assertTrue(result.ok, result.errors)
+
+    def test_current_verification_results_is_distinct_from_status(self):
+        result = self.validator(make_repo(VALID_STATE, VALID_HANDOFF)).run()
+        self.assertFalse(
+            any(
+                "current-state/status sections" in warning
+                for warning in result.warnings
+            )
+        )
 
     def test_remote_unavailable_is_a_warning(self):
         result = self.validator(

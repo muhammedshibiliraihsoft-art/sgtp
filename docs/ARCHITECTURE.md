@@ -67,6 +67,10 @@ This is the approved target structure. The root-level `core/`, `apps/accounts/`,
 - Background jobs: Django-Q or Celery + Redis; the choice remains open until the reliability phase selects and documents one.
 - Authentication: access token plus refresh token, with the refresh token handled through an HttpOnly/Secure cookie, rotation, and reuse detection; cookie-authenticated state-changing requests also require an approved CSRF protection strategy.
 
+### T3-05A staging backend foundation (implementation in progress)
+
+The repository now defines an explicit `DJANGO_ENV=staging` settings module, a Render Blueprint for a manually deployed, isolated staging API/PostgreSQL pair, bounded startup readiness/migration behavior, and safe health/CSRF bootstrap support. Render resources, DNS/TLS, and an operational deployment are not claimed until verified through the provider. The Free plan is temporary and non-durable; see `docs/runbooks/STAGING_BACKEND.md` for its current limitations and gates. No Production or business module is part of this work.
+
 ## Verified starter architecture
 
 The cloned starter is a conventional Django monolith:

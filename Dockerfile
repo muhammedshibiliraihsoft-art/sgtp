@@ -39,4 +39,4 @@ EXPOSE 8000
 ENTRYPOINT ["/app/entrypoint.prod.sh"]
 
 # Run Gunicorn server
-CMD ["gunicorn", "core.wsgi:application", "--bind", "0.0.0.0:8000", "--workers=4", "--threads=2", "--timeout=120", "--access-logfile", "-", "--error-logfile", "-"]
+CMD ["sh", "-c", "exec gunicorn core.wsgi:application --bind \"0.0.0.0:${PORT:-8000}\" \"--workers=${WEB_CONCURRENCY:-1}\" \"--threads=${GUNICORN_THREADS:-2}\" \"--timeout=${GUNICORN_TIMEOUT:-120}\" --access-logfile - --error-logfile -"]

@@ -37,6 +37,29 @@ class AuthLifecycleTest(TestCase):
         
         return refresh_cookie, csrf_cookie, response.data.get('access')
 
+    def test_csrf_bootstrap_returns_token_and_sets_host_scoped_cookie(self):
+        response = self.client.get('/api/v1/auth/csrf/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.data['csrf_token'])
+        self.assertIn('csrftoken', response.cookies)
+        self.assertEqual(response['Cache-Control'], 'no-store')
+        self.assertEqual(response['Pragma'], 'no-cache')
+        self.assertFalse(response.cookies['csrftoken']['httponly'])
+
+    def test_csrf_bootstrap_token_authorizes_cookie_refresh(self):
+        self.get_valid_login_cookies()
+        bootstrap = self.client.get('/api/v1/auth/csrf/')
+
+        response = self.client.post(
+            '/api/v1/auth/token/refresh/',
+            HTTP_X_CSRFTOKEN=bootstrap.data['csrf_token'],
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('access', response.data)
+        self.assertIn('refresh', response.cookies)
+
     def test_login_sets_httponly_cookie_and_csrf_cookie(self):
         """Verify /login/ returns access in JSON, sets refresh HttpOnly cookie, and issues csrftoken."""
         refresh_cookie, csrf_cookie, access_token = self.get_valid_login_cookies()

@@ -8,6 +8,8 @@
   - **Local Development:** runs via `postgres:15` Docker container (see `.devcontainer/docker-compose.yml`).
   - **Production:** Managed PostgreSQL service (e.g., Render PostgreSQL).
 - **Connection Configuration:** Configured dynamically via environment variables (`DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`). See `.env.example`.
+- **Staging provider connection:** The existing split-variable contract remains supported. Render Blueprint injects its internal staging PostgreSQL `DATABASE_URL`; the settings layer parses it using the Python standard library, without adding a runtime dependency. The staging DB is PostgreSQL 15, Frankfurt, named `sgtp_staging`, and isolated from local/Production. Free-tier staging has 1 GB storage, expires after 30 days, and has no backups; no shared/staging migration or data preflight has been run until the provider DB exists.
+- T3-05A adds no Django model or migration. Startup applies only committed migrations after a bounded DB wait; migration failure stops the service. The guarded `reset_staging` command flushes rows only with staging settings, exact database name, and `--confirm-staging-reset`; it preserves schema/migration records and does not seed data.
 
 ## V1 Shop Tenancy and Legacy Tenant Input
 

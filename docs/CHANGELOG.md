@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-09-30 — T3-05A Staging Backend Foundation (local validation; publication pending)
+
+- Prepared an explicit secure staging settings profile, PostgreSQL URL support, Render Blueprint with manual deployment and isolated Free PostgreSQL, bounded database startup readiness, provider PORT/Gunicorn configuration, CSRF bootstrap, guarded staging reset command, smoke checker, and staging runbook.
+- Local PostgreSQL-backed application suite: 255 passed; staging-focused tests: 28 passed; auth/CSRF lifecycle regressions: 7 passed; validator tests: 23 passed. Staging Django/deploy checks, migration drift, OpenAPI (zero errors), Black, Flake8, and `git diff --check` passed. Docker build and disposable local PostgreSQL-backed container smoke passed.
+- Black/Flake8 passed for new staging and validator Python modules; whole-file checks of touched legacy files report existing style findings and no broad reformat was applied. No application business models or migrations, dependency changes, frontend, worker, storage, or Production resources were added. Commit/push and exact-SHA GitHub Actions remain pending. No Render account/resource, DNS/TLS, or live staging deployment has been verified or performed.
+
 ## 2026-09-30 — T3-05 Back-office / Shop API and Admin hardening (published; CI green)
 
 - Implemented membership-scoped Shop discovery/profile reads, role-limited statistics, Main Supplier-only Shop settings and lifecycle operations, exact User-ID member lookup, capacity lower-bound enforcement, and hardened Django Admin paths without changing the approved business rules.

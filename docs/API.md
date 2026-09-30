@@ -6,6 +6,8 @@ The cloned starter contains partial backend/API scaffolding. It has Django URL c
 
 Existing starter routes include `/api/v1/auth/`, `/api/v1/tenants/`, `/api/schema/`, and `/api/docs/`. Their current behavior and limitations are described in `docs/ARCHITECTURE.md` and `docs/PROJECT_STATE.md`.
 
+`GET /api/v1/auth/csrf/` is a public, non-authenticating bootstrap for credentialed browser clients. It issues the host-only CSRF cookie and returns a masked `csrf_token` with `Cache-Control: no-store`; it returns no access or refresh credential. Staging allows credentialed CORS only from `https://staging.birky.com`, and refresh/logout remain CSRF-protected.
+
 ## Target V1 application API
 
 The complete V1 API does not yet exist. Implementation phases will refine the starter and add the approved supplier/back-office/shop, clients/related persons, catalog, works/production, billing, reports/PDF, storage/job, AI, and integration contracts under the canonical target architecture. Backend authorization, shop isolation, object permissions, workflow rules, and financial rules remain authoritative.

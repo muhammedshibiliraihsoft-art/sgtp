@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from datetime import timedelta
+from urllib.parse import unquote, urlsplit
 from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -75,9 +76,46 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "core.wsgi.application"
 
-# Database configuration
-DATABASES = {
-    "default": {
+
+def database_config_from_url(database_url):
+    """Parse a PostgreSQL URL without exposing credentials in errors."""
+    try:
+        parsed = urlsplit(database_url)
+        name = parsed.path.lstrip("/")
+        port = parsed.port or 5432
+    except ValueError as exc:
+        raise ImproperlyConfigured("DATABASE_URL is invalid.") from exc
+
+    if (
+        parsed.scheme not in {"postgres", "postgresql"}
+        or not parsed.hostname
+        or not parsed.username
+        or not parsed.password
+        or not name
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise ImproperlyConfigured("DATABASE_URL must be a complete PostgreSQL URL.")
+
+    return {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": unquote(name),
+        "USER": unquote(parsed.username),
+        "PASSWORD": unquote(parsed.password),
+        "HOST": parsed.hostname,
+        "PORT": str(port),
+    }
+
+
+# Keep the existing split-variable contract. DATABASE_URL is supported for
+# providers such as Render that expose a database connection string directly.
+_database_url = os.environ.get("DATABASE_URL")
+if _database_url is not None:
+    if not _database_url.strip():
+        raise ImproperlyConfigured("DATABASE_URL must not be empty.")
+    _database_config = database_config_from_url(_database_url)
+else:
+    _database_config = {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": get_env_var("DB_NAME"),
         "USER": get_env_var("DB_USER"),
@@ -85,7 +123,7 @@ DATABASES = {
         "HOST": get_env_var("DB_HOST", "localhost"),
         "PORT": get_env_var("DB_PORT", "5432"),
     }
-}
+DATABASES = {"default": _database_config}
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
