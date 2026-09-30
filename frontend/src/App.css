@@ -367,7 +367,7 @@
 .brand-container {
   display: flex;
   font-family: 'Inter', sans-serif;
-  color: #1e3a8a; /* Locked existing dark-blue brand tone for BMS */
+  color: var(--color-primary); /* Match active theme */
 }
 .brand-logo-img {
   display: block;
@@ -381,19 +381,20 @@
 /* Sidebar context */
 .brand-container.sidebar {
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center; /* Center the BMS text relative to the logo */
   gap: 0px;
   padding-left: 16px; /* Align with sidebar navigation content */
   margin-top: 4px; /* Slightly lowered to match the required visual spacing */
+  width: max-content; /* Hug the logo tightly to ensure centering is accurate */
 }
 .brand-container.sidebar .brand-logo-img {
-  width: 90px;
+  width: 92px; /* Slight bump in logo size for better balance */
   height: auto;
 }
 .brand-container.sidebar .brand-text {
-  font-size: 10px;
-  font-weight: 500;
-  opacity: 0.55;
+  font-size: 12px; /* Increased size as requested */
+  font-weight: 600; /* Slightly bolder to hold its shape at 12px */
+  opacity: 0.8;
   letter-spacing: 0.5px;
   margin-top: 2px;
 }
