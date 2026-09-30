@@ -106,6 +106,7 @@
   font-size: 13px;
   font-weight: 500;
   text-decoration: none;
+  border: 1px solid transparent;
 }
 
 .nav-link-desktop:hover {
@@ -116,6 +117,7 @@
 .nav-link-desktop.active {
   background: var(--color-primary-soft);
   color: var(--color-primary);
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
 }
 
 .nav-disabled { cursor: not-allowed; opacity: 0.58; }
