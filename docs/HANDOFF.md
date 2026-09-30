@@ -36,7 +36,7 @@ Derive current `HEAD`/`main` from Git rather than storing a current SHA in this 
 
 ## Tests and checks
 
-- Current T3-05A local PostgreSQL-backed application suite: 255 passed. Repository validator discovered 255 application tests and passed; validator tests: 23 passed. Staging-specific tests: 28 passed; auth/CSRF lifecycle regressions: 7 passed.
+- Current T3-05A local PostgreSQL-backed application suite: 294 passed. Repository validator discovered 294 application tests and passed; validator tests: 23 passed. Staging-specific tests: 28 passed; auth/CSRF lifecycle regressions: 7 passed.
 - Staging Django system/deployment checks, migration drift, OpenAPI validation (zero errors), and `git diff --check` passed. Black/Flake8 passed for new staging and validator Python modules; whole-file checks of touched legacy files report existing style findings. Docker image build and disposable local PostgreSQL container smoke passed. GitHub Actions run `36652187336` passed for the exact T3-05A implementation SHA; no Render provisioning or deployment has occurred.
 
 ## T3-04C execution (historical)
