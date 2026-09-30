@@ -1,9 +1,14 @@
 # Changelog
 
+## 2026-09-30 — T3-05A partial live staging verification
+
+- Added a guarded synthetic Main Supplier/Shop A/Shop B fixture using staging-only secrets; live provider-hostname login, refresh CSRF rejection/success and rotation, Secure/HttpOnly/SameSite=Lax refresh-cookie attributes, authenticated logout CSRF rejection/success, and Shop-context isolation were observed. Main Supplier context access to both Shops succeeded; each Shop's foreign context returned 404.
+- Bootstrap flag was set false and the three credential variables were blanked after fixture creation; cleanup deploy is live and health checks return HTTP 200. No real customer data or credentials were committed/documented. T3-05A remains in progress because broader membership/User-ID/stats/Work-Function/direct-object isolation and definitive cookie-clear/old-token revocation checks remain outstanding. Custom-domain DNS/TLS and real frontend browser integration remain deferred.
+
 ## 2026-09-30 — T3-05A custom-domain deferment and live staging state
 
 - Recorded the approved operational decision that BiRKy does not currently control `birky.com`: `https://birky-staging-api.onrender.com` is the active T3-05A backend; `https://api-staging.birky.com` and `https://staging.birky.com` are reserved/planned targets only. Removed the unowned custom API domain from the repository's Render Blueprint configuration without changing host validation, CORS/CSRF policy, resource plans, or deployment behavior.
-- Recorded observed Render resources and live deployment in the environment, project-state, handoff, architecture, security, Phase 3 playbook, and staging runbook. Authentication lifecycle/cookie and Shop-isolation checks remain pending; T3-05A is still in progress.
+- At this earlier checkpoint, recorded Render resources and the initial live deployment in the environment, project-state, handoff, architecture, security, Phase 3 playbook, and staging runbook; authenticated lifecycle and Shop-isolation evidence had not yet been collected. T3-05A remained in progress.
 
 ## 2026-09-30 — T3-05A Staging Backend Foundation (published; CI green)
 

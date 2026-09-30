@@ -2,7 +2,7 @@
 
 ## Purpose and status
 
-This runbook covers the early shared, non-production backend for T3-05A. It is not the formal Phase 9 release-candidate sign-off and is never Production. The Render Blueprint is applied and the backend/database are operational on Render; authenticated lifecycle and Shop-isolation checks remain pending.
+This runbook covers the early shared, non-production backend for T3-05A. It is not the formal Phase 9 release-candidate sign-off and is never Production. The Render Blueprint is applied and the backend/database are operational on Render. A synthetic fixture exists; live auth/CSRF and Shop-context checks are partially verified, while the full isolation matrix and complete token-revocation/cookie-clear evidence remain pending.
 
 Active API: `https://birky-staging-api.onrender.com`
 Reserved future API target: `https://api-staging.birky.com` (BiRKy does not currently own/control `birky.com`; no active custom-domain declaration, DNS verification, or TLS verification)
@@ -59,9 +59,9 @@ The script checks only `/api/health/live/` and `/api/health/ready/`; both must r
 ### Verified Render deployment (2026-09-30)
 
 - Service `birky-staging-api`: Free, Frankfurt, Docker; application auto-deploy off. Database `birky-staging-db`: Free, Frankfurt, PostgreSQL 15, `sgtp_staging` database/user; expires 2026-10-30 and has no backups.
-- Live deploy `dep-dau6e4ad0e5s73eemlkg` runs application SHA `26760fb9da305968236126024fe98dbbec16f5fc`. Startup logs show committed migrations applied, 164 static files collected, and Gunicorn started. Both provider-hostname health endpoints returned HTTP 200.
-- Provider-hostname CORS preflight allowed `https://staging.birky.com`; an unapproved origin received no `Access-Control-Allow-Origin`. CSRF bootstrap returned HTTP 200 and set a Secure CSRF cookie. These checks do not verify authenticated login/refresh/logout, refresh-cookie flags/rotation, or Shop isolation.
-- Inspected startup logs contained no exposed credentials or secrets. The custom API domain and frontend are not active; custom DNS/TLS and frontend browser integration are deferred.
+- Initial live deploy `dep-dau6e4ad0e5s73eemlkg` runs application SHA `26760fb9da305968236126024fe98dbbec16f5fc`. Startup logs show committed migrations applied, 164 static files collected, and Gunicorn started. The bootstrap deploy `dep-dau7htek1f9s73amb5p0` created only the synthetic Main Supplier/Shop A/Shop B fixture; no customer data was used. Cleanup deploy `dep-dau7muhsrm7s73b4h1g0` is live on the same SHA after setting the bootstrap flag false and blanking all three credential variables. Health endpoints return HTTP 200 after cleanup.
+- Provider-hostname CORS preflight allowed `https://staging.birky.com`; an unapproved origin received no `Access-Control-Allow-Origin`. Synthetic account login succeeded. Refresh without CSRF returned 403; valid-CSRF refresh returned 200 and rotated the refresh cookie. The refresh cookie was Secure, HttpOnly, SameSite=Lax. Authenticated logout without CSRF returned 403 and valid-CSRF logout returned 200. Refresh-cookie clearing and old-token revocation were not conclusively verified. Shop A/B context requests returned own-Shop 200 and foreign-Shop 404; Main Supplier context requests to both Shops returned 200. Membership list/detail, exact User-ID, stats, Work Function, and direct-object isolation remain unverified.
+- Inspected deploy/startup logs showed no credential values; credentials were not recorded in repository documentation. The custom API domain and frontend are not active; custom DNS/TLS and frontend browser integration are deferred.
 
 The CSRF bootstrap endpoint returns only a masked CSRF token and sets the API-host CSRF cookie; it does not authenticate a caller or expose the refresh token. The refresh cookie remains HttpOnly, Secure in Staging, host-only, and SameSite=Lax. The allowed frontend uses credentialed requests and the returned CSRF token for refresh/logout. No broader `.birky.com` cookie domain is configured. Browser integration remains deferred until the separately authorized staging frontend is actually available (F7-01A).
 
