@@ -2,7 +2,7 @@
 
 ## Purpose and status
 
-This runbook covers the early shared, non-production backend for T3-05A. It is not the formal Phase 9 release-candidate sign-off and is never Production. The Render Blueprint is applied and the backend/database are operational on Render. A synthetic fixture exists; live auth/CSRF and Shop-context checks are partially verified, while the full isolation matrix and complete token-revocation/cookie-clear evidence remain pending.
+This runbook covers the early shared, non-production backend established by T3-05A. It is not the formal Phase 9 release-candidate sign-off and is never Production. The Render Blueprint and backend/database are operational. The existing synthetic fixture is retained, and the T3-05A live auth/token and Shop-isolation matrix is verified. Custom-domain DNS/TLS and real-browser frontend integration remain deferred.
 
 Active API: `https://birky-staging-api.onrender.com`
 Reserved future API target: `https://api-staging.birky.com` (BiRKy does not currently own/control `birky.com`; no active custom-domain declaration, DNS verification, or TLS verification)
@@ -56,12 +56,20 @@ python scripts/staging_smoke.py https://birky-staging-api.onrender.com
 
 The script checks only `/api/health/live/` and `/api/health/ready/`; both must return HTTP 200. A 503 readiness response means the service is not ready. The current provider HTTPS hostname is valid. Verify approved/unapproved Host behavior, CORS preflight for the planned origin `https://staging.birky.com`, CSRF bootstrap, and refresh/logout rejection without CSRF and success with CSRF. Use synthetic accounts only for login, refresh, logout, Shop A/Shop B isolation, Shop list/context/profile/stats, and migration smoke checks. Never place credentials in shell history or output. Real-browser frontend/backend integration is deferred until the frontend exists.
 
-### Verified Render deployment (2026-09-30)
+### Initial Render provisioning checkpoint (historical, 2026-09-30)
 
 - Service `birky-staging-api`: Free, Frankfurt, Docker; application auto-deploy off. Database `birky-staging-db`: Free, Frankfurt, PostgreSQL 15, `sgtp_staging` database/user; expires 2026-10-30 and has no backups.
 - Initial live deploy `dep-dau6e4ad0e5s73eemlkg` runs application SHA `26760fb9da305968236126024fe98dbbec16f5fc`. Startup logs show committed migrations applied, 164 static files collected, and Gunicorn started. The bootstrap deploy `dep-dau7htek1f9s73amb5p0` created only the synthetic Main Supplier/Shop A/Shop B fixture; no customer data was used. Cleanup deploy `dep-dau7muhsrm7s73b4h1g0` is live on the same SHA after setting the bootstrap flag false and blanking all three credential variables. Health endpoints return HTTP 200 after cleanup.
 - Provider-hostname CORS preflight allowed `https://staging.birky.com`; an unapproved origin received no `Access-Control-Allow-Origin`. Synthetic account login succeeded. Refresh without CSRF returned 403; valid-CSRF refresh returned 200 and rotated the refresh cookie. The refresh cookie was Secure, HttpOnly, SameSite=Lax. Authenticated logout without CSRF returned 403 and valid-CSRF logout returned 200. Refresh-cookie clearing and old-token revocation were not conclusively verified. Shop A/B context requests returned own-Shop 200 and foreign-Shop 404; Main Supplier context requests to both Shops returned 200. Membership list/detail, exact User-ID, stats, Work Function, and direct-object isolation remain unverified.
-- Inspected deploy/startup logs showed no credential values; credentials were not recorded in repository documentation. The custom API domain and frontend are not active; custom DNS/TLS and frontend browser integration are deferred.
+- At this initial provisioning checkpoint, only context-level isolation had been tested. The later final verification below supersedes its partial-verification status; preserve this paragraph as historical evidence.
+
+### Final T3-05A staging verification (2026-09-30)
+
+- Render service `birky-staging-api` is Free, Frankfurt, Docker, with auto-deploy off. Database `birky-staging-db` is Free, Frankfurt, PostgreSQL 15, logical DB `sgtp_staging`; its IP allow-list remains unchanged/empty. No Production resources were created.
+- Implementation SHA `b29a897897d35ec9163c510456bd9197b8a4f6e1` passed exact-SHA Project State Validation run `36667104952`. Final cleanup deploy `dep-dau9ptlg1s2s73c2foig` is live on the same SHA. Logs confirmed migrations, collectstatic, and Gunicorn startup; no secret exposure was found. `/api/health/live/` and `/api/health/ready/` returned 200.
+- The existing fixture was preserved. Main Supplier, Shop A Admin, and Shop B Admin login succeeded; login JSON omitted refresh tokens. Refresh cookies were HttpOnly, Secure, and SameSite=Lax. Refresh/logout without CSRF were rejected; valid-CSRF refresh rotated the cookie, old-token reuse was rejected, logout cleared the cookie, and refresh after logout was rejected. Approved CORS worked; an unapproved origin received no CORS permission.
+- Shop A↔Shop B membership-list/detail, exact User-ID, stats, Work Function, Shop context/profile, and direct-object checks enforced the existing isolation contract in both directions. Main Supplier access to approved Shop A/B surfaces succeeded; Shop-local Work Function management remained denied to Main Supplier as designed.
+- Credential rotation was limited to the exact existing synthetic identities and did not recreate Users/Shops/memberships/Work Functions. Temporary credential vars are blank; bootstrap and rotation flags are false. The fixture remains synthetic staging data. The provider hostname is active; custom DNS/TLS and frontend browser integration remain deferred.
 
 The CSRF bootstrap endpoint returns only a masked CSRF token and sets the API-host CSRF cookie; it does not authenticate a caller or expose the refresh token. The refresh cookie remains HttpOnly, Secure in Staging, host-only, and SameSite=Lax. The allowed frontend uses credentialed requests and the returned CSRF token for refresh/logout. No broader `.birky.com` cookie domain is configured. Browser integration remains deferred until the separately authorized staging frontend is actually available (F7-01A).
 

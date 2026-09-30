@@ -69,13 +69,13 @@ When Phase 9 begins, the same Staging environment becomes the formal release-can
 
 Phase 9 does NOT create a second Staging environment. Early development use is NOT sufficient evidence for Phase 9 completion.
 
-### Staging Backend Foundation (T3-05A in progress)
+### Staging Backend Foundation (T3-05A complete)
 
-- Render resources and a live backend deployment are verified; the active URL is `https://birky-staging-api.onrender.com`. See `docs/runbooks/STAGING_BACKEND.md` for the exact observed resource/deploy evidence and remaining checks.
+- Render resources and live backend deployment are verified; active URL is `https://birky-staging-api.onrender.com`. T3-05A live auth, token lifecycle, CORS, health, and Shop-isolation checks are complete; see `docs/runbooks/STAGING_BACKEND.md` for evidence.
 - Intended Render Web Service and isolated PostgreSQL use the Free plan in Frankfurt, with manual deploys from CI-green `main` checkpoints. Free Postgres is temporary (1 GB, 30-day expiry, no backups); free web services sleep after inactivity and use ephemeral filesystems. Free usage overages may be billable; inspect account usage/cost before provisioning and do not approve paid upgrades/add-ons without explicit approval.
 - Staging secrets are generated/stored by Render, distinct from local/Production; use synthetic data only. Staging email reset delivery is disabled; the host-only CSRF flow is protected and exact-origin CORS/CSRF are configured.
 - `api-staging.birky.com` is a reserved future target only because BiRKy does not currently control `birky.com`; custom DNS/TLS is deferred and is not a blocker for the provider-hosted backend. The staging frontend at `staging.birky.com` is not provisioned; full real-browser frontend/backend integration remains deferred.
-- T3-05A remains in progress: synthetic fixture exists; login, refresh CSRF/rotation, cookie flags, authenticated logout-CSRF, and Shop-context isolation are verified, while membership/detail/User-ID/stats/Work-Function/direct-object isolation and definitive cookie-clear/revocation evidence remain outstanding. The temporary bootstrap flag is false and credential variables were blanked. Application auto-deploy remains off; see the runbook for evidence, reset/recovery, and temporary-plan limitations.
+- T3-05A is complete: the existing synthetic fixture was preserved; login, refresh/logout CSRF, cookie flags, rotation/reuse rejection, cookie clearing, post-logout rejection, membership/detail/User-ID/stats/Work-Function/direct-object isolation, and Main Supplier approved cross-Shop access were verified. Temporary credential variables are blank and bootstrap/rotation flags are false. Application auto-deploy remains off. Custom-domain DNS/TLS and real-browser frontend integration remain deferred; see the runbook for evidence and Free-plan limitations.
 
 ### Staging Frontend & Client Review Checkpoint (planned F7-01A)
 

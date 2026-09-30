@@ -67,9 +67,9 @@ This is the approved target structure. The root-level `core/`, `apps/accounts/`,
 - Background jobs: Django-Q or Celery + Redis; the choice remains open until the reliability phase selects and documents one.
 - Authentication: access token plus refresh token, with the refresh token handled through an HttpOnly/Secure cookie, rotation, and reuse detection; cookie-authenticated state-changing requests also require an approved CSRF protection strategy.
 
-### T3-05A staging backend foundation (implementation in progress)
+### T3-05A staging backend foundation (complete)
 
-The repository defines an explicit `DJANGO_ENV=staging` settings module and a Render Blueprint for a manually deployed, isolated staging API/PostgreSQL pair, with bounded startup readiness/migration behavior and safe health/CSRF bootstrap support. As of 2026-09-30, the Free Frankfurt Docker API and PostgreSQL 15 resources are provisioned and the API is live at `https://birky-staging-api.onrender.com`; authenticated and isolation verification remains in progress. `api-staging.birky.com` is a reserved future target only because BiRKy does not currently control the domain; its DNS/TLS are deferred. The Free plan is temporary and non-durable; see `docs/runbooks/STAGING_BACKEND.md`. No Production or business module is part of this work.
+The repository defines an explicit `DJANGO_ENV=staging` settings module and a Render Blueprint for a manually deployed, isolated staging API/PostgreSQL pair, with bounded startup readiness/migration behavior and safe health/CSRF bootstrap support. The Free Frankfurt Docker API and PostgreSQL 15 resources are operational at `https://birky-staging-api.onrender.com`; T3-05A live authentication, token lifecycle, CORS, health, and bidirectional Shop-isolation verification is complete. The implementation SHA passed exact-SHA CI, and the existing synthetic fixture remains after temporary credentials were blanked and bootstrap/rotation flags disabled. `api-staging.birky.com` is reserved only because BiRKy does not currently control the domain; DNS/TLS and real-browser frontend integration remain deferred. The Free plan is temporary and non-durable; see `docs/runbooks/STAGING_BACKEND.md`. No Production or business module is part of this work.
 
 ## Verified starter architecture
 

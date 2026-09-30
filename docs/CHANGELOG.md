@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-09-30 — T3-05A final staging verification and closure
+
+- Added a fail-closed command for rotating credentials of only the already-existing deterministic staging smoke identities, with staging/database/explicit-confirmation guards and fixture integrity checks. The fixture itself was preserved; no Users/Shops/memberships/Work Functions were recreated or changed.
+- Local PostgreSQL suite: 294 passed; focused rotation/bootstrap tests: 39 passed. Repository validator and validator tests passed; Django/deploy/migration/OpenAPI/format/lint/shell/diff checks passed. Implementation commit `b29a897897d35ec9163c510456bd9197b8a4f6e1` passed exact-SHA Project State Validation run `36667104952` (294 application tests).
+- Render final deployment `dep-dau9ptlg1s2s73c2foig` is live on the same application SHA. Live login, cookie, refresh/logout/revocation, CORS, health, Main Supplier access, and bidirectional Shop endpoint/object isolation checks passed. Migration, static collection, and Gunicorn startup were confirmed; no secret exposure was found. Temporary credential variables are blank, bootstrap/rotation flags are false, and the existing synthetic fixture remains.
+- T3-05A is complete. The Render provider hostname remains active; custom-domain DNS/TLS and real frontend browser integration remain deferred. No frontend, Production, worker, Redis/Celery, or Phase 4 work was performed.
+
 ## 2026-09-30 — T3-05A partial live staging verification
 
 - Added a guarded synthetic Main Supplier/Shop A/Shop B fixture using staging-only secrets; live provider-hostname login, refresh CSRF rejection/success and rotation, Secure/HttpOnly/SameSite=Lax refresh-cookie attributes, authenticated logout CSRF rejection/success, and Shop-context isolation were observed. Main Supplier context access to both Shops succeeded; each Shop's foreign context returned 404.
