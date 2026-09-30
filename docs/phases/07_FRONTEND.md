@@ -25,7 +25,7 @@ Establish frontend structure, API client, authentication/session handling, routi
 
 ## 5. Preconditions & Governance Rules (FRONTEND-DELIVERY-LOCK-01)
 
-Frontend delivery operates on a **Contract-First Paired Delivery** strategy rather than waiting for Phase 6.
+Frontend delivery operates on a **Contract-First Paired Delivery** strategy and may progress in parallel with backend Phase 4/5/6. Frontend completion does not block backend phase or task progression. Frontend consumes only accepted backend contracts; it does not define backend behavior.
 
 ### UI REFERENCE GATE — LOCKED GOVERNANCE RULE
 No frontend page, screen, component, or visual workflow may be implemented without an approved visual/design reference supplied or explicitly accepted by the user.
@@ -35,7 +35,7 @@ Engineering agents MAY inspect backend contracts and define routing, mapping, ac
 - Engineering agents must NOT treat a scaffold/mock as an approved final design.
 **If an implementation task reaches the UI stage and no approved reference exists: STOP AND WAIT FOR THE UI REFERENCE.**
 
-### Locked Frontend Delivery Order
+### Frontend Work Sequence (non-blocking with backend delivery)
 1. **Existing Backend Contacts**: Login/Auth, Shared Auth Layout, Profile/Prefs, Shop Context, Team/Members, Work Functions, Main Supplier Settings.
 2. **Phase 4 Paired Delivery**: Backend domain accepted → Corresponding frontend slice. (e.g. T4-01 Backend → T4-01 Frontend).
 3. **Phase 5 Paired Delivery**: Billing/Reports wait for accepted Phase 5 backend contracts.

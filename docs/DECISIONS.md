@@ -145,3 +145,9 @@ These decisions supersede conflicting earlier target assumptions, including requ
 - **UI REFERENCE GATE**: No frontend page, screen, component, or visual workflow may be implemented without an approved visual/design reference supplied or explicitly accepted by the user. If an implementation task reaches the UI stage and no approved reference exists: STOP AND WAIT FOR THE UI REFERENCE. Engineering agents must NOT invent the final UI or independently design new pages.
 - **Approved Layout References**: The current Work page on `frontend/parallel-foundation` is the approved authenticated visual/layout reference. Its layout patterns (desktop shell, sidebar, mobile nav) may be reused, but its data and stages remain strictly mock/template-only until T4-04 (Work Backend API) is accepted. The current `LoginPage` is only a scaffold/preview and NOT an approved Login UI reference.
 - **Dashboard Last Rule**: The real Dashboard is intentionally LAST. It will only aggregate real information after the real business modules and data contracts exist.
+
+## 2026-09-30 — Approve non-blocking parallel backend delivery (PHASE4-PARALLEL-UNBLOCK-01)
+
+- Backend Phase 4/5/6 work may proceed in parallel with frontend integration of existing backend capabilities. Frontend completion is not a prerequisite to start Phase 4 or to advance between backend tasks whose dependencies are satisfied.
+- Backend task dependencies remain authoritative. A corresponding frontend domain slice may follow only after its backend contract is accepted; frontend remains contract-first and must not invent API or business behavior.
+- This clarifies and supersedes any blocking interpretation of the delivery sequence recorded under `FRONTEND-DELIVERY-LOCK-01`; it does not erase that historical decision or alter its UI Reference Gate, Dashboard Last Rule, phase boundaries, or task-confirmation rules.

@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-09-30 — PHASE4-PARALLEL-UNBLOCK-01 roadmap dependency clarification
+
+- Clarified that backend Phase 4/5/6 delivery may progress independently of frontend completion; each frontend domain slice remains contract-first and follows its accepted backend contract.
+- Preserved the historical `PHASE4-RESEQUENCE-01` and `FRONTEND-DELIVERY-LOCK-01` entries; the UI Reference Gate, Dashboard Last Rule, phase boundaries, and separate confirmation gates remain unchanged.
+- Documentation/roadmap only. No application or frontend source changes. This entry records the approved roadmap correction, not a Phase 4 activation or T4-01 implementation.
+
 ## 2026-09-30 — PHASE4-RESEQUENCE-01 roadmap dependency update
 
 - Parked the existing parallel frontend foundation without touching, deleting, resetting, or merging its branch/worktree. Formal frontend work remains gated until the later sequence and individual confirmations.
