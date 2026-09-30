@@ -254,7 +254,7 @@
 }
 .more-affordance-icon {
   width: 24px;
-  height: 24px;
+  height: 32px;
   border-radius: 6px;
   background: var(--color-primary-soft);
   color: var(--color-primary);
@@ -376,7 +376,7 @@
 
 /* Header/Navbar context */
 .brand-container.header .brand-logo-img {
-  height: 24px;
+  height: 32px;
 }
 
 /* Login context */
