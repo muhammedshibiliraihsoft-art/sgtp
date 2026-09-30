@@ -160,14 +160,14 @@ function PaletteMenu({ palette, onChange }: { palette: Palette; onChange: (value
 }
 
 
-function LoginPage({ palette, resolvedTheme }: { palette: Palette, resolvedTheme: 'light' | 'dark' }) {
+function LoginPage() {
   const { t } = useTranslation()
   const [currentYear] = useState(() => new Date().getFullYear())
   const [notice, setNotice] = useState('')
   return <main className="login-page">
-    <div className="login-art" aria-hidden="true"><div className="art-mark">s<span>.</span></div><div className="art-stitch" /><p>Crafted with care.<br />Run with clarity.</p><span className="art-caption">SUPPLIER · GARMENT · TAILOR PLATFORM</span></div>
+    <div className="login-art" aria-hidden="true"><div className="art-mark">s<span>.</span></div><div className="art-stitch" /><p>Crafted with care.<br />Run with clarity.</p><span className="art-caption">BMS</span></div>
     <section className="login-panel">
-      <Link to="/" style={{ textDecoration: "none" }}><BrandLogo palette={palette} resolvedTheme={resolvedTheme} /></Link>
+      <Link to="/" style={{ textDecoration: "none" }}><BrandLogo layout="login" /></Link>
       <div className="login-content"><h1>{t('welcomeBack')}</h1><p className="muted" style={{ marginBottom: '30px' }}>Sign in to continue to your tailoring workspace.</p>
         <form onSubmit={(event) => { event.preventDefault(); setNotice('Authentication is not connected in this foundation preview.') }}>
           <label className="field-label" htmlFor="identifier">Email or phone</label><input id="identifier" autoComplete="username" placeholder="Enter your account identifier" />
@@ -175,16 +175,16 @@ function LoginPage({ palette, resolvedTheme }: { palette: Palette, resolvedTheme
           <button className="primary-button sign-in" type="submit">Sign in <ArrowRight size={16} /></button>
           {notice && <p style={{ marginTop: '8px', padding: '8px', background: 'var(--color-warning-soft)', borderRadius: '8px', fontSize: '11px', color: 'var(--color-warning)' }} role="status">{notice}</p>}
         </form>
-      </div><footer style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--color-text-muted)' }}><span>© {currentYear} SGTP</span><span>Help</span></footer>
+      </div><footer style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--color-text-muted)' }}><span>© {currentYear} BMS</span><span>Help</span></footer>
     </section>
   </main>
 }
 
-function DesktopSidebar({ palette, resolvedTheme }: { palette: Palette, resolvedTheme: 'light' | 'dark' }) {
+function DesktopSidebar() {
   const { t } = useTranslation()
   return (
     <aside className="desktop-sidebar">
-      <Link to="/" style={{ textDecoration: "none" }}><BrandLogo palette={palette} resolvedTheme={resolvedTheme} /></Link>
+      <Link to="/" style={{ textDecoration: "none" }}><BrandLogo layout="sidebar" /></Link>
 
       <nav style={{ marginTop: '32px', flex: 1 }} aria-label="Main navigation">
         <NavLink to="/" end className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><LayoutDashboard size={18} /> {t('nav.dashboard')}</NavLink>
@@ -212,7 +212,7 @@ function TopHeader({ theme, setTheme, palette, setPalette }: { theme: Theme, set
   return (
     <header className="topbar">
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <Store size={20} className="header-mobile-only" />
+        <BrandLogo layout="header" className="header-mobile-only" />
         <span style={{ fontSize: '14px', fontWeight: 600 }}>Modern Tailors <ChevronDown size={14} style={{ display: 'inline' }} /></span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -404,7 +404,7 @@ function WorkPreviewPage() {
 }
 
 function Workspace() {
-  const [theme, setTheme, resolvedTheme] = useTheme()
+  const [theme, setTheme] = useTheme()
   const [palette, setPalette] = usePalette()
   const location = useLocation()
   const [isMoreOpen, setIsMoreOpen] = useState(false)
@@ -412,10 +412,10 @@ function Workspace() {
 
   useEffect(() => { setIsMoreOpen(false) }, [location.pathname])
 
-  if (isLogin) return <LoginPage palette={palette} resolvedTheme={resolvedTheme} />
+  if (isLogin) return <LoginPage />
 
   return <div className="app-shell">
-    <DesktopSidebar palette={palette} resolvedTheme={resolvedTheme} />
+    <DesktopSidebar />
     <main className="main-area">
       <TopHeader theme={theme} setTheme={setTheme} palette={palette} setPalette={setPalette} />
       <Routes>
