@@ -381,22 +381,21 @@
 /* Sidebar context */
 .brand-container.sidebar {
   flex-direction: column;
-  align-items: center; /* Center the BMS text relative to the logo */
+  align-items: flex-start; /* Left-aligned as per reference image */
   gap: 0px;
-  padding-left: 16px; /* Align with sidebar navigation content */
-  margin-top: 4px; /* Slightly lowered to match the required visual spacing */
-  width: max-content; /* Hug the logo tightly to ensure centering is accurate */
+  padding-left: 16px;
+  margin-top: 4px;
 }
 .brand-container.sidebar .brand-logo-img {
-  width: 92px; /* Slight bump in logo size for better balance */
+  width: 90px;
   height: auto;
 }
 .brand-container.sidebar .brand-text {
-  font-size: 12px; /* Increased size as requested */
-  font-weight: 600; /* Slightly bolder to hold its shape at 12px */
-  opacity: 0.8;
-  letter-spacing: 0.5px;
-  margin-top: 2px;
+  font-size: 15px; /* Larger text */
+  font-weight: 700; /* Bold */
+  opacity: 1; /* Solid theme color */
+  letter-spacing: 0;
+  margin-top: 4px;
 }
 
 /* Header/Navbar context */
