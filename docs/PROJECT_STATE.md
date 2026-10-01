@@ -2,7 +2,7 @@
 
 ## Status
 
-- **Current task: BACKOFFICE-01 is implemented locally and is pending publication.** The Main Supplier Back Office reuses the existing frontend shell and uses live Shop APIs; the Work page mock content is not reused. Backend adds a derived read-only `is_main_supplier_admin` profile field and no migration. Validation evidence and current publication/deployment state are recorded in the latest changelog and handoff entries.
+- **Current task: BACKOFFICE-01 backend implementation is published to `main` and live on Render staging.** Readiness and CSRF bootstrap endpoints returned 200 after deploy. The frontend feature is committed locally on `frontend/parallel-foundation`, with `main` merged; it remains unpushed because that branch push triggers the Cloudflare Pages client-preview deployment and explicit approval is pending. The Main Supplier Back Office reuses the existing frontend shell and uses live Shop APIs; the Work page mock content is not reused. Backend adds a derived read-only `is_main_supplier_admin` profile field and no migration. Exact deployment evidence is in the latest changelog and handoff entries.
 - Phase 1 and Phase 2 are complete.
 - Phase 3 is COMPLETE; it was activated with `CONFIRM PHASE 3` and the approved T3-05A staging foundation is complete (custom-domain DNS/TLS remains explicitly deferred).
 - Phase 4 is ACTIVE; Core Tailor Business activation was explicitly confirmed with `CONFIRM PHASE 4`. T4-01 is COMPLETE, committed, and published; exact-SHA Project State Validation run `36796609814` succeeded. T4-02 and later tasks remain unstarted and require their own confirmation.
