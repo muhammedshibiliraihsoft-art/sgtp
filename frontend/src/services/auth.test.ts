@@ -9,7 +9,7 @@ function json(data: unknown, status = 200) {
 const user = {
   id: 'uuid-1', user_code: 'SGTP-USER-1', email: 'member@example.test', first_name: 'Member', last_name: '',
   is_active: true, date_joined: '2026-01-01T00:00:00Z', phone: null,
-  preferred_locale: 'en' as const, appearance_preference: 'system' as const, must_change_password: false,
+  preferred_locale: 'en' as const, appearance_preference: 'system' as const, must_change_password: false, is_main_supplier_admin: false,
 }
 
 afterEach(() => { clearCredentials(); authService.setSessionExpiredHandler(null); vi.unstubAllGlobals() })

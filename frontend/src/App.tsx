@@ -12,6 +12,7 @@ import './App.css'
 import { BrandLogo } from './components/BrandLogo'
 import { AuthProvider } from './services/AuthContext'
 import { useAuth } from './services/useAuth'
+import { BackOfficeDashboard, CreateShopPage, ShopDetailPage, ShopListPage } from './backoffice/BackOfficePages'
 
 import desktopImg from './assets/images/login/desktop.png'
 import phoneImg from './assets/images/login/phone.png'
@@ -418,10 +419,39 @@ function DesktopSidebar() {
   )
 }
 
+function BackOfficeSidebar() {
+  const { t } = useTranslation()
+  const { user, signOut } = useAuth()
+  const navigate = useNavigate()
+  return <aside className="desktop-sidebar">
+    <div className="sidebar-brand-header"><img src={sidebarLogo} alt="BiRKy" className="sidebar-logo-img" /></div>
+    <nav style={{ flex: 1 }} aria-label={t('backoffice.navigation')}>
+      <NavLink to="/backoffice" end className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><LayoutDashboard size={18} />{t('backoffice.dashboard')}</NavLink>
+      <NavLink to="/backoffice/shops" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Store size={18} />{t('backoffice.shops')}</NavLink>
+    </nav>
+    <div className="bo-sidebar-account"><span className="account-avatar glass-effect">{user?.first_name?.slice(0, 1).toUpperCase() || 'M'}</span>
+      <div><strong>{user ? `${user.first_name} ${user.last_name}`.trim() : ''}</strong><small>{t('backoffice.mainSupplier')}</small></div></div>
+    <button type="button" className="nav-link-desktop bo-signout" onClick={() => { void signOut().catch(() => undefined).finally(() => navigate('/login', { replace: true })) }}><LogOut size={18} />{t('backoffice.signOut')}</button>
+  </aside>
+}
+
+function BackOfficeBottomNavigation() {
+  const { t } = useTranslation()
+  const { signOut } = useAuth()
+  const navigate = useNavigate()
+  return <nav className="bottom-nav bo-bottom-nav" aria-label={t('backoffice.navigation')}>
+    <NavLink to="/backoffice" end className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}><LayoutDashboard size={20} />{t('backoffice.dashboard')}</NavLink>
+    <NavLink to="/backoffice/shops" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}><Store size={20} />{t('backoffice.shops')}</NavLink>
+    <button type="button" className="nav-item" onClick={() => { void signOut().catch(() => undefined).finally(() => navigate('/login', { replace: true })) }}><LogOut size={20} />{t('backoffice.signOut')}</button>
+  </nav>
+}
+
 function TopHeader({ theme, setTheme, palette, setPalette }: { theme: Theme, setTheme: (v: Theme) => void, palette: Palette, setPalette: (v: Palette) => void }) {
   const location = useLocation()
+  const isBackOffice = location.pathname.startsWith('/backoffice')
 
   const getPageContext = () => {
+    if (isBackOffice) return { main: location.pathname === '/backoffice' ? 'Back Office' : location.pathname.endsWith('/new') ? 'Create Shop' : 'Shops' }
     if (location.pathname === '/work') return { main: 'Work' }
     if (location.pathname === '/') return { main: 'Dashboard' }
     if (location.pathname.startsWith('/orders')) return { main: 'Orders' }
@@ -435,7 +465,7 @@ function TopHeader({ theme, setTheme, palette, setPalette }: { theme: Theme, set
   return (
     <header className="topbar">
       <div style={{ display: 'flex', alignItems: 'center' }}>
-        <Link to="/" style={{ display: 'flex', textDecoration: 'none' }}>
+        <Link to={isBackOffice ? '/backoffice' : '/'} style={{ display: 'flex', textDecoration: 'none' }}>
           <BrandLogo layout="header" />
         </Link>
         <div className="page-context">
@@ -443,6 +473,7 @@ function TopHeader({ theme, setTheme, palette, setPalette }: { theme: Theme, set
         </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        {isBackOffice ? <div className="bo-top-controls"><LanguageMenu /><ThemeMenu theme={theme} onChange={setTheme} /><PaletteMenu palette={palette} onChange={setPalette} /></div> : <>
         <div className="search-box header-desktop-only">
           <Search size={14} />
           <input aria-label="Search" placeholder="Search orders, clients..." disabled />
@@ -457,6 +488,7 @@ function TopHeader({ theme, setTheme, palette, setPalette }: { theme: Theme, set
           <Bell size={18} />
           <span style={{ position: 'absolute', top: '6px', right: '6px', width: '6px', height: '6px', borderRadius: '50%', background: 'var(--color-danger)' }} />
         </button>
+        </>}
       </div>
     </header>
   )
@@ -641,9 +673,26 @@ function Workspace() {
   useEffect(() => { setIsMoreOpen(false) }, [location.pathname])
 
   if (!ready) return <main className="login-page" aria-busy="true"><p>Loading your session…</p></main>
-  if (isLogin) return user && !passwordChangeRequired ? <Navigate to="/" replace /> : <LoginPage />
-  if (isPasswordChange) return passwordChangeRequired ? <PasswordChangePage /> : user ? <Navigate to="/" replace /> : <Navigate to="/login" replace />
+  if (isLogin) return user && !passwordChangeRequired ? <Navigate to={user.is_main_supplier_admin ? '/backoffice' : '/'} replace /> : <LoginPage />
+  if (isPasswordChange) return passwordChangeRequired ? <PasswordChangePage /> : user ? <Navigate to={user.is_main_supplier_admin ? '/backoffice' : '/'} replace /> : <Navigate to="/login" replace />
   if (!user || passwordChangeRequired) return <Navigate to={passwordChangeRequired ? '/password-change' : '/login'} replace />
+
+  if (user.is_main_supplier_admin) return <div className="app-shell">
+    <BackOfficeSidebar />
+    <main className="main-area">
+      <TopHeader theme={theme} setTheme={setTheme} palette={palette} setPalette={setPalette} />
+      <Routes>
+        <Route path="/backoffice" element={<BackOfficeDashboard />} />
+        <Route path="/backoffice/shops" element={<ShopListPage />} />
+        <Route path="/backoffice/shops/new" element={<CreateShopPage />} />
+        <Route path="/backoffice/shops/:shopId" element={<ShopDetailPage />} />
+        <Route path="*" element={<Navigate to="/backoffice" replace />} />
+      </Routes>
+    </main>
+    <BackOfficeBottomNavigation />
+  </div>
+
+  if (location.pathname.startsWith('/backoffice')) return <Navigate to="/" replace />
 
   return <div className="app-shell">
     <DesktopSidebar />

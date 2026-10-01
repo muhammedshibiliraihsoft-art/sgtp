@@ -19,7 +19,7 @@ describe('foundation shell', () => {
     await i18n.changeLanguage('en')
     localStorage.clear()
     vi.spyOn(authService, 'restore').mockResolvedValue({
-      user: { id: 'u1', user_code: 'USER-1', email: null, first_name: 'Test', last_name: '', is_active: true, date_joined: '', phone: null, preferred_locale: 'en', appearance_preference: 'system', must_change_password: false },
+      user: { id: 'u1', user_code: 'USER-1', email: null, first_name: 'Test', last_name: '', is_active: true, date_joined: '', phone: null, preferred_locale: 'en', appearance_preference: 'system', must_change_password: false, is_main_supplier_admin: false },
       passwordChangeRequired: false,
     })
   })
@@ -35,7 +35,7 @@ describe('foundation shell', () => {
   it('provides an identifier-and-password sign-in shell without public signup', async () => {
     vi.spyOn(authService, 'restore').mockResolvedValue(null)
     const loginSpy = vi.spyOn(authService, 'login').mockResolvedValue({
-      user: { id: 'u1', user_code: 'USER-1', email: null, first_name: 'Test', last_name: '', is_active: true, date_joined: '', phone: null, preferred_locale: 'en', appearance_preference: 'system', must_change_password: false },
+      user: { id: 'u1', user_code: 'USER-1', email: null, first_name: 'Test', last_name: '', is_active: true, date_joined: '', phone: null, preferred_locale: 'en', appearance_preference: 'system', must_change_password: false, is_main_supplier_admin: false },
       passwordChangeRequired: false,
     })
     await renderApp('/login')

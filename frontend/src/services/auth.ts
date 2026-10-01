@@ -12,6 +12,7 @@ export type BackendUser = {
   preferred_locale: 'en' | 'ar-KW' | 'bn' | 'ur' | null
   appearance_preference: 'system' | 'light' | 'dark'
   must_change_password: boolean
+  is_main_supplier_admin: boolean
 }
 
 export type AuthSession = { user: BackendUser | null; passwordChangeRequired: boolean }
