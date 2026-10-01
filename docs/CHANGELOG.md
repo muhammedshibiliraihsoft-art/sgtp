@@ -4,7 +4,8 @@
 
 - Added a staging-only, one-time Main Supplier Admin bootstrap management command and disabled-by-default Render entrypoint switch. It guards the exact staging environment/database, requires explicit confirmation and strong temporary credentials, creates no Shop, forces password change, and treats existing email/phone collisions as safe no-ops without changing accounts.
 - Added focused tests for account creation, role/password-change flags, environment/database/confirmation/secret guards, duplicate protection, and repeat-run immutability. No migration or frontend changes.
-- Validation: focused tests 9 passed; Django system check and no-migration-drift check passed; repository validator passed; Black, Flake8, and `git diff --check` passed. The broader 330-test run could not complete because the local PostgreSQL server exited during the run; a retry then failed after that server was unavailable. Exact-SHA CI and manual Render staging deploy remain pending; credentials are not configured.
+- Validation: focused tests 9 passed; Django system check and no-migration-drift check passed; repository validator passed; Black, Flake8, Git Bash syntax check, and `git diff --check` passed. The broader local 330-test run did not complete because the local PostgreSQL server exited during the run; a retry then failed after that server was unavailable. Exact-SHA Project State Validation run `36887320909` passed for `9b8fbc94741d85e018be10fdee41b34bd283af52`.
+- Pushed to `main` as `9b8fbc94741d85e018be10fdee41b34bd283af52`. Render deploy `dep-dav83hhsrm7s73e9llsg` created the requested staging Main Supplier Admin, with no Shop created. A duplicate same-SHA deploy was a safe no-op. Cleanup deploy `dep-dav84r3bc2fs738dghi0` is live after disabling the bootstrap switch and blanking all four temporary inputs; `/api/health/ready/` returned 200. No secret values are recorded here.
 
 ## 2026-10-01 — BACKOFFICE-01 local implementation
 

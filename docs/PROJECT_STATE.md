@@ -2,7 +2,7 @@
 
 ## Status
 
-- **Current task: STAGING-MAIN-ADMIN-BOOTSTRAP-01 implementation is locally validated and awaiting publication/deployment.** A disabled-by-default, staging/database-guarded command can create one Main Supplier Admin with forced first-login password change; existing identity collisions are no-ops. No migration or staging account creation has occurred yet.
+- **Current task: STAGING-MAIN-ADMIN-BOOTSTRAP-01 is complete, pushed, and live on Render staging.** Commit `9b8fbc94741d85e018be10fdee41b34bd283af52` passed exact-SHA Project State Validation run `36887320909`. One Main Supplier Admin was created through the guarded one-time command, with first-login password change required. The bootstrap switch is off, all four temporary inputs are blank, and cleanup deploy `dep-dav84r3bc2fs738dghi0` is live with readiness HTTP 200. No Shop or migration was added.
 
 - **Previous task: BACKOFFICE-01 backend implementation is published to `main` and live on Render staging.** Readiness and CSRF bootstrap endpoints returned 200 after deploy. The frontend feature is committed locally on `frontend/parallel-foundation`, with `main` merged; it remains unpushed because that branch push triggers the Cloudflare Pages client-preview deployment and explicit approval is pending. The Main Supplier Back Office reuses the existing frontend shell and uses live Shop APIs; the Work page mock content is not reused. Backend adds a derived read-only `is_main_supplier_admin` profile field and no migration. Exact deployment evidence is in the latest changelog and handoff entries.
 - Phase 1 and Phase 2 are complete.
