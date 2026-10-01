@@ -3,8 +3,9 @@
 ## Internal API documentation
 
 - `/api/docs/` and `/api/schema/` require an active Main Supplier superuser session through Django Admin. Forced-password-change accounts and ordinary Shop ADMIN/STAFF/VIEWER accounts are denied. Anonymous requests are sent to the existing Admin login without returning docs/schema content.
+- `/api/browse/` uses the same portal gate. Business API calls from its browser UI require a Bearer access JWT and remain subject to existing endpoint/Shop permissions. The UI allows only same-origin `/api/v1/` requests, holds access JWT only in page memory, and does not write it to Web Storage or log it. Django Admin session authentication remains disabled for DRF business APIs; CSRF bootstrap and refresh/logout cookie protections are unchanged.
 - Both responses use private, no-store cache controls. Swagger does not persist bearer authorization. Documentation visibility grants no business API authentication; application API requests retain their JWT and endpoint-specific authorization, Shop-context, and object-isolation checks.
-- Root `/` redirects to the protected docs portal. The stale public API test page and unused `/api-auth/` route were removed. Health probes remain available and return only minimal status.
+- Root `/` redirects to the protected Browsable API portal; Swagger remains at `/api/docs/`. The stale public API test page and unused `/api-auth/` route were removed. Health probes remain available and return only minimal status.
 - **Public repository limitation:** `schema.yml` is committed to the public GitHub repository, so its API paths and contract metadata remain publicly readable regardless of route protection. If that information must be confidential, repository visibility or the committed-schema publication strategy needs an owner-approved change. Endpoint secrecy does not replace authorization.
 
 ## V1 roadmap security requirements

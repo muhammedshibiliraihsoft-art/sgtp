@@ -192,7 +192,7 @@ The current `User` model uses email as Django's `USERNAME_FIELD` for Admin/CLI c
 - `GET /api/v1/shops/{shop_id}/context/` authenticates first, resolves one active Shop, and returns only the selected Shop UUID, the actor's selected-Shop role (null for Main Supplier), and Main Supplier context flag. Denied/unavailable Shop cases share a uniform 404; invalid/unauthenticated authentication remains 401.
 - User API ordinary-user access is restricted to the authenticated user's own record; self-profile activation state is read-only.
 - Shop-scoped APIs use `/shops/{shop_id}/...`; T3-03 establishes request-local context and T3-04 supplies the reusable trusted-context queryset/object boundary. Business modules/endpoints must adopt it when introduced.
-- `/api/docs/` and `/api/schema/` require an active Main Supplier Django Admin session with the password-change gate clear; both responses are private/no-store. The root redirects to `/api/docs/`.
+- `/api/browse/`, `/api/docs/`, and `/api/schema/` require an active Main Supplier Django Admin session with the password-change gate clear; responses are private/no-store. The root redirects to the Browsable API portal. Its same-origin API requests require Bearer JWT; the Admin session alone is not DRF authentication, and the access token is never persisted in Web Storage.
 - `/api-auth/` and the obsolete static API test page have been removed. The committed `schema.yml` remains public because the GitHub repository is public; live endpoint protection does not make the file confidential.
 
 ## Infrastructure

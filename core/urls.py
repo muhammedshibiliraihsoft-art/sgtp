@@ -6,7 +6,7 @@ from django.contrib import admin
 from django.urls import path, include, reverse_lazy
 from django.conf import settings
 from django.conf.urls.static import static
-from django.views.generic import RedirectView
+from django.views.generic import RedirectView, TemplateView
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from core.api_documentation import internal_api_documentation
 from core.health import health_live, health_ready
@@ -19,13 +19,20 @@ api_v1_patterns = [
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("", RedirectView.as_view(url=reverse_lazy("swagger-ui"), permanent=False)),
+    path("", RedirectView.as_view(url=reverse_lazy("api-browser"), permanent=False)),
     # Versioned API routes
     path("api/v1/", include((api_v1_patterns, "v1"))),
     # Health Probes
     path("api/health/live/", health_live, name="health_live"),
     path("api/health/ready/", health_ready, name="health_ready"),
     # API Documentation
+    path(
+        "api/browse/",
+        internal_api_documentation(
+            TemplateView.as_view(template_name="core/api_browser.html")
+        ),
+        name="api-browser",
+    ),
     path(
         "api/schema/",
         internal_api_documentation(

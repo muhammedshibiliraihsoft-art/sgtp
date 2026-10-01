@@ -52,8 +52,9 @@ make dev
 ### 4. Access Your Application
 - **Development Server**: http://localhost:8001
 - **Admin Panel**: http://localhost:8001/admin
-- **Internal API Documentation**: http://localhost:8001/api/docs/ (sign in through Django Admin as Main Supplier)
-- **Root URL**: redirects to the protected API documentation portal
+- **Browsable API**: http://localhost:8001/api/browse/ (sign in through Django Admin as Main Supplier; enter an access JWT to call API endpoints)
+- **OpenAPI/Swagger docs**: http://localhost:8001/api/docs/ (same Main Supplier sign-in)
+- **Root URL**: redirects to the protected Browsable API portal
 
 ## 📁 Project Structure
 
@@ -250,9 +251,9 @@ class YourModel(BaseModelWithTenant):
 ## 📚 API Documentation
 
 Access interactive API documentation:
-- **Swagger UI**: `/api/docs/` (active Main Supplier Django Admin session required)
-- **OpenAPI Schema**: `/api/schema/` (same access policy as Swagger UI)
-- The root URL redirects to the protected Swagger UI. The committed `schema.yml` remains publicly readable from this public GitHub repository.
+- **Browsable API Explorer**: `/api/browse/` (active Main Supplier Django Admin session required; API calls use a manually entered JWT)
+- **Swagger UI**: `/api/docs/` and **OpenAPI Schema**: `/api/schema/` (same access policy)
+- The root URL redirects to the protected Browsable API portal. The committed `schema.yml` remains publicly readable from this public GitHub repository.
 
 ## 🤝 Contributing
 

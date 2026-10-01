@@ -52,7 +52,7 @@ class InternalApiDocumentationTests(TestCase):
 
         root = self.client.get("/")
         self.assertEqual(root.status_code, 302)
-        self.assertEqual(root["Location"], reverse("swagger-ui"))
+        self.assertEqual(root["Location"], reverse("api-browser"))
         self.assertNotIn(b"api test", root.content.lower())
 
     def test_only_active_main_supplier_without_password_gate_can_read_docs(self):
