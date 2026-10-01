@@ -24,6 +24,10 @@ This early Parallel Frontend Foundation Track is not Phase 7 completion. The app
 
 Ordinary Users have one immutable owning Shop and do not select among multiple Shop memberships after login. Main Supplier is the global authority; any cross-Shop navigation depends on a real authorized backend contract and does not imply ordinary-user multi-Shop identity.
 
+### BACKOFFICE-01 implementation
+
+The Main Supplier Back Office is a React route group (`/backoffice`) that reuses the established application shell, navigation styling, and presentation preferences. It does not reuse the Work page's mock records. Shop list and lifecycle screens call the existing tenant APIs through a typed frontend service. The backend's `is_main_supplier_admin` user-profile value guides frontend routing only; each write/read remains subject to server-side authentication and authorization. Shop creation calls the existing atomic Shop + first ADMIN operation, and the API returns initial credentials once with no-store headers.
+
 ## V1 Supplier / Shop / External Supplier Model
 
 The following business model is locked for V1:

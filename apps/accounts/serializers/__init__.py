@@ -22,6 +22,7 @@ class UserSerializer(serializers.ModelSerializer):
     phone = serializers.CharField(read_only=True)
     must_change_password = serializers.BooleanField(read_only=True)
     user_code = serializers.CharField(read_only=True)
+    is_main_supplier_admin = serializers.SerializerMethodField()
     email = serializers.EmailField(required=False, allow_null=True, allow_blank=True)
     first_name = serializers.CharField(required=True, allow_blank=False, max_length=30)
 
@@ -39,6 +40,7 @@ class UserSerializer(serializers.ModelSerializer):
             "preferred_locale",
             "appearance_preference",
             "must_change_password",
+            "is_main_supplier_admin",
         )
         read_only_fields = (
             "id",
@@ -48,7 +50,11 @@ class UserSerializer(serializers.ModelSerializer):
             "phone",
             "email",
             "must_change_password",
+            "is_main_supplier_admin",
         )
+
+    def get_is_main_supplier_admin(self, obj) -> bool:
+        return bool(obj.is_active and obj.is_superuser)
 
 
 class UserAdminSerializer(UserSerializer):

@@ -1,5 +1,15 @@
 # Handoff
 
+## Current handoff — BACKOFFICE-01 (2026-10-01)
+
+- Task `BACKOFFICE-01` is implemented locally across backend `main` and frontend `frontend/parallel-foundation`; neither branch has been committed or pushed yet.
+- Main Supplier-only frontend pages provide Back Office dashboard, Shop list/search/filter/order/pagination, create, detail/edit, and activate/deactivate. The pages reuse the established shell/theme and use the real `/api/v1/tenants/` contract. Work page mock data remains untouched.
+- Backend exposes a derived `is_main_supplier_admin` boolean in login/profile responses. A focused backend integration test verifies the created first Shop ADMIN can log in using the returned permanent User ID and initial password, is correctly forced through password change, and succeeds at changing that password.
+- Validation so far: complete backend PostgreSQL suite passed 257 tests, then the added first-admin login test passed separately; frontend 31 tests, typecheck, and build passed; lint reported one existing warning in `src/App.tsx`; Django checks, migration drift check, and schema validation passed earlier in this task. Re-run checks and `python scripts/verify_project_state.py` after final edits.
+- Render inspection found the existing `birky-staging-api` Web Service on `main`, manually deployed (`autoDeploy=off`). The user authorized Render staging migration; after backend main is pushed, manually deploy this service and verify deploy health. Do not deploy Production.
+- The frontend branch is configured as the Cloudflare Pages client-preview source; a push automatically triggers a preview deployment. Current approval covers Render staging, not automatic Cloudflare preview publication. Prepare the frontend branch locally and request approval for that preview push after changes are reviewable.
+- Next: finish docs and checks, validate, commit backend and frontend separately, push backend `main`, deploy/verify Render staging, then stop before pushing the frontend branch until Cloudflare preview deployment is explicitly approved.
+
 ## Current phase
 
 Phase 3 is COMPLETE; it was activated with `CONFIRM PHASE 3`, and T3-05A is complete with custom-domain DNS/TLS explicitly deferred. Phase 4 is ACTIVE; Core Tailor Business activation was explicitly confirmed with `CONFIRM PHASE 4`.

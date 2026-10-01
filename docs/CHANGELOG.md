@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-01 — BACKOFFICE-01 local implementation
+
+- Added a Main Supplier-only Back Office shell that reuses the current frontend sidebar, header, theme, color palette, and responsive layout. The Work page mock data is not reused.
+- Connected Shop listing, search/filter/order/pagination, create, detail/update, and activation lifecycle to the existing `/api/v1/tenants/` API. Shop creation atomically creates its first ADMIN; the returned User ID and temporary password are shown once in memory and are not persisted by the frontend.
+- Added `is_main_supplier_admin` to the auth user profile so the frontend can route Main Supplier users into Back Office; server permissions remain authoritative. No model migration or environment-variable change was needed.
+- Local evidence: frontend 31 tests passed, typecheck and production build passed, lint has one existing `react(set-state-in-effect)` warning in `src/App.tsx`; backend full suite passed 257 tests before adding one focused first-admin login/password-change test, which also passed separately. OpenAPI refreshed with zero errors and 23 warnings (7 unique).
+- Render staging service is `birky-staging-api`, source `main`, with auto-deploy disabled. No deployment has been performed yet. Frontend branch push triggers a Cloudflare Pages client-preview deployment; do not push that branch without explicit approval for this side effect.
+- Current local work is uncommitted and unpublished; exact branch parity and final Project State validation remain to be recorded before publication.
+
 ## 2026-10-01 — API-BROWSABLE-PORTAL-01
 
 - Added a Main Supplier-only, DRF-style API browser at `/api/browse/`; root now opens it, while Swagger remains at `/api/docs/`.

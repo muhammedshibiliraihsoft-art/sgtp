@@ -21,6 +21,18 @@ class T304AIdentityTests(TestCase):
             password="Strong-Admin-934!",
         )
 
+    def test_profile_exposes_backend_main_supplier_authority(self):
+        self.client.force_authenticate(user=self.admin)
+        main_profile = self.client.get("/api/v1/auth/users/me/")
+        self.assertEqual(main_profile.status_code, 200)
+        self.assertIs(main_profile.data["is_main_supplier_admin"], True)
+
+        ordinary = create_test_user(first_name="Noor")
+        self.client.force_authenticate(user=ordinary)
+        ordinary_profile = self.client.get("/api/v1/auth/users/me/")
+        self.assertEqual(ordinary_profile.status_code, 200)
+        self.assertIs(ordinary_profile.data["is_main_supplier_admin"], False)
+
     def test_user_code_and_optional_contacts_are_generated_for_normal_user(self):
         user = create_test_user(
             first_name="  Noor ", last_name="  Khan ", password="Strong-User-934!"

@@ -6,6 +6,15 @@ The cloned starter contains partial backend/API scaffolding. It has Django URL c
 
 Existing starter routes include `/api/v1/auth/`, `/api/v1/tenants/`, `/api/schema/`, and `/api/docs/`. Their current behavior and limitations are described in `docs/ARCHITECTURE.md` and `docs/PROJECT_STATE.md`.
 
+## BACKOFFICE-01 Main Supplier integration
+
+- Auth user representations from `POST /api/v1/auth/login/` and `GET /api/v1/auth/users/me/` include read-only `is_main_supplier_admin`. It is derived from an active superuser and is a frontend routing hint; authorization is still enforced by backend permissions.
+- `GET /api/v1/tenants/` lists Shops for an authenticated account, with existing pagination, search, `is_active` filtering, and ordering. Main Supplier receives the global authorized Shop list.
+- `GET /api/v1/tenants/{id}/` reads a Shop under existing authorization rules. Main Supplier receives the administrative detail representation.
+- `POST /api/v1/tenants/` requires Main Supplier Admin authorization and the existing password-change gate. Required body: `name`, `slug`, positive `max_users`, and `first_admin` with `first_name`, email, and phone. Optional Shop profile fields follow `TenantAdminSerializer`. The transaction creates the Shop and its first ADMIN account/membership together.
+- Successful creation returns the Shop representation plus `first_admin_user_code` and `initial_password` once, with `Cache-Control: no-store` and `Pragma: no-cache`. The first ADMIN can authenticate with that permanent User ID and initial password, then must change the password before ordinary protected API use.
+- `PATCH /api/v1/tenants/{id}/` updates allowed Shop profile fields. `POST /api/v1/tenants/{id}/activate/` and `/deactivate/` use existing Main Supplier authorization and lifecycle rules. Shops are not deleted.
+
 ## Internal OpenAPI documentation portal
 
 - `/api/docs/` serves the single interactive Swagger UI and `/api/schema/` serves its generated OpenAPI document. Both require a Django Admin session for an active Main Supplier superuser whose forced-password-change gate is clear. Anonymous visitors are redirected to the existing Admin login; authenticated non-Main-Supplier accounts receive a generic not-found response. The root path redirects to `/api/docs/` and does not serve a second API reference.

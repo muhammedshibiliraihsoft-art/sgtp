@@ -2286,6 +2286,9 @@ components:
         must_change_password:
           type: boolean
           readOnly: true
+        is_main_supplier_admin:
+          type: boolean
+          readOnly: true
         initial_password:
           type: string
       required:
@@ -2294,6 +2297,7 @@ components:
       - id
       - initial_password
       - is_active
+      - is_main_supplier_admin
       - must_change_password
       - user_code
     TenantCreate:
@@ -2666,11 +2670,15 @@ components:
         must_change_password:
           type: boolean
           readOnly: true
+        is_main_supplier_admin:
+          type: boolean
+          readOnly: true
       required:
       - date_joined
       - first_name
       - id
       - is_active
+      - is_main_supplier_admin
       - must_change_password
       - phone
       - user_code
