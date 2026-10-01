@@ -81,6 +81,25 @@ case "${STAGING_SMOKE_ROTATE_CREDENTIALS_ENABLED:-false}" in
     ;;
 esac
 
+# A separate one-time bootstrap for the real staging Main Supplier Admin.
+# Its Django command independently verifies environment and database scope.
+case "${STAGING_MAIN_ADMIN_BOOTSTRAP_ENABLED:-false}" in
+  true|TRUE|True)
+    if [ "${DJANGO_ENV:-}" != "staging" ]; then
+      echo "Main Admin bootstrap cannot run outside DJANGO_ENV=staging." >&2
+      exit 1
+    fi
+    echo "[staging] Creating the configured Main Supplier Admin if absent..."
+    python manage.py bootstrap_staging_main_admin --confirm-staging-main-admin-bootstrap
+    ;;
+  false|FALSE|False|'')
+    ;;
+  *)
+    echo "Invalid STAGING_MAIN_ADMIN_BOOTSTRAP_ENABLED value; expected true or false." >&2
+    exit 1
+    ;;
+esac
+
 # Start Gunicorn
 echo "[${DJANGO_ENV:-unknown}] Starting Gunicorn..."
 exec "$@"

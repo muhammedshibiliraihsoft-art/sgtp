@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-01 — STAGING-MAIN-ADMIN-BOOTSTRAP-01 implementation
+
+- Added a staging-only, one-time Main Supplier Admin bootstrap management command and disabled-by-default Render entrypoint switch. It guards the exact staging environment/database, requires explicit confirmation and strong temporary credentials, creates no Shop, forces password change, and treats existing email/phone collisions as safe no-ops without changing accounts.
+- Added focused tests for account creation, role/password-change flags, environment/database/confirmation/secret guards, duplicate protection, and repeat-run immutability. No migration or frontend changes.
+- Validation: focused tests 9 passed; Django system check and no-migration-drift check passed; repository validator passed; Black, Flake8, and `git diff --check` passed. The broader 330-test run could not complete because the local PostgreSQL server exited during the run; a retry then failed after that server was unavailable. Exact-SHA CI and manual Render staging deploy remain pending; credentials are not configured.
+
 ## 2026-10-01 — BACKOFFICE-01 local implementation
 
 - Added a Main Supplier-only Back Office shell that reuses the current frontend sidebar, header, theme, color palette, and responsive layout. The Work page mock data is not reused.

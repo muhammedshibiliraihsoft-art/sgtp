@@ -1,6 +1,13 @@
 # Handoff
 
-## Current handoff — BACKOFFICE-01 (2026-10-01)
+## Current handoff — STAGING-MAIN-ADMIN-BOOTSTRAP-01 (2026-10-01)
+
+- Authorized implementation is in progress on `main`. Added `bootstrap_staging_main_admin`, a staging-only entrypoint switch, nine focused tests, and runbook/env-example documentation. No migration, commit, push, environment-variable update, Render deploy, or staging account creation has occurred.
+- Local checks: focused tests 9 passed; `manage.py check`, no-migration-drift check, repository validator, Black, Flake8, and `git diff --check` passed. The broader 330-test run did not complete because the local PostgreSQL process exited; the follow-up run then had database-connection errors. Exact-SHA CI is still required before staging deployment.
+- Render staging `birky-staging-api` is linked to `main`, auto-deploy off. The new bootstrap remains disabled unless explicit temporary Render variables are configured. After the exact-SHA CI-green code commit is pushed, deploy the accepted SHA manually, run and verify the one-time account creation, then disable the switch and blank all four temporary variables in a cleanup deploy. Never deploy Production. If the contact collides with an existing identity, do not promote/reset it.
+- User identity requested: Shibili, `mshibilin06@gmail.com`, phone `6282911854` normalized to E.164 as `+916282911854`. Any generated temporary password must remain out of repository, logs, commands, and tool text output; communicate it only once after successful creation so the user can change it immediately.
+
+## Previous handoff — BACKOFFICE-01 (2026-10-01)
 
 - Task `BACKOFFICE-01` backend commit `a0bd06ec272440f687fef68a157568466821a664` is committed and pushed to `main`; Render staging deploy `dep-dav6emo473hc73dqm7t0` is live. Frontend feature commit `def2c60d` is committed locally on `frontend/parallel-foundation` and `main` has been merged into that branch; it is not pushed yet.
 - Main Supplier-only frontend pages provide Back Office dashboard, Shop list/search/filter/order/pagination, create, detail/edit, and activate/deactivate. The pages reuse the established shell/theme and use the real `/api/v1/tenants/` contract. Work page mock data remains untouched.
