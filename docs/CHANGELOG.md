@@ -5,7 +5,7 @@
 - Added a Main Supplier-only, DRF-style API browser at `/api/browse/`; root now opens it, while Swagger remains at `/api/docs/`.
 - The browser builds its endpoint list from the protected OpenAPI schema, restricts requests to same-origin `/api/v1/`, requires Bearer JWT where the API requires it, and keeps access tokens in page memory only. Existing Django-session exclusion, API permissions, CSRF bootstrap, and refresh/logout protection remain unchanged.
 - No business endpoint, model, migration, dependency, or React frontend was added.
-- Local validation: 10 focused documentation/browser tests and all 319 PostgreSQL-backed application tests passed. The working-tree implementation is not committed or pushed; no deployment occurred.
+- Validation: 10 focused documentation/browser tests and all 319 PostgreSQL-backed application tests passed. Published at implementation commit `304c9666f680e3e32aa05e4545b44aa049963e19`; exact-SHA Project State Validation run `36862739900` succeeded. No deployment occurred.
 
 ## 2026-10-01 — API-DOC-REFRESH-01
 
