@@ -7,12 +7,14 @@ from django.core.exceptions import ImproperlyConfigured
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
 
+
 def get_env_var(var_name, default=None):
     if var_name in os.environ:
         return os.environ[var_name]
     if default is not None:
         return default
     raise ImproperlyConfigured(f"Set the {var_name} environment variable")
+
 
 # Secret key is provided by the environment
 SECRET_KEY = get_env_var("DJANGO_SECRET_KEY")
@@ -128,7 +130,9 @@ DATABASES = {"default": _database_config}
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
+    },
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
@@ -220,7 +224,10 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "Supplier-Centric Garment & Tailor Platform API",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
-    "SWAGGER_UI_SETTINGS": {"deepLinking": True},
+    "SWAGGER_UI_SETTINGS": {
+        "deepLinking": True,
+        "persistAuthorization": False,
+    },
     "COMPONENT_SPLIT_REQUEST": True,
     "ENUM_NAME_OVERRIDES": {
         "Locale": [

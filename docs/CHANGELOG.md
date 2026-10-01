@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-01 — API-DOC-REFRESH-01
+
+- Protected `/api/docs/` and `/api/schema/` with the existing Django Admin/Main Supplier session and forced-password-change policy; responses are private and no-store.
+- Root now redirects to the protected docs portal. Removed the stale starter API test page, unused `/api-auth/` route, and development-only DRF session authentication so docs sessions do not authenticate business API calls.
+- Refreshed the committed OpenAPI schema from the current `v1` implementation and clarified authentication, CSRF, pagination, Shop scope, and Client/Related Person contracts. No business API behavior, models, or migrations were changed.
+- The repository is public and `schema.yml` remains committed; live route protection does not make this file confidential. No repository-visibility change or deployment was performed.
+- Local verification before publication: focused tests 62 passed; full PostgreSQL-backed suite 315 passed; repository validator and validator tests 27 passed; Django checks and migration drift check passed; schema validation had zero errors (23 warnings); Black, Flake8, and `git diff --check` passed. Exact-SHA GitHub Actions remains pending publication.
+
 ## 2026-10-01 — T4-01 published
 
 - T4-01 Clients and Related Persons is complete and published at `e4e5e4126d60bfb563fbd25fbf0baab9e85963f9`; exact-SHA Project State Validation run `36796609814` succeeded.

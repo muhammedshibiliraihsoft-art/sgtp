@@ -58,7 +58,12 @@ class ClientQueryMixin:
                 OpenApiParameter.QUERY,
                 description="Unicode name, normalized phone prefix, or exact Client UUID.",
             )
-        ]
+        ],
+        description=(
+            "List only Clients in the explicitly authorized Shop. Results are "
+            "page-number paginated and ordered by name and UUID. Search accepts "
+            "a Unicode name, normalized phone prefix, or exact UUID."
+        ),
     )
 )
 class ClientListCreateView(
@@ -74,6 +79,11 @@ class ClientListCreateView(
     @extend_schema(
         request=ClientSerializer,
         responses={201: ContactWriteResponseSerializer},
+        description=(
+            "Create a Client in the selected Shop. Requires the approved Shop "
+            "write permission; duplicate phone/email matches return warnings "
+            "and never merge records."
+        ),
     )
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
@@ -101,9 +111,14 @@ class ClientDetailView(
     permission_classes = (IsAuthenticated, IsTenantMember, ClientAccessPermission)
     http_method_names = ("get", "put", "patch", "delete", "head", "options")
 
+    @extend_schema(description="Retrieve a Client in the authorized Shop.")
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
     @extend_schema(
         request=ClientSerializer,
         responses={200: ContactWriteResponseSerializer},
+        description="Update a Client scoped to the authorized Shop.",
     )
     def put(self, request, *args, **kwargs):
         return self.update(request, *args, **kwargs)
@@ -111,6 +126,7 @@ class ClientDetailView(
     @extend_schema(
         request=ClientSerializer,
         responses={200: ContactWriteResponseSerializer},
+        description="Partially update a Client scoped to the authorized Shop.",
     )
     def patch(self, request, *args, **kwargs):
         kwargs["partial"] = True
@@ -140,6 +156,10 @@ class ClientDetailView(
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @extend_schema(description="Soft-delete a Client in the authorized Shop.")
+    def delete(self, request, *args, **kwargs):
+        return super().delete(request, *args, **kwargs)
+
 
 @extend_schema_view(
     get=extend_schema(
@@ -150,7 +170,12 @@ class ClientDetailView(
                 OpenApiParameter.QUERY,
                 description="Unicode name, normalized phone prefix, or exact RelatedPerson UUID.",
             )
-        ]
+        ],
+        description=(
+            "List Related Persons belonging to the URL Client in the selected "
+            "Shop. Results are page-number paginated and ordered by name and "
+            "UUID; search accepts a Unicode name, normalized phone prefix, or UUID."
+        ),
     )
 )
 class RelatedPersonListCreateView(
@@ -176,6 +201,11 @@ class RelatedPersonListCreateView(
     @extend_schema(
         request=RelatedPersonSerializer,
         responses={201: RelatedPersonWriteResponseSerializer},
+        description=(
+            "Create a Related Person under the selected Shop Client. The Primary "
+            "Client relationship is assigned from the URL and cannot be spoofed "
+            "in the request body."
+        ),
     )
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
@@ -207,6 +237,12 @@ class RelatedPersonDetailView(
     permission_classes = (IsAuthenticated, IsTenantMember, ClientAccessPermission)
     http_method_names = ("get", "put", "patch", "delete", "head", "options")
 
+    @extend_schema(
+        description="Retrieve a Related Person beneath the authorized URL Client."
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
     def get_queryset(self):
         parent = Client.objects.filter(
             tenant_id=self.request.shop_context.shop.pk
@@ -218,6 +254,7 @@ class RelatedPersonDetailView(
     @extend_schema(
         request=RelatedPersonSerializer,
         responses={200: RelatedPersonWriteResponseSerializer},
+        description="Update a Related Person under the authorized URL Client.",
     )
     def put(self, request, *args, **kwargs):
         return self.update(request, *args, **kwargs)
@@ -225,6 +262,7 @@ class RelatedPersonDetailView(
     @extend_schema(
         request=RelatedPersonSerializer,
         responses={200: RelatedPersonWriteResponseSerializer},
+        description="Partially update a Related Person under the authorized URL Client.",
     )
     def patch(self, request, *args, **kwargs):
         kwargs["partial"] = True
@@ -253,3 +291,9 @@ class RelatedPersonDetailView(
             actor=request.user,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @extend_schema(
+        description="Soft-delete a Related Person beneath the authorized URL Client."
+    )
+    def delete(self, request, *args, **kwargs):
+        return super().delete(request, *args, **kwargs)

@@ -77,7 +77,7 @@ The cloned starter is a conventional Django monolith:
 
 ```text
 core.settings -> installed Django/DRF/local apps
-core.urls     -> admin, browsable API, auth API, tenant API, schema/docs
+core.urls     -> admin, browsable API, auth API, tenant API, protected schema/docs
 apps.accounts -> User model, JWT auth, profile endpoints, admin, tests
 apps.tenants  -> Tenant model, tenant CRUD/actions, admin, tests
 apps.common   -> abstract UUID/audit/soft-delete base models
@@ -109,7 +109,7 @@ Docker        -> development container and production web/db services
 
 - `AUTH_USER_MODEL = accounts.User`.
 - T3-02A authentication accepts the compatible `email` field or an `identifier` containing email/E.164 phone; both resolve to the same UUID User and password-authentication path. Anonymous account creation is denied; Main Supplier Admin may create accounts and manage login phones.
-- Base DRF configuration uses JWT authentication; development settings also enable session authentication and the browsable API.
+- Business API requests use the versioned JWT authenticator in all environments. Development retains the Browsable API renderer; Django session authentication is reserved for Django Admin and the internal documentation portal.
 - Login and refresh routes use SimpleJWT.
 - The JWT blacklist application is installed and configured.
 - Access token is returned in JSON.
@@ -192,8 +192,8 @@ The current `User` model uses email as Django's `USERNAME_FIELD` for Admin/CLI c
 - `GET /api/v1/shops/{shop_id}/context/` authenticates first, resolves one active Shop, and returns only the selected Shop UUID, the actor's selected-Shop role (null for Main Supplier), and Main Supplier context flag. Denied/unavailable Shop cases share a uniform 404; invalid/unauthenticated authentication remains 401.
 - User API ordinary-user access is restricted to the authenticated user's own record; self-profile activation state is read-only.
 - Shop-scoped APIs use `/shops/{shop_id}/...`; T3-03 establishes request-local context and T3-04 supplies the reusable trusted-context queryset/object boundary. Business modules/endpoints must adopt it when introduced.
-- `/api/schema/` and `/api/docs/`
-- `/` serves a static API test/reference page.
+- `/api/docs/` and `/api/schema/` require an active Main Supplier Django Admin session with the password-change gate clear; both responses are private/no-store. The root redirects to `/api/docs/`.
+- `/api-auth/` and the obsolete static API test page have been removed. The committed `schema.yml` remains public because the GitHub repository is public; live endpoint protection does not make the file confidential.
 
 ## Infrastructure
 

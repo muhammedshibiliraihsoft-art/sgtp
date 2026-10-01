@@ -52,8 +52,8 @@ make dev
 ### 4. Access Your Application
 - **Development Server**: http://localhost:8001
 - **Admin Panel**: http://localhost:8001/admin
-- **API Documentation**: http://localhost:8001/api/schema/swagger-ui/
-- **API Test Page**: http://localhost:8001/
+- **Internal API Documentation**: http://localhost:8001/api/docs/ (sign in through Django Admin as Main Supplier)
+- **Root URL**: redirects to the protected API documentation portal
 
 ## 📁 Project Structure
 
@@ -250,9 +250,9 @@ class YourModel(BaseModelWithTenant):
 ## 📚 API Documentation
 
 Access interactive API documentation:
-- **Swagger UI**: `/api/docs/`
-- **OpenAPI Schema**: `/api/schema/`
-- **API Test Page**: `/` (root URL)
+- **Swagger UI**: `/api/docs/` (active Main Supplier Django Admin session required)
+- **OpenAPI Schema**: `/api/schema/` (same access policy as Swagger UI)
+- The root URL redirects to the protected Swagger UI. The committed `schema.yml` remains publicly readable from this public GitHub repository.
 
 ## 🤝 Contributing
 

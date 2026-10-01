@@ -70,6 +70,16 @@ def clear_refresh_cookie(response):
     response.delete_cookie("refresh")
 
 
+LoginRequestSerializer = inline_serializer(
+    name="EmailOrIdentifierLoginRequest",
+    fields={
+        "email": serializers.EmailField(required=False),
+        "identifier": serializers.CharField(required=False),
+        "password": serializers.CharField(write_only=True, required=True),
+    },
+)
+
+
 @extend_schema(
     responses={
         200: inline_serializer(
@@ -234,12 +244,19 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     throttle_scope = "auth"
 
     @extend_schema(
+        request=LoginRequestSerializer,
+        description=(
+            "Authenticate using the legacy email/password fields or identifier/password, "
+            "where identifier accepts User ID, email, or E.164 phone. The response "
+            "contains an access JWT and user profile; the refresh JWT is set only in "
+            "the HttpOnly cookie."
+        ),
         responses={
             200: inline_serializer(
                 name="LoginResponse",
                 fields={"access": serializers.CharField(), "user": UserSerializer()},
             )
-        }
+        },
     )
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
@@ -274,8 +291,20 @@ class CustomTokenRefreshView(TokenRefreshView):
                 location=OpenApiParameter.COOKIE,
                 description="Refresh token in HttpOnly cookie",
                 required=True,
-            )
+            ),
+            OpenApiParameter(
+                name="X-CSRFToken",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.HEADER,
+                description="Masked token from the CSRF bootstrap response.",
+                required=True,
+            ),
         ],
+        description=(
+            "Rotate the refresh token from the HttpOnly cookie. A valid CSRF cookie "
+            "and matching X-CSRFToken header are required. The refresh token is never "
+            "accepted from the request body."
+        ),
         responses={
             200: inline_serializer(
                 name="RefreshResponse", fields={"access": serializers.CharField()}
@@ -385,6 +414,27 @@ def password_reset_confirm(request):
 
 @extend_schema(
     request=None,
+    parameters=[
+        OpenApiParameter(
+            name="refresh",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.COOKIE,
+            description="HttpOnly refresh token cookie to blacklist and clear.",
+            required=False,
+        ),
+        OpenApiParameter(
+            name="X-CSRFToken",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.HEADER,
+            description="Masked token from the CSRF bootstrap response.",
+            required=True,
+        ),
+    ],
+    description=(
+        "Requires a valid access JWT. Blacklist the refresh token when present, "
+        "then clear the refresh and CSRF cookies. A valid CSRF cookie and matching "
+        "X-CSRFToken header are required."
+    ),
     responses={
         200: inline_serializer(
             name="LogoutResponse",

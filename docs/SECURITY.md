@@ -1,5 +1,12 @@
 # Security
 
+## Internal API documentation
+
+- `/api/docs/` and `/api/schema/` require an active Main Supplier superuser session through Django Admin. Forced-password-change accounts and ordinary Shop ADMIN/STAFF/VIEWER accounts are denied. Anonymous requests are sent to the existing Admin login without returning docs/schema content.
+- Both responses use private, no-store cache controls. Swagger does not persist bearer authorization. Documentation visibility grants no business API authentication; application API requests retain their JWT and endpoint-specific authorization, Shop-context, and object-isolation checks.
+- Root `/` redirects to the protected docs portal. The stale public API test page and unused `/api-auth/` route were removed. Health probes remain available and return only minimal status.
+- **Public repository limitation:** `schema.yml` is committed to the public GitHub repository, so its API paths and contract metadata remain publicly readable regardless of route protection. If that information must be confidential, repository visibility or the committed-schema publication strategy needs an owner-approved change. Endpoint secrecy does not replace authorization.
+
 ## V1 roadmap security requirements
 
 - Published T3-04A, T3-04B remediation, and T3-04B-USER-SCOPE retain UUID identity, permanent immutable `user_code`, optional email/phone for normal Users, User ID/email/phone login aliases, required first name, Admin-grade contact safeguards, no anonymous self-registration, credential protections, refresh-session revocation, membership/Admin lifecycle protections, and one immutable owning Shop per ordinary account. T3-04B-USER-SCOPE commit `ed845e89d7656bf9d9e1e24f03b79e7de0d3bd9c` passed exact-SHA Project State Validation run `36591864481`.
