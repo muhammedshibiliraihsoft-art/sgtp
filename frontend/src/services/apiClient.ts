@@ -1,5 +1,3 @@
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
-
 type ApiEnvelope = { errors?: unknown; detail?: unknown; code?: unknown }
 
 export class ApiError extends Error {
@@ -43,7 +41,7 @@ export function clearCredentials() {
 }
 
 function apiUrl(path: string) {
-  return `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`
+  return path.startsWith('/') ? path : `/${path}`
 }
 
 function extractMessage(payload: unknown, fallback: string): { message: string; code?: string } {
@@ -83,6 +81,13 @@ export async function bootstrapCsrf(): Promise<string> {
     throw new ApiError('Unable to reach the service. Check your connection and try again.', 0, 'network_unavailable')
   }
   const data = await readResponse<{ csrf_token: string }>(response)
+  if (!data || typeof data !== 'object' || typeof data.csrf_token !== 'string' || !data.csrf_token) {
+    throw new ApiError(
+      'The API proxy returned a webpage instead of the CSRF response. Check the frontend API proxy configuration.',
+      502,
+      'invalid_csrf_response',
+    )
+  }
   csrfToken = data.csrf_token
   return csrfToken
 }

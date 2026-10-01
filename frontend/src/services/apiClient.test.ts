@@ -15,6 +15,18 @@ describe('shared API client authentication', () => {
     expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: 'GET', credentials: 'include' })
   })
 
+  it('reports an HTML fallback instead of throwing when the CSRF proxy route is missing', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('<!doctype html><html></html>', {
+      status: 200,
+      headers: { 'Content-Type': 'text/html' },
+    })))
+    await expect(bootstrapCsrf()).rejects.toMatchObject({
+      status: 502,
+      code: 'invalid_csrf_response',
+      message: 'The API proxy returned a webpage instead of the CSRF response. Check the frontend API proxy configuration.',
+    })
+  })
+
   it('sends the access token in memory and never persists it', async () => {
     const fetchMock = vi.fn().mockResolvedValue(json({ ok: true }))
     vi.stubGlobal('fetch', fetchMock)

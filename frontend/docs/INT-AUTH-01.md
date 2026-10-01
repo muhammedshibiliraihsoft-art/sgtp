@@ -5,7 +5,7 @@ Branch: `frontend/parallel-foundation`
 
 ## Implemented contract
 
-The frontend uses `VITE_API_BASE_URL` as a public API origin; when unset, calls use the current origin. Requests include cookies. Access credentials remain in memory and are sent as Bearer tokens. Refresh tokens remain in backend-owned HttpOnly cookies and are never read by JavaScript.
+The frontend calls relative `/api/...` paths so browser requests stay same-origin. Local Vite proxies those paths using server-only `AUTH_API_PROXY_TARGET`; Cloudflare Pages uses a same-origin Pages Function. Requests include cookies. Access credentials remain in memory and are sent as Bearer tokens. Refresh tokens remain in HttpOnly cookies and are never read by JavaScript.
 
 - `GET /api/v1/auth/csrf/` returns `{csrf_token}` and sets the CSRF cookie. The frontend bootstraps CSRF before login and refresh/logout and sends `X-CSRFToken` on refresh/logout.
 - `POST /api/v1/auth/login/` sends `{identifier,password}` and receives `{access,user}`. Backend profile properties remain snake_case, including `must_change_password`.
