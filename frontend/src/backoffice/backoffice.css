@@ -53,6 +53,9 @@
 .bo-form-grid, .bo-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 22px; }
 .bo-field { display: flex; flex-direction: column; gap: 7px; min-width: 0; font-size: 12px; font-weight: 650; }
 .bo-field input, .bo-field select { width: 100%; font-size: 13px; font-weight: 400; }
+.bo-phone-input-group { display: flex; gap: 8px; }
+.bo-phone-input-group select { flex: 0 0 142px; }
+.bo-phone-input-group input { flex: 1; min-width: 0; }
 .bo-field small { color: var(--color-text-muted); font-size: 11px; font-weight: 400; }
 .bo-field .bo-field-error { color: var(--color-danger); }
 .bo-field [aria-invalid="true"] { border-color: var(--color-danger); }

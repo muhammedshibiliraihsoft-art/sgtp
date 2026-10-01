@@ -131,6 +131,8 @@ export function CreateShopPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [form, setForm] = useState<CreateShopInput>(blankCreate)
+  const [phoneCountryCode, setPhoneCountryCode] = useState('+965')
+  const [phoneNumber, setPhoneNumber] = useState('')
   const [created, setCreated] = useState<CreatedShop | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [copied, setCopied] = useState('')
@@ -140,6 +142,15 @@ export function CreateShopPage() {
 
   const change = (key: keyof CreateShopInput, value: string | number | null) => setForm(previous => ({ ...previous, [key]: value }))
   const changeAdmin = (key: keyof CreateShopInput['first_admin'], value: string) => setForm(previous => ({ ...previous, first_admin: { ...previous.first_admin, [key]: value } }))
+  const changePhoneNumber = (value: string) => {
+    const pastedCountryCode = ['+965', '+91'].find(code => value.trim().startsWith(code))
+    if (pastedCountryCode) {
+      setPhoneCountryCode(pastedCountryCode)
+      setPhoneNumber(value.trim().slice(pastedCountryCode.length).replace(/\D/g, ''))
+      return
+    }
+    setPhoneNumber(value.replace(/\D/g, ''))
+  }
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
@@ -150,7 +161,7 @@ export function CreateShopPage() {
       const response = await shopsService.create({
         ...form,
         name: form.name.trim(), slug: form.slug.trim().toLowerCase(),
-        first_admin: { ...form.first_admin, first_name: form.first_admin.first_name.trim(), email: form.first_admin.email.trim(), phone: form.first_admin.phone.trim() },
+        first_admin: { ...form.first_admin, first_name: form.first_admin.first_name.trim(), email: form.first_admin.email.trim(), phone: `${phoneCountryCode}${phoneNumber}` },
       })
       setCreated(response)
     } catch (cause: unknown) {
@@ -191,7 +202,18 @@ export function CreateShopPage() {
         <div className="bo-form-grid"><Field label={t('backoffice.firstName')} name="first_admin.first_name" value={form.first_admin.first_name} onChange={value => changeAdmin('first_name', value)} error={fieldErrors['first_admin.first_name']} required />
           <Field label={t('backoffice.lastName')} name="first_admin.last_name" value={form.first_admin.last_name || ''} onChange={value => changeAdmin('last_name', value)} error={fieldErrors['first_admin.last_name']} />
           <Field label={t('backoffice.email')} name="first_admin.email" type="email" value={form.first_admin.email} onChange={value => changeAdmin('email', value)} error={fieldErrors['first_admin.email']} required />
-          <Field label={t('backoffice.phone')} name="first_admin.phone" type="tel" value={form.first_admin.phone} onChange={value => changeAdmin('phone', value)} error={fieldErrors['first_admin.phone']} hint={t('backoffice.phoneHint')} required /></div></section>
+          <label className="bo-field" htmlFor="bo-first_admin.phone"><span>{t('backoffice.phone')} *</span>
+            <div className="bo-phone-input-group">
+              <select aria-label={t('backoffice.phoneCountryCode')} value={phoneCountryCode} onChange={event => setPhoneCountryCode(event.target.value)}>
+                <option value="+965">Kuwait (+965)</option><option value="+91">India (+91)</option>
+              </select>
+              <input id="bo-first_admin.phone" name="first_admin.phone" type="tel" inputMode="numeric" value={phoneNumber}
+                onChange={event => changePhoneNumber(event.target.value)} required aria-invalid={Boolean(fieldErrors['first_admin.phone'])}
+                aria-describedby={fieldErrors['first_admin.phone'] ? 'bo-first_admin.phone-error' : undefined} />
+            </div>
+            <small>{t('backoffice.phoneHint')}</small>
+            {fieldErrors['first_admin.phone'] && <small className="bo-field-error" id="bo-first_admin.phone-error">{fieldErrors['first_admin.phone']}</small>}
+          </label></div></section>
       <section className="bo-card"><div className="bo-section-heading"><span>03</span><div><h2>{t('backoffice.optionalSettings')}</h2><p>{t('backoffice.optionalHint')}</p></div></div>
         <div className="bo-form-grid"><Field label={t('backoffice.contactEmail')} name="contact_email" type="email" value={form.contact_email || ''} onChange={value => change('contact_email', value)} error={fieldErrors.contact_email} />
           <Field label={t('backoffice.contactPhone')} name="contact_phone" type="tel" value={form.contact_phone || ''} onChange={value => change('contact_phone', value)} error={fieldErrors.contact_phone} />
