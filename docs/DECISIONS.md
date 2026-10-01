@@ -123,6 +123,7 @@ These decisions supersede conflicting earlier target assumptions, including requ
 - Shop creation atomically creates its first Shop-owned ADMIN account and membership. Main Supplier may create any approved Shop role; a Shop ADMIN may create only STAFF/VIEWER in their own Shop and reset only current same-Shop STAFF/VIEWER credentials.
 - Existing multi-Shop or unowned ordinary-account data must be preflighted. Migration stops with actual affected identifiers; do not merge accounts or fabricate ownership.
 - This decision supersedes only the multi-Shop global User identity and account-attachment assumptions above. It does not authorize T3-04C or otherwise change role names, Shop isolation, or approved ADMIN lifecycle rules.
+- **Implementation status:** Membership-scoped Work Function persistence and Shop-local management are implemented and published under T3-04C; exact-SHA Project State Validation passed in run `36605653294`. Phase 4 workflow-stage mapping remains deferred and is not resolved by this implementation.
 
 ## 2026-09-29 — Approve T3-04A display-name rule
 
@@ -133,3 +134,20 @@ These decisions supersede conflicting earlier target assumptions, including requ
 - This decision resolves the T3-04A display-name question and does not itself authorize implementation.
 
 **Implementation note (2026-09-29):** T3-04A is published. Current T3-04B remediation status is maintained in `docs/PROJECT_STATE.md`; this historical display-name decision does not authorize later tasks.
+
+## 2026-09-30 — Approve Phase 4–6 before formal frontend resequencing (SUPERSEDED)
+
+**SUPERSEDED by FRONTEND-DELIVERY-LOCK-01 below.** This historical block (from `PHASE4-RESEQUENCE-01`) previously mandated Phase 4 → 5 → 6 before any frontend work, but this is no longer the active roadmap.
+
+## 2026-09-30 — Contract-First Paired Delivery & UI Reference Gate (FRONTEND-DELIVERY-LOCK-01)
+
+- **Paired Delivery Strategy**: The strict Phase 4-6 backend-before-frontend roadmap is superseded. Frontend development will resume immediately on `frontend/parallel-foundation` to implement all current backend features (Auth, Layout, Profile, Shop, Members, Work Functions, Main Supplier). Future Phase 4 and Phase 5 features will follow a **Contract-First Paired Delivery** rule: Backend Domain Accepted → Corresponding Frontend Slice.
+- **UI REFERENCE GATE**: No frontend page, screen, component, or visual workflow may be implemented without an approved visual/design reference supplied or explicitly accepted by the user. If an implementation task reaches the UI stage and no approved reference exists: STOP AND WAIT FOR THE UI REFERENCE. Engineering agents must NOT invent the final UI or independently design new pages.
+- **Approved Layout References**: The current Work page on `frontend/parallel-foundation` is the approved authenticated visual/layout reference. Its layout patterns (desktop shell, sidebar, mobile nav) may be reused, but its data and stages remain strictly mock/template-only until T4-04 (Work Backend API) is accepted. The current `LoginPage` is only a scaffold/preview and NOT an approved Login UI reference.
+- **Dashboard Last Rule**: The real Dashboard is intentionally LAST. It will only aggregate real information after the real business modules and data contracts exist.
+
+## 2026-09-30 — Approve non-blocking parallel backend delivery (PHASE4-PARALLEL-UNBLOCK-01)
+
+- Backend Phase 4/5/6 work may proceed in parallel with frontend integration of existing backend capabilities. Frontend completion is not a prerequisite to start Phase 4 or to advance between backend tasks whose dependencies are satisfied.
+- Backend task dependencies remain authoritative. A corresponding frontend domain slice may follow only after its backend contract is accepted; frontend remains contract-first and must not invent API or business behavior.
+- This clarifies and supersedes any blocking interpretation of the delivery sequence recorded under `FRONTEND-DELIVERY-LOCK-01`; it does not erase that historical decision or alter its UI Reference Gate, Dashboard Last Rule, phase boundaries, or task-confirmation rules.

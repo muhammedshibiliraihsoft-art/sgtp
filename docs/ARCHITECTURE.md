@@ -20,9 +20,13 @@ Client → Design → Measurement → Fabric/Material → Production Workflow
 
 `main` remains the backend/current integration source of truth and the primary owner of canonical project and business documentation. Parallel visual and frontend-foundation work uses the same repository on `frontend/parallel-foundation` in the sibling worktree `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp-frontend`; frontend implementation lives under `/frontend` and must not be developed in the main worktree. Frontend-specific instructions and handoff belong under `frontend/`.
 
-This early Parallel Frontend Foundation Track is not Phase 7 completion and does not move or waive F7-01 dependencies. It may establish tooling, application/layout shells, design tokens/components, accessibility/responsive/i18n/RTL/LTR/theme foundations, and mock-first API adapters. Unimplemented backend features remain interfaces/mocks, not live contracts. Backend/main is synchronized into the frontend branch through deliberate normal merges; unfinished frontend work is not routinely merged into main. Frontend navigation and role presentation are UX only; all authorization remains backend-enforced.
+This early Parallel Frontend Foundation Track is not Phase 7 completion. The approved `PHASE4-PARALLEL-UNBLOCK-01` sequence places Phases 4–6 before F7-01/F7-01A; the frontend foundation remains isolated and unmerged. It may establish tooling, application/layout shells, design tokens/components, accessibility/responsive/i18n/RTL/LTR/theme foundations, and mock-first API adapters. Unimplemented backend features remain interfaces/mocks, not live contracts. Backend/main is synchronized into the frontend branch through deliberate normal merges; unfinished frontend work is not routinely merged into main. Frontend navigation and role presentation are UX only; all authorization remains backend-enforced.
 
 Ordinary Users have one immutable owning Shop and do not select among multiple Shop memberships after login. Main Supplier is the global authority; any cross-Shop navigation depends on a real authorized backend contract and does not imply ordinary-user multi-Shop identity.
+
+### BACKOFFICE-01 implementation
+
+The Main Supplier Back Office is a React route group (`/backoffice`) that reuses the established application shell, navigation styling, and presentation preferences. It does not reuse the Work page's mock records. Shop list and lifecycle screens call the existing tenant APIs through a typed frontend service. The backend's `is_main_supplier_admin` user-profile value guides frontend routing only; each write/read remains subject to server-side authentication and authorization. Shop creation calls the existing atomic Shop + first ADMIN operation, and the API returns initial credentials once with no-store headers.
 
 ## V1 Supplier / Shop / External Supplier Model
 
@@ -67,13 +71,17 @@ This is the approved target structure. The root-level `core/`, `apps/accounts/`,
 - Background jobs: Django-Q or Celery + Redis; the choice remains open until the reliability phase selects and documents one.
 - Authentication: access token plus refresh token, with the refresh token handled through an HttpOnly/Secure cookie, rotation, and reuse detection; cookie-authenticated state-changing requests also require an approved CSRF protection strategy.
 
+### T3-05A staging backend foundation (complete)
+
+The repository defines an explicit `DJANGO_ENV=staging` settings module and a Render Blueprint for a manually deployed, isolated staging API/PostgreSQL pair, with bounded startup readiness/migration behavior and safe health/CSRF bootstrap support. The Free Frankfurt Docker API and PostgreSQL 15 resources are operational at `https://birky-staging-api.onrender.com`; T3-05A live authentication, token lifecycle, CORS, health, and bidirectional Shop-isolation verification is complete. The implementation SHA passed exact-SHA CI, and the existing synthetic fixture remains after temporary credentials were blanked and bootstrap/rotation flags disabled. `api-staging.birky.com` is reserved only because BiRKy does not currently control the domain; DNS/TLS and real-browser frontend integration remain deferred. The Free plan is temporary and non-durable; see `docs/runbooks/STAGING_BACKEND.md`. No Production or business module is part of this work.
+
 ## Verified starter architecture
 
 The cloned starter is a conventional Django monolith:
 
 ```text
 core.settings -> installed Django/DRF/local apps
-core.urls     -> admin, browsable API, auth API, tenant API, schema/docs
+core.urls     -> admin, browsable API, auth API, tenant API, protected schema/docs
 apps.accounts -> User model, JWT auth, profile endpoints, admin, tests
 apps.tenants  -> Tenant model, tenant CRUD/actions, admin, tests
 apps.common   -> abstract UUID/audit/soft-delete base models
@@ -87,16 +95,25 @@ Docker        -> development container and production web/db services
 - `accounts` owns authentication identity and user-facing auth endpoints.
 - `tenants` contains the retained `Tenant` model mapped to the V1 Shop, the singleton Main Supplier, membership, policy and administration endpoints.
 - `common` owns shared model abstractions.
-- No service layer, domain modules, background worker, event bus, or external integration layer exists.
-- Target modules for V1 are not yet implemented: supplier/back office, shop workspace, clients, related persons, designs, measurements, materials, production workflow, billing, reports/PDFs, storage, jobs, and monitoring.
+- `clients` is the first Phase 4 business domain, implemented at runtime under `apps/clients` to match existing `INSTALLED_APPS`; it uses Shop context, tenant queryset scoping, role permissions, and transactional services. Do not create a shadow `backend/apps` tree or relocate existing apps as part of T4-01.
+- No background worker, event bus, or external integration layer exists.
+- Target modules still not implemented: supplier/back office beyond existing Shop APIs, catalog/designs, measurements, materials, production workflow, billing, reports/PDFs, storage, jobs, and monitoring.
 - `backend/` contains settings and shared model foundation code; `frontend/` is an empty placeholder. Django project wiring and apps remain at the repository root under `core/` and `apps/`.
 - Target boundaries are `accounts` for identity/auth, `shops` for supplier/shop/membership/workspace tenancy, `clients` for clients/related persons, `catalog` for designs/measurements/materials, `works` for orders and production workflow, `billing` for invoices/payments/accounts, `reports` for reports/history/PDFs, `ai_agents` for controlled AI services, `integrations` for external adapters/webhooks, and `core` for shared primitives only.
+
+### Phase 4 T4-01 — Clients and Related Persons (implemented)
+
+- Runtime module: `apps/clients` (Django app label `clients`); the existing `BaseModel` supplies UUID identity, audit timestamps/users, and soft-delete history.
+- `Client` and `RelatedPerson` each require Shop ownership. Every RelatedPerson has exactly one same-Shop `primary_client`; this preserves future billing ownership. Phase 5 billing is not implemented.
+- Client operations require explicit trusted `/api/v1/shops/{shop_id}/...` context and Phase 3 scoping. Main Supplier/ADMIN have full CRUD including soft-delete; STAFF has read/create/update; VIEWER is read-only; inactive/removed membership is denied. Work Functions do not affect this authority.
+- Duplicate checks are informational only and Shop-local. Phone/email remain non-unique. A transaction locks the Shop before duplicate query/write, serializing same-Shop contact writes; warnings never merge/reject and expose only same-Shop IDs/names of the same record type.
+- Search uses canonical stored names with Unicode-aware containment, deterministic normalized phone prefix, and exact UUID matching; no accent-insensitive or Work-number search is claimed. Deleted rows are excluded from normal queries.
 
 ## Authentication
 
 - `AUTH_USER_MODEL = accounts.User`.
 - T3-02A authentication accepts the compatible `email` field or an `identifier` containing email/E.164 phone; both resolve to the same UUID User and password-authentication path. Anonymous account creation is denied; Main Supplier Admin may create accounts and manage login phones.
-- Base DRF configuration uses JWT authentication; development settings also enable session authentication and the browsable API.
+- Business API requests use the versioned JWT authenticator in all environments. Development retains the Browsable API renderer; Django session authentication is reserved for Django Admin and the internal documentation portal.
 - Login and refresh routes use SimpleJWT.
 - The JWT blacklist application is installed and configured.
 - Access token is returned in JSON.
@@ -129,14 +146,14 @@ Docker        -> development container and production web/db services
 - `TenantMember` references the ordinary account's owning Shop, and the database guards ownership/membership consistency. Shop creation atomically creates a new first ADMIN account and membership. Main Supplier may create any Shop role; a Shop ADMIN may create STAFF/VIEWER and reset current same-Shop STAFF/VIEWER credentials only.
 - Existing T3-04B membership/Admin safeguards remain in force. T3-04B-USER-SCOPE is published at `ed845e89d7656bf9d9e1e24f03b79e7de0d3bd9c` with exact-SHA CI success in run `36591864481`.
 - Every User receives permanent `user_code` (human User ID); UUID remains the internal key/JWT `user_id`. Normal-user email/phone are optional; active Shop ADMIN/Main Supplier accounts require both. T3-04A and the T3-04B remediation are published; the latter enforces membership promotion/lifecycle/cardinality safeguards.
-- Access Role (`ADMIN`, `STAFF`, `VIEWER`) is distinct from membership-scoped Work Functions. Each Shop permits one to two active ADMIN memberships; Main Supplier manages this hierarchy. Shop creation establishes its first ADMIN, and global deactivation must preserve at least one active ADMIN in every affected Shop. Work Functions remain T3-04C scope.
-- Work Functions are zero-to-many assignments on a Shop membership, from the approved controlled V1 catalog. They describe work eligibility, not authorization. Shop ADMINs manage functions only within their own Shop. T3-04C owns this foundation; Phase 4 owns workflow-stage mapping and work assignment.
-- Approved Shop targets: ordinary Users see only authorized Shops; Main Supplier controls Shop activation/deactivation and settings; deactivation preserves Shop data/memberships; no ordinary Shop DELETE; max_users cannot be lowered below current user_count. T3-05 owns implementation after T3-04A–C.
+- Access Role (`ADMIN`, `STAFF`, `VIEWER`) is distinct from membership-scoped Work Functions. Each Shop permits one to two active ADMIN memberships; Main Supplier manages this hierarchy. Shop creation establishes its first ADMIN, and global deactivation must preserve at least one active ADMIN in every affected Shop.
+- Work Functions are normalized zero-to-many assignments on a Shop membership, from the approved controlled V1 catalog. They describe work eligibility, not authorization. Shop ADMINs manage functions only within their own Shop through the Shop-path API. T3-04C implements persistence, transactional set management, and lifecycle history; Phase 4 owns workflow-stage mapping and work assignment.
+- Approved Shop rules are implemented in T3-05: ordinary Users see only authorized Shops; Main Supplier controls Shop activation/deactivation and settings; deactivation preserves Shop data/memberships; no ordinary Shop DELETE; max_users cannot be lowered below current user_count. T3-05 is published and its exact-SHA CI succeeded.
 - Preserve the existing explicit `/shops/{shop_id}/...` context, authentication ordering, uniform non-disclosing unavailable-Shop 404, 401 authentication behavior, and T3-04 trusted-context/query/object boundary. A person with accounts in different Shops uses distinct independent accounts; each request still requires explicit authorized Shop context, and no preference/default guess replaces the path context.
 
 ### Current code boundary and approved target
 
-The current `User` model uses email as Django's `USERNAME_FIELD` for Admin/CLI compatibility, but email may be null; `user_code` is the permanent human identifier, `first_name` is required, and ordinary Users have one immutable `owning_shop`. `TenantMember` is constrained to that owning Shop and has a per-membership role. Published T3-04B safeguards enforce the one-to-two active-ADMIN invariant and lifecycle authority. Membership-scoped Work Functions remain T3-04C; broader Shop management remains T3-05.
+The current `User` model uses email as Django's `USERNAME_FIELD` for Admin/CLI compatibility, but email may be null; `user_code` is the permanent human identifier, `first_name` is required, and ordinary Users have one immutable `owning_shop`. `TenantMember` is constrained to that owning Shop and has a per-membership role. Published T3-04B safeguards enforce the one-to-two active-ADMIN invariant and lifecycle authority. Membership-scoped Work Functions are implemented by T3-04C; T3-05 Shop management is published with exact-SHA CI green.
 
 ## Planned cross-cutting V1 presentation and operations
 
@@ -179,8 +196,8 @@ The current `User` model uses email as Django's `USERNAME_FIELD` for Admin/CLI c
 - `GET /api/v1/shops/{shop_id}/context/` authenticates first, resolves one active Shop, and returns only the selected Shop UUID, the actor's selected-Shop role (null for Main Supplier), and Main Supplier context flag. Denied/unavailable Shop cases share a uniform 404; invalid/unauthenticated authentication remains 401.
 - User API ordinary-user access is restricted to the authenticated user's own record; self-profile activation state is read-only.
 - Shop-scoped APIs use `/shops/{shop_id}/...`; T3-03 establishes request-local context and T3-04 supplies the reusable trusted-context queryset/object boundary. Business modules/endpoints must adopt it when introduced.
-- `/api/schema/` and `/api/docs/`
-- `/` serves a static API test/reference page.
+- `/api/browse/`, `/api/docs/`, and `/api/schema/` require an active Main Supplier Django Admin session with the password-change gate clear; responses are private/no-store. The root redirects to the Browsable API portal. Its same-origin API requests require Bearer JWT; the Admin session alone is not DRF authentication, and the access token is never persisted in Web Storage.
+- `/api-auth/` and the obsolete static API test page have been removed. The committed `schema.yml` remains public because the GitHub repository is public; live endpoint protection does not make the file confidential.
 
 ## Infrastructure
 
@@ -193,12 +210,12 @@ The current `User` model uses email as Django's `USERNAME_FIELD` for Admin/CLI c
 ## Architecture gaps and conflicts
 
 1. `Tenant.user_count` counts ACTIVE and INACTIVE memberships via the `memberships` reverse relation.
-2. T3-03 URL-path request context and T3-04 trusted-context query/object primitives are implemented. No production business-resource endpoints exist yet; their adoption and end-to-end isolation remain future verification requirements. `TenantScopedMixin` is an isolation primitive, not a substitute for endpoint/action authorization.
+2. T3-03 URL-path request context and T3-04 trusted-context query/object primitives are implemented. T4-01 Clients/Related Persons is the first business-resource endpoint set and has direct Shop-isolation tests; remaining business routes must adopt and prove the primitives. `TenantScopedMixin` is an isolation primitive, not a substitute for endpoint/action authorization.
 3. The tenant field is nullable, so tenant-scoped records can be unscoped by default.
 4. The README references missing `apps.common.views.base_model_view` and `apps.tenants.mixins` components.
 5. Local settings use `DJANGO_DEBUG`, `DJANGO_ALLOWED_HOSTS` and `DB_*`; verify each deployment environment supplies those documented names.
 6. JWT blacklist is installed/configured; runtime refresh rotation and reuse behavior is covered by authentication lifecycle tests, while deployment-specific database behavior still requires CI/runtime verification.
-7. The foundation includes the single Supplier, Tenant-as-Shop mapping, membership/role policy, T3-03 URL-path context, and T3-04 scoped query/object primitives, but does not yet implement External Supplier records, business-resource endpoints, or the end-to-end tailoring workflow.
+7. The foundation includes the single Supplier, Tenant-as-Shop mapping, membership/role policy, T3-03 URL-path context, and T3-04 scoped query/object primitives. T4-01 Clients/Related Persons is implemented; External Supplier records and the remaining end-to-end tailoring workflow are not yet implemented.
 8. The target React/Vite/Tailwind frontend is absent; persistent object storage, background workers, monitoring and complete release operations are also pending.
 
 ## Recommended foundation changes
@@ -217,7 +234,7 @@ The current `User` model uses email as Django's `USERNAME_FIELD` for Admin/CLI c
 
 ## Phase 1 status and current V1 readiness
 
-Phase 1 foundation implementation is complete. T3-02A, T3-03, T3-04, T3-04A, and the T3-04B remediation are published. Require Project State Validation SUCCESS for the exact T3-04B publication SHA before proceeding to T3-04C. SGTP V1 is not ready for production. T3-04C must precede T3-05. Business modules and end-to-end workflows remain unimplemented; future endpoints must adopt and verify the T3-04 boundary.
+Phase 1 foundation implementation is complete. T3-02A, T3-03, T3-04, T3-04A, T3-04B remediation, T3-04B-USER-SCOPE, T3-04C, and T3-05 are published; Project State Validation passed for the exact T3-05 commit. SGTP V1 is not ready for production. Business modules and end-to-end workflows remain unimplemented; future endpoints must adopt and verify the T3-04 boundary.
 
 ## Membership Lifecycle and Rules
 

@@ -1,0 +1,77 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <title>SGTP API Browser</title>
+    <link rel="stylesheet" href="{% static 'core/api_browser.css' %}">
+    <script src="{% static 'core/api_browser.js' %}" defer></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/api/browse/">SGTP API</a>
+      <span class="topbar-caption">Browsable API</span>
+      <a class="docs-link" href="/api/docs/">Open Swagger docs</a>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar" aria-label="API endpoints">
+        <label for="route-search">Find an endpoint</label>
+        <input id="route-search" type="search" placeholder="Search paths or tags">
+        <p id="route-count" class="muted">Loading API schema…</p>
+        <nav id="route-list" class="route-list"></nav>
+      </aside>
+
+      <main>
+        <section class="intro">
+          <p class="eyebrow">INTERNAL API EXPLORER</p>
+          <h1>SGTP API Browser</h1>
+          <p>Browse implemented API endpoints and send requests with your access JWT.</p>
+          <div class="security-note">
+            Your JWT stays in this page's memory and is cleared when you leave or reload.
+            It is not saved in browser storage. Django Admin login grants access to this
+            page only; API requests still require JWT and normal permissions.
+          </div>
+        </section>
+
+        <section class="request-panel" aria-labelledby="request-title">
+          <h2 id="request-title">Request</h2>
+          <label for="access-token">Access JWT <span class="muted">(optional for login/CSRF bootstrap)</span></label>
+          <div class="token-row">
+            <input id="access-token" type="password" autocomplete="off" spellcheck="false"
+                   placeholder="Paste access JWT; held only in this page">
+            <button id="clear-token" class="button secondary" type="button">Clear JWT</button>
+          </div>
+
+          <form id="api-request-form">
+            <div class="request-line">
+              <label class="sr-only" for="http-method">HTTP method</label>
+              <select id="http-method" aria-label="HTTP method">
+                <option>GET</option><option>POST</option><option>PUT</option>
+                <option>PATCH</option><option>DELETE</option>
+              </select>
+              <label class="sr-only" for="api-path">API path</label>
+              <input id="api-path" type="text" required value="/api/v1/"
+                     autocomplete="off" spellcheck="false">
+              <button class="button primary" type="submit">Send</button>
+            </div>
+            <p id="operation-description" class="muted">Choose an endpoint from the list. Replace any {path} placeholders and add query parameters before sending.</p>
+            <label for="request-body">JSON request body <span class="muted">(leave empty for requests without a body)</span></label>
+            <textarea id="request-body" rows="8" spellcheck="false" placeholder='{"example": "value"}'></textarea>
+          </form>
+        </section>
+
+        <section class="response-panel" aria-labelledby="response-title">
+          <div class="response-heading">
+            <h2 id="response-title">Response</h2>
+            <span id="response-status" class="status muted">No request sent</span>
+          </div>
+          <pre id="response-body" aria-live="polite">Select an endpoint, enter your JWT when required, then send a request.</pre>
+        </section>
+        <p id="page-error" class="error" role="alert" hidden></p>
+      </main>
+    </div>
+  </body>
+</html>

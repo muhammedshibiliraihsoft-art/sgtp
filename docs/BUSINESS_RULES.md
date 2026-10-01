@@ -173,6 +173,10 @@ New business rules require:
 **Status:** CONFIRMED
 **Rule:** A potential duplicate by phone or email is a warning, not an automatic merge. Duplicate checks and results are confined to the authorized Shop; concurrent writes must not silently merge records.
 
+### BR-CLIENT-002 — Client and Related Person Access
+**Status:** CONFIRMED
+**Rule:** Main Supplier may read, create, update, and soft-delete Client and Related Person records only through an explicit authorized Shop context. An active Shop ADMIN has the same actions only in their own Shop. An active STAFF may read, create, and update those records in their own Shop but may not delete them. An active VIEWER is read-only in their own Shop. Inactive or removed memberships have no operational access. Work Functions do not grant or restrict these Client permissions; no SALES or other function is required. No Client tags or separate human-readable Client code are part of this V1 task; the immutable UUID is the stable API identifier. Related Person Work remains billed to the Primary Client under BR-BILL-001.
+
 ### BR-WORK-001 — Work Priority and Date Indicators
 **Status:** CONFIRMED
 **Rule:** V1 Work priorities are Normal, Urgent, and Very Urgent. Upcoming, due soon, due today, and overdue are derived date indicators, not workflow states. Exact due-soon threshold and date-cutoff semantics remain **BUSINESS DECISION REQUIRED** before implementation.
@@ -243,7 +247,7 @@ New business rules require:
 
 ## 6A. Phase 3 Business Architecture Rebaseline — Approved Target Rules
 
-These rules are approved target behavior, not claims about current code. Implementation ownership is listed per rule; current behavior and compatibility work are tracked in `docs/PROJECT_STATE.md`, `docs/HANDOFF.md`, and the Phase 3 playbook.
+These are authoritative business rules. Implementation status is recorded separately in `docs/PROJECT_STATE.md`, `docs/HANDOFF.md`, and the Phase 3 playbook; status notes below do not alter rule meaning.
 
 ### BR-ACC-003 — One Global User Across Shops (SUPERSEDED)
 **Status:** SUPERSEDED
@@ -279,7 +283,7 @@ These rules are approved target behavior, not claims about current code. Impleme
 
 ### BR-MEM-010 — ADMIN Authority and Shop Creation
 **Status:** CONFIRMED
-**Rule:** Main Supplier manages ADMIN assignment, promotion, demotion and removal, while preserving the 1–2 active ADMIN invariant. Shop Admins cannot change another membership's ADMIN authority. Shop creation must atomically establish its first valid ADMIN before the Shop enters normal operation. Shop Admins may manage permitted non-ADMIN memberships and Work Functions only within their own Shop. ADMIN lifecycle and first-ADMIN safeguards are published in T3-04B remediation and T3-04B-USER-SCOPE; Work Functions remain T3-04C.
+**Rule:** Main Supplier manages ADMIN assignment, promotion, demotion and removal, while preserving the 1–2 active ADMIN invariant. Shop Admins cannot change another membership's ADMIN authority. Shop creation must atomically establish its first valid ADMIN before the Shop enters normal operation. Shop Admins may manage permitted non-ADMIN memberships and Work Functions only within their own Shop. ADMIN lifecycle and first-ADMIN safeguards are published in T3-04B remediation and T3-04B-USER-SCOPE; membership Work-Function management is implemented in T3-04C.
 
 ### BR-MEM-011 — Global User Deactivation Guard
 **Status:** CONFIRMED
@@ -287,23 +291,23 @@ These rules are approved target behavior, not claims about current code. Impleme
 
 ### BR-MEM-012 — Membership Capacity Lower Bound
 **Status:** CONFIRMED
-**Rule:** `user_count` remains ACTIVE + INACTIVE memberships; REMOVED memberships do not count. Reject any reduction of `max_users` below current `user_count`; first remove memberships through the approved lifecycle. API and Django Admin must enforce the same rule. Implementation is pending T3-05 after prerequisite remediation.
+**Rule:** `user_count` remains ACTIVE + INACTIVE memberships; REMOVED memberships do not count. Reject any reduction of `max_users` below current `user_count`; first remove memberships through the approved lifecycle. API and Django Admin must enforce the same rule. **Implementation status:** T3-05 is implemented and published; exact-SHA Project State Validation run `36614638187` succeeded for commit `3d21a0943006cd866bc19bc728cbec05daae1630`.
 
 ### BR-SHOP-008 — Authorized Shop Visibility
 **Status:** CONFIRMED
-**Rule:** Ordinary Users may discover only Shops for which they have authorized membership/access, including list, detail, search, filters, ordering, pagination, stats, autocomplete, counts, foreign-key traversal and direct IDs. A User with a relevant inactive membership may see that Shop only as disabled/inactive historical context, never as selectable operational context. Main Supplier retains authorized cross-Shop visibility. Preserve T3-03/T3-04 non-disclosure and isolation. Implementation is pending T3-05.
+**Rule:** Ordinary Users may discover only Shops for which they have authorized membership/access, including list, detail, search, filters, ordering, pagination, stats, autocomplete, counts, foreign-key traversal and direct IDs. A User with a relevant inactive membership may see that Shop only as disabled/inactive historical context, never as selectable operational context. Main Supplier retains authorized cross-Shop visibility. Preserve T3-03/T3-04 non-disclosure and isolation. **Implementation status:** T3-05 is implemented and published; exact-SHA Project State Validation run `36614638187` succeeded for commit `3d21a0943006cd866bc19bc728cbec05daae1630`.
 
 ### BR-SHOP-009 — Shop Deactivation and Delete
 **Status:** CONFIRMED
-**Rule:** Only Main Supplier manages Shop activation/deactivation. Deactivation preserves Shop data, memberships and history, and makes operational context unavailable until reactivation. V1 does not expose ordinary Shop DELETE; deactivate is the operational shutdown action. Archive is a separate future concept. Implementation is pending T3-05.
+**Rule:** Only Main Supplier manages Shop activation/deactivation. Deactivation preserves Shop data, memberships and history, and makes operational context unavailable until reactivation. V1 does not expose ordinary Shop DELETE; deactivate is the operational shutdown action. Archive is a separate future concept. **Implementation status:** T3-05 is implemented and published; exact-SHA Project State Validation run `36614638187` succeeded for commit `3d21a0943006cd866bc19bc728cbec05daae1630`.
 
 ### BR-SHOP-010 — Shop Profile and Management Statistics Visibility
 **Status:** CONFIRMED
-**Rule:** Main Supplier may view Shops cross-Shop. An authorized Shop member may view appropriate profile/contact/address information for that Shop only. Management statistics (`user_count`, `max_users`, capacity state) are limited to Main Supplier and that Shop's ADMIN; they are not exposed to STAFF/VIEWER or foreign Shops. Implementation is pending T3-05.
+**Rule:** Main Supplier may view Shops cross-Shop. An authorized Shop member may view appropriate profile/contact/address information for that Shop only. Management statistics (`user_count`, `max_users`, capacity state) are limited to Main Supplier and that Shop's ADMIN; they are not exposed to STAFF/VIEWER or foreign Shops. **Implementation status:** T3-05 is implemented and published; exact-SHA Project State Validation run `36614638187` succeeded for commit `3d21a0943006cd866bc19bc728cbec05daae1630`.
 
 ### BR-FUNC-001 — Work Functions Are Membership-Scoped and Not Permissions
 **Status:** CONFIRMED
-**Rule:** A membership may have zero, one, or multiple Work Functions, independently of its access role. The controlled V1 catalog is SALES, MEASUREMENT, CUTTING, STITCHING, FINISHING, QC, and CASHIER. Functions are managed by that Shop's ADMINs, including for ADMIN memberships, but never across Shops. A function describes work eligibility; it does not grant permissions or override endpoint/service authorization. A VIEWER does not gain operational/write authority from a descriptive function; Phase 4 must define the action policy without treating a function as sufficient authorization. Main Supplier cross-Shop administrative authority does not automatically create operational membership or Work Functions in every Shop. Membership deactivation preserves functions; reactivation restores eligibility; removal/undo preserves associated history; fresh re-add requires explicit assignment. Implementation is pending T3-04C. Any distinct function for the Check workflow stage remains a Phase 4 mapping decision.
+**Rule:** A membership may have zero, one, or multiple Work Functions, independently of its access role. The controlled V1 catalog is SALES, MEASUREMENT, CUTTING, STITCHING, FINISHING, QC, and CASHIER. Functions are managed by that Shop's ADMINs, including for ADMIN memberships, but never across Shops. A function describes work eligibility; it does not grant permissions or override endpoint/service authorization. A VIEWER does not gain operational/write authority from a descriptive function; Phase 4 must define the action policy without treating a function as sufficient authorization. Main Supplier cross-Shop administrative authority does not automatically create operational membership or Work Functions in every Shop. Membership deactivation preserves functions; reactivation restores eligibility; removal/undo preserves associated history; fresh re-add requires explicit assignment. The membership-scoped persistence and Shop-local management foundation is implemented by T3-04C. Any distinct function for the Check workflow stage remains a Phase 4 mapping decision.
 
 ### BR-FLOW-001 — Fixed Workflow, Flexible Staffing
 **Status:** CONFIRMED

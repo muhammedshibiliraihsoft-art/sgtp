@@ -1,5 +1,85 @@
 # Changelog
 
+## 2026-10-01 — BACKOFFICE-01 local implementation
+
+- Added a Main Supplier-only Back Office shell that reuses the current frontend sidebar, header, theme, color palette, and responsive layout. The Work page mock data is not reused.
+- Connected Shop listing, search/filter/order/pagination, create, detail/update, and activation lifecycle to the existing `/api/v1/tenants/` API. Shop creation atomically creates its first ADMIN; the returned User ID and temporary password are shown once in memory and are not persisted by the frontend.
+- Added `is_main_supplier_admin` to the auth user profile so the frontend can route Main Supplier users into Back Office; server permissions remain authoritative. No model migration or environment-variable change was needed.
+- Local evidence: frontend 31 tests passed, typecheck and production build passed, lint has one existing `react(set-state-in-effect)` warning in `src/App.tsx`; backend full suite passed 257 tests before adding one focused first-admin login/password-change test, which also passed separately. OpenAPI refreshed with zero errors and 23 warnings (7 unique).
+- Render staging service is `birky-staging-api`, source `main`, with auto-deploy disabled. No deployment has been performed yet. Frontend branch push triggers a Cloudflare Pages client-preview deployment; do not push that branch without explicit approval for this side effect.
+- Current local work is uncommitted and unpublished; exact branch parity and final Project State validation remain to be recorded before publication.
+
+## 2026-10-01 — API-BROWSABLE-PORTAL-01
+
+- Added a Main Supplier-only, DRF-style API browser at `/api/browse/`; root now opens it, while Swagger remains at `/api/docs/`.
+- The browser builds its endpoint list from the protected OpenAPI schema, restricts requests to same-origin `/api/v1/`, requires Bearer JWT where the API requires it, and keeps access tokens in page memory only. Existing Django-session exclusion, API permissions, CSRF bootstrap, and refresh/logout protection remain unchanged.
+- No business endpoint, model, migration, dependency, or React frontend was added.
+- Validation: 10 focused documentation/browser tests and all 319 PostgreSQL-backed application tests passed. Published at implementation commit `304c9666f680e3e32aa05e4545b44aa049963e19`; exact-SHA Project State Validation run `36862739900` succeeded. No deployment occurred.
+
+## 2026-10-01 — API-DOC-REFRESH-01
+
+- Protected `/api/docs/` and `/api/schema/` with the existing Django Admin/Main Supplier session and forced-password-change policy; responses are private and no-store.
+- Root now redirects to the protected docs portal. Removed the stale starter API test page, unused `/api-auth/` route, and development-only DRF session authentication so docs sessions do not authenticate business API calls.
+- Refreshed the committed OpenAPI schema from the current `v1` implementation and clarified authentication, CSRF, pagination, Shop scope, and Client/Related Person contracts. No business API behavior, models, or migrations were changed.
+- The repository is public and `schema.yml` remains committed; live route protection does not make this file confidential. No repository-visibility change or deployment was performed.
+- Local verification before publication: focused tests 62 passed; full PostgreSQL-backed suite 315 passed; repository validator and validator tests 27 passed; Django checks and migration drift check passed; schema validation had zero errors (23 warnings); Black, Flake8, and `git diff --check` passed. Published at implementation checkpoint `9e93a77754ac03839d038e5e3a32458208bc02e9`; exact-SHA Project State Validation run `36850074419` succeeded.
+
+## 2026-10-01 — T4-01 published
+
+- T4-01 Clients and Related Persons is complete and published at `e4e5e4126d60bfb563fbd25fbf0baab9e85963f9`; exact-SHA Project State Validation run `36796609814` succeeded.
+- T4-02 remains unstarted and unauthorized. No frontend source or deployment was included.
+
+## 2026-09-30 — Phase 4 activation and T4-01 implementation
+
+- Phase 4 was explicitly activated and only T4-01 Clients/Related Persons was authorized. Canonical BR-CLIENT-002 records the approved role-access matrix. T4-01 work began under that authorization; its later completion/publication is recorded above. Do not infer that future tasks are authorized.
+- The runtime app follows the current Django `apps.*` layout at `apps/clients`; frontend source remains isolated and unchanged.
+
+## 2026-09-30 — PHASE4-PARALLEL-UNBLOCK-01 roadmap dependency clarification
+
+- Clarified that backend Phase 4/5/6 delivery may progress independently of frontend completion; each frontend domain slice remains contract-first and follows its accepted backend contract.
+- Preserved the historical `PHASE4-RESEQUENCE-01` and `FRONTEND-DELIVERY-LOCK-01` entries; the UI Reference Gate, Dashboard Last Rule, phase boundaries, and separate confirmation gates remain unchanged.
+- Documentation/roadmap only. No application or frontend source changes. This entry records the approved roadmap correction, not a Phase 4 activation or T4-01 implementation.
+
+## 2026-09-30 — PHASE4-RESEQUENCE-01 roadmap dependency update
+
+- Parked the existing parallel frontend foundation without touching, deleting, resetting, or merging its branch/worktree. Formal frontend work remains gated until the later sequence and individual confirmations.
+- Documentation/roadmap only. Phase 4 was not activated; T4-01, F7-01, F7-01A, application code, and frontend source were not started or changed.
+
+## 2026-09-30 — T3-05A final staging verification and closure
+
+- Added a fail-closed command for rotating credentials of only the already-existing deterministic staging smoke identities, with staging/database/explicit-confirmation guards and fixture integrity checks. The fixture itself was preserved; no Users/Shops/memberships/Work Functions were recreated or changed.
+- Local PostgreSQL suite: 294 passed; focused rotation/bootstrap tests: 39 passed. Repository validator and validator tests passed; Django/deploy/migration/OpenAPI/format/lint/shell/diff checks passed. Implementation commit `b29a897897d35ec9163c510456bd9197b8a4f6e1` passed exact-SHA Project State Validation run `36667104952` (294 application tests).
+- Render final deployment `dep-dau9ptlg1s2s73c2foig` is live on the same application SHA. Live login, cookie, refresh/logout/revocation, CORS, health, Main Supplier access, and bidirectional Shop endpoint/object isolation checks passed. Migration, static collection, and Gunicorn startup were confirmed; no secret exposure was found. Temporary credential variables are blank, bootstrap/rotation flags are false, and the existing synthetic fixture remains.
+- T3-05A is complete. The Render provider hostname remains active; custom-domain DNS/TLS and real frontend browser integration remain deferred. No frontend, Production, worker, Redis/Celery, or Phase 4 work was performed.
+
+## 2026-09-30 — T3-05A partial live staging verification
+
+- Added a guarded synthetic Main Supplier/Shop A/Shop B fixture using staging-only secrets; live provider-hostname login, refresh CSRF rejection/success and rotation, Secure/HttpOnly/SameSite=Lax refresh-cookie attributes, authenticated logout CSRF rejection/success, and Shop-context isolation were observed. Main Supplier context access to both Shops succeeded; each Shop's foreign context returned 404.
+- Bootstrap flag was set false and the three credential variables were blanked after fixture creation; cleanup deploy is live and health checks return HTTP 200. No real customer data or credentials were committed/documented. T3-05A remains in progress because broader membership/User-ID/stats/Work-Function/direct-object isolation and definitive cookie-clear/old-token revocation checks remain outstanding. Custom-domain DNS/TLS and real frontend browser integration remain deferred.
+
+## 2026-09-30 — T3-05A custom-domain deferment and live staging state
+
+- Recorded the approved operational decision that BiRKy does not currently control `birky.com`: `https://birky-staging-api.onrender.com` is the active T3-05A backend; `https://api-staging.birky.com` and `https://staging.birky.com` are reserved/planned targets only. Removed the unowned custom API domain from the repository's Render Blueprint configuration without changing host validation, CORS/CSRF policy, resource plans, or deployment behavior.
+- At this earlier checkpoint, recorded Render resources and the initial live deployment in the environment, project-state, handoff, architecture, security, Phase 3 playbook, and staging runbook; authenticated lifecycle and Shop-isolation evidence had not yet been collected. T3-05A remained in progress.
+
+## 2026-09-30 — T3-05A Staging Backend Foundation (published; CI green)
+
+- Prepared an explicit secure staging settings profile, PostgreSQL URL support, Render Blueprint with manual deployment and isolated Free PostgreSQL, bounded database startup readiness, provider PORT/Gunicorn configuration, CSRF bootstrap, guarded staging reset command, smoke checker, and staging runbook.
+- Local PostgreSQL-backed application suite: 255 passed; staging-focused tests: 28 passed; auth/CSRF lifecycle regressions: 7 passed; validator tests: 23 passed. Staging Django/deploy checks, migration drift, OpenAPI (zero errors), Black, Flake8, and `git diff --check` passed. Docker build and disposable local PostgreSQL-backed container smoke passed.
+- Black/Flake8 passed for new staging and validator Python modules; whole-file checks of touched legacy files report existing style findings and no broad reformat was applied. Published as `9af6424116ebba12896d90d032c36bd25328a4d0`; Project State Validation run `36652187336` succeeded for that exact SHA. No application business models or migrations, dependency changes, frontend, worker, storage, or Production resources were added. At that repository-publication checkpoint, no Render account/resource, DNS/TLS, or live staging deployment had been verified or performed.
+
+## 2026-09-30 — T3-05 Back-office / Shop API and Admin hardening (published; CI green)
+
+- Implemented membership-scoped Shop discovery/profile reads, role-limited statistics, Main Supplier-only Shop settings and lifecycle operations, exact User-ID member lookup, capacity lower-bound enforcement, and hardened Django Admin paths without changing the approved business rules.
+- Added API/Admin, authorization, regression, and PostgreSQL concurrency coverage. Full PostgreSQL-backed suite: 231 passed; repository validator and 14 validator tests passed; Django check, production deployment check, migration drift check, OpenAPI validation (zero errors), Black, Flake8, and `git diff --check` passed. OpenAPI/deployment checks report nonfatal serializer type-hint and role-enum warnings.
+- No migration or dependency changes. Published as commit `3d21a0943006cd866bc19bc728cbec05daae1630`; exact-SHA Project State Validation run `36614638187` succeeded. T3-05A, Phase 4, frontend, and deployment work have not started.
+
+## 2026-09-29 — T3-04C Work-Function foundation (published; CI green)
+
+- Added normalized membership-scoped persistence for the approved seven-code catalog, additive migration with no backfill, Shop ADMIN-only GET/PUT management, Shop isolation, actor attribution, transactional set replacement, and soft-deleted assignment history.
+- Added model/API/lifecycle/migration and PostgreSQL concurrency regression coverage. Focused tests: 19 passed; full PostgreSQL-backed suite: 211 passed (172 warnings). Repository validator, validator tests, Django/migration/OpenAPI checks, Black, Flake8, and diff check passed. Published implementation commit `dfbf6eecdbcd36c014a45a5d297c26e4e27a4113`; GitHub Actions Project State Validation run `36605653294` succeeded for that exact SHA.
+- Updated current product-definition, decision, API, architecture, database, security, business-rule, phase, development-plan, project-state, and handoff descriptions. Phase 4 stage/function mapping remains deferred; T3-05 and later tasks have not started.
+
 ## 2026-09-29 — Parallel Frontend Foundation Track governance
 
 - Documented a separate same-repository frontend branch/worktree strategy while retaining `main` as the backend/integration source and canonical cross-project documentation owner.

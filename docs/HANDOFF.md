@@ -1,31 +1,66 @@
 # Handoff
 
+## Current handoff — BACKOFFICE-01 (2026-10-01)
+
+- Task `BACKOFFICE-01` is implemented locally across backend `main` and frontend `frontend/parallel-foundation`; neither branch has been committed or pushed yet.
+- Main Supplier-only frontend pages provide Back Office dashboard, Shop list/search/filter/order/pagination, create, detail/edit, and activate/deactivate. The pages reuse the established shell/theme and use the real `/api/v1/tenants/` contract. Work page mock data remains untouched.
+- Backend exposes a derived `is_main_supplier_admin` boolean in login/profile responses. A focused backend integration test verifies the created first Shop ADMIN can log in using the returned permanent User ID and initial password, is correctly forced through password change, and succeeds at changing that password.
+- Validation so far: complete backend PostgreSQL suite passed 257 tests, then the added first-admin login test passed separately; frontend 31 tests, typecheck, and build passed; lint reported one existing warning in `src/App.tsx`; Django checks, migration drift check, and schema validation passed earlier in this task. Re-run checks and `python scripts/verify_project_state.py` after final edits.
+- Render inspection found the existing `birky-staging-api` Web Service on `main`, manually deployed (`autoDeploy=off`). The user authorized Render staging migration; after backend main is pushed, manually deploy this service and verify deploy health. Do not deploy Production.
+- The frontend branch is configured as the Cloudflare Pages client-preview source; a push automatically triggers a preview deployment. Current approval covers Render staging, not automatic Cloudflare preview publication. Prepare the frontend branch locally and request approval for that preview push after changes are reviewable.
+- Next: finish docs and checks, validate, commit backend and frontend separately, push backend `main`, deploy/verify Render staging, then stop before pushing the frontend branch until Cloudflare preview deployment is explicitly approved.
+
 ## Current phase
 
-Phase 3 is ACTIVE; activation was explicitly confirmed with `CONFIRM PHASE 3`.
+Phase 3 is COMPLETE; it was activated with `CONFIRM PHASE 3`, and T3-05A is complete with custom-domain DNS/TLS explicitly deferred. Phase 4 is ACTIVE; Core Tailor Business activation was explicitly confirmed with `CONFIRM PHASE 4`.
 
-Completed foundation tasks: T3-01, T3-02, T3-02-REMEDIATION, T3-02A, T3-03, and T3-04. T3-04A is published at `304e6ec4a6811b0153db4dea1417d24affa11bec` with green CI. Initial T3-04B commit `5e3b1714289e7b5660e1a54d6cb2752b64d54683` failed Run #36545855022 and was reverted. T3-04B remediation and T3-04B-USER-SCOPE are published. User-Scope commit `ed845e89d7656bf9d9e1e24f03b79e7de0d3bd9c` passed exact-SHA Project State Validation run `36591864481`.
+Completed foundation tasks include T3-01–T3-04B-USER-SCOPE, T3-04C, and T3-05. T3-05 is published and its exact-SHA Project State Validation succeeded for the implementation commit. Derive current `HEAD`/`main` from Git.
 
 ## Current task
 
-T3-04B-USER-SCOPE is committed and published; exact-SHA Project State Validation succeeded in GitHub Actions run `36591864481`.
+T4-01 — Clients and Related Persons — is COMPLETE and published.
+T4-02 is the next candidate only; it is NOT STARTED and NOT AUTHORIZED.
+The separate API-DOC-REFRESH-01 maintenance task is committed and published at checkpoint `9e93a77754ac03839d038e5e3a32458208bc02e9`; exact-SHA Project State Validation run `36850074419` succeeded. This maintenance task does not activate T4-02 or frontend work.
+API-BROWSABLE-PORTAL-01 is implemented and published at `304c9666f680e3e32aa05e4545b44aa049963e19`; exact-SHA Project State Validation run `36862739900` succeeded. Focused tests 10 passed, full PostgreSQL-backed suite 319 passed, validator PASS (319 discovered), validator tests 27 passed, and Django checks/migration check/collectstatic dry-run/OpenAPI/lint/format/diff checks passed. It adds `/api/browse/`, keeps Swagger at `/api/docs/`, and preserves JWT-only business API authentication. No T4-02, React frontend, or deployment work is authorized here.
+T3-05A — Staging Backend Foundation — remains complete, committed, pushed, exact-SHA CI-green, and live-verified. Staging remains on the verified provider hostname; custom-domain DNS/TLS and frontend browser integration are deferred. Derive current `HEAD` from Git. The T4-01 implementation SHA and exact-CI run are recorded in `docs/PROJECT_STATE.md` and `docs/CHANGELOG.md`.
 
-Derive `HEAD`/`main` from Git rather than storing a current SHA in this handoff. T3-04C is the next planned task, NOT STARTED, and requires its own plan and explicit task confirmation.
+`FRONTEND-DELIVERY-LOCK-01` established Contract-First Paired Delivery and the UI Reference Gate. The later-approved `PHASE4-PARALLEL-UNBLOCK-01` clarification allows backend Phase 4/5/6 and frontend integration to progress in parallel: frontend completion is not a backend prerequisite, while each frontend business slice still follows acceptance of its backend contract. The frontend foundation branch remains isolated and must not be modified from this worktree. Phase 4 is active; T4-01 is complete. T4-02 and Phase 5 require separate confirmation.
+
+Derive current `HEAD`/`main` from Git rather than storing a current SHA in this handoff. T4-01 is complete; stop here. Do not begin T4-02, Phase 5, or frontend work without their separate authorization. Do not modify/merge frontend work. No Production deployment is allowed.
 
 ## Current state and next gate
 
 - Parallel development rule: `main` remains the backend/current integration source and canonical documentation owner. Frontend foundation work uses `frontend/parallel-foundation` in sibling worktree `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp-frontend`, with application source only under `/frontend`. Do not edit frontend source in the main worktree or repeatedly edit canonical docs from the frontend branch.
-- The early Parallel Frontend Foundation Track is preparation only, not F7-01 or Phase 7 completion. F7-01/F7-01A remain after T3-05A. Use mock adapters for unstable APIs and preserve backend authorization as the sole authority. Periodically merge `origin/main` into the frontend branch; do not routinely merge unfinished frontend work into main.
+- The Parallel Frontend Foundation Track (`frontend/parallel-foundation`) is active. The existing Work page serves as the authenticated visual/layout reference but its data remains mocked until the T4-04 API exists. No final UI may be implemented without an approved visual reference (UI REFERENCE GATE).
 - Ordinary accounts are Shop-owned and must not receive a post-login multi-Shop selector. Main Supplier cross-Shop UX must rely on an authorized backend contract.
 
 - T3-04A's published generated `user_code`, optional normal-user email/phone, required trimmed `first_name`, alias login, controlled credential reset, contact safeguards, and User hard-delete denial remain in place; UUID remains the database/JWT `user_id` identity.
 - T3-04B remediation routes membership changes through transactional services; enforces immutable membership User/Shop identity, atomic Shop + first ADMIN creation, ADMIN 1–2 cardinality, global User-deactivation authority/invariants, lifecycle rules, safe Django Admin paths, and approved capacity semantics. No migration was added.
-- Approved ordinary-Shop visibility, Shop deactivation/no-delete, and max_users lower-bound rules are pending T3-05 implementation.
+- Approved ordinary-Shop visibility, Shop deactivation/no-delete, and max_users lower-bound rules are implemented and published under T3-05; its exact-SHA CI gate succeeded.
+- T3-05A repository changes include explicit staging settings, a manually deployed Render Blueprint, isolated Free PostgreSQL, bounded DB startup wait, provider PORT/Gunicorn tuning, host-only CSRF bootstrap, guarded synthetic-data reset, smoke script, and runbook. Actual Render resources and deployment are now verified; see current evidence below. Application auto-deploy is off.
+- Local verification on the guarded-bootstrap commit: full PostgreSQL-backed application suite 270 passed; repository validator PASS (270 discovered), validator tests 23 passed. The previously recorded staging Django/deploy checks, migration drift, OpenAPI, Black/Flake8, Docker smoke, and exact-SHA CI evidence remain as stated for their respective checkpoints; exact-SHA run `36661313651` passed for commit `b53c897cff193eebeebf664b01fb8a55b335a718`.
+- Historical checkpoint: after initial fixture creation, only context-level A↔B isolation and core authenticated flows had been checked. The subsequent final verification completed the Shop endpoint matrix and logout/revocation checks; see the current status and staging runbook. No customer data was used. Never use Production credentials/data.
+- Free plan is temporary/non-durable: Web Service sleeps on idle and has an ephemeral filesystem; Free PostgreSQL is limited to 1 GB, expires after 30 days, and has no backups. Excess bandwidth/build usage may be billed. Do not upgrade/add paid resources without explicit billing approval. See `docs/runbooks/STAGING_BACKEND.md`.
 - The approved T3-04B User-Scope decision supersedes the older one-global-User/multiple-Shops target: each ordinary account has one immutable owning Shop; same-real-world people in different Shops use independent accounts. Main Supplier accounts remain global.
 - Published implementation adds `User.owning_shop`, migration `accounts.0005_user_shop_ownership` with historical-membership preflight and database guards, atomic Shop-owned account creation, `/api/v1/shops/{shop_id}/users/`, same-Shop account reset authorization, and regression fixtures/tests.
 - Pre-publication local preflight found zero Users and memberships in the development DB. GitHub CI migration/application validation passed on its disposable PostgreSQL database. Neither establishes shared/staging/production data status; the migration aborts on ordinary Users with multiple or no determinable Shop. Shared/staging/production ownership preflight was NOT PERFORMED; no shared/staging/production migration was applied.
 - Pre-publication local validation: focused account/membership/auth regressions 138 passed; PostgreSQL-backed full suite 192 passed, including four concurrency cases; validator tests 14 passed; Django and migration checks passed; OpenAPI passed with two nonfatal role-enum naming warnings; Black/Flake8 passed on new Python files. GitHub Actions Project State Validation passed for the published exact SHA. Broad lint checks on touched legacy files still report existing style findings; they were not mass-formatted.
-- T3-04C, T3-05, T3-05A, and Phase 4 remain unstarted and unauthorized. Any next task requires its own plan and exact confirmation.
+- T3-04C, T3-05, and T3-05A are complete and published with exact-SHA CI green. Phase 4 is active; T4-01 is complete and published. T4-02 remains unstarted and unauthorized.
+- T3-05 local validation: focused Shop/API/Admin/regression/concurrency tests 30 passed; complete PostgreSQL-backed application suite 231 passed (186 warnings); repository validator PASS (231 discovered); validator tests 14 passed; Django system/deploy checks and migration drift check passed; OpenAPI validation reported zero errors with nonfatal warnings; Black, Flake8, and `git diff --check` passed. The exact commit's GitHub Actions run `36614638187` passed all steps, including the PostgreSQL-backed application suite and migration check.
+
+## Tests and checks
+
+- **T4-01 final validation:** focused Clients/Related Persons API and PostgreSQL concurrency tests: 15 passed; full PostgreSQL 15-backed application suite: 309 passed; repository validator PASS (309 discovered); validator tests: 27 passed. Django system check and production `check --deploy`: PASS; migration drift: no changes; OpenAPI: zero errors, 23 warnings (7 unique, existing serializer type-hint/role-enum warnings); Black, Flake8, and `git diff --check`: PASS. Exact-SHA Project State Validation run `36796609814` succeeded for `e4e5e4126d60bfb563fbd25fbf0baab9e85963f9`; no deployment occurred.
+- Final T3-05A application suite: 294 passed; repository validator PASS (294 discovered); validator tests 23 passed. Focused credential rotation/bootstrap tests: 39 passed; staging tests: 28 passed; auth/CSRF lifecycle regressions: 7 passed.
+- Staging Django checks, deploy check, migration drift, OpenAPI (zero errors), Black/Flake8 for new staging Python, Git Bash shell syntax, and `git diff --check` passed. GitHub Actions run `36667104952` succeeded for exact implementation SHA `b29a897897d35ec9163c510456bd9197b8a4f6e1`. Render final cleanup deploy `dep-dau9ptlg1s2s73c2foig` is live on that SHA; migrations/static collection/Gunicorn and health checks succeeded. No secret exposure was found. Full live token and Shop isolation matrix passed. Free-plan limitations and remaining DNS/TLS/browser deferrals are documented in the staging runbook.
+
+## T3-04C execution (historical)
+
+- Scope: membership-scoped seven-code Work Function catalog and Shop ADMIN-only same-Shop GET/PUT management. Functions remain eligibility descriptions, not roles or permissions. No Phase 4 mapping, T3-05, frontend, or deployment work is included.
+- Implementation: additive `tenants.0009_membership_work_functions`, normalized relation with current-assignment uniqueness/catalog check, transactional set replacement and soft-deleted history, Shop-first authorization/locking, audit actor attribution, API/OpenAPI contract, and regression tests. Existing membership lifecycle keeps assignments through inactive/reactivated states and valid removal undo; expired undo does not restore membership/function assignments.
+- Tests: focused Work Function model/API/lifecycle/migration/concurrency tests: 19 passed. Full PostgreSQL-backed suite: 211 passed, 172 warnings. The suite includes the PostgreSQL concurrency tests.
+- Checks: repository validator PASS (211 discovered; one earlier invocation could not reach the remote, then a final invocation verified `origin/main` parity); validator tests 14 passed; Django check PASS; `DJANGO_ENV=prod check --deploy` exit 0 with two nonfatal OpenAPI role-enum warnings; migration drift PASS; OpenAPI validation PASS with the same two warnings; Black/Flake8 PASS; `git diff --check` PASS.
+- Publication and exact-SHA CI were verified for T3-04C. At that checkpoint T3-05 had not started; current T3-05 status is recorded at the top of this handoff.
 
 ## T3-04B remediation — task-time local validation record
 
@@ -34,7 +69,7 @@ Derive `HEAD`/`main` from Git rather than storing a current SHA in this handoff.
 - Repository validator: PASS (183 discovered); validator tests: 14 passed. Django system/deployment checks, OpenAPI schema validation, Black, Flake8, and `git diff --check`: PASS.
 - `makemigrations --check --dry-run`: no model changes detected. The statements above describe validation at that task-time checkpoint; publication/current status is recorded at the top of this handoff.
 
-## Current T3-04B-USER-SCOPE execution
+## T3-04B-USER-SCOPE execution (historical)
 
 - Task is explicitly confirmed, implemented, validated, committed, and published; T3-04C is not started and must not be begun without its own task plan and confirmation.
 - Confirmed design: one immutable owning Shop per ordinary account; different Shops use distinct accounts even for the same real-world person. Main Supplier accounts remain global with no owning Shop. Existing account attachment/movement is rejected.
@@ -68,7 +103,7 @@ Derive `HEAD`/`main` from Git rather than storing a current SHA in this handoff.
 - **Next task at that historical point:** T3-05 was the proposed next task; the 2026-09-29 rebaseline supersedes that order with T3-04A–C prerequisites.
 - **Known warning baseline:** Django tests emit existing test-key-length, local staticfiles, and DRF format-converter warnings; these are not T3-03 failures.
 
-## T3-04 verification record
+## T3-04 verification record (historical)
 
 - T3-03 context/membership tests remain covered by the validation matrix. Focused T3-04 permission/scope plus T3-03 context tests: 28 passed.
 - Full suite: 152 passed (144 warnings). Repository validator: PASS, 152 discovered, dirty-tree warning expected. Validator tests: 14 passed. Django system check: PASS. Migration drift: no changes. OpenAPI validation: PASS. Black and Flake8: PASS. `git diff --check`: PASS.
@@ -155,7 +190,7 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 ## Phase 3+ Deferred Implementations
 
 - `BaseModelWithTenant.tenant` remains nullable. T3-03 establishes request context and T3-04 provides reusable query/object isolation primitives; future concrete Shop-owned endpoints must adopt and verify those primitives.
-- The starter is not yet the target product: Clients, Related Persons, Designs, Measurements, Materials, production stages, billing, reports/PDFs, frontend, persistent storage, workers, complete audit capture, monitoring, and end-to-end validation remain unimplemented. T3-03's pushed baseline passed GitHub Actions run #19. T3-04, T3-04A, and T3-04B remediation are published; T3-04C, T3-05, and later work remain unimplemented and individually gated.
+- The starter is not yet the target product: Clients, Related Persons, Designs, Measurements, Materials, production stages, billing, reports/PDFs, frontend, persistent storage, workers, complete audit capture, monitoring, and end-to-end validation remain unimplemented. T3-03's pushed baseline passed GitHub Actions run #19. T3-04, T3-04A, T3-04B remediation, T3-04C, T3-05, and the T3-05A staging backend foundation are published; remaining work is individually gated.
 - The target requires React/Vite/Tailwind, but the starter has only an empty `frontend/` placeholder. English/ar-KW/Bangla/Urdu localization, RTL/LTR, and Light/Dark/System are planned V1 requirements, not implemented.
 - Tenant context is implemented as URL-path based (`/api/v1/shops/{shop_id}/...`); T3-04 primitives are available, and each future Shop-owned endpoint must apply them to queries and objects.
 - Related Person billing ownership is approved as Primary Client ownership and must be implemented/tested in Phase 5.

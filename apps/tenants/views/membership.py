@@ -20,7 +20,7 @@ class TenantMemberViewSet(viewsets.ModelViewSet):
     permission_classes = [CanManageShopMembership]
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ["tenant", "user", "role", "is_active"]
-    search_fields = ["user__email", "user__first_name", "user__last_name"]
+    search_fields = ["user__user_code", "user__first_name", "user__last_name"]
 
     def get_queryset(self):
         user = self.request.user
@@ -35,6 +35,8 @@ class TenantMemberViewSet(viewsets.ModelViewSet):
                 tenant__memberships__role="ADMIN",
                 tenant__memberships__is_active=True,
                 tenant__memberships__deleted__isnull=True,
+                tenant__memberships__user__is_active=True,
+                tenant__is_active=True,
             )
             .distinct()
         )
@@ -74,11 +76,24 @@ class TenantMemberViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"])
     def undo_remove(self, request, pk=None):
+        candidates = TenantMember.objects.all_with_deleted().select_related(
+            "tenant", "user"
+        )
+        if not ShopRolePolicy.is_main_supplier_admin(request.user):
+            if not request.user.is_active:
+                raise NotFound()
+            candidates = candidates.filter(
+                tenant__is_active=True,
+                tenant__memberships__user_id=request.user.pk,
+                tenant__memberships__role="ADMIN",
+                tenant__memberships__is_active=True,
+                tenant__memberships__deleted__isnull=True,
+                tenant__memberships__user__is_active=True,
+            ).distinct()
         try:
-            membership = TenantMember.objects.all_with_deleted().get(pk=pk)
-        except TenantMember.DoesNotExist as exc:
+            membership = candidates.get(pk=pk)
+        except (TenantMember.DoesNotExist, ValueError) as exc:
             raise NotFound() from exc
-        self.check_object_permissions(request, membership)
         membership = membership_service.undo_remove_membership(
             actor=request.user, membership_id=pk
         )

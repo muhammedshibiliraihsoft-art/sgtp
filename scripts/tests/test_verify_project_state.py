@@ -77,6 +77,21 @@ T3-03 is complete locally.
 - Validation performed: 2 tests pass.
 """
 
+PHASE4_STATE = """## Status
+- Phase 3 is complete; activation: CONFIRM PHASE 3.
+- Phase 4 is active; activation: CONFIRM PHASE 4.
+- Current task: T4-01 is in progress.
+## Current Verification Results
+- Application tests: 2 tests verified passing.
+"""
+PHASE4_HANDOFF = """## Current phase
+Phase 3 is complete; activation: CONFIRM PHASE 3. Phase 4 is active; activation: CONFIRM PHASE 4.
+## Current task
+T4-01 is in progress.
+## Tests and checks
+- Validation performed: 2 tests pass.
+"""
+
 
 class ValidatorTests(unittest.TestCase):
     def validator(self, root, git=None, count=2):
@@ -90,6 +105,20 @@ class ValidatorTests(unittest.TestCase):
         result = self.validator(make_repo(VALID_STATE, VALID_HANDOFF)).run()
         self.assertTrue(result.ok, result.errors)
         self.assertEqual(result.facts["current_task"], "B2-05")
+
+    def test_letter_suffixed_task_id_is_preserved(self):
+        state = VALID_STATE.replace("B2-05", "T3-05A")
+        handoff = VALID_HANDOFF.replace("B2-05", "T3-05A")
+        result = self.validator(make_repo(state, handoff)).run()
+        self.assertTrue(result.ok, result.errors)
+        self.assertEqual(result.facts["current_task"], "T3-05A")
+
+    def test_compound_task_id_is_preserved(self):
+        state = VALID_STATE.replace("B2-05", "T3-04B-USER-SCOPE")
+        handoff = VALID_HANDOFF.replace("B2-05", "T3-04B-USER-SCOPE")
+        result = self.validator(make_repo(state, handoff)).run()
+        self.assertTrue(result.ok, result.errors)
+        self.assertEqual(result.facts["current_task"], "T3-04B-USER-SCOPE")
 
     def test_phase_three_active_with_matching_activation_records_is_accepted(self):
         result = self.validator(make_repo(ACTIVE_STATE, ACTIVE_HANDOFF)).run()
@@ -116,6 +145,43 @@ class ValidatorTests(unittest.TestCase):
         handoff = VALID_HANDOFF.replace("Phase 2 is complete", "Phase 2 is active")
         result = self.validator(make_repo(VALID_STATE, handoff)).run()
         self.assertTrue(any("Phase 2 disagrees" in error for error in result.errors))
+
+    def test_phase4_t401_allows_only_the_clients_module_path(self):
+        root = make_repo(PHASE4_STATE, PHASE4_HANDOFF)
+        (root / "apps/clients").mkdir(parents=True)
+        result = self.validator(root).run()
+        self.assertTrue(result.ok, result.errors)
+        self.assertEqual(
+            result.facts["phase_state"], "Phase 3=complete, Phase 4=active"
+        )
+
+    def test_phase4_clients_path_without_activation_is_rejected(self):
+        state = PHASE4_STATE.replace("; activation: CONFIRM PHASE 4", "")
+        handoff = PHASE4_HANDOFF.replace("; activation: CONFIRM PHASE 4", "")
+        root = make_repo(state, handoff)
+        (root / "apps/clients").mkdir(parents=True)
+        result = self.validator(root).run()
+        self.assertTrue(
+            any("apps/clients" in error for error in result.errors), result.errors
+        )
+
+    def test_phase4_clients_path_with_inconsistent_phase_state_is_rejected(self):
+        handoff = PHASE4_HANDOFF.replace("Phase 4 is active", "Phase 4 is not started")
+        root = make_repo(PHASE4_STATE, handoff)
+        (root / "apps/clients").mkdir(parents=True)
+        result = self.validator(root).run()
+        self.assertTrue(
+            any("Phase 4 disagrees" in error for error in result.errors), result.errors
+        )
+
+    def test_other_business_modules_remain_forbidden_during_t401(self):
+        root = make_repo(PHASE4_STATE, PHASE4_HANDOFF)
+        (root / "apps/clients").mkdir(parents=True)
+        (root / "apps/catalog").mkdir(parents=True)
+        result = self.validator(root).run()
+        self.assertTrue(
+            any("apps/catalog" in error for error in result.errors), result.errors
+        )
 
     def test_contradictory_task_state_is_blocking(self):
         handoff = VALID_HANDOFF.replace("B2-05 is complete", "B2-06 is complete")
@@ -180,6 +246,15 @@ class ValidatorTests(unittest.TestCase):
             )
         )
         self.assertTrue(result.ok, result.errors)
+
+    def test_current_verification_results_is_distinct_from_status(self):
+        result = self.validator(make_repo(VALID_STATE, VALID_HANDOFF)).run()
+        self.assertFalse(
+            any(
+                "current-state/status sections" in warning
+                for warning in result.warnings
+            )
+        )
 
     def test_remote_unavailable_is_a_warning(self):
         result = self.validator(

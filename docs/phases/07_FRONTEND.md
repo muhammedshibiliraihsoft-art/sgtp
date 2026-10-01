@@ -23,13 +23,28 @@ Give supplier/main-admin and shop users usable back-office and tailoring workspa
 
 Establish frontend structure, API client, authentication/session handling, routing, tenant context, feature screens, loading/error states, and accessibility.
 
-## 5. Preconditions
+## 5. Preconditions & Governance Rules (FRONTEND-DELIVERY-LOCK-01)
 
-Phase 6 is complete or explicitly accepted as a dependency; backend API schemas and permission contracts are stable; explicit `CONFIRM PHASE 7` has been received.
+Frontend delivery operates on a **Contract-First Paired Delivery** strategy and may progress in parallel with backend Phase 4/5/6. Frontend completion does not block backend phase or task progression. Frontend consumes only accepted backend contracts; it does not define backend behavior.
 
-**Frontend timing note:** F7-01 and F7-01A are allowed to execute immediately after T3-05A in the overall project dependency sequence, before Phases 4–6, to validate auth/i18n/theme integration early and give the client a usable staging shell. F7-02–F7-05 remain later frontend implementation tasks unless separately re-planned.
+### UI REFERENCE GATE — LOCKED GOVERNANCE RULE
+No frontend page, screen, component, or visual workflow may be implemented without an approved visual/design reference supplied or explicitly accepted by the user.
+Engineering agents MAY inspect backend contracts and define routing, mapping, access, states, etc. before a visual reference exists. However:
+- Engineering agents must NOT invent the final UI.
+- Engineering agents must NOT independently design new pages or guess visual composition.
+- Engineering agents must NOT treat a scaffold/mock as an approved final design.
+**If an implementation task reaches the UI stage and no approved reference exists: STOP AND WAIT FOR THE UI REFERENCE.**
 
-**Parallel Frontend Foundation Track:** repository/tooling, app-shell, design-system, responsive/accessibility, i18n/RTL/LTR/theme, and mock/API-boundary preparation may start before T3-05A in the isolated `frontend/parallel-foundation` worktree. This preparation is not F7-01, does not complete Phase 7, does not authorize F7-02–F7-05, and must not implement unstable backend business behavior. F7-01 and F7-01A retain the T3-05A dependency and approved sequencing above. Canonical cross-project docs remain owned primarily by `main`; frontend-specific instructions/docs belong under `/frontend`.
+### Frontend Work Sequence (non-blocking with backend delivery)
+1. **Existing Backend Contacts**: Login/Auth, Shared Auth Layout, Profile/Prefs, Shop Context, Team/Members, Work Functions, Main Supplier Settings.
+2. **Phase 4 Paired Delivery**: Backend domain accepted → Corresponding frontend slice. (e.g. T4-01 Backend → T4-01 Frontend).
+3. **Phase 5 Paired Delivery**: Billing/Reports wait for accepted Phase 5 backend contracts.
+4. **Dashboard**: The real Dashboard is built LAST using integrated real data. Do not build it early using fake counters.
+
+### Approved UI References
+- **Work Page**: The current Work page on `frontend/parallel-foundation` is the authenticated layout/style reference. Its data remains mock until T4-04.
+- **Login Page**: The current Login page is ONLY a scaffold/preview, NOT the final approved design.
+- **Future Pages**: Use the Work page as a general shell/layout reference. Stop before specific visual implementation and await a reference.
 
 ## 6. Dependencies
 

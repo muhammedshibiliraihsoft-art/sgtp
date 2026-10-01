@@ -1,10 +1,12 @@
 import os
 from pathlib import Path
 from datetime import timedelta
+from urllib.parse import unquote, urlsplit
 from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
+
 
 def get_env_var(var_name, default=None):
     if var_name in os.environ:
@@ -12,6 +14,7 @@ def get_env_var(var_name, default=None):
     if default is not None:
         return default
     raise ImproperlyConfigured(f"Set the {var_name} environment variable")
+
 
 # Secret key is provided by the environment
 SECRET_KEY = get_env_var("DJANGO_SECRET_KEY")
@@ -41,6 +44,7 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.common",
     "apps.tenants",
+    "apps.clients",
 ]
 
 MIDDLEWARE = [
@@ -60,7 +64,7 @@ ROOT_URLCONF = "core.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"],
+        "DIRS": [BASE_DIR / "templates", BASE_DIR / "core" / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -75,9 +79,46 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "core.wsgi.application"
 
-# Database configuration
-DATABASES = {
-    "default": {
+
+def database_config_from_url(database_url):
+    """Parse a PostgreSQL URL without exposing credentials in errors."""
+    try:
+        parsed = urlsplit(database_url)
+        name = parsed.path.lstrip("/")
+        port = parsed.port or 5432
+    except ValueError as exc:
+        raise ImproperlyConfigured("DATABASE_URL is invalid.") from exc
+
+    if (
+        parsed.scheme not in {"postgres", "postgresql"}
+        or not parsed.hostname
+        or not parsed.username
+        or not parsed.password
+        or not name
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise ImproperlyConfigured("DATABASE_URL must be a complete PostgreSQL URL.")
+
+    return {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": unquote(name),
+        "USER": unquote(parsed.username),
+        "PASSWORD": unquote(parsed.password),
+        "HOST": parsed.hostname,
+        "PORT": str(port),
+    }
+
+
+# Keep the existing split-variable contract. DATABASE_URL is supported for
+# providers such as Render that expose a database connection string directly.
+_database_url = os.environ.get("DATABASE_URL")
+if _database_url is not None:
+    if not _database_url.strip():
+        raise ImproperlyConfigured("DATABASE_URL must not be empty.")
+    _database_config = database_config_from_url(_database_url)
+else:
+    _database_config = {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": get_env_var("DB_NAME"),
         "USER": get_env_var("DB_USER"),
@@ -85,11 +126,13 @@ DATABASES = {
         "HOST": get_env_var("DB_HOST", "localhost"),
         "PORT": get_env_var("DB_PORT", "5432"),
     }
-}
+DATABASES = {"default": _database_config}
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
+    },
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
@@ -104,6 +147,7 @@ USE_TZ = True
 # Static files configuration
 STATIC_URL = "/static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+STATICFILES_DIRS = [BASE_DIR / "core" / "static"]
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 WHITENOISE_MAX_AGE = 60 * 60 * 24 * 7  # 1 week
 
@@ -181,7 +225,10 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "Supplier-Centric Garment & Tailor Platform API",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
-    "SWAGGER_UI_SETTINGS": {"deepLinking": True},
+    "SWAGGER_UI_SETTINGS": {
+        "deepLinking": True,
+        "persistAuthorization": False,
+    },
     "COMPONENT_SPLIT_REQUEST": True,
     "ENUM_NAME_OVERRIDES": {
         "Locale": [

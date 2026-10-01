@@ -68,6 +68,44 @@ class T304BRemediationTests(TestCase):
         self.assertEqual(membership.user.owning_shop_id, shop.pk)
         self.assertEqual(response["Cache-Control"], "no-store")
 
+    def test_created_first_admin_can_log_in_and_change_initial_password(self):
+        created = self.client.post(
+            "/api/v1/tenants/",
+            self.create_shop_payload("login-shop"),
+            format="json",
+        )
+        self.assertEqual(created.status_code, 201, created.data)
+        user = User.objects.get(user_code=created.data["first_admin_user_code"])
+        initial_password = created.data["initial_password"]
+
+        shop_admin_client = APIClient()
+        login = shop_admin_client.post(
+            "/api/v1/auth/login/",
+            {"identifier": user.user_code, "password": initial_password},
+            format="json",
+        )
+        self.assertEqual(login.status_code, 200, login.data)
+        self.assertEqual(login.data["user"]["id"], str(user.pk))
+        self.assertTrue(login.data["user"]["must_change_password"])
+        shop_admin_client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {login.data['access']}"
+        )
+        blocked = shop_admin_client.get("/api/v1/auth/users/me/")
+        self.assertEqual(blocked.status_code, 403)
+
+        changed = shop_admin_client.post(
+            "/api/v1/auth/users/password/change/",
+            {
+                "current_password": initial_password,
+                "new_password": "ShopAdminSecure-939!Pass",
+                "new_password_confirm": "ShopAdminSecure-939!Pass",
+            },
+            format="json",
+        )
+        self.assertEqual(changed.status_code, 200, changed.data)
+        user.refresh_from_db()
+        self.assertFalse(user.must_change_password)
+
     def test_shop_creation_rejects_invalid_first_admin_without_orphan(self):
         first_admin = {
             "first_name": "No phone", "email": "no-phone@example.test", "phone": ""

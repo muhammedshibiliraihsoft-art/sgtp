@@ -7,6 +7,8 @@ if DJANGO_ENV in ("production", "prod"):
     from backend.config.settings.prod import *
 elif DJANGO_ENV == "test":
     from backend.config.settings.test import *
+elif DJANGO_ENV == "staging":
+    from backend.config.settings.staging import *  # noqa: F403, F401
 elif DJANGO_ENV in ("development", "dev"):
     from backend.config.settings.dev import *
 else:

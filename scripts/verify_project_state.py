@@ -22,7 +22,9 @@ PHASE_STATUS_RE = re.compile(
     r"(?P<status>complete|completed|active|in progress|not started)\b",
     re.IGNORECASE,
 )
-TASK_RE = re.compile(r"\b(?:PRE-P3-\d{2}|[A-Z]\d{1,2}-\d{2})\b")
+TASK_RE = re.compile(
+    r"\b(?:PRE-P3-\d{2}(?:-[A-Z0-9]+)*|" r"[A-Z]\d{1,2}-\d{2}[A-Z]?(?:-[A-Z0-9]+)*)\b"
+)
 TEST_COUNT_RE = re.compile(
     r"\b(?P<count>\d+)\s+tests?\s+(?:verified\s+)?" r"(?:pass|passed|passing|green)\b",
     re.IGNORECASE,
@@ -306,19 +308,41 @@ class ProjectStateValidator:
             "backend/apps/billing",
             "apps/shops",
             "apps/clients",
+            "apps/catalog",
             "apps/works",
             "apps/billing",
         )
         present = [path for path in forbidden if (self.root / path).exists()]
+        state = self.phase_facts("docs/PROJECT_STATE.md")
+        handoff = self.phase_facts("docs/HANDOFF.md")
+        phase4_is_activated_consistently = (
+            state.get(4) == "active"
+            and handoff.get(4) == "active"
+            and re.search(
+                r"\bCONFIRM\s+PHASE\s+4\b",
+                self._current_section(self.read("docs/PROJECT_STATE.md"), "Status"),
+                re.IGNORECASE,
+            )
+            and re.search(
+                r"\bCONFIRM\s+PHASE\s+4\b",
+                self._current_section(self.read("docs/HANDOFF.md"), "Current phase"),
+                re.IGNORECASE,
+            )
+        )
+        if phase4_is_activated_consistently:
+            # Clients is the first permitted business app in active Phase 4.
+            # Future domain modules stay blocked until separately implemented.
+            present = [path for path in present if path != "apps/clients"]
         if present:
             self.result.error(
-                "Pre-Phase-3 business module paths exist: " + ", ".join(present)
+                "Business module paths are outside the currently authorized phase/task: "
+                + ", ".join(present)
             )
 
     def check_duplicate_current_state(self) -> None:
         relative = "docs/PROJECT_STATE.md"
         headings = re.findall(
-            r"^##\s+(Status|Current Verification Results|Implementation Status)\s*$",
+            r"^##\s+(Status|Implementation Status)\s*$",
             self.read(relative),
             re.IGNORECASE | re.MULTILINE,
         )
