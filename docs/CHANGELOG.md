@@ -1,8 +1,13 @@
 # Changelog
 
+## 2026-10-01 — T4-01 published
+
+- T4-01 Clients and Related Persons is complete and published at `e4e5e4126d60bfb563fbd25fbf0baab9e85963f9`; exact-SHA Project State Validation run `36796609814` succeeded.
+- T4-02 remains unstarted and unauthorized. No frontend source or deployment was included.
+
 ## 2026-09-30 — Phase 4 activation and T4-01 implementation
 
-- Phase 4 was explicitly activated and only T4-01 Clients/Related Persons was authorized. Canonical BR-CLIENT-002 records the approved role-access matrix. T4-01 is in progress; do not infer that future tasks are authorized.
+- Phase 4 was explicitly activated and only T4-01 Clients/Related Persons was authorized. Canonical BR-CLIENT-002 records the approved role-access matrix. T4-01 work began under that authorization; its later completion/publication is recorded above. Do not infer that future tasks are authorized.
 - The runtime app follows the current Django `apps.*` layout at `apps/clients`; frontend source remains isolated and unchanged.
 
 ## 2026-09-30 — PHASE4-PARALLEL-UNBLOCK-01 roadmap dependency clarification

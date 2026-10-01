@@ -13,7 +13,7 @@ Phase 3 T3-04A–T3-04C identity/membership/Work-Function prerequisites and T3-0
 ## 6. Dependencies
 Shop context/membership, permissions, shared models, PostgreSQL.
 ## 7. Current Repository Assumptions
-Accounts, Supplier/Shop (legacy Tenant), memberships, T3-03 Shop context, and T3-04 reusable isolation primitives exist. T3-04A identity/User-ID remediation, T3-04B membership/Admin safeguards, T3-04B-USER-SCOPE, and T3-04C Work Functions are published; exact-SHA CI passed for T3-04C. T4-01 Clients/Related Persons is the first Phase 4 module and is currently implemented locally pending publication; no later Phase 4 business module or service is implemented.
+Accounts, Supplier/Shop (legacy Tenant), memberships, T3-03 Shop context, and T3-04 reusable isolation primitives exist. T3-04A identity/User-ID remediation, T3-04B membership/Admin safeguards, T3-04B-USER-SCOPE, and T3-04C Work Functions are published; exact-SHA CI passed for T3-04C. T4-01 Clients/Related Persons is the first Phase 4 module and is published; T4-02 and later Phase 4 business modules/services are not implemented and require their own task authorization.
 ## 8. Exact Scope
 Clients, family/related persons, catalog/designs, measurements, materials, works/orders, workflow services, indexes, constraints, concurrency.
 ## 9. Out of Scope

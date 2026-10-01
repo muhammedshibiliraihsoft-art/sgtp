@@ -4,7 +4,7 @@
 
 - Phase 1 and Phase 2 are complete.
 - Phase 3 is COMPLETE; it was activated with `CONFIRM PHASE 3` and the approved T3-05A staging foundation is complete (custom-domain DNS/TLS remains explicitly deferred).
-- Phase 4 is ACTIVE; Core Tailor Business activation was explicitly confirmed with `CONFIRM PHASE 4`. Only T4-01 is authorized and in progress; T4-02 and later tasks remain unstarted and require their own confirmation.
+- Phase 4 is ACTIVE; Core Tailor Business activation was explicitly confirmed with `CONFIRM PHASE 4`. T4-01 is COMPLETE, committed, and published; exact-SHA Project State Validation run `36796609814` succeeded. T4-02 and later tasks remain unstarted and require their own confirmation.
 - Completed Phase 3 tasks include T3-01, T3-02, T3-02-REMEDIATION, T3-02A, T3-03, T3-04, T3-04A, T3-04B-REMEDIATION-01, T3-04B-USER-SCOPE, and T3-04C. T3-04C implementation commit `dfbf6eecdbcd36c014a45a5d297c26e4e27a4113` is published; exact-SHA Project State Validation run `36605653294` succeeded.
 - T3-04B-USER-SCOPE is COMPLETE, COMMITTED, and PUBLISHED on `main` at `ed845e89d7656bf9d9e1e24f03b79e7de0d3bd9c`; GitHub Actions Project State Validation run `36591864481` completed successfully for that exact SHA.
 - T3-04 is COMPLETE, COMMITTED, and PUSHED on `main`. Live verification on 2026-09-29: local `HEAD`, `origin/main`, and remote `refs/heads/main` matched; derive the current SHA from Git.
@@ -23,8 +23,8 @@
 - Target status: SGTP V1 is explicitly defined in `docs/PRODUCT_DEFINITION.md`
 - Starter foundation: exists in the cloned SGTP repository.
 - Phase 1 implementation: **Historical - Complete.**
-- Confirmation status: Phase 4 and T4-01 were explicitly authorized in the current execution request. T4-01 only; no later task is authorized.
-- Current task: T4-01 — Clients and Related Persons — IN PROGRESS. T3-05A remains complete; no Phase 5 or frontend implementation is authorized here.
+- Confirmation status: Phase 4 and T4-01 were explicitly authorized. T4-01 is complete; T4-02 has not been confirmed and is not authorized.
+- Current task: none in progress. T4-01 — Clients and Related Persons — is COMPLETE and published; T4-02 is the next candidate only and requires its own explicit confirmation. T3-05A remains complete; no Phase 5 or frontend implementation is authorized here.
 - Detailed phase playbooks: 01-10 present.
 - Later-phase decisions: Tenant context is approved as URL-path based (`/shops/{shop_id}/...`), and Related Person billing is owned by the Primary Client.
 - T3-05A (Staging Backend Foundation) is complete. Active backend: `https://birky-staging-api.onrender.com`; reserved future API hostname: `https://api-staging.birky.com` (not owned/controlled, configured, DNS-verified, or TLS-verified). On 2026-09-30, live checks with synthetic Main Supplier and Shop A/B accounts verified login without refresh-token JSON exposure; Secure/HttpOnly/SameSite=Lax refresh cookie; CSRF-required refresh/logout; rotation, old-token reuse rejection, cookie clearing, and post-logout refresh rejection. Membership list/detail, exact User-ID, stats, Work Function, and direct-object isolation were verified for Shop A→B and B→A; Main Supplier access to approved surfaces in both Shops was verified. Temporary credentials are blank and bootstrap/rotation flags are false. Final cleanup deploy is live and both health endpoints return 200. No real customer data was used. F7-01A remains planned only; frontend browser integration and custom-domain DNS/TLS are deferred. T3-02A implemented the account/preference data and API foundation; frontend localization, RTL/LTR layout, and full Light/Dark/System UI remain Phase 7 work.
@@ -34,9 +34,9 @@
 
 ## Current Verification Results
 
-- T4-01 pre-publication validation: focused Clients/Related Persons API and PostgreSQL concurrency tests: 15 passed; full PostgreSQL 15-backed application suite: 309 passed. Repository validator: PASS (309 application tests discovered); validator tests: 27 passed.
+- T4-01 validation: focused Clients/Related Persons API and PostgreSQL concurrency tests: 15 passed; full PostgreSQL 15-backed application suite: 309 passed. Repository validator: PASS (309 application tests discovered); validator tests: 27 passed. GitHub Actions Project State Validation run `36796609814` succeeded for exact commit `e4e5e4126d60bfb563fbd25fbf0baab9e85963f9`.
 - Django system check and production `check --deploy`: PASS; `makemigrations --check --dry-run`: no changes detected. OpenAPI validation: zero errors, 23 warnings (7 unique, existing serializer type-hint/role-enum warnings). Black and Flake8 checks for the changed/new Python files and `git diff --check` passed.
-- The current full-suite run is local PostgreSQL test evidence; exact-SHA GitHub Actions for T4-01 has not yet run. No deployment occurred.
+- The full-suite run used local PostgreSQL 15; GitHub Actions separately completed successfully for the exact published T4-01 SHA. No deployment occurred.
 - T3-05A live staging security/isolation verification passed using only the existing synthetic fixture. Staging-focused tests: 28 passed; authentication/CSRF lifecycle regressions: 7 passed. Docker image build and disposable local Docker/PostgreSQL smoke passed: migrations and static collection completed; liveness/readiness/CSRF bootstrap returned HTTP 200.
 - Historical staging bootstrap evidence and deploy IDs below remain checkpoint records. Final T3-05A evidence: implementation commit `b29a897897d35ec9163c510456bd9197b8a4f6e1`; Project State Validation run `36667104952` succeeded for that exact SHA with 294 application tests. Render was verified as Free/Frankfurt Docker service plus Free/Frankfurt PostgreSQL 15, auto-deploy off and DB IP allow-list unchanged. Final application deploy `dep-dau9ptlg1s2s73c2foig` runs that SHA; logs confirmed migrations, collectstatic, and Gunicorn startup, with no secret exposure found. Credential variables were blanked and both bootstrap/rotation flags false; both health routes return 200. Complete authenticated endpoint isolation and token lifecycle checks passed. Custom DNS/TLS and frontend browser integration remain deferred.
 
