@@ -10,7 +10,7 @@ Completed foundation tasks include T3-01–T3-04B-USER-SCOPE, T3-04C, and T3-05.
 
 T4-01 — Clients and Related Persons — is COMPLETE and published.
 T4-02 is the next candidate only; it is NOT STARTED and NOT AUTHORIZED.
-The separate API-DOC-REFRESH-01 maintenance task is implemented and locally validated (62 focused tests; full suite 315 passed). Commit/push and exact-SHA CI verification remain. This task does not activate T4-02 or frontend work.
+The separate API-DOC-REFRESH-01 maintenance task is committed and published at checkpoint `9e93a77754ac03839d038e5e3a32458208bc02e9`; exact-SHA Project State Validation run `36850074419` succeeded. This maintenance task does not activate T4-02 or frontend work.
 T3-05A — Staging Backend Foundation — remains complete, committed, pushed, exact-SHA CI-green, and live-verified. Staging remains on the verified provider hostname; custom-domain DNS/TLS and frontend browser integration are deferred. Derive current `HEAD` from Git. The T4-01 implementation SHA and exact-CI run are recorded in `docs/PROJECT_STATE.md` and `docs/CHANGELOG.md`.
 
 `FRONTEND-DELIVERY-LOCK-01` established Contract-First Paired Delivery and the UI Reference Gate. The later-approved `PHASE4-PARALLEL-UNBLOCK-01` clarification allows backend Phase 4/5/6 and frontend integration to progress in parallel: frontend completion is not a backend prerequisite, while each frontend business slice still follows acceptance of its backend contract. The frontend foundation branch remains isolated and must not be modified from this worktree. Phase 4 is active; T4-01 is complete. T4-02 and Phase 5 require separate confirmation.
