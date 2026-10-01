@@ -1,0 +1,20 @@
+/* Hide dark theme logo by default */
+.dark-theme-logo {
+  display: none;
+}
+
+/* Light theme overrides */
+[data-theme='light'] .light-theme-logo {
+  display: block;
+}
+[data-theme='light'] .dark-theme-logo {
+  display: none;
+}
+
+/* Dark theme overrides */
+[data-theme='dark'] .light-theme-logo {
+  display: none;
+}
+[data-theme='dark'] .dark-theme-logo {
+  display: block;
+}

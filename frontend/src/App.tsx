@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { Link, NavLink, Route, Routes, useLocation } from 'react-router-dom'
+import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   ArrowRight, Bell, ChevronDown, CircleHelp,
@@ -10,20 +10,28 @@ import {
 } from 'lucide-react'
 import './App.css'
 import { BrandLogo } from './components/BrandLogo'
+import { AuthProvider } from './services/AuthContext'
+import { useAuth } from './services/useAuth'
 
+import desktopImg from './assets/images/login/desktop.png'
+import phoneImg from './assets/images/login/phone.png'
+import tabletPortraitImg from './assets/images/login/tablet-portrait.png'
+import tabletLandscapeImg from './assets/images/login/tablet-landscape.png'
+import sidebarLogo from './assets/brand/sidebar_logo.png'
 
 type Theme = 'light' | 'dark' | 'system'
 const themeKey = 'sgtp-theme'
-export type Palette = 'blue' | 'indigo' | 'violet' | 'teal' | 'emerald' | 'navy' | 'rose' | 'amber'
+export type Palette = 'default' | 'blue' | 'indigo' | 'violet' | 'teal' | 'navy'
 const paletteKey = 'sgtp-palette'
-
-
-
 
 function usePalette() {
   const [palette, setPalette] = useState<Palette>(() => {
-    const stored = localStorage.getItem(paletteKey) as Palette
-    return stored || 'blue'
+    const stored = localStorage.getItem(paletteKey)
+    const validPalettes = ['default', 'blue', 'indigo', 'violet', 'teal', 'navy']
+    if (stored && validPalettes.includes(stored)) {
+      return stored as Palette
+    }
+    return 'default'
   })
   useEffect(() => {
     document.documentElement.dataset.palette = palette
@@ -146,10 +154,10 @@ function ThemeMenu({ theme, onChange }: { theme: Theme; onChange: (value: Theme)
 
 function PaletteMenu({ palette, onChange }: { palette: Palette; onChange: (value: Palette) => void }) {
   const options = [
+    { value: 'default', label: 'Default' },
     { value: 'blue', label: 'Blue' }, { value: 'indigo', label: 'Indigo' },
     { value: 'violet', label: 'Violet' }, { value: 'teal', label: 'Teal' },
-    { value: 'emerald', label: 'Emerald' }, { value: 'navy', label: 'Navy' },
-    { value: 'rose', label: 'Rose' }, { value: 'amber', label: 'Amber' }
+    { value: 'navy', label: 'Navy' }
   ]
   return <CustomSelect
     value={palette}
@@ -162,26 +170,189 @@ function PaletteMenu({ palette, onChange }: { palette: Palette; onChange: (value
 
 function LoginPage() {
   const { t } = useTranslation()
-  const [currentYear] = useState(() => new Date().getFullYear())
-  const [notice, setNotice] = useState('')
-  return <main className="login-page">
-    <div className="login-art" aria-hidden="true"><div className="art-mark">s<span>.</span></div><div className="art-stitch" /><p>Crafted with care.<br />Run with clarity.</p><span className="art-caption">BMS</span></div>
-    <section className="login-panel">
-      <Link to="/" style={{ textDecoration: "none" }}><BrandLogo layout="login" /></Link>
-      <div className="login-content"><h1>{t('welcomeBack')}</h1><p className="muted" style={{ marginBottom: '30px' }}>Sign in to continue to your tailoring workspace.</p>
-        <form onSubmit={(event) => { event.preventDefault(); setNotice('Authentication is not connected in this foundation preview.') }}>
-          <label className="field-label" htmlFor="identifier">Email or phone</label><input id="identifier" autoComplete="username" placeholder="Enter your account identifier" />
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><label className="field-label" htmlFor="password">Password</label><button className="icon-button" style={{ width: 'auto', fontSize: '12px', color: 'var(--color-primary)' }} type="button" disabled>Forgot?</button></div><input id="password" type="password" autoComplete="current-password" placeholder="Enter your password" />
-          <button className="primary-button sign-in" type="submit">Sign in <ArrowRight size={16} /></button>
-          {notice && <p style={{ marginTop: '8px', padding: '8px', background: 'var(--color-warning-soft)', borderRadius: '8px', fontSize: '11px', color: 'var(--color-warning)' }} role="status">{notice}</p>}
-        </form>
-      </div><footer style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--color-text-muted)' }}><span>© {currentYear} BMS</span><span>Help</span></footer>
-    </section>
-  </main>
+  const { signIn } = useAuth()
+  const navigate = useNavigate()
+  const [identifier, setIdentifier] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setError('')
+
+    if (!identifier.trim()) {
+      setError('Please enter your User ID, email, or phone number.')
+      return
+    }
+    if (!password) {
+      setError('Please enter your password.')
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const mustChangePassword = await signIn(identifier.trim(), password)
+      navigate(mustChangePassword ? '/password-change' : '/', { replace: true })
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unable to sign in right now. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <main className="login-page">
+      <div className="login-card">
+
+        {/* Mobile-only Top Logo */}
+        <div className="login-logo-slot mobile-top-logo">
+          <BrandLogo layout="login" />
+        </div>
+
+        {/* Visual / Image Slot */}
+        <div className="login-visual-slot" aria-hidden="true">
+          <div className="login-visual-placeholder">
+            <img src={phoneImg} alt="" className="login-img-phone" />
+            <img src={tabletPortraitImg} alt="" className="login-img-tablet-portrait" />
+            <img src={tabletLandscapeImg} alt="" className="login-img-tablet-landscape" />
+            <img src={desktopImg} alt="" className="login-img-desktop" />
+          </div>
+        </div>
+
+        {/* Form Area */}
+        <section className="login-form-area">
+          <div className="login-form-container">
+            {/* Tablet/Desktop Form Logo */}
+            <div className="login-logo-slot desktop-form-logo">
+              <BrandLogo layout="login" />
+            </div>
+
+            <div className="login-header">
+              <h1>{t('welcomeBack') === 'welcomeBack' ? 'Welcome back 👋' : t('welcomeBack')}</h1>
+              <p className="login-subtitle">
+                {t('login.subtitle') === 'login.subtitle' ? 'Please enter your email, phone number or username to continue.' : t('login.subtitle')}
+              </p>
+            </div>
+
+            <form className="login-form" onSubmit={handleSubmit}>
+              {error && (
+                <div className="login-error-message" role="alert">
+                  {error}
+                </div>
+              )}
+
+              <div className="form-group">
+                <div className="input-with-icon">
+                  <UsersRound className="input-icon" size={18} aria-hidden="true" />
+                  <input
+                    id="identifier"
+                    type="text"
+                    autoComplete="username"
+                    placeholder="Email / Phone / Username"
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    disabled={isLoading}
+                    aria-label="User ID, Email, or Phone"
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <div className="input-with-icon">
+                  <Settings2 className="input-icon" size={18} aria-hidden="true" />
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={isLoading}
+                    aria-label="Password"
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    <CircleHelp size={18} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="form-actions">
+                <span className="spacer"></span>
+                <button
+                  type="button"
+                  className="forgot-password-link"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                  onClick={() => alert('FOLLOW-UP AUTH SCREEN REQUIRED — PASSWORD RESET')}
+                >
+                  Forgot password?
+                </button>
+              </div>
+
+              <button className="primary-button submit-button" type="submit" disabled={isLoading}>
+                {isLoading ? 'Logging in...' : 'Log in'} <ArrowRight size={18} />
+              </button>
+            </form>
+          </div>
+
+          <footer className="login-footer">
+             {/* No "Sign up" per backend contract */}
+          </footer>
+        </section>
+
+      </div>
+    </main>
+  )
+}
+
+function PasswordChangePage() {
+  const { changePassword } = useAuth()
+  const navigate = useNavigate()
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setError('')
+    setIsLoading(true)
+    try {
+      await changePassword(currentPassword, newPassword, confirmPassword)
+      navigate('/login', { replace: true, state: { notice: 'Password changed. Sign in with your new password.' } })
+    } catch (cause: unknown) {
+      setError(cause instanceof Error ? cause.message : 'Unable to change your password. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return <main className="login-page"><section className="login-form-area"><div className="login-form-container">
+    <div className="login-header"><h1>Change your password</h1><p className="login-subtitle">Set a new password before continuing.</p></div>
+    <form className="login-form" onSubmit={submit}>
+      {error && <div className="login-error-message" role="alert">{error}</div>}
+      <label className="field-label" htmlFor="current-password">Current password</label>
+      <input id="current-password" type="password" autoComplete="current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} required disabled={isLoading} />
+      <label className="field-label" htmlFor="new-password">New password</label>
+      <input id="new-password" type="password" autoComplete="new-password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} required disabled={isLoading} />
+      <label className="field-label" htmlFor="confirm-password">Confirm new password</label>
+      <input id="confirm-password" type="password" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required disabled={isLoading} />
+      <button className="primary-button submit-button" type="submit" disabled={isLoading}>{isLoading ? 'Saving...' : 'Change password'}</button>
+    </form>
+  </div></section></main>
 }
 
 function DesktopSidebar() {
   const { t } = useTranslation()
+  const { signOut, user } = useAuth()
+  const navigate = useNavigate()
   const [isAccountOpen, setIsAccountOpen] = useState(false)
   const accountRef = useRef<HTMLDivElement>(null)
 
@@ -206,7 +377,9 @@ function DesktopSidebar() {
 
   return (
     <aside className="desktop-sidebar">
-      <div style={{ height: '24px' }}></div>
+      <div className="sidebar-brand-header">
+        <img src={sidebarLogo} alt="Logo" className="sidebar-logo-img" />
+      </div>
 
       <nav style={{ flex: 1 }} aria-label="Main navigation">
         <NavLink to="/" end className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><LayoutDashboard size={18} /> {t('nav.dashboard')}</NavLink>
@@ -217,7 +390,7 @@ function DesktopSidebar() {
       </nav>
 
       <div className="account-container" ref={accountRef}>
-        <button 
+        <button
           className="account-trigger"
           onClick={() => setIsAccountOpen(!isAccountOpen)}
           aria-expanded={isAccountOpen}
@@ -227,17 +400,16 @@ function DesktopSidebar() {
           <span className="account-shop-name">Modern Tailors</span>
           <ChevronUp size={14} style={{ transform: isAccountOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
         </button>
-        
+
         {isAccountOpen && (
           <div className="account-popover">
             <div className="popover-header">
               <span className="popover-shop-primary">Modern Tailors</span>
-              <span className="popover-user-secondary">Ahammed Rafi</span>
-              <span className="popover-role-subtle">ADMIN</span>
+              <span className="popover-user-secondary">{user ? `${user.first_name} ${user.last_name}`.trim() : ''}</span>
             </div>
             <div className="popover-actions">
               <button className="popover-action"><Settings2 size={14} /> Settings</button>
-              <button className="popover-action"><LogOut size={14} /> Sign out</button>
+              <button className="popover-action" onClick={() => { void signOut().catch(() => undefined).finally(() => navigate('/login', { replace: true })) }}><LogOut size={14} /> Sign out</button>
             </div>
           </div>
         )}
@@ -248,7 +420,7 @@ function DesktopSidebar() {
 
 function TopHeader({ theme, setTheme, palette, setPalette }: { theme: Theme, setTheme: (v: Theme) => void, palette: Palette, setPalette: (v: Palette) => void }) {
   const location = useLocation()
-  
+
   const getPageContext = () => {
     if (location.pathname === '/work') return { main: 'Work' }
     if (location.pathname === '/') return { main: 'Dashboard' }
@@ -257,7 +429,7 @@ function TopHeader({ theme, setTheme, palette, setPalette }: { theme: Theme, set
     if (location.pathname.startsWith('/billing')) return { main: 'Billing' }
     return { main: 'Dashboard' }
   }
-  
+
   const ctx = getPageContext()
 
   return (
@@ -458,15 +630,20 @@ function WorkPreviewPage() {
 }
 
 function Workspace() {
+  const { ready, user, passwordChangeRequired } = useAuth()
   const [theme, setTheme] = useTheme()
   const [palette, setPalette] = usePalette()
   const location = useLocation()
   const [isMoreOpen, setIsMoreOpen] = useState(false)
   const isLogin = location.pathname === '/login'
+  const isPasswordChange = location.pathname === '/password-change'
 
   useEffect(() => { setIsMoreOpen(false) }, [location.pathname])
 
-  if (isLogin) return <LoginPage />
+  if (!ready) return <main className="login-page" aria-busy="true"><p>Loading your session…</p></main>
+  if (isLogin) return user && !passwordChangeRequired ? <Navigate to="/" replace /> : <LoginPage />
+  if (isPasswordChange) return passwordChangeRequired ? <PasswordChangePage /> : user ? <Navigate to="/" replace /> : <Navigate to="/login" replace />
+  if (!user || passwordChangeRequired) return <Navigate to={passwordChangeRequired ? '/password-change' : '/login'} replace />
 
   return <div className="app-shell">
     <DesktopSidebar />
@@ -489,5 +666,5 @@ export default function App() {
     document.documentElement.lang = language
     document.documentElement.dir = i18n.dir(language)
   }, [i18n, i18n.resolvedLanguage])
-  return <Workspace />
+  return <AuthProvider><Workspace /></AuthProvider>
 }

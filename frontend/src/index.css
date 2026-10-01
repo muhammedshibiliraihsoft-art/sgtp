@@ -18,10 +18,7 @@
   font-optical-sizing: auto;
   font-weight: 400;
 
-  /* Default Preset: Blue */
-  --theme-primary-base: #2563eb;
-  --theme-primary-fg: #ffffff;
-  --theme-secondary-base: #475569;
+  /* Default Preset removed. Handled by data-palette="default" or fallback below. */
 }
 
 /* Curated Theme Presets */
@@ -45,25 +42,35 @@
   --theme-primary-fg: #ffffff;
   --theme-secondary-base: #334155;
 }
-:root[data-palette="emerald"] {
-  --theme-primary-base: #059669;
-  --theme-primary-fg: #ffffff;
-  --theme-secondary-base: #334155;
-}
 :root[data-palette="navy"] {
   --theme-primary-base: #1e3a8a;
   --theme-primary-fg: #ffffff;
   --theme-secondary-base: #475569;
 }
-:root[data-palette="rose"] {
-  --theme-primary-base: #e11d48;
-  --theme-primary-fg: #ffffff;
-  --theme-secondary-base: #52525b;
-}
-:root[data-palette="amber"] {
-  --theme-primary-base: #d97706;
-    --theme-primary-fg: #451a03;
-  --theme-secondary-base: #52525b;
+/* Default Palette (Screenshot Derived) */
+:root[data-palette="default"], :root:not([data-palette]) {
+  --color-brand-accent: #e11d48;
+
+  --color-canvas: #eef2f9;
+  --color-sidebar: #eef2f9;
+  --color-header: #fdfeff;
+  --color-surface: #fdfeff;
+  --color-surface-subtle: #f1f5f9;
+  --color-surface-raised: #ffffff;
+
+  --color-primary-soft: #e8f0fe;
+  --color-primary-border: #d0dbf1;
+
+  --color-border: #d0dbf1;
+  --color-focus: rgba(0, 0, 0, 0.1);
+
+  --color-text: #0f172a;
+  --color-text-muted: #64789a;
+
+  --color-primary: #000000;
+  --color-primary-hover: #1e293b;
+  --color-primary-pressed: #0f172a;
+  --color-primary-foreground: #ffffff;
 }
 
 /* Light Theme Derived Architecture */
@@ -158,10 +165,31 @@
   --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.15), 0 2px 6px 0 rgb(0 0 0 / 0.1);
 }
 
-/* Special contrast fix for amber in dark mode */
-:root[data-theme="dark"][data-palette="amber"] {
-  --color-primary: color-mix(in oklab, var(--theme-primary-base) 70%, #fff);
-  --color-primary-foreground: #451a03;
+/* Default Dark Palette */
+:root[data-theme="dark"][data-palette="default"],
+:root[data-theme="dark"]:not([data-palette]) {
+  --color-brand-accent: #ef4444;
+
+  --color-canvas: #0f172a;
+  --color-sidebar: #1e293b;
+  --color-header: #1e293b;
+  --color-surface: #1e293b;
+  --color-surface-subtle: #334155;
+  --color-surface-raised: #475569;
+
+  --color-primary-soft: #0f172a;
+  --color-primary-border: #334155;
+
+  --color-border: #334155;
+  --color-focus: rgba(255, 255, 255, 0.15);
+
+  --color-text: #f8fafc;
+  --color-text-muted: #94a3b8;
+
+  --color-primary: #f8fafc;
+  --color-primary-hover: #e2e8f0;
+  --color-primary-pressed: #cbd5e1;
+  --color-primary-foreground: #020617;
 }
 
 /* Locale Typography Applications */
