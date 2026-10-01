@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-09-30 — Phase 4 activation and T4-01 implementation
+
+- Phase 4 was explicitly activated and only T4-01 Clients/Related Persons was authorized. Canonical BR-CLIENT-002 records the approved role-access matrix. T4-01 is in progress; do not infer that future tasks are authorized.
+- The runtime app follows the current Django `apps.*` layout at `apps/clients`; frontend source remains isolated and unchanged.
+
 ## 2026-09-30 — PHASE4-PARALLEL-UNBLOCK-01 roadmap dependency clarification
 
 - Clarified that backend Phase 4/5/6 delivery may progress independently of frontend completion; each frontend domain slice remains contract-first and follows its accepted backend contract.

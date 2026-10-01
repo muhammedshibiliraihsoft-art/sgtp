@@ -2,17 +2,17 @@
 
 ## Current phase
 
-Phase 3 is ACTIVE; activation was explicitly confirmed with `CONFIRM PHASE 3`.
+Phase 3 is COMPLETE; it was activated with `CONFIRM PHASE 3`, and T3-05A is complete with custom-domain DNS/TLS explicitly deferred. Phase 4 is ACTIVE; Core Tailor Business activation was explicitly confirmed with `CONFIRM PHASE 4`.
 
 Completed foundation tasks include T3-01–T3-04B-USER-SCOPE, T3-04C, and T3-05. T3-05 is published and its exact-SHA Project State Validation succeeded for the implementation commit. Derive current `HEAD`/`main` from Git.
 
 ## Current task
 
-T3-05A — Staging Backend Foundation — is COMPLETE, committed, pushed, exact-SHA CI-green, and live-verified. Active backend: `https://birky-staging-api.onrender.com`. The existing synthetic Main Supplier/Shop A/Shop B fixture was preserved. Live verification passed for login/cookie contract, CSRF, refresh rotation/reuse rejection, logout cookie clearing/post-logout rejection, bidirectional Shop endpoint/object isolation, and Main Supplier visibility on approved surfaces. Temporary credential variables are blank; bootstrap and rotation flags are false. Final cleanup deployment is live and health endpoints pass. `api-staging.birky.com` DNS/TLS and frontend browser integration remain deferred. Derive current `HEAD` from Git.
+T4-01 — Clients and Related Persons — is the only authorized current task and is IN PROGRESS. T3-05A — Staging Backend Foundation — remains complete, committed, pushed, exact-SHA CI-green, and live-verified. Staging remains on the verified provider hostname; custom-domain DNS/TLS and frontend browser integration are deferred. Derive current `HEAD` from Git.
 
-`FRONTEND-DELIVERY-LOCK-01` established Contract-First Paired Delivery and the UI Reference Gate. The later-approved `PHASE4-PARALLEL-UNBLOCK-01` clarification allows backend Phase 4/5/6 and frontend integration to progress in parallel: frontend completion is not a backend prerequisite, while each frontend business slice still follows acceptance of its backend contract. The frontend foundation branch remains isolated and must not be modified from this worktree. Phase 4 activation and T4-01 implementation retain separate confirmation gates.
+`FRONTEND-DELIVERY-LOCK-01` established Contract-First Paired Delivery and the UI Reference Gate. The later-approved `PHASE4-PARALLEL-UNBLOCK-01` clarification allows backend Phase 4/5/6 and frontend integration to progress in parallel: frontend completion is not a backend prerequisite, while each frontend business slice still follows acceptance of its backend contract. The frontend foundation branch remains isolated and must not be modified from this worktree. Phase 4 is active; T4-01 alone is authorized. T4-02 and Phase 5 require separate confirmation.
 
-Derive current `HEAD`/`main` from Git rather than storing a current SHA in this handoff. T3-05A is complete; do not begin another task or Phase 4 without its own plan and explicit confirmation. Do not modify/merge frontend work. No Production deployment is allowed.
+Derive current `HEAD`/`main` from Git rather than storing a current SHA in this handoff. Implement and validate only T4-01, then stop. Do not begin T4-02, Phase 5, or frontend work. Do not modify/merge frontend work. No Production deployment is allowed.
 
 ## Current state and next gate
 
@@ -31,11 +31,12 @@ Derive current `HEAD`/`main` from Git rather than storing a current SHA in this 
 - Published implementation adds `User.owning_shop`, migration `accounts.0005_user_shop_ownership` with historical-membership preflight and database guards, atomic Shop-owned account creation, `/api/v1/shops/{shop_id}/users/`, same-Shop account reset authorization, and regression fixtures/tests.
 - Pre-publication local preflight found zero Users and memberships in the development DB. GitHub CI migration/application validation passed on its disposable PostgreSQL database. Neither establishes shared/staging/production data status; the migration aborts on ordinary Users with multiple or no determinable Shop. Shared/staging/production ownership preflight was NOT PERFORMED; no shared/staging/production migration was applied.
 - Pre-publication local validation: focused account/membership/auth regressions 138 passed; PostgreSQL-backed full suite 192 passed, including four concurrency cases; validator tests 14 passed; Django and migration checks passed; OpenAPI passed with two nonfatal role-enum naming warnings; Black/Flake8 passed on new Python files. GitHub Actions Project State Validation passed for the published exact SHA. Broad lint checks on touched legacy files still report existing style findings; they were not mass-formatted.
-- T3-04C, T3-05, and T3-05A are complete and published with exact-SHA CI green. Phase 4 remains unstarted and unauthorized.
+- T3-04C, T3-05, and T3-05A are complete and published with exact-SHA CI green. Phase 4 is active; T4-01 is the sole authorized task.
 - T3-05 local validation: focused Shop/API/Admin/regression/concurrency tests 30 passed; complete PostgreSQL-backed application suite 231 passed (186 warnings); repository validator PASS (231 discovered); validator tests 14 passed; Django system/deploy checks and migration drift check passed; OpenAPI validation reported zero errors with nonfatal warnings; Black, Flake8, and `git diff --check` passed. The exact commit's GitHub Actions run `36614638187` passed all steps, including the PostgreSQL-backed application suite and migration check.
 
 ## Tests and checks
 
+- **Current T4-01 pre-publication validation:** focused Clients/Related Persons API and PostgreSQL concurrency tests: 15 passed; full PostgreSQL 15-backed application suite: 309 passed; repository validator PASS (309 discovered); validator tests: 27 passed. Django system check and production `check --deploy`: PASS; migration drift: no changes; OpenAPI: zero errors, 23 warnings (7 unique, existing serializer type-hint/role-enum warnings); Black, Flake8, and `git diff --check`: PASS. Exact-SHA GitHub Actions has not yet run; no deployment occurred.
 - Final T3-05A application suite: 294 passed; repository validator PASS (294 discovered); validator tests 23 passed. Focused credential rotation/bootstrap tests: 39 passed; staging tests: 28 passed; auth/CSRF lifecycle regressions: 7 passed.
 - Staging Django checks, deploy check, migration drift, OpenAPI (zero errors), Black/Flake8 for new staging Python, Git Bash shell syntax, and `git diff --check` passed. GitHub Actions run `36667104952` succeeded for exact implementation SHA `b29a897897d35ec9163c510456bd9197b8a4f6e1`. Render final cleanup deploy `dep-dau9ptlg1s2s73c2foig` is live on that SHA; migrations/static collection/Gunicorn and health checks succeeded. No secret exposure was found. Full live token and Shop isolation matrix passed. Free-plan limitations and remaining DNS/TLS/browser deferrals are documented in the staging runbook.
 

@@ -173,6 +173,10 @@ New business rules require:
 **Status:** CONFIRMED
 **Rule:** A potential duplicate by phone or email is a warning, not an automatic merge. Duplicate checks and results are confined to the authorized Shop; concurrent writes must not silently merge records.
 
+### BR-CLIENT-002 — Client and Related Person Access
+**Status:** CONFIRMED
+**Rule:** Main Supplier may read, create, update, and soft-delete Client and Related Person records only through an explicit authorized Shop context. An active Shop ADMIN has the same actions only in their own Shop. An active STAFF may read, create, and update those records in their own Shop but may not delete them. An active VIEWER is read-only in their own Shop. Inactive or removed memberships have no operational access. Work Functions do not grant or restrict these Client permissions; no SALES or other function is required. No Client tags or separate human-readable Client code are part of this V1 task; the immutable UUID is the stable API identifier. Related Person Work remains billed to the Primary Client under BR-BILL-001.
+
 ### BR-WORK-001 — Work Priority and Date Indicators
 **Status:** CONFIRMED
 **Rule:** V1 Work priorities are Normal, Urgent, and Very Urgent. Upcoming, due soon, due today, and overdue are derived date indicators, not workflow states. Exact due-soon threshold and date-cutoff semantics remain **BUSINESS DECISION REQUIRED** before implementation.

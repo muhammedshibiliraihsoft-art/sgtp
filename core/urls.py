@@ -11,6 +11,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 api_v1_patterns = [
     path('auth/', include('apps.accounts.urls')),
     path('', include('apps.tenants.urls')),
+    path('', include('apps.clients.urls')),
 ]
 
 from core.health import health_live, health_ready

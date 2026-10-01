@@ -36,8 +36,25 @@ The complete V1 API does not yet exist. Implementation phases will refine the st
 - `GET /api/v1/tenants/{shop_id}/stats/` is available to Main Supplier for any Shop and to an active same-Shop ADMIN only; role-insufficient same-Shop requests receive 403 and foreign/nonexistent Shop requests are scoped to 404. `GET /api/v1/tenants/{shop_id}/member-lookup/?user_code=...` performs exact lookup only among current or removed membership history in the selected Shop and returns User ID/display name/role/status; it never attaches an account or searches the global User directory. These T3-05 endpoints are published with exact-SHA CI green.
 - The account/login routes above implement the published T3-04A User-ID contract. T3-04B ADMIN membership lifecycle actions are published. Work Function management is implemented under T3-04C. Do not infer additional endpoint paths or response shapes.
 - Foreign, unauthorized, inactive, soft-deleted, unavailable, and nonexistent Shop requests return the same `404` envelope/code (`shop_context_unavailable`) without revealing Shop existence. Unauthenticated, invalid, and revoked authentication retain `401`. Malformed UUIDs do not match the UUID route and return 404 at URL resolution.
-- Shop-scoped endpoints use `/shops/{shop_id}/...`; authorization precedes Shop-default access. Preferences never grant access. T3-04 now provides a trusted-context scoped queryset/write-ownership mixin and selected-Shop object permission contract. No business-resource endpoints exist yet; future routes must adopt and test these primitives.
-- Client search includes name, normalized phone and stable client ID; Work number becomes searchable when available. Duplicate response warns only and never merges silently.
+- Shop-scoped endpoints use `/shops/{shop_id}/...`; authorization precedes Shop-default access. Preferences never grant access. T3-04 provides a trusted-context scoped queryset/write-ownership mixin and selected-Shop object permission contract. T4-01 Clients/Related Persons is the first business-resource API and adopts/tests these primitives; future routes must do likewise.
+### T4-01 Clients and Related Persons (implemented)
+
+All routes require authenticated, password-change-complete access and explicit authorized Shop context:
+
+- `GET/POST /api/v1/shops/{shop_id}/clients/`
+- `GET/PUT/PATCH/DELETE /api/v1/shops/{shop_id}/clients/{client_uuid}/`
+- `GET/POST /api/v1/shops/{shop_id}/clients/{client_uuid}/related-persons/`
+- `GET/PUT/PATCH/DELETE /api/v1/shops/{shop_id}/clients/{client_uuid}/related-persons/{related_person_uuid}/`
+
+UUIDs are immutable identities; no Client code is returned. Lists use page-number pagination (`count`, `next`, `previous`, `results`), page size 20, and deterministic name/UUID ordering. Optional `search` performs Unicode-aware name containment, normalized-phone prefix matching, and exact UUID matching. Deleted records are omitted. Work-number search is not implemented until T4-04.
+
+Create body: `{"name":"...","phone":"optional","email":"optional"}`. Updates accept the same fields; Shop/Primary Client ownership is server/path-derived. RelatedPerson responses also include `primary_client_id`; future Work billing stays owned by that Primary Client, with no billing routes or fields implemented.
+
+Successful writes include `warnings`, e.g. `[{"code":"possible_duplicate","field":"phone","matches":[{"id":"<uuid>","name":"..."}]}]`. Warnings cover same-Shop records of the same type only, return at most 10 references, do not reject or merge, and never reveal another Shop. Contact updates return warnings only when phone/email changed. Empty warnings means no same-Shop duplicate was found.
+
+Main Supplier and active same-Shop ADMIN have read/create/update/soft-delete. Active STAFF has read/create/update. Active VIEWER is read-only. Inactive/removed memberships have no operational access. Work Functions do not alter Client permissions. Foreign/missing record and nested-parent lookups are non-disclosing 404s. DELETE soft-deletes and returns 204; there is no restore endpoint.
+
+Phone search normalization applies Unicode NFKC, maps Unicode decimal digits to ASCII, removes other characters, and preserves `+` only when it is the first non-whitespace character. No country/region is inferred. Email matching uses trimmed case-folded text; stored contact values are trimmed but are not rewritten to the search key. Client/RelatedPerson duplicates are allowed; there is no phone/email uniqueness constraint.
 - Payment writes require idempotency and explicit safe outcomes. Invoices/receipts/reports may accept a per-document locale override without changing canonical data or money.
 
 ## Future documentation requirements
