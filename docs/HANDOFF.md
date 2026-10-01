@@ -2,13 +2,13 @@
 
 ## Current handoff — BACKOFFICE-01 (2026-10-01)
 
-- Task `BACKOFFICE-01` is implemented locally across backend `main` and frontend `frontend/parallel-foundation`; neither branch has been committed or pushed yet.
+- Task `BACKOFFICE-01` backend commit `a0bd06ec272440f687fef68a157568466821a664` is committed and pushed to `main`; Render staging deploy `dep-dav6emo473hc73dqm7t0` is live. Frontend feature commit `def2c60d` is committed locally on `frontend/parallel-foundation` and `main` has been merged into that branch; it is not pushed yet.
 - Main Supplier-only frontend pages provide Back Office dashboard, Shop list/search/filter/order/pagination, create, detail/edit, and activate/deactivate. The pages reuse the established shell/theme and use the real `/api/v1/tenants/` contract. Work page mock data remains untouched.
 - Backend exposes a derived `is_main_supplier_admin` boolean in login/profile responses. A focused backend integration test verifies the created first Shop ADMIN can log in using the returned permanent User ID and initial password, is correctly forced through password change, and succeeds at changing that password.
-- Validation so far: complete backend PostgreSQL suite passed 257 tests, then the added first-admin login test passed separately; frontend 31 tests, typecheck, and build passed; lint reported one existing warning in `src/App.tsx`; Django checks, migration drift check, and schema validation passed earlier in this task. Re-run checks and `python scripts/verify_project_state.py` after final edits.
-- Render inspection found the existing `birky-staging-api` Web Service on `main`, manually deployed (`autoDeploy=off`). The user authorized Render staging migration; after backend main is pushed, manually deploy this service and verify deploy health. Do not deploy Production.
+- Validation: complete backend PostgreSQL suite passed 257 tests, then the added first-admin login/password-change test passed separately; frontend 31 tests, typecheck, and build passed; lint reported one existing warning in `src/App.tsx`; Django check, migration drift, schema validation, Project State validator, and `git diff --check` passed. Render readiness and CSRF bootstrap endpoints returned 200 after the deployment.
+- The existing `birky-staging-api` is on `main` with `autoDeploy=off`; staging now runs the backend implementation commit. Do not deploy Production.
 - The frontend branch is configured as the Cloudflare Pages client-preview source; a push automatically triggers a preview deployment. Current approval covers Render staging, not automatic Cloudflare preview publication. Prepare the frontend branch locally and request approval for that preview push after changes are reviewable.
-- Next: finish docs and checks, validate, commit backend and frontend separately, push backend `main`, deploy/verify Render staging, then stop before pushing the frontend branch until Cloudflare preview deployment is explicitly approved.
+- Next: obtain the user's approval to push `frontend/parallel-foundation`, because that push triggers the Cloudflare Pages client-preview deployment. After approval, push and verify the preview; do not deploy Production.
 
 ## Current phase
 
