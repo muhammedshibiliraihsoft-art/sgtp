@@ -117,23 +117,20 @@ async function refreshAccessToken(): Promise<string> {
   return refreshPromise
 }
 
-type RequestOptions = Omit<RequestInit, 'body'> & { body?: unknown; authenticated?: boolean; retryUnauthorized?: boolean }
+type RequestOptions = Omit<RequestInit, 'body'> & { authenticated?: boolean; retryUnauthorized?: boolean }
 
-export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { authenticated = true, retryUnauthorized = true, headers: suppliedHeaders, body, ...init } = options
+async function coreRequest(path: string, options: RequestOptions, body?: BodyInit | null): Promise<Response> {
+  const { authenticated = true, retryUnauthorized = true, headers: suppliedHeaders, ...init } = options
   const requestGeneration = authGeneration
   const tokenUsed = authenticated ? accessToken : null
   const headers = new Headers(suppliedHeaders)
-  headers.set('Accept', 'application/json')
-  if (body !== undefined) headers.set('Content-Type', 'application/json')
   if (authenticated && accessToken) headers.set('Authorization', `Bearer ${accessToken}`)
   if (csrfToken && ['POST', 'PUT', 'PATCH', 'DELETE'].includes((init.method ?? 'GET').toUpperCase())) headers.set('X-CSRFToken', csrfToken)
 
   let response: Response
   try {
     response = await fetch(apiUrl(path), {
-      ...init, headers, credentials: 'include',
-      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+      ...init, headers, credentials: 'include', body
     })
   } catch {
     throw new ApiError('Unable to reach the service. Check your connection and try again.', 0, 'network_unavailable')
@@ -144,16 +141,50 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   }
   if (response.status === 401 && authenticated && retryUnauthorized) {
     if (accessToken && accessToken !== tokenUsed) {
-      return apiRequest<T>(path, { ...options, headers: { ...Object.fromEntries(headers.entries()), Authorization: `Bearer ${accessToken}` }, retryUnauthorized: false })
+      return coreRequest(path, { ...options, retryUnauthorized: false }, body)
     }
-    const token = await refreshAccessToken()
-    return apiRequest<T>(path, { ...options, headers: { ...Object.fromEntries(headers.entries()), Authorization: `Bearer ${token}` }, retryUnauthorized: false })
+    await refreshAccessToken()
+    return coreRequest(path, { ...options, retryUnauthorized: false }, body)
   }
   if (response.status === 401 && authenticated) {
     clearCredentials()
     unauthorizedHandler?.()
   }
+  return response
+}
+
+type JsonRequestOptions = RequestOptions & { body?: unknown }
+
+export async function apiRequest<T>(path: string, options: JsonRequestOptions = {}): Promise<T> {
+  const { body, headers, ...rest } = options
+  const requestHeaders = new Headers(headers)
+  requestHeaders.set('Accept', 'application/json')
+  let requestBody: BodyInit | undefined = undefined
+  if (body !== undefined) {
+    requestHeaders.set('Content-Type', 'application/json')
+    requestBody = JSON.stringify(body)
+  }
+  const response = await coreRequest(path, { ...rest, headers: requestHeaders }, requestBody)
   return readResponse<T>(response)
+}
+
+export async function multipartRequest<T>(path: string, formData: FormData, options: RequestOptions = {}): Promise<T> {
+  const { headers, ...rest } = options
+  const requestHeaders = new Headers(headers)
+  requestHeaders.set('Accept', 'application/json')
+  const response = await coreRequest(path, { ...rest, method: 'POST', headers: requestHeaders }, formData)
+  return readResponse<T>(response)
+}
+
+export async function binaryRequest(path: string, options: RequestOptions = {}): Promise<Blob> {
+  const response = await coreRequest(path, { ...options, method: 'GET' })
+  if (!response.ok) {
+    let payload: unknown
+    try { payload = await response.json() } catch {}
+    const parsed = extractMessage(payload, response.status >= 500 ? 'The service is unavailable. Please try again.' : 'The request could not be completed.')
+    throw new ApiError(parsed.message, response.status, parsed.code, payload)
+  }
+  return response.blob()
 }
 
 export async function refreshSession(): Promise<string> {

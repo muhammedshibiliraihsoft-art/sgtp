@@ -7,8 +7,9 @@ import {
   Moon, MoreHorizontal, Plus, Search, Settings2, LogOut, ChevronUp, Sun,
   UsersRound, Scissors, CreditCard, BarChart3, Users,
   Wand2, Store, Sliders, Shirt, PackageOpen, LayoutGrid, X, Clock, ChevronRight,
-  PanelLeftClose, PanelLeftOpen
+  PanelLeftClose, PanelLeftOpen, Shield
 } from 'lucide-react'
+import { UsersPage } from './features/users/UsersPage'
 import './App.css'
 import { BrandLogo } from './components/BrandLogo'
 import { AuthProvider } from './services/AuthContext'
@@ -21,6 +22,12 @@ import phoneImg from './assets/images/login/phone.png'
 import tabletPortraitImg from './assets/images/login/tablet-portrait.png'
 import tabletLandscapeImg from './assets/images/login/tablet-landscape.png'
 import sidebarLogo from './assets/brand/sidebar_logo.png'
+import { CatalogPage } from './features/catalog/CatalogPage'
+import { DesignsPage } from './features/designs/DesignsPage'
+import { DesignEditor } from './features/designs/DesignEditor'
+import { GlobalCatalogPage } from './backoffice/catalog/GlobalCatalogPage'
+import { GlobalDesignTemplatesPage } from './backoffice/designs/GlobalDesignTemplatesPage'
+import { GlobalTemplateEditor } from './backoffice/designs/GlobalTemplateEditor'
 
 type Theme = 'light' | 'dark' | 'system'
 const themeKey = 'sgtp-theme'
@@ -485,8 +492,11 @@ function DesktopSidebar({ isPinned, setIsPinned }: { isPinned: boolean, setIsPin
         <NavLink to="/" end className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><LayoutDashboard size={18} /> <span className="nav-label">{t('nav.dashboard')}</span></NavLink>
         <NavLink to="/work" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Scissors size={18} /> <span className="nav-label">{t('nav.work')}</span></NavLink>
         <div className="nav-link-desktop nav-disabled" aria-disabled="true"><ClipboardList size={18} /> <span className="nav-label">{t('nav.orders')}</span></div>
+        <NavLink to="/designs" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Wand2 size={18} /> <span className="nav-label">{t('nav.designs', 'Designs')}</span></NavLink>
+        <NavLink to="/catalog" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Shirt size={18} /> <span className="nav-label">{t('nav.catalog', 'Catalog')}</span></NavLink>
         <NavLink to="/clients" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><UsersRound size={18} /> <span className="nav-label">{t('nav.clients')}</span></NavLink>
         <div className="nav-link-desktop nav-disabled" aria-disabled="true"><CreditCard size={18} /> <span className="nav-label">{t('nav.billing')}</span></div>
+        <NavLink to="/users" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Shield size={18} /> <span className="nav-label">{t('nav.team', 'Team')}</span></NavLink>
       </nav>
 
       <div className="account-container" ref={accountRef}>
@@ -539,6 +549,8 @@ function BackOfficeSidebar({ isPinned, setIsPinned }: { isPinned: boolean, setIs
     <nav style={{ flex: 1 }} aria-label={t('backoffice.navigation')}>
       <NavLink to="/backoffice" end className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><LayoutDashboard size={18} /><span className="nav-label">{t('backoffice.dashboard')}</span></NavLink>
       <NavLink to="/backoffice/shops" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Store size={18} /><span className="nav-label">{t('backoffice.shops')}</span></NavLink>
+      <NavLink to="/backoffice/designs" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Wand2 size={18} /><span className="nav-label">{t('backoffice.designs', 'Global Designs')}</span></NavLink>
+      <NavLink to="/backoffice/catalog" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Shirt size={18} /><span className="nav-label">{t('backoffice.catalog', 'Global Catalog')}</span></NavLink>
     </nav>
     <div className="account-container" ref={accountRef}>
       <button
@@ -597,6 +609,7 @@ function TopHeader({
     if (location.pathname === '/') return { main: 'Dashboard' }
     if (location.pathname.startsWith('/orders')) return { main: 'Orders' }
     if (location.pathname.startsWith('/clients')) return { main: 'Clients' }
+    if (location.pathname.startsWith('/users')) return { main: 'Team' }
     if (location.pathname.startsWith('/billing')) return { main: 'Billing' }
     return { main: 'Dashboard' }
   }
@@ -673,7 +686,9 @@ function MoreSheet({ isOpen, onClose, theme, setTheme }: { isOpen: boolean, onCl
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><CreditCard size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('more.billing')}</span></div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><BarChart3 size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('more.reports')}</span></div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><Users size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('more.members')}</span></div>
+          <Link to="/users" onClick={onClose} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><Users size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('more.members')}</span></Link>
+          <Link to="/designs" onClick={onClose} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><Wand2 size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('nav.designs', 'Designs')}</span></Link>
+          <Link to="/catalog" onClick={onClose} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><Shirt size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('nav.catalog', 'Catalog')}</span></Link>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><LayoutGrid size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('more.workFunctions')}</span></div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><Settings2 size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('more.settings')}</span></div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><Store size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('more.shopProfile')}</span></div>
@@ -843,6 +858,9 @@ function Workspace() {
         <Route path="/backoffice/shops" element={<ShopListPage />} />
         <Route path="/backoffice/shops/new" element={<CreateShopPage />} />
         <Route path="/backoffice/shops/:shopId" element={<ShopDetailPage />} />
+        <Route path="/backoffice/catalog" element={<GlobalCatalogPage />} />
+        <Route path="/backoffice/designs" element={<GlobalDesignTemplatesPage />} />
+        <Route path="/backoffice/designs/:designId" element={<GlobalTemplateEditor />} />
         <Route path="*" element={<Navigate to="/backoffice" replace />} />
       </Routes>
     </main>
@@ -864,6 +882,10 @@ function Workspace() {
         <Route path="/work" element={<WorkPreviewPage />} />
         <Route path="/clients" element={<ClientsPage />} />
         <Route path="/clients/:clientId" element={<ClientDetailPage />} />
+        <Route path="/users" element={<UsersPage />} />
+        <Route path="/catalog" element={<CatalogPage />} />
+        <Route path="/designs" element={<DesignsPage />} />
+        <Route path="/designs/:designId" element={<DesignEditor />} />
         <Route path="*" element={<div className="content-wrap"><h1 style={{fontSize:'24px'}}>{location.pathname === '/' ? 'Dashboard' : 'Preview'}</h1><p style={{color:'var(--color-text-muted)'}}>Navigate to Work to see the layout.</p><Link to="/work" style={{color:'var(--color-primary)'}}>Go to Work</Link></div>} />
       </Routes>
     </main>

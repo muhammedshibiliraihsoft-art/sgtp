@@ -1,0 +1,26 @@
+/* Designs Styles */
+.design-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.design-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.editor-main {
+  min-width: 0;
+}
+
+.editor-sidebar {
+  min-width: 300px;
+}
+
+@media (max-width: 768px) {
+  .content-wrap > div[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+  .editor-sidebar {
+    min-width: 0;
+  }
+}
