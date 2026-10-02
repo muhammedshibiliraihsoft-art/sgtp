@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-03 — Catalog and Designs frontend integration
+
+- Connected the existing Catalog and Designs frontend modules to the current `apps/catalog` API contracts, corrected request/response field and upload/query parameter mismatches, and removed mock-data success fallbacks so API failures are visible.
+- Implemented the supported catalog and design actions, pagination, reference-image uploads, and API contract tests. Backend API gaps (Family/Option Group creation and the global variant list needed for Global Template creation) remain explicitly unavailable in the UI; no guessed endpoint or mock behavior was added.
+- Updated the repository state validator to recognize the previously approved and completed T4-03A Catalog backend during a later frontend-only handoff, with regression coverage.
+- Validation on frontend commit `fa9e84b55fe8d5f9b62aee12459138edf790233d`: typecheck PASS; 47 tests PASS; production build PASS; lint PASS with six pre-existing warnings; repository state validator PASS with its documented test-discovery warning; `git diff --check` PASS. No authenticated staging browser E2E or deployment was performed.
+
 ## 2026-10-02 — DJANGO-ADMIN-UX-01 local implementation
 
 - Added a native Django Admin index organized by Business, Garments & Designs, Measurements, Materials, Users & Access, and System; applied the requested BiRKy Admin branding and minimal responsive/dark-mode-compatible status styling.

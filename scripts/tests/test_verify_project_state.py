@@ -241,6 +241,29 @@ class ValidatorTests(unittest.TestCase):
         result = self.validator(root).run()
         self.assertTrue(any("apps/catalog" in error for error in result.errors))
 
+    def test_completed_t403a_allows_catalog_during_later_frontend_handoff(self):
+        state = PHASE4_STATE.replace(
+            "## Current Verification Results",
+            "- T4-03A is COMPLETE. CONFIRM TASK T4-03A\n"
+            "## Current Verification Results",
+        )
+        handoff = PHASE4_HANDOFF + "\nCONFIRM TASK T4-03A\n"
+        root = make_repo(state, handoff)
+        (root / "apps/catalog").mkdir(parents=True)
+        result = self.validator(root).run()
+        self.assertTrue(result.ok, result.errors)
+
+    def test_completed_t403a_without_handoff_confirmation_rejects_catalog(self):
+        state = PHASE4_STATE.replace(
+            "## Current Verification Results",
+            "- T4-03A is COMPLETE. CONFIRM TASK T4-03A\n"
+            "## Current Verification Results",
+        )
+        root = make_repo(state, PHASE4_HANDOFF)
+        (root / "apps/catalog").mkdir(parents=True)
+        result = self.validator(root).run()
+        self.assertTrue(any("apps/catalog" in error for error in result.errors))
+
     def test_contradictory_task_state_is_blocking(self):
         handoff = VALID_HANDOFF.replace("B2-05 is complete", "B2-06 is complete")
         result = self.validator(make_repo(VALID_STATE, handoff)).run()

@@ -391,6 +391,28 @@ class ProjectStateValidator:
                 )
             ):
                 allowed.add("apps/catalog")
+            # A later frontend-only task may be the current handoff after the
+            # backend Catalog foundation is already complete. Preserve the
+            # guard for new/unapproved modules while recognizing that
+            # explicitly approved, completed foundation in both canonical docs.
+            if (
+                re.search(
+                    r"(?im)^\s*-\s.*\bT4-03A\b.*\bCOMPLETE\b",
+                    self._current_section(self.read("docs/PROJECT_STATE.md"), "Status"),
+                    re.IGNORECASE,
+                )
+                and re.search(
+                    r"\bCONFIRM\s+TASK\s+T4-03A\b",
+                    self.read("docs/PROJECT_STATE.md"),
+                    re.IGNORECASE,
+                )
+                and re.search(
+                    r"\bCONFIRM\s+TASK\s+T4-03A\b",
+                    self.read("docs/HANDOFF.md"),
+                    re.IGNORECASE,
+                )
+            ):
+                allowed.add("apps/catalog")
             present = [path for path in present if path not in allowed]
         if present:
             self.result.error(

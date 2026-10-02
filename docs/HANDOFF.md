@@ -1,5 +1,14 @@
 # Handoff
 
+## Current handoff — Catalog and Designs frontend integration (2026-10-03)
+
+- User authorized integrating the existing Catalog and Designs frontend modules against the current backend contract, fixing small UI issues, and bringing the result to `main` only if safe. The implementation commit `feat(frontend): integrate catalog and designs APIs` is on `frontend/parallel-foundation` and has been merged locally into `main` using a normal merge; publication is pending validation.
+- The pages now consume live API shapes and pagination, show request errors instead of mock fallback data, and implement supported Shop/global catalog and design actions, including Shop design creation, supported draft selections, publish/archive, and reference-image uploads. API contract tests were added. No backend files or deployment settings were changed.
+- Local frontend validation on that commit: typecheck PASS; 47 tests PASS; production build PASS; lint exits successfully with six pre-existing warnings in `useCurrentShop.ts`, `usePrivateImage.ts` (two), `ClientForm.tsx`, `UsersPage.tsx`, and `App.tsx`; no new warnings from changed files. `git diff --check` passed. Repository state validator passed, with its documented test-discovery warning. Its scope check was updated to recognize the previously approved and completed T4-03A Catalog backend when a later frontend task is current; all 28 validator tests pass.
+- Known API-driven limits: there is no backend create endpoint for Families or Option Groups, so those create actions are not offered. Global design-template creation cannot be safely completed from the current API because there is no global variant-list endpoint; no fake endpoint or mock fallback was introduced. The backend has no Global Design Template detail route, so the frontend resolves a selected template from the paginated list. These gaps are documented in the frontend README.
+- No authenticated staging browser E2E was performed, and no deployment occurred. The feature branch push is known to trigger the Cloudflare client-preview; the `main` production Pages branch setting is not independently verified. Before publishing, derive current refs/worktree state again, run the main repository validator, and report separately whether any hosting provider actually deployed the pushed commit. Never force-push.
+- Broader frontend work and T4-04 remain outside this integration task.
+
 ## Current handoff — T4-03A Inventory & Stock Foundation (2026-10-02)
 
 - T4-03A is explicitly authorized (`CONFIRM TASK T4-03A`), implemented in commit `1e6e79a60a7337a43e6bb73c47aacf0c947c6570`, pushed to `main`, and exact-SHA CI-verified by Project State Validation run `37045373602` (SUCCESS). It adds inventory to the existing `apps/catalog` Material identity; T4-03 remains historically complete with its original reference-only scope. T4-04 has not started and is not authorized.
