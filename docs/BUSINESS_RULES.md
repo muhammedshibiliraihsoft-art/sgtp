@@ -336,6 +336,38 @@ These are authoritative business rules. Implementation status is recorded separa
 **Rule:**
 Undo is valid only within the exact 5-second window. Current Shop capacity must be re-checked immediately before restoration. If current user_count < max_users, restore the same membership and previous state. If current user_count >= max_users, reject Undo and leave the membership REMOVED. Do not remove/deactivate another membership, and do not exceed max_users.
 
+## T4-03 implemented measurement and material contract
+
+T4-03 implementation preserves these approved boundaries:
+
+- A measurement profile belongs to exactly one Shop-owned Client or Related Person. A Related Person remains linked to its existing Primary Client, which remains the future billing owner; this task adds no billing model or behavior.
+- Only the approved Men's Shirt and Kuwaiti Dishdasha system templates are seeded. Abaya and Darraa have no guessed complete mappings. Shop-created definitions are reusable only in their owning Shop and configured family/optional variant; they require an English canonical label, while English, ar-KW, Bangla, and Urdu labels may be stored. Stable codes identify definitions; labels are not identity.
+- Measurement sets are immutable history. Corrections create a new version. Copies create independent values and retain source-set provenance. Values are partial, Decimal-based, and require an explicit `INCH` or `CM` unit; no default or implicit conversion exists. A comparison difference is returned only for matching units.
+- Measurement access requires an active selected-Shop membership and role; STAFF additionally require `MEASUREMENT`. The function alone never authorizes access. Main Supplier operations remain bound to an explicitly selected Shop. VIEWER and unassigned STAFF cannot read measurements.
+- In its original T4-03 scope, Material is an active/archived Shop-owned reference record only; T4-03A later adds inventory additively without changing Measurement ownership/history.
+
+## T4-03A approved inventory rules
+
+### BR-INV-001 — Canonical Shop-owned inventory identity
+**Status:** CONFIRMED
+**Rule:** Existing Material UUID is the sole item identity. Every inventory record belongs to exactly one Shop. Legacy Materials are not auto-classified and receive no inferred opening stock; enablement is explicit.
+
+### BR-INV-002 — Explicit classification and units
+**Status:** CONFIRMED
+**Rule:** Categories are `FABRIC`, `BUTTON`, `ZIP`, `THREAD`, `HOOK`, `INTERLINING`, `OTHER`; units are `METRE`, `YARD`, `PIECE`, `ROLL`. No automatic conversion is allowed; PIECE/ROLL quantities are whole numbers. Shop/category/unit are immutable after movement history exists.
+
+### BR-INV-003 — Ledger and balance integrity
+**Status:** CONFIRMED
+**Rule:** Every stock change is an immutable ledger movement paired atomically with a materialized balance. `On Hand - Reserved = Available`; on-hand/available cannot become negative. Balance starts at zero; direct edits and movement update/delete are forbidden. Corrections use compensating movements. Opening stock is explicit and recorded once; stock-in and authorized adjustments use positive quantities and a reason.
+
+### BR-INV-004 — Inventory access and archive
+**Status:** CONFIRMED
+**Rule:** Main Supplier must use an explicit Shop path; Shop ADMIN manages same-Shop inventory/history; STAFF reads active inventory/availability only; VIEWER reads active inventory only. Foreign/unauthorized data is non-disclosing. Archived items are not selectable and cannot be archived with non-zero on-hand/reserved balance; authorized managers retain history access.
+
+### BR-INV-005 — No premature Work or costing behavior
+**Status:** CONFIRMED
+**Rule:** Work-linked reservation, release, consumption, return, cutting, and allocation require the real Work aggregate and remain deferred. Inventory selection beside measurement UI is not measurement history and does not reserve/deduct stock. No cost, procurement, warehouse, lot, or valuation is added.
+
 ## 8. Environment and Deployment Rules
 
 ### BR-ENV-001 — V1 Environment Progression

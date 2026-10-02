@@ -117,14 +117,27 @@ class ProjectStateValidator:
 
     def current_task(self, relative: str) -> str | None:
         text = self.read(relative)
-        section = self._current_section(text, "Current task")
         if relative.endswith("PROJECT_STATE.md"):
             section = next(
                 (line for line in text.splitlines() if "Current task:" in line),
                 "",
             )
+        elif relative.endswith("HANDOFF.md"):
+            section = self.current_handoff_section() or self._current_section(
+                text, "Current task"
+            )
+        else:
+            section = self._current_section(text, "Current task")
         match = TASK_RE.search(section)
         return match.group(0) if match else None
+
+    def current_handoff_section(self) -> str:
+        match = re.search(
+            r"^##\s+Current handoff[^\n]*\n([\s\S]*?)(?=^##\s+|\Z)",
+            self.read("docs/HANDOFF.md"),
+            re.MULTILINE | re.IGNORECASE,
+        )
+        return match.group(0) if match else ""
 
     def discover_tests(self) -> int | None:
         try:
@@ -330,9 +343,55 @@ class ProjectStateValidator:
             )
         )
         if phase4_is_activated_consistently:
-            # Clients is the first permitted business app in active Phase 4.
-            # Future domain modules stay blocked until separately implemented.
-            present = [path for path in present if path != "apps/clients"]
+            current_handoff_text = self.current_handoff_section()
+            # A task-specific confirmation is required before its business app
+            # may appear; Phase activation alone never unlocks future modules.
+            allowed = {"apps/clients"}
+            state_task = self.current_task("docs/PROJECT_STATE.md")
+            handoff_task = self.current_task("docs/HANDOFF.md")
+            if (
+                state_task == handoff_task == "T4-02"
+                and re.search(
+                    r"\bCONFIRM\s+TASK\s+T4-02\b",
+                    self.read("docs/PROJECT_STATE.md"),
+                    re.IGNORECASE,
+                )
+                and re.search(
+                    r"\bCONFIRM\s+TASK\s+T4-02\b",
+                    self.read("docs/HANDOFF.md"),
+                    re.IGNORECASE,
+                )
+            ):
+                allowed.add("apps/catalog")
+            if (
+                state_task == handoff_task == "T4-03"
+                and re.search(
+                    r"\bCONFIRM\s+TASK\s+T4-03\b",
+                    self._current_section(self.read("docs/PROJECT_STATE.md"), "Status"),
+                    re.IGNORECASE,
+                )
+                and re.search(
+                    r"\bCONFIRM\s+TASK\s+T4-03\b",
+                    current_handoff_text,
+                    re.IGNORECASE,
+                )
+            ):
+                allowed.add("apps/catalog")
+            if (
+                state_task == handoff_task == "T4-03A"
+                and re.search(
+                    r"\bCONFIRM\s+TASK\s+T4-03A\b",
+                    self._current_section(self.read("docs/PROJECT_STATE.md"), "Status"),
+                    re.IGNORECASE,
+                )
+                and re.search(
+                    r"\bCONFIRM\s+TASK\s+T4-03A\b",
+                    current_handoff_text,
+                    re.IGNORECASE,
+                )
+            ):
+                allowed.add("apps/catalog")
+            present = [path for path in present if path not in allowed]
         if present:
             self.result.error(
                 "Business module paths are outside the currently authorized phase/task: "

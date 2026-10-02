@@ -73,6 +73,17 @@ The script checks only `/api/health/live/` and `/api/health/ready/`; both must r
 
 The CSRF bootstrap endpoint returns only a masked CSRF token and sets the API-host CSRF cookie; it does not authenticate a caller or expose the refresh token. The refresh cookie remains HttpOnly, Secure in Staging, host-only, and SameSite=Lax. The allowed frontend uses credentialed requests and the returned CSRF token for refresh/logout. No broader `.birky.com` cookie domain is configured. Browser integration remains deferred until the separately authorized staging frontend is actually available (F7-01A).
 
+## One-time Main Supplier Admin bootstrap
+
+Use task `STAGING-MAIN-ADMIN-BOOTSTRAP-01` only when the staging Main Supplier login must be initialized. The `bootstrap_staging_main_admin` management command creates at most one User, does not create a Shop, refuses to promote or reset any existing User, and marks a newly created account `must_change_password=True`. It independently requires `DJANGO_ENV=staging`, settings environment `staging`, database name `sgtp_staging`, an explicit command confirmation, the Render-only enable switch, valid contact details, and a 40-character minimum password. The entrypoint runs it only when `STAGING_MAIN_ADMIN_BOOTSTRAP_ENABLED=true` and `DJANGO_ENV=staging`; the flag defaults off.
+
+For the authorized one-time operation, configure `STAGING_MAIN_ADMIN_EMAIL`, `STAGING_MAIN_ADMIN_FIRST_NAME`, `STAGING_MAIN_ADMIN_PHONE` in E.164 format, and a randomly generated one-time `STAGING_MAIN_ADMIN_PASSWORD` in Render secret settings. Enable the switch and manually deploy the accepted exact-CI-green `main` SHA. Inspect startup logs only for the generic created/no-op result; they must never reveal input values. Confirm the User through the authorized login/profile route, then immediately set the enable flag to `false` and blank all four input variables and trigger a cleanup deploy. Verify health after cleanup. Do not put secrets in Git, shell history, chat output, or logs. If the configured email or phone is already in use, the command is a successful no-op and leaves that User unchanged; investigate the existing identity separately rather than trying another password.
+
+### STAGING-MAIN-ADMIN-BOOTSTRAP-01 completion (2026-10-01)
+
+- Commit `9b8fbc94741d85e018be10fdee41b34bd283af52` passed exact-SHA Project State Validation run `36887320909` and was pushed to `main`. The staging Main Supplier Admin was created by deploy `dep-dav83hhsrm7s73e9llsg`; its startup log confirmed creation without exposing input values. A second same-SHA deploy re-ran the guard and left the account unchanged.
+- Cleanup deploy `dep-dav84r3bc2fs738dghi0` is live. The bootstrap switch is disabled, the four input variables are blank, and `/api/health/ready/` returned HTTP 200. No migration, Shop, or Production changes were made.
+
 ## Data, reset, and recovery
 
 Only synthetic/demo data is allowed. No seed users/passwords are committed; no demo data is automatically seeded during deploy. Do not upload customer data or Production backups. Persistent private business-file storage is not present; the container filesystem is ephemeral and must not be used as durable media storage.

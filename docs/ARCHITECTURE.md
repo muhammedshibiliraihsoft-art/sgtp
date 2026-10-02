@@ -77,6 +77,10 @@ The repository defines an explicit `DJANGO_ENV=staging` settings module and a Re
 
 ## Verified starter architecture
 
+### Internal Django Admin UX
+
+The native `/admin/` is an internal Main Supplier inspection and management surface. A shared Admin permission mixin resolves Main Supplier authority from persisted active superuser state on every direct/model Admin permission check; ordinary Shop staff cannot use these cross-Shop views. Shop creation and membership lifecycle stay on their existing atomic/service-backed flows. User add/delete and password-change protections remain in place. Client, Related Person, catalog, design, measurement, and material records are inspection-only in Admin unless an existing safe service-backed mutation is already defined. Private reference/image FileFields are omitted from Admin forms and tables; only non-file metadata is visible. The Admin index groups registered models using template presentation without changing Django app labels. Shop user counts use one filtered aggregate rather than one query per Shop row.
+
 The cloned starter is a conventional Django monolith:
 
 ```text
@@ -97,7 +101,8 @@ Docker        -> development container and production web/db services
 - `common` owns shared model abstractions.
 - `clients` is the first Phase 4 business domain, implemented at runtime under `apps/clients` to match existing `INSTALLED_APPS`; it uses Shop context, tenant queryset scoping, role permissions, and transactional services. Do not create a shadow `backend/apps` tree or relocate existing apps as part of T4-01.
 - No background worker, event bus, or external integration layer exists.
-- Target modules still not implemented: supplier/back office beyond existing Shop APIs, catalog/designs, measurements, materials, production workflow, billing, reports/PDFs, storage, jobs, and monitoring.
+- T4-02 implements the runtime `apps/catalog` foundation: global defaults/templates, Shop-local variants/styles/designs, immutable version history, private reference images and Shop isolation. T4-03 adds global and Shop-owned measurement definitions, person-owned immutable measurement history, explicit INCH/CM values, and a minimal Shop-owned Material reference catalog. Work/Orders, production workflow, billing, reports/PDFs, production object-storage provider selection, jobs, and monitoring remain later work.
+- T4-03A is an additive, separately approved extension to the existing Material identity: explicit inventory category/unit, zero-start Shop balance, and immutable stock-movement ledger. Legacy Materials remain unclassified and receive no inferred unit or opening stock; inventory enablement is explicit. Balance writes and ledger append are atomic under Shop→Material→Balance locks. Work allocation/reservation/consumption, procurement, warehouse, lots, costing, and frontend remain out of scope until their authorized tasks.
 - `backend/` contains settings and shared model foundation code; `frontend/` is an empty placeholder. Django project wiring and apps remain at the repository root under `core/` and `apps/`.
 - Target boundaries are `accounts` for identity/auth, `shops` for supplier/shop/membership/workspace tenancy, `clients` for clients/related persons, `catalog` for designs/measurements/materials, `works` for orders and production workflow, `billing` for invoices/payments/accounts, `reports` for reports/history/PDFs, `ai_agents` for controlled AI services, `integrations` for external adapters/webhooks, and `core` for shared primitives only.
 

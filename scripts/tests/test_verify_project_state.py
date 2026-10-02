@@ -183,6 +183,64 @@ class ValidatorTests(unittest.TestCase):
             any("apps/catalog" in error for error in result.errors), result.errors
         )
 
+    def test_phase4_t402_allows_catalog_only_with_matching_confirmation(self):
+        state = PHASE4_STATE.replace("T4-01", "T4-02") + "\nCONFIRM TASK T4-02\n"
+        handoff = PHASE4_HANDOFF.replace("T4-01", "T4-02") + "\nCONFIRM TASK T4-02\n"
+        root = make_repo(state, handoff)
+        (root / "apps/catalog").mkdir(parents=True)
+        result = self.validator(root).run()
+        self.assertTrue(result.ok, result.errors)
+
+    def test_phase4_t403_allows_catalog_with_matching_confirmation(self):
+        state = PHASE4_STATE.replace("T4-01", "T4-03")
+        state = state.replace(
+            "Current task: T4-03 is in progress.",
+            "Current task: T4-03 is in progress; CONFIRM TASK T4-03.",
+        )
+        handoff = (
+            "## Current handoff — T4-03\n"
+            "CONFIRM TASK T4-03\n" + PHASE4_HANDOFF.replace("T4-01", "T4-03")
+        )
+        root = make_repo(state, handoff)
+        (root / "apps/catalog").mkdir(parents=True)
+        result = self.validator(root).run()
+        self.assertTrue(result.ok, result.errors)
+
+    def test_phase4_t403_without_both_confirmations_rejects_catalog(self):
+        state = PHASE4_STATE.replace("T4-01", "T4-03")
+        handoff = "## Current handoff — T4-03\n" + PHASE4_HANDOFF.replace(
+            "T4-01", "T4-03"
+        )
+        root = make_repo(state, handoff)
+        (root / "apps/catalog").mkdir(parents=True)
+        result = self.validator(root).run()
+        self.assertTrue(any("apps/catalog" in error for error in result.errors))
+
+    def test_phase4_t403a_allows_catalog_only_with_matching_confirmation(self):
+        state = PHASE4_STATE.replace("T4-01", "T4-03A")
+        state = state.replace(
+            "Current task: T4-03A is in progress.",
+            "Current task: T4-03A is in progress; CONFIRM TASK T4-03A.",
+        )
+        handoff = (
+            "## Current handoff — T4-03A\n"
+            "CONFIRM TASK T4-03A\n" + PHASE4_HANDOFF.replace("T4-01", "T4-03A")
+        )
+        root = make_repo(state, handoff)
+        (root / "apps/catalog").mkdir(parents=True)
+        result = self.validator(root).run()
+        self.assertTrue(result.ok, result.errors)
+
+    def test_phase4_t403a_without_both_confirmations_rejects_catalog(self):
+        state = PHASE4_STATE.replace("T4-01", "T4-03A")
+        handoff = "## Current handoff — T4-03A\n" + PHASE4_HANDOFF.replace(
+            "T4-01", "T4-03A"
+        )
+        root = make_repo(state, handoff)
+        (root / "apps/catalog").mkdir(parents=True)
+        result = self.validator(root).run()
+        self.assertTrue(any("apps/catalog" in error for error in result.errors))
+
     def test_contradictory_task_state_is_blocking(self):
         handoff = VALID_HANDOFF.replace("B2-05 is complete", "B2-06 is complete")
         result = self.validator(make_repo(VALID_STATE, handoff)).run()

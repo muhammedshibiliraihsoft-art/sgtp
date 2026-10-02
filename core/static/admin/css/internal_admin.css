@@ -1,0 +1,102 @@
+.admin-section-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+  gap: 1rem;
+  margin-block: 1rem;
+}
+
+.admin-section {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--hairline-color, var(--border-color));
+  border-radius: 0.6rem;
+  background: var(--body-bg);
+}
+
+.admin-section h2 {
+  margin: 0;
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--hairline-color, var(--border-color));
+  color: var(--body-fg);
+  font-size: 1rem;
+}
+
+.admin-model-list {
+  margin: 0;
+  padding: 0.25rem 1rem;
+  list-style: none;
+}
+
+.admin-model-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  border-bottom: 1px solid var(--hairline-color, var(--border-color));
+}
+
+.admin-model-list li:last-child {
+  border-bottom: 0;
+}
+
+.admin-model-link {
+  font-weight: 600;
+}
+
+.admin-add-link {
+  font-size: 0.75rem;
+}
+
+.admin-status-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.45rem;
+  padding: 0.08rem 0.5rem;
+  border: 1px solid var(--hairline-color, var(--border-color));
+  border-inline-start: 3px solid var(--admin-status-accent, var(--body-quiet-color));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--body-fg) 7%, var(--body-bg));
+  color: var(--body-fg);
+  font-size: 0.72rem;
+  font-weight: 650;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.admin-status-badge--active {
+  --admin-status-accent: #198754;
+}
+
+.admin-status-badge--inactive,
+.admin-status-badge--archived {
+  --admin-status-accent: #a66a00;
+}
+
+.admin-status-badge--draft {
+  --admin-status-accent: #57606a;
+}
+
+.admin-status-badge--published {
+  --admin-status-accent: #0969da;
+}
+
+.admin-capacity {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  .admin-section-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-section h2 {
+    padding: 0.7rem 0.8rem;
+  }
+
+  .admin-model-list {
+    padding-inline: 0.8rem;
+  }
+}

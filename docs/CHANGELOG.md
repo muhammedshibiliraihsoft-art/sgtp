@@ -1,5 +1,30 @@
 # Changelog
 
+## 2026-10-02 — DJANGO-ADMIN-UX-01 local implementation
+
+- Added a native Django Admin index organized by Business, Garments & Designs, Measurements, Materials, Users & Access, and System; applied the requested BiRKy Admin branding and minimal responsive/dark-mode-compatible status styling.
+- Explicitly gated internal Admin models to persisted active Main Supplier superusers. Added read-only catalog/design/measurement/material inspections, Shop client history views, clear list/search/filter layouts, and selected relations to avoid N+1 lookups. Private FileFields are excluded from Admin forms and displays.
+- Preserved the existing safe Shop update/lifecycle path and User creation/deletion/password protections. Added 18 focused Admin tests. No model/schema/API/business-rule/dependency/frontend/deployment changes. Implementation commit `608362d6509b286ba0daa9ede4e33d39d2888a6c` passed exact-SHA GitHub Actions Project State Validation run `37017703294`.
+
+## 2026-10-02 — T4-03 Measurements and Materials implementation
+
+- Added Shop-scoped measurement definitions, localized labels, approved Men's Shirt and Kuwaiti Dishdasha seed templates, Client/Related Person measurement profiles, immutable versioned measurement sets and values, copy/compare operations, and minimal Shop-owned Material references.
+- Added explicit Shop-path APIs with role/function checks, cross-Shop non-disclosure, PostgreSQL locking/constraints, regression and concurrency tests, and refreshed the generated OpenAPI artifacts. No frontend, inventory, Work/Order, billing, Phase 5, or deployment work was included.
+- Published as implementation commit `d9ca27bbab8587c2da5ceb8c1f61f913087fdc48`; exact-SHA Project State Validation run `37006408609` completed successfully. No deployment occurred.
+
+## 2026-10-02 — T4-02 Catalog and Designs local implementation
+
+- Added the Shop-scoped `apps/catalog` foundation: locked global garment/style defaults, translations, Shop custom catalog records, reusable private image references, versioned designs, immutable published snapshots, independent design/template copies, and Main Supplier global-template controls.
+- Shop-local design publication is allowed to an active Shop ADMIN or active STAFF assigned `STITCHING`; “Tailor” is this STAFF function, not an access role. No Work, measurement, material, billing, frontend, deployment, or production storage provider was added.
+- Local validation: catalog/docs/browser focused suite 30 passed; full PostgreSQL-backed application suite 350 passed; migration drift and Django checks passed; OpenAPI had zero errors (23 existing warnings). GitHub Actions validation is tracked against the exact publication commit SHA.
+
+## 2026-10-01 — STAGING-MAIN-ADMIN-BOOTSTRAP-01 implementation
+
+- Added a staging-only, one-time Main Supplier Admin bootstrap management command and disabled-by-default Render entrypoint switch. It guards the exact staging environment/database, requires explicit confirmation and strong temporary credentials, creates no Shop, forces password change, and treats existing email/phone collisions as safe no-ops without changing accounts.
+- Added focused tests for account creation, role/password-change flags, environment/database/confirmation/secret guards, duplicate protection, and repeat-run immutability. No migration or frontend changes.
+- Validation: focused tests 9 passed; Django system check and no-migration-drift check passed; repository validator passed; Black, Flake8, Git Bash syntax check, and `git diff --check` passed. The broader local 330-test run did not complete because the local PostgreSQL server exited during the run; a retry then failed after that server was unavailable. Exact-SHA Project State Validation run `36887320909` passed for `9b8fbc94741d85e018be10fdee41b34bd283af52`.
+- Pushed to `main` as `9b8fbc94741d85e018be10fdee41b34bd283af52`. Render deploy `dep-dav83hhsrm7s73e9llsg` created the requested staging Main Supplier Admin, with no Shop created. A duplicate same-SHA deploy was a safe no-op. Cleanup deploy `dep-dav84r3bc2fs738dghi0` is live after disabling the bootstrap switch and blanking all four temporary inputs; `/api/health/ready/` returned 200. No secret values are recorded here.
+
 ## 2026-10-01 — BACKOFFICE-01 local implementation
 
 - Added a Main Supplier-only Back Office shell that reuses the current frontend sidebar, header, theme, color palette, and responsive layout. The Work page mock data is not reused.
@@ -210,3 +235,12 @@
 - Confirmed that the GitHub Actions run for the closure commit successfully passed the application suite, Django system checks, and PostgreSQL integration.
 - Confirmed T3-02-REMEDIATION is now fully CLOSED.
 - Added agent transition note regarding the shift to Codex for upcoming engineering work, maintaining all established governance and architectural rules.
+## 2026-10-02 — T4-03A Inventory & Stock Foundation (completed locally)
+
+- Added additive Shop-scoped inventory classification, explicit legacy-Material enablement, zero-start materialized balances, immutable stock ledger, explicit opening/stock-in/adjustment APIs, inventory selector/history, and archive stock protection. Existing T4-03 measurement history remains separate; no Work, costing, procurement, frontend, or deployment behavior is included.
+- Validation: focused inventory plus T4-03 measurement regressions 41 passed; full PostgreSQL-backed suite 409 passed; repository validator PASS (409 tests discovered); validator tests 32 passed; Django system check PASS; production `check --deploy` has no errors and reports 12 warnings; migration drift: no changes; OpenAPI: zero errors, 28 warnings (12 unique); Black, Flake8, schema artifact parity, and `git diff --check` PASS. Migrations were exercised on the disposable PostgreSQL test DB. At the time this implementation entry was recorded, publication was still pending; no deployment occurred.
+
+## 2026-10-02 — T4-03A publication and exact-SHA CI
+
+- Published implementation commit `1e6e79a60a7337a43e6bb73c47aacf0c947c6570` to `main` with message `feat: add shop inventory and stock ledger foundation`.
+- GitHub Actions Project State Validation run `37045373602` completed successfully for that exact SHA. Local `main`, `origin/main`, and GitHub `main` matched after push; no deployment or shared/staging/production migration occurred.

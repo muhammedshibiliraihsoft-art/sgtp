@@ -143,6 +143,18 @@ class FirstShopAdminSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
     phone = serializers.CharField(required=True, allow_blank=False)
 
+    def validate_phone(self, value):
+        """Reject invalid phone numbers as request validation, not server errors."""
+        from apps.accounts.phone_numbers import InvalidUserPhone, normalize_user_phone
+
+        try:
+            normalized = normalize_user_phone(value)
+        except InvalidUserPhone as exc:
+            raise serializers.ValidationError(str(exc)) from exc
+        if not normalized:
+            raise serializers.ValidationError("Enter an international phone number with country code.")
+        return normalized
+
     def to_internal_value(self, data):
         if "is_active" in data or "owning_shop" in data or "shop" in data:
             raise serializers.ValidationError(
