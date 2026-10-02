@@ -4,16 +4,25 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import APIException
+from apps.common.admin import MainSupplierAdminMixin, status_badge
 from .models.users import User
 from .forms import AccountChangeForm, AccountCreationForm
 
 
-class UserAdmin(BaseUserAdmin):
+class UserAdmin(MainSupplierAdminMixin, BaseUserAdmin):
     model = User
     form = AccountChangeForm
     add_form = AccountCreationForm
-    list_display = ("user_code", "full_name", "email", "phone", "is_staff", "is_active")
-    list_filter = ("is_staff", "is_active")
+    list_display = (
+        "user_code",
+        "full_name",
+        "owning_shop",
+        "email",
+        "phone",
+        "staff_status",
+        "active_status",
+    )
+    list_filter = ("owning_shop", "is_staff", "is_active")
     fieldsets = (
         (None, {"fields": ("user_code", "email", "owning_shop")}),
         (_("Personal info"), {"fields": ("first_name", "last_name")}),
@@ -30,7 +39,23 @@ class UserAdmin(BaseUserAdmin):
                 )
             },
         ),
-        (_("Important dates"), {"fields": ("last_login", "date_joined")}),
+        (
+            _("Security & activity"),
+            {
+                "fields": (
+                    "must_change_password",
+                    "auth_version",
+                    "last_login",
+                    "date_joined",
+                    "created_at",
+                    "updated_at",
+                )
+            },
+        ),
+        (
+            _("Preferences"),
+            {"fields": ("preferred_locale", "appearance_preference")},
+        ),
     )
     add_fieldsets = (
         (
@@ -50,14 +75,44 @@ class UserAdmin(BaseUserAdmin):
             },
         ),
     )
-    readonly_fields = ("user_code", "owning_shop", "is_superuser")
-    search_fields = ("user_code", "email", "first_name", "last_name", "phone")
+    readonly_fields = (
+        "user_code",
+        "owning_shop",
+        "is_superuser",
+        "must_change_password",
+        "auth_version",
+        "last_login",
+        "date_joined",
+        "created_at",
+        "updated_at",
+        "preferred_locale",
+        "appearance_preference",
+    )
+    search_fields = (
+        "user_code",
+        "first_name",
+        "last_name",
+        "email",
+        "phone",
+        "owning_shop__name",
+    )
     ordering = ("user_code",)
+    list_select_related = ("owning_shop",)
     actions = None
 
     def has_add_permission(self, request):
         # Account creation must atomically set immutable Shop ownership and membership.
         return False
+
+    @admin.display(description="Staff", ordering="is_staff")
+    def staff_status(self, obj):
+        return status_badge(
+            "ACTIVE" if obj.is_staff else "INACTIVE", "Staff" if obj.is_staff else "No"
+        )
+
+    @admin.display(description="Status", ordering="is_active")
+    def active_status(self, obj):
+        return status_badge("ACTIVE" if obj.is_active else "INACTIVE")
 
     @admin.display(description="Name")
     def full_name(self, obj):
@@ -103,7 +158,9 @@ class UserAdmin(BaseUserAdmin):
         # account's permanent password directly. T3-04A replaces that with the
         # explicit generated-credential reset action on the authorized API.
         return [
-            url for url in super().get_urls() if url.name != "auth_user_password_change"
+            url
+            for url in super().get_urls()
+            if not (url.name or "").endswith("_user_password_change")
         ]
 
 

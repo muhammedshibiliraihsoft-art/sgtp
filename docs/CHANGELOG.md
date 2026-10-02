@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-02 — DJANGO-ADMIN-UX-01 local implementation
+
+- Added a native Django Admin index organized by Business, Garments & Designs, Measurements, Materials, Users & Access, and System; applied the requested BiRKy Admin branding and minimal responsive/dark-mode-compatible status styling.
+- Explicitly gated internal Admin models to persisted active Main Supplier superusers. Added read-only catalog/design/measurement/material inspections, Shop client history views, clear list/search/filter layouts, and selected relations to avoid N+1 lookups. Private FileFields are excluded from Admin forms and displays.
+- Preserved the existing safe Shop update/lifecycle path and User creation/deletion/password protections. Added 18 focused Admin tests. No model/schema/API/business-rule/dependency/frontend/deployment changes. Validation is recorded in current state/handoff; commit/push and exact-SHA CI remain pending.
+
 ## 2026-10-02 — T4-03 Measurements and Materials implementation
 
 - Added Shop-scoped measurement definitions, localized labels, approved Men's Shirt and Kuwaiti Dishdasha seed templates, Client/Related Person measurement profiles, immutable versioned measurement sets and values, copy/compare operations, and minimal Shop-owned Material references.

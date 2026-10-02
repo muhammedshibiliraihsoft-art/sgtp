@@ -2,6 +2,10 @@
 
 ## Current handoff — T4-03 Measurements + Materials (2026-10-02)
 
+- Latest separately authorized maintenance task `DJANGO-ADMIN-UX-01` is implemented and locally validated on `main`; commit/push and exact-SHA CI are pending. The task only changes native Django Admin registration, permissions, templates, local Admin CSS, docs, and focused tests. It does not change models, migrations, APIs, business rules, dependencies, frontend source, or deployment state.
+- Django Admin UX tests: 18 passed; full PostgreSQL-backed application suite: 388 passed; validator test suite: 30 passed; Django system check PASS; production `check --deploy` exits 0 with 12 existing nonfatal OpenAPI warnings; migration drift: no changes; OpenAPI: zero errors and existing warnings; Black/Flake8/`git diff --check` PASS. No deployment occurred.
+- Before publication, run `scripts/verify_project_state.py` and inspect the complete diff. Then selectively commit task-owned changes to `main`, push `main`, and verify GitHub Actions for the exact pushed SHA. Stop after exact-SHA CI; do not deploy.
+
 - Phase 4 remains ACTIVE. T4-01, T4-02, and T4-03 are complete and published. T4-03 was confirmed with `CONFIRM TASK T4-03`; T4-04, Phase 5, frontend, and deployment remain separately gated.
 - T4-03 implementation was added to the existing `apps/catalog` runtime app: Shop-context measurement/material models, services, APIs, migrations, PostgreSQL tests, and synchronized docs/schema. No Work/Order, inventory, billing, frontend, Phase 5, or deployment work was included.
 - Validation: focused T4-03 API/concurrency tests 20 passed; full PostgreSQL-backed application suite 370 passed; repository validator PASS (370 tests discovered); validator tests 30 passed. Django system check PASS; production `check --deploy` had no errors (12 nonfatal drf-spectacular warnings); migration drift clean; OpenAPI zero errors and 28 warnings (12 unique); Black/Flake8 and `git diff --check` PASS. Implementation commit `d9ca27bbab8587c2da5ceb8c1f61f913087fdc48` passed exact-SHA Project State Validation run `37006408609`.

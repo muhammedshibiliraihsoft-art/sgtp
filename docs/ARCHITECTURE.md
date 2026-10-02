@@ -77,6 +77,10 @@ The repository defines an explicit `DJANGO_ENV=staging` settings module and a Re
 
 ## Verified starter architecture
 
+### Internal Django Admin UX
+
+The native `/admin/` is an internal Main Supplier inspection and management surface. A shared Admin permission mixin resolves Main Supplier authority from persisted active superuser state on every direct/model Admin permission check; ordinary Shop staff cannot use these cross-Shop views. Shop creation and membership lifecycle stay on their existing atomic/service-backed flows. User add/delete and password-change protections remain in place. Client, Related Person, catalog, design, measurement, and material records are inspection-only in Admin unless an existing safe service-backed mutation is already defined. Private reference/image FileFields are omitted from Admin forms and tables; only non-file metadata is visible. The Admin index groups registered models using template presentation without changing Django app labels. Shop user counts use one filtered aggregate rather than one query per Shop row.
+
 The cloned starter is a conventional Django monolith:
 
 ```text
