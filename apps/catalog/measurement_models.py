@@ -10,6 +10,7 @@ from backend.core.models import BaseModel
 from apps.catalog.models import GarmentFamily, GarmentVariant, ShopScopedCatalogModel
 from apps.clients.models import Client, RelatedPerson
 from apps.tenants.models import Tenant
+from apps.catalog.inventory_types import InventoryCategory, StockUnit
 
 
 LOCALES = (
@@ -393,7 +394,7 @@ class MeasurementValueTranslationSnapshot(BaseModel):
 
 
 class Material(BaseModel):
-    """Minimal Shop-owned fabric/material reference; contains no inventory data."""
+    """Canonical Shop-owned material identity, optionally enabled for inventory."""
 
     class Status(models.TextChoices):
         ACTIVE = "ACTIVE", "Active"
@@ -405,12 +406,24 @@ class Material(BaseModel):
     name = models.CharField(max_length=160)
     code = models.SlugField(max_length=64, blank=True)
     description = models.TextField(blank=True)
+    inventory_category = models.CharField(
+        max_length=16, choices=InventoryCategory.choices, blank=True, default=""
+    )
+    stock_unit = models.CharField(
+        max_length=8, choices=StockUnit.choices, blank=True, default=""
+    )
     status = models.CharField(
         max_length=8, choices=Status.choices, default=Status.ACTIVE
     )
 
     class Meta:
         ordering = ("name", "id")
+        indexes = [
+            models.Index(
+                fields=("tenant", "inventory_category", "status"),
+                name="catalog_material_inventory_idx",
+            )
+        ]
         constraints = [
             models.UniqueConstraint(
                 fields=("tenant", "code"),
@@ -421,27 +434,86 @@ class Material(BaseModel):
                 condition=Q(status__in=("ACTIVE", "ARCHIVED")),
                 name="material_status_valid",
             ),
+            models.CheckConstraint(
+                condition=(
+                    Q(inventory_category="", stock_unit="")
+                    | Q(
+                        inventory_category__in=InventoryCategory.values,
+                        stock_unit__in=StockUnit.values,
+                    )
+                ),
+                name="material_inventory_classification_valid",
+            ),
         ]
 
     def save(self, *args, **kwargs):
         if not self._state.adding:
             previous = (
-                type(self).all_objects.filter(pk=self.pk).values("status").first()
+                type(self)
+                .all_objects.filter(pk=self.pk)
+                .values("status", "tenant_id", "inventory_category", "stock_unit")
+                .first()
             )
+            if (
+                previous
+                and previous["status"] != self.Status.ARCHIVED
+                and self.status == self.Status.ARCHIVED
+                and previous["inventory_category"]
+            ):
+                # Keep the invariant at the model boundary as well as in the
+                # locked archive service, so ordinary save paths cannot hide
+                # inventory that still has stock or reservations.
+                from apps.catalog.inventory_models import InventoryBalance
+
+                balance = InventoryBalance.objects.filter(
+                    material_id=self.pk,
+                    tenant_id=previous["tenant_id"],
+                    deleted__isnull=True,
+                ).first()
+                if balance and (balance.on_hand != 0 or balance.reserved != 0):
+                    raise ValidationError(
+                        "Material cannot be archived while inventory remains."
+                    )
             if previous and previous["status"] == self.Status.ARCHIVED:
                 if self.status != self.Status.ARCHIVED:
                     raise ValidationError("Archived Materials cannot be restored.")
                 original = (
                     type(self)
                     .all_objects.filter(pk=self.pk)
-                    .values("tenant_id", "name", "code", "description")
+                    .values(
+                        "tenant_id",
+                        "name",
+                        "code",
+                        "description",
+                        "inventory_category",
+                        "stock_unit",
+                    )
                     .first()
                 )
                 if original and any(
                     original[field] != getattr(self, field)
-                    for field in ("tenant_id", "name", "code", "description")
+                    for field in (
+                        "tenant_id",
+                        "name",
+                        "code",
+                        "description",
+                        "inventory_category",
+                        "stock_unit",
+                    )
                 ):
                     raise ValidationError("Archived Materials cannot be edited.")
+            if previous and any(
+                previous[field] != getattr(self, attribute)
+                for field, attribute in (
+                    ("tenant_id", "tenant_id"),
+                    ("inventory_category", "inventory_category"),
+                    ("stock_unit", "stock_unit"),
+                )
+            ):
+                if self.stock_movements.exists():
+                    raise ValidationError(
+                        "Shop, category, and stock unit are immutable after stock history exists."
+                    )
         return super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):

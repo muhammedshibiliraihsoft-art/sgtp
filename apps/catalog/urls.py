@@ -42,8 +42,58 @@ from apps.catalog.measurement_views import (
     MeasurementSetListCreateView,
     RelatedPersonMeasurementProfilesView,
 )
+from apps.catalog.inventory_views import (
+    EnableMaterialInventoryView,
+    InventoryAdjustmentView,
+    InventoryItemDetailView,
+    InventoryItemListCreateView,
+    MaterialInventoryArchiveView,
+    OpeningStockView,
+    StockInView,
+    StockMovementListView,
+)
 
 urlpatterns = [
+    path(
+        "shops/<uuid:shop_id>/inventory/items/",
+        InventoryItemListCreateView.as_view(),
+        name="inventory-item-list",
+    ),
+    path(
+        "shops/<uuid:shop_id>/inventory/items/<uuid:material_id>/",
+        InventoryItemDetailView.as_view(),
+        name="inventory-item-detail",
+    ),
+    path(
+        "shops/<uuid:shop_id>/materials/<uuid:material_id>/enable-inventory/",
+        EnableMaterialInventoryView.as_view(),
+        name="material-enable-inventory",
+    ),
+    path(
+        "shops/<uuid:shop_id>/inventory/items/<uuid:material_id>/movements/",
+        StockMovementListView.as_view(),
+        name="inventory-movement-list",
+    ),
+    path(
+        "shops/<uuid:shop_id>/inventory/items/<uuid:material_id>/opening/",
+        OpeningStockView.as_view(),
+        name="inventory-opening-stock",
+    ),
+    path(
+        "shops/<uuid:shop_id>/inventory/items/<uuid:material_id>/stock-in/",
+        StockInView.as_view(),
+        name="inventory-stock-in",
+    ),
+    path(
+        "shops/<uuid:shop_id>/inventory/items/<uuid:material_id>/adjust/",
+        InventoryAdjustmentView.as_view(),
+        name="inventory-adjustment",
+    ),
+    path(
+        "shops/<uuid:shop_id>/inventory/items/<uuid:material_id>/archive/",
+        MaterialInventoryArchiveView.as_view(),
+        name="inventory-item-archive",
+    ),
     path(
         "shops/<uuid:shop_id>/measurement-definitions/",
         MeasurementDefinitionListCreateView.as_view(),

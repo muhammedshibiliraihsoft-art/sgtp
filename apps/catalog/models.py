@@ -546,3 +546,7 @@ from apps.catalog.measurement_models import (  # noqa: E402, F401
     MeasurementValue,
     MeasurementValueTranslationSnapshot,
 )
+from apps.catalog.inventory_models import (  # noqa: E402, F401
+    InventoryBalance,
+    StockMovement,
+)

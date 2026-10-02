@@ -377,6 +377,20 @@ class ProjectStateValidator:
                 )
             ):
                 allowed.add("apps/catalog")
+            if (
+                state_task == handoff_task == "T4-03A"
+                and re.search(
+                    r"\bCONFIRM\s+TASK\s+T4-03A\b",
+                    self._current_section(self.read("docs/PROJECT_STATE.md"), "Status"),
+                    re.IGNORECASE,
+                )
+                and re.search(
+                    r"\bCONFIRM\s+TASK\s+T4-03A\b",
+                    current_handoff_text,
+                    re.IGNORECASE,
+                )
+            ):
+                allowed.add("apps/catalog")
             present = [path for path in present if path not in allowed]
         if present:
             self.result.error(

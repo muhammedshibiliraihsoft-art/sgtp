@@ -1,5 +1,9 @@
 # Architectural Decisions
 
+## 2026-10-02 — Approve T4-03A Shop-scoped inventory foundation
+
+The user approved `T4-03A — Inventory & Stock Foundation` as an additive Phase 4 task following the completed T4-03. The existing Material UUID remains canonical. Inventory category/unit are explicit, legacy Materials are not inferred or given opening stock, and all stock mutations require immutable ledger provenance plus atomic balance maintenance. Supported V1 categories are FABRIC/BUTTON/ZIP/THREAD/HOOK/INTERLINING/OTHER; units are METRE/YARD/PIECE/ROLL with no conversion. Work-linked allocation/reservation/consumption and financial costing remain deferred until their authorized domain tasks. See `docs/BUSINESS_RULES.md`, `docs/DATABASE.md`, and `docs/API.md` for exact contracts.
+
 ## 2026-09-25 — Establish repository-contained continuity
 
 The repository will contain explicit agent instructions and persistent state, architecture, decision, plan, API, security, database, changelog, and handoff documents. This makes work transferable between agents and IDEs without relying on conversation history.

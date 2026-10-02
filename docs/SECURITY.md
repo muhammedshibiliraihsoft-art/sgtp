@@ -53,7 +53,11 @@ The 2026-09-29 rebaseline resolves Shop policy: ordinary Shop discovery is membe
 
 Every T4-03 request resolves an explicit Shop through the existing authenticated URL-path context. Measurement PII and history are available only to that Shop's ADMIN, Main Supplier operating inside that selected Shop, or active STAFF assigned the `MEASUREMENT` Work Function. The function is an additional eligibility check and cannot authorize a foreign/inactive membership. VIEWER and STAFF without the function are denied measurement access. Related Person measurement profiles remain nested under their Primary Client, retaining the existing billing-owner relationship without adding billing behavior. Foreign person/profile/set/definition objects are filtered to the selected Shop and return non-disclosing not-found responses.
 
-Saved measurement sets, values, and label snapshots are immutable; history corrections create a new set/version. Definitions with history and Materials are archived rather than deleted. Measurement units must be explicitly `INCH` or `CM`; comparison never converts units. Materials contain no inventory or procurement data. No frontend authorization assumption is permitted.
+Saved measurement sets, values, and label snapshots are immutable; history corrections create a new set/version. Definitions with history and Materials are archived rather than deleted. Measurement units must be explicitly `INCH` or `CM`; comparison never converts units. No frontend authorization assumption is permitted.
+
+## T4-03A inventory authorization and integrity
+
+Inventory uses the same explicit Shop context and Material access policy: Main Supplier must select a Shop; same-Shop ADMIN manages; STAFF/VIEWER read active items only; no Work Function grants mutation authority. Every detail, selector, movement, and mutation is constrained to that Shop, with foreign records returning non-disclosing not-found. Movement history is read-only; balance writes are limited to atomic services that append a ledger entry. Admin registration is inspection-only. No Work reservation, client-supplied Shop/actor/balance, frontend permission trust, or public inventory route is introduced.
 
 ## Future review areas
 

@@ -5,6 +5,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
+from rest_framework.fields import ErrorDetail
 
 from apps.catalog.measurement_models import (
     Material,
@@ -16,6 +17,7 @@ from apps.catalog.measurement_models import (
     MeasurementValue,
     MeasurementValueTranslationSnapshot,
 )
+from apps.catalog.inventory_models import InventoryBalance
 from apps.catalog.models import GarmentFamily, GarmentVariant
 from apps.clients.models import Client
 from apps.tenants.models import MembershipWorkFunction, Tenant, TenantMember
@@ -429,6 +431,22 @@ def archive_material(*, shop_id, actor, material_id):
     )
     if material is None:
         raise NotFound()
+    balance = (
+        InventoryBalance.objects.select_for_update()
+        .filter(material=material, tenant=shop, deleted__isnull=True)
+        .first()
+    )
+    if balance and (balance.on_hand != 0 or balance.reserved != 0):
+        raise ValidationError(
+            {
+                "status": [
+                    ErrorDetail(
+                        "Stock must be zero before this item can be archived.",
+                        code="inventory_stock_remaining",
+                    )
+                ]
+            }
+        )
     material.status = Material.Status.ARCHIVED
     material.updated_by = actor
     material.save(update_fields=("status", "updated_by", "updated_at"))

@@ -1,5 +1,11 @@
 # Database & Migration Strategy
 
+## T4-03A inventory additions (implemented locally; not published or deployed)
+
+The follow-up migration `catalog.0009_stockmovement_stock_movement_piece_roll_whole` adds a database check that piece/roll ledger quantities are whole numbers. Model and service validation likewise reject fractional piece/roll balance quantities.
+
+Additive migrations `catalog.0008_inventorybalance_stockmovement_and_more` and `catalog.0009_stockmovement_stock_movement_piece_roll_whole` add optional `Material.inventory_category`/`stock_unit`, `InventoryBalance`, and `StockMovement`, then enforce whole-number PIECE/ROLL movement quantities. Existing Material rows retain UUID/Shop/metadata and receive blank classification (not guessed); no data migration or opening-stock inference occurs. Explicit enablement creates one zeroed `InventoryBalance` per Material. `StockMovement` records positive Decimal quantity, movement type, unit snapshot, Shop/Material, before/after on-hand and reserved snapshots, actor, reason, and timestamps. Database checks enforce supported movement/unit/category values, positive quantity, nonnegative snapshots/balances, reserved ≤ on-hand, and integer quantities for PIECE/ROLL; uniqueness enforces one balance per Material. Shop/material agreement is revalidated in services/models. Balances are materialized for reads but can only be changed by atomic stock services; movements are append-only. Work allocation relations are intentionally absent. Migrations are validated by the disposable PostgreSQL test database; the local development database has not been migrated for T4-03A.
+
 ## Engine & Persistence
 
 - **Primary Database Engine:** PostgreSQL 15.

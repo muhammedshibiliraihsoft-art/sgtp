@@ -235,3 +235,7 @@
 - Confirmed that the GitHub Actions run for the closure commit successfully passed the application suite, Django system checks, and PostgreSQL integration.
 - Confirmed T3-02-REMEDIATION is now fully CLOSED.
 - Added agent transition note regarding the shift to Codex for upcoming engineering work, maintaining all established governance and architectural rules.
+## 2026-10-02 — T4-03A Inventory & Stock Foundation (completed locally)
+
+- Added additive Shop-scoped inventory classification, explicit legacy-Material enablement, zero-start materialized balances, immutable stock ledger, explicit opening/stock-in/adjustment APIs, inventory selector/history, and archive stock protection. Existing T4-03 measurement history remains separate; no Work, costing, procurement, frontend, or deployment behavior is included.
+- Validation: focused inventory plus T4-03 measurement regressions 41 passed; full PostgreSQL-backed suite 409 passed; repository validator PASS (409 tests discovered); validator tests 32 passed; Django system check PASS; production `check --deploy` has no errors and reports 12 existing nonfatal OpenAPI warnings; migration drift: no changes; OpenAPI: zero errors, 28 warnings (12 unique); Black, Flake8, schema artifact parity, and `git diff --check` PASS. Migrations were exercised on the disposable PostgreSQL test DB. Work is local and uncommitted/unpublished; no deployment or push occurred.

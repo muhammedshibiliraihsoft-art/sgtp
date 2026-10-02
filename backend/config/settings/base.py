@@ -242,6 +242,12 @@ SPECTACULAR_SETTINGS = {
     },
     "COMPONENT_SPLIT_REQUEST": True,
     "ENUM_NAME_OVERRIDES": {
+        "StockUnit": [
+            ("METRE", "Metre"),
+            ("YARD", "Yard"),
+            ("PIECE", "Piece"),
+            ("ROLL", "Roll"),
+        ],
         "Locale": [
             ("en", "English"),
             ("ar-KW", "Arabic (Kuwait)"),

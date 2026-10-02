@@ -2880,6 +2880,332 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/shops/{shop_id}/inventory/items/:
+    get:
+      operationId: inventory_items_list
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: query
+        name: category
+        schema:
+          type: string
+          enum:
+          - BUTTON
+          - FABRIC
+          - HOOK
+          - INTERLINING
+          - OTHER
+          - THREAD
+          - ZIP
+      - in: query
+        name: include_archived
+        schema:
+          type: boolean
+      - in: query
+        name: search
+        schema:
+          type: string
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryItemPage'
+          description: ''
+    post:
+      operationId: inventory_items_create
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryItemCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/InventoryItemCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/InventoryItemCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryBalance'
+          description: ''
+  /api/v1/shops/{shop_id}/inventory/items/{material_id}/:
+    get:
+      operationId: inventory_item_detail
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: material_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryBalance'
+          description: ''
+    patch:
+      operationId: inventory_item_update
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: material_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedInventoryItemUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedInventoryItemUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedInventoryItemUpdateRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryBalance'
+          description: ''
+  /api/v1/shops/{shop_id}/inventory/items/{material_id}/adjust/:
+    post:
+      operationId: inventory_adjust_stock
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: material_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryAdjustmentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/InventoryAdjustmentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/InventoryAdjustmentRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryBalance'
+          description: ''
+  /api/v1/shops/{shop_id}/inventory/items/{material_id}/archive/:
+    post:
+      operationId: inventory_item_archive
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: material_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryBalance'
+          description: ''
+  /api/v1/shops/{shop_id}/inventory/items/{material_id}/movements/:
+    get:
+      operationId: inventory_movement_history
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: material_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockMovementPage'
+          description: ''
+  /api/v1/shops/{shop_id}/inventory/items/{material_id}/opening/:
+    post:
+      operationId: api_v1_shops_inventory_items_opening_create
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: material_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockMutationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StockMutationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StockMutationRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryBalance'
+          description: ''
+  /api/v1/shops/{shop_id}/inventory/items/{material_id}/stock-in/:
+    post:
+      operationId: api_v1_shops_inventory_items_stock_in_create
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: material_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockMutationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StockMutationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StockMutationRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryBalance'
+          description: ''
   /api/v1/shops/{shop_id}/materials/:
     get:
       operationId: materials_list
@@ -3033,6 +3359,47 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Material'
+          description: ''
+  /api/v1/shops/{shop_id}/materials/{material_id}/enable-inventory/:
+    post:
+      operationId: inventory_enable_legacy_material
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: material_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryEnableRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/InventoryEnableRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/InventoryEnableRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryBalance'
           description: ''
   /api/v1/shops/{shop_id}/measurement-definitions/:
     get:
@@ -3603,6 +3970,24 @@ components:
       - next
       - previous
       - results
+    CategoryEnum:
+      enum:
+      - FABRIC
+      - BUTTON
+      - ZIP
+      - THREAD
+      - HOOK
+      - INTERLINING
+      - OTHER
+      type: string
+      description: |-
+        * `FABRIC` - Fabric
+        * `BUTTON` - Button
+        * `ZIP` - Zip
+        * `THREAD` - Thread
+        * `HOOK` - Hook
+        * `INTERLINING` - Interlining
+        * `OTHER` - Other
     Client:
       type: object
       properties:
@@ -3896,6 +4281,14 @@ components:
       description: |-
         * `DRAFT` - Draft
         * `PUBLISHED` - Published
+    DirectionEnum:
+      enum:
+      - IN
+      - OUT
+      type: string
+      description: |-
+        * `IN` - IN
+        * `OUT` - OUT
     DuplicateMatch:
       type: object
       properties:
@@ -4096,6 +4489,133 @@ components:
           type: string
       required:
       - status
+    InventoryAdjustmentRequest:
+      type: object
+      properties:
+        quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 300
+        direction:
+          $ref: '#/components/schemas/DirectionEnum'
+      required:
+      - direction
+      - quantity
+      - reason
+    InventoryBalance:
+      type: object
+      properties:
+        material_id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        code:
+          type: string
+          readOnly: true
+        category:
+          type: string
+          readOnly: true
+        unit:
+          type: string
+          readOnly: true
+        status:
+          type: string
+          readOnly: true
+        on_hand:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+          readOnly: true
+        reserved:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+          readOnly: true
+        available:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - available
+      - category
+      - code
+      - created_at
+      - material_id
+      - name
+      - on_hand
+      - reserved
+      - status
+      - unit
+      - updated_at
+    InventoryEnableRequest:
+      type: object
+      properties:
+        category:
+          $ref: '#/components/schemas/CategoryEnum'
+        stock_unit:
+          $ref: '#/components/schemas/StockUnit'
+      required:
+      - category
+      - stock_unit
+    InventoryItemCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+        code:
+          type: string
+          maxLength: 64
+          pattern: ^[-a-zA-Z0-9_]+$
+        description:
+          type: string
+        category:
+          $ref: '#/components/schemas/CategoryEnum'
+        stock_unit:
+          $ref: '#/components/schemas/StockUnit'
+      required:
+      - category
+      - name
+      - stock_unit
+    InventoryItemPage:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          format: uri
+          nullable: true
+        previous:
+          type: string
+          format: uri
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/InventoryBalance'
+      required:
+      - count
+      - next
+      - previous
+      - results
     Locale:
       enum:
       - en
@@ -4613,6 +5133,26 @@ components:
       - functions
       - membership_id
       - shop_id
+    MovementTypeEnum:
+      enum:
+      - OPENING
+      - STOCK_IN
+      - RESERVE
+      - RELEASE
+      - CONSUME
+      - RETURN
+      - ADJUSTMENT_IN
+      - ADJUSTMENT_OUT
+      type: string
+      description: |-
+        * `OPENING` - Opening stock
+        * `STOCK_IN` - Stock in
+        * `RESERVE` - Reserve
+        * `RELEASE` - Release
+        * `CONSUME` - Consume
+        * `RETURN` - Return
+        * `ADJUSTMENT_IN` - Adjustment in
+        * `ADJUSTMENT_OUT` - Adjustment out
     NullEnum:
       enum:
       - null
@@ -4824,6 +5364,23 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TranslationInputRequest'
+    PatchedInventoryItemUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+        code:
+          type: string
+          maxLength: 64
+          pattern: ^[-a-zA-Z0-9_]+$
+        description:
+          type: string
+        category:
+          $ref: '#/components/schemas/CategoryEnum'
+        stock_unit:
+          $ref: '#/components/schemas/StockUnit'
     PatchedMaterialPatchRequest:
       type: object
       properties:
@@ -5324,6 +5881,127 @@ components:
       description: |-
         * `ACTIVE` - Active
         * `ARCHIVED` - Archived
+    StockMovement:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        shop_id:
+          type: string
+          format: uuid
+          readOnly: true
+        material_id:
+          type: string
+          format: uuid
+          readOnly: true
+        movement_type:
+          allOf:
+          - $ref: '#/components/schemas/MovementTypeEnum'
+          readOnly: true
+        quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+          readOnly: true
+        unit_snapshot:
+          allOf:
+          - $ref: '#/components/schemas/StockUnit'
+          readOnly: true
+        on_hand_before:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+          readOnly: true
+        on_hand_after:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+          readOnly: true
+        reserved_before:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+          readOnly: true
+        reserved_after:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+          readOnly: true
+        actor_id:
+          type: string
+          format: uuid
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - actor_id
+      - created_at
+      - id
+      - material_id
+      - movement_type
+      - on_hand_after
+      - on_hand_before
+      - quantity
+      - reason
+      - reserved_after
+      - reserved_before
+      - shop_id
+      - unit_snapshot
+    StockMovementPage:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          format: uri
+          nullable: true
+        previous:
+          type: string
+          format: uri
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/StockMovement'
+      required:
+      - count
+      - next
+      - previous
+      - results
+    StockMutationRequest:
+      type: object
+      properties:
+        quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 300
+      required:
+      - quantity
+      - reason
+    StockUnit:
+      enum:
+      - METRE
+      - YARD
+      - PIECE
+      - ROLL
+      type: string
+      description: |-
+        * `METRE` - Metre
+        * `YARD` - Yard
+        * `PIECE` - Piece
+        * `ROLL` - Roll
     StyleImage:
       type: object
       properties:

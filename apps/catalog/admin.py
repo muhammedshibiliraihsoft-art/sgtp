@@ -93,6 +93,8 @@ CATALOG_MODELS = (
     measurements.MeasurementValue,
     measurements.MeasurementValueTranslationSnapshot,
     measurements.Material,
+    catalog.InventoryBalance,
+    catalog.StockMovement,
 )
 
 for model in CATALOG_MODELS:

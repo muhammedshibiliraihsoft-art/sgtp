@@ -1,6 +1,16 @@
 # Handoff
 
-## Current handoff — T4-03 Measurements + Materials (2026-10-02)
+## Current handoff — T4-03A Inventory & Stock Foundation (2026-10-02)
+
+- T4-03A is explicitly authorized (`CONFIRM TASK T4-03A`) and complete locally, uncommitted, and unpublished. It adds inventory to the existing `apps/catalog` Material identity; T4-03 remains historically complete with its original reference-only scope. T4-04 has not started and is not authorized.
+- Current local changes are limited to T4-03A implementation, additive `catalog.0008`/`0009` migrations, regression/concurrency tests, validator task allowance, generated schema, and canonical documentation. No frontend, Work aggregate, billing/costing, Phase 5, staging migration, deployment, commit, or push is included.
+- Implemented so far: controlled categories/units; explicit enablement for legacy Materials without inferred values/opening stock; zero-initialized Shop-scoped balance; atomic opening/stock-in/adjustment ledger services; immutable movement history; active inventory selector and management APIs; archive blocked while on-hand/reserved quantities remain; archived history stays readable to authorized managers. Work-linked reserve/release/consume/return remains future integration with the real Work model.
+- Final validation: focused inventory + T4-03 measurement regressions 41 passed; full PostgreSQL-backed suite 409 passed; repository validator PASS (409 discovered); validator tests 32 passed; Django check PASS; production deploy check no errors (12 existing nonfatal OpenAPI warnings); migration drift PASS; OpenAPI zero errors/28 warnings (12 unique); Black, Flake8, schema parity, and `git diff --check` PASS. Changes remain local, uncommitted, and unpublished.
+- PostgreSQL 15 was started locally from the existing initialized `pgdata` cluster after read-only verification; no reinitialization occurred. Testing uses disposable `test_devdb`; no staging or production database was accessed.
+- Preserve UUID Material identities and Measurement history. Existing Materials migrate with blank inventory classification and no fabricated stock. Inventory classification must be explicitly enabled before selector visibility. Every mutation uses Shop→Material→Balance lock order.
+- Next task: none authorized. Stop after T4-03A; do not start T4-04, Phase 5, frontend, or deployment.
+
+## Historical handoff — T4-03 Measurements + Materials (2026-10-02)
 
 - Latest separately authorized maintenance task `DJANGO-ADMIN-UX-01` is implemented, published to `main`, and exact-SHA CI-verified. The task only changes native Django Admin registration, permissions, templates, local Admin CSS, docs, and focused tests. It does not change models, migrations, APIs, business rules, dependencies, frontend source, or deployment state.
 - Django Admin UX tests: 18 passed; full PostgreSQL-backed application suite: 388 passed; validator test suite: 30 passed; Django system check PASS; production `check --deploy` exits 0 with 12 existing nonfatal OpenAPI warnings; migration drift: no changes; OpenAPI: zero errors and existing warnings; Black/Flake8/`git diff --check` PASS. Implementation SHA `608362d6509b286ba0daa9ede4e33d39d2888a6c` passed GitHub Actions Project State Validation run `37017703294`. No deployment occurred.
@@ -43,7 +53,7 @@ The separate API-DOC-REFRESH-01 maintenance task is committed and published at c
 API-BROWSABLE-PORTAL-01 is a published historical maintenance task; it did not authorize or implement T4-02.
 T3-05A — Staging Backend Foundation — remains complete, committed, pushed, exact-SHA CI-green, and live-verified. Staging remains on the verified provider hostname; custom-domain DNS/TLS and frontend browser integration are deferred. Derive current `HEAD` from Git. The T4-01 implementation SHA and exact-CI run are recorded in `docs/PROJECT_STATE.md` and `docs/CHANGELOG.md`.
 
-`FRONTEND-DELIVERY-LOCK-01` established Contract-First Paired Delivery and the UI Reference Gate. The later-approved `PHASE4-PARALLEL-UNBLOCK-01` clarification allows backend Phase 4/5/6 and frontend integration to progress in parallel: frontend completion is not a backend prerequisite, while each frontend business slice still follows acceptance of its backend contract. The frontend foundation branch remains isolated and must not be modified from this worktree. Phase 4 is active; T4-01/T4-02/T4-03 are published. T4-04, Phase 5, and frontend tasks remain separately gated.
+`FRONTEND-DELIVERY-LOCK-01` established Contract-First Paired Delivery and the UI Reference Gate. The later-approved `PHASE4-PARALLEL-UNBLOCK-01` clarification allows backend Phase 4/5/6 and frontend integration to progress in parallel: frontend completion is not a backend prerequisite, while each frontend business slice still follows acceptance of its backend contract. The frontend foundation branch remains isolated and must not be modified from this worktree. Phase 4 is active; T4-01/T4-02/T4-03 are published, and T4-03A is the current separately authorized inventory task. T4-04, Phase 5, and frontend tasks remain separately gated.
 
 Derive current `HEAD`/`main` from Git rather than storing a current SHA in this handoff. Do not begin T4-04, Phase 5, or frontend work without separate authorization. Do not modify/merge frontend work. No deployment is allowed for T4-03.
 

@@ -41,7 +41,7 @@ Seed only these approved mappings: Men's Shirt — Full Length, Shoulder Width, 
 
 Values may be partial. Each value requires an explicit Decimal and `INCH` or `CM`; no default, conversion, or BODY/GARMENT/FINISHED distinction. Sets/values/snapshot labels cannot be edited or deleted; corrections create a new version. Copying creates independent value rows and records `copied_from`. Compare only within the same profile; return a difference only when units match, and return both raw values/units without conversion when they differ. Historical labels stay stable if reusable definition translations later change. Shop custom definitions are reusable only inside the Shop and mapped family/optional variant; require an English canonical label; archive rather than delete or restore.
 
-Materials: only UUID, required Shop, name, optional Shop-local code, description, ACTIVE/ARCHIVED state, audit fields and timestamps. ADMIN/Main Supplier selected-Shop can create/update/archive; STAFF and VIEWER read active records only. Do not add material units, quantity, inventory, reservations, purchase/procurement, suppliers, warehouse, lots, BOM, or costing.
+Materials in T4-03: only UUID, required Shop, name, optional Shop-local code, description, ACTIVE/ARCHIVED state, audit fields and timestamps. T4-03A is a later additive task and does not rewrite this completed contract.
 
 API: `/api/v1/shops/{shop_id}/measurement-definitions/` (GET/POST), definition detail (GET/PATCH), and `/archive/`; client-nested `/clients/{client_id}/measurement-profiles/`, profile detail, `/sets/` GET/POST, set detail GET, set `/copy/` POST, and profile `/compare/` GET; Related Person equivalents nested under `/clients/{client_id}/related-persons/{related_person_id}/measurement-profiles/`; `/materials/` (GET/POST), material detail (GET/PATCH), and `/archive/` POST. No hard-delete or Work-specific route. Use page-number pagination, stable ordering, selected-Shop filtering, and uniform non-disclosing 404 for foreign/missing nested records.
 
@@ -60,8 +60,14 @@ Objective: enforce domain rules outside views. Dependencies: T4-04. Steps: trans
 ### T4-06 Domain integration validation
 Objective: verify the complete shop workflow before billing. Dependencies: T4-05. Steps: API integration scenario from request to completed; verify data links and isolation. DoD: documented evidence.
 
+## T4-03A — Inventory & Stock Foundation (separately approved)
+
+Objective: extend canonical Shop-owned Material records with explicit inventory classification, safe balance, and immutable stock ledger. Existing Materials keep UUID and receive no inferred category/unit or opening stock; inventory enablement is explicit and initializes zero balance. Categories: FABRIC/BUTTON/ZIP/THREAD/HOOK/INTERLINING/OTHER. Units: METRE/YARD/PIECE/ROLL; no conversions, fractional PIECE/ROLL, or negative stock. Main Supplier must select a Shop; ADMIN manages and adjusts; STAFF/VIEWER read active inventory only. Opening, stock-in, and reasoned adjustments append ledger entries atomically with balance changes. Archive requires zero on-hand and reserved and preserves readable history. No measurement-history change, Work, reservation/consumption API, procurement, costing, frontend, or deployment.
+
+Files: additive code/migration/tests under `apps/catalog/`, API and generated schema artifacts, validator allowance gated on explicit T4-03A confirmation in current state/handoff, and canonical inventory documentation. Validation: focused API/model tests, PostgreSQL concurrency (oversell, stock-in, adjustment, enablement, archive race), T4-03 measurement regressions, full PostgreSQL suite, project validator/tests, Django/deploy checks, migration drift, OpenAPI/schema parity, Black/Flake8, `git diff --check`. DoD requires verified results and state/handoff update; stop afterward without T4-04.
+
 ## 13. Task Dependency Graph
-`T4-01 → T4-02 → T4-03 → T4-04 → T4-05 → T4-06`.
+`T4-01 → T4-02 → T4-03 → T4-03A → T4-04 → T4-05 → T4-06`.
 ## 14. Expected Files / Folders
 For T4-01, use runtime `apps/clients/`, `backend/config/settings/base.py`, and `core/urls.py`, with migrations, serializers/views/URLs, tests, and domain docs. Do not create a shadow `backend/apps/clients` package or relocate existing apps. Later task paths are planned separately and must follow the live repository's Django import structure when each task is activated.
 ## 15. Expected New Files
