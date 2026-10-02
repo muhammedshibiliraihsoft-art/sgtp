@@ -13,7 +13,8 @@ import { BrandLogo } from './components/BrandLogo'
 import { AuthProvider } from './services/AuthContext'
 import { useAuth } from './services/useAuth'
 import { BackOfficeDashboard, CreateShopPage, ShopDetailPage, ShopListPage } from './backoffice/BackOfficePages'
-
+import { ClientsPage } from './features/clients/ClientsPage'
+import { ClientDetailPage } from './features/clients/ClientDetailPage'
 import desktopImg from './assets/images/login/desktop.png'
 import phoneImg from './assets/images/login/phone.png'
 import tabletPortraitImg from './assets/images/login/tablet-portrait.png'
@@ -386,7 +387,7 @@ function DesktopSidebar() {
         <NavLink to="/" end className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><LayoutDashboard size={18} /> {t('nav.dashboard')}</NavLink>
         <NavLink to="/work" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Scissors size={18} /> {t('nav.work')}</NavLink>
         <div className="nav-link-desktop nav-disabled" aria-disabled="true"><ClipboardList size={18} /> {t('nav.orders')}</div>
-        <div className="nav-link-desktop nav-disabled" aria-disabled="true"><UsersRound size={18} /> {t('nav.clients')}</div>
+        <NavLink to="/clients" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><UsersRound size={18} /> {t('nav.clients')}</NavLink>
         <div className="nav-link-desktop nav-disabled" aria-disabled="true"><CreditCard size={18} /> {t('nav.billing')}</div>
       </nav>
 
@@ -501,7 +502,7 @@ function BottomNavigation({ onMoreClick }: { onMoreClick: () => void }) {
       <NavLink to="/" end className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}><LayoutDashboard size={20} />{t('nav.dashboard')}</NavLink>
       <NavLink to="/work" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}><Scissors size={20} />{t('nav.work')}</NavLink>
       <div className="nav-item nav-disabled" aria-disabled="true"><ClipboardList size={20} />{t('nav.orders')}</div>
-      <div className="nav-item nav-disabled" aria-disabled="true"><UsersRound size={20} />{t('nav.clients')}</div>
+      <NavLink to="/clients" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}><UsersRound size={20} />{t('nav.clients')}</NavLink>
       <button className="nav-item" onClick={onMoreClick}><MoreHorizontal size={20} />{t('nav.more')}</button>
     </nav>
   )
@@ -700,6 +701,8 @@ function Workspace() {
       <TopHeader theme={theme} setTheme={setTheme} palette={palette} setPalette={setPalette} />
       <Routes>
         <Route path="/work" element={<WorkPreviewPage />} />
+        <Route path="/clients" element={<ClientsPage />} />
+        <Route path="/clients/:clientId" element={<ClientDetailPage />} />
         <Route path="*" element={<div className="content-wrap"><h1 style={{fontSize:'24px'}}>{location.pathname === '/' ? 'Dashboard' : 'Preview'}</h1><p style={{color:'var(--color-text-muted)'}}>Navigate to Work to see the layout.</p><Link to="/work" style={{color:'var(--color-primary)'}}>Go to Work</Link></div>} />
       </Routes>
     </main>

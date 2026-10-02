@@ -63,7 +63,7 @@ describe('Main Supplier Back Office', () => {
     fireEvent.change(screen.getByLabelText(/Maximum users/), { target: { value: '5' } })
     fireEvent.change(screen.getByLabelText(/First name/), { target: { value: 'First' } })
     fireEvent.change(screen.getByLabelText(/^Email/), { target: { value: 'first@example.test' } })
-    fireEvent.change(screen.getByLabelText(/^Phone/), { target: { value: '+919000000000' } })
+    fireEvent.change(screen.getAllByLabelText(/^Phone/)[1], { target: { value: '+919000000000' } })
     fireEvent.click(screen.getByRole('button', { name: 'Create Shop' }))
     await waitFor(() => expect(create).toHaveBeenCalledWith(expect.objectContaining({
       name: 'Demo Shop', slug: 'demo-shop', max_users: 5,
@@ -90,7 +90,7 @@ describe('Main Supplier Back Office', () => {
     fireEvent.change(screen.getByLabelText(/Slug/), { target: { value: 'demo-shop' } })
     fireEvent.change(screen.getByLabelText(/First name/), { target: { value: 'First' } })
     fireEvent.change(screen.getByLabelText(/^Email/), { target: { value: 'first@example.test' } })
-    fireEvent.change(screen.getByLabelText(/^Phone/), { target: { value: '+919000000000' } })
+    fireEvent.change(screen.getAllByLabelText(/^Phone/)[1], { target: { value: '+919000000000' } })
     fireEvent.click(screen.getByRole('button', { name: 'Create Shop' }))
     expect(await screen.findByText('This email is already assigned.')).toBeInTheDocument()
   })
