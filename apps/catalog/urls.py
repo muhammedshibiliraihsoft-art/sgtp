@@ -4,6 +4,7 @@ from apps.clients.models import Client, RelatedPerson
 from apps.catalog.views import (
     DesignDetailView,
     DesignListCreateView,
+    GlobalDesignTemplateDetailView,
     DesignReferenceImageView,
     DesignReferenceView,
     DesignSelectionView,
@@ -15,6 +16,7 @@ from apps.catalog.views import (
     GlobalDesignTemplatesView,
     FamilyListView,
     FamilyOptionGroupsView,
+    GlobalVariantsView,
     GlobalStyleImageView,
     GlobalStyleImageUploadView,
     GlobalStyleOptionsView,
@@ -201,6 +203,11 @@ urlpatterns = [
         name="catalog-option-groups",
     ),
     path(
+        "catalog/variants/",
+        GlobalVariantsView.as_view(),
+        name="catalog-global-variants",
+    ),
+    path(
         "catalog/families/<uuid:family_id>/option-groups/",
         FamilyOptionGroupsView.as_view(),
         name="catalog-family-option-groups",
@@ -229,6 +236,11 @@ urlpatterns = [
         "catalog/design-templates/",
         GlobalDesignTemplatesView.as_view(),
         name="catalog-global-design-templates",
+    ),
+    path(
+        "catalog/design-templates/<uuid:design_id>/",
+        GlobalDesignTemplateDetailView.as_view(),
+        name="catalog-global-design-template-detail",
     ),
     path(
         "catalog/design-templates/<uuid:design_id>/versions/<uuid:version_id>/selections/",

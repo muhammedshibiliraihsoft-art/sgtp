@@ -136,6 +136,142 @@ class CatalogDesignApiTests(APITestCase):
         )
         self.assertNotIn("french-cuff", cuff_codes)
 
+    def test_main_supplier_can_create_global_family_with_translations(self):
+        payload = {
+            "code": "mens-jacket",
+            "translations": [
+                {"locale": "en", "name": "Men's Jacket"},
+            ],
+        }
+        self.client.force_authenticate(self.admin)
+        denied = self.client.post("/api/v1/catalog/families/", payload, format="json")
+        self.assertEqual(denied.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.client.force_authenticate(self.main)
+        created = self.client.post("/api/v1/catalog/families/", payload, format="json")
+        self.assertEqual(created.status_code, status.HTTP_201_CREATED)
+        family = GarmentFamily.objects.get(pk=created.data["id"])
+        self.assertIsNone(family.variants.filter(is_default=True).first())
+        self.assertEqual(
+            set(family.translations.values_list("locale", flat=True)),
+            {"en"},
+        )
+        self.assertEqual(created.data["name"], "Men's Jacket")
+        duplicate = self.client.post(
+            "/api/v1/catalog/families/", payload, format="json"
+        )
+        self.assertEqual(duplicate.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_global_family_creation_requires_unique_english_translations(self):
+        self.client.force_authenticate(self.main)
+        response = self.client.post(
+            "/api/v1/catalog/families/",
+            {
+                "code": "mens-coat",
+                "translations": [
+                    {"locale": "ar-KW", "name": "معطف"},
+                    {"locale": "ar-KW", "name": "معطف آخر"},
+                ],
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(GarmentFamily.objects.filter(code="mens-coat").exists())
+
+    def test_main_supplier_can_create_global_option_group(self):
+        payload = {
+            "code": "collar-style",
+            "translations": [
+                {"locale": "en", "name": "Collar Style"},
+            ],
+        }
+        self.client.force_authenticate(self.staff)
+        denied = self.client.post(
+            "/api/v1/catalog/option-groups/", payload, format="json"
+        )
+        self.assertEqual(denied.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.client.force_authenticate(self.main)
+        created = self.client.post(
+            "/api/v1/catalog/option-groups/", payload, format="json"
+        )
+        self.assertEqual(created.status_code, status.HTTP_201_CREATED)
+        group = OptionGroup.objects.get(pk=created.data["id"])
+        self.assertEqual(
+            set(group.translations.values_list("locale", flat=True)), {"en"}
+        )
+        self.assertEqual(created.data["families"], [])
+        self.assertEqual(created.data["name"], "Collar Style")
+
+    def test_global_variants_are_main_supplier_only_and_exclude_shop_variants(self):
+        self.client.force_authenticate(self.admin)
+        denied = self.client.get("/api/v1/catalog/variants/")
+        self.assertEqual(denied.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.client.force_authenticate(self.main)
+        response = self.client.get("/api/v1/catalog/variants/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(
+            any(
+                str(row["id"]) == str(self.variant.pk)
+                for row in response.data["results"]
+            )
+        )
+        filtered = self.client.get(f"/api/v1/catalog/variants/?family={self.family.pk}")
+        self.assertTrue(
+            all(
+                str(row["family"]) == str(self.family.pk)
+                for row in filtered.data["results"]
+            )
+        )
+        invalid_filter = self.client.get("/api/v1/catalog/variants/?family=invalid")
+        self.assertEqual(invalid_filter.status_code, status.HTTP_400_BAD_REQUEST)
+        custom_response = self.client.post(
+            self.shop_url(self.shop_a, "catalog/variants/"),
+            {
+                "family_id": str(self.family.pk),
+                "code": "global-list-test-custom",
+                "translations": [{"locale": "en", "name": "Custom"}],
+            },
+            format="json",
+        )
+        self.assertEqual(custom_response.status_code, status.HTTP_201_CREATED)
+        rows = self.client.get("/api/v1/catalog/variants/").data["results"]
+        self.assertFalse(any(row["id"] == custom_response.data["id"] for row in rows))
+
+    def test_global_design_template_detail_hides_drafts_from_shop_members(self):
+        self.client.force_authenticate(self.main)
+        created = self.client.post(
+            "/api/v1/catalog/design-templates/",
+            {
+                "family_id": str(self.family.pk),
+                "variant_id": str(self.variant.pk),
+                "name": "Global Template Detail",
+            },
+            format="json",
+        )
+        self.assertEqual(created.status_code, status.HTTP_201_CREATED)
+        detail_url = f"/api/v1/catalog/design-templates/{created.data['id']}/"
+        self.assertEqual(self.client.get(detail_url).status_code, status.HTTP_200_OK)
+
+        self.client.force_authenticate(self.admin)
+        self.assertEqual(
+            self.client.get(detail_url).status_code, status.HTTP_404_NOT_FOUND
+        )
+
+        self.client.force_authenticate(self.main)
+        version_id = created.data["latest_version"]["id"]
+        published = self.client.post(
+            f"/api/v1/catalog/design-templates/{created.data['id']}/versions/{version_id}/publish/",
+            {},
+            format="json",
+        )
+        self.assertEqual(published.status_code, status.HTTP_200_OK)
+        self.client.force_authenticate(self.admin)
+        visible = self.client.get(detail_url)
+        self.assertEqual(visible.status_code, status.HTTP_200_OK)
+        self.assertEqual(visible.data["latest_version"]["status"], "PUBLISHED")
+
     def test_global_catalog_falls_back_to_english_and_shop_cannot_change_defaults(self):
         self.client.force_authenticate(self.staff)
         response = self.client.get("/api/v1/catalog/style-options/?locale=ur")

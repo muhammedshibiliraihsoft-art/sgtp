@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-03 — T4-02 Catalog and Design API completion endpoints
+
+- Added authenticated, password-change-complete API routes for Main Supplier-only Family and Option Group creation with atomic translated records, a paginated Main Supplier-only global variant selector, and visibility-safe Global Design Template detail retrieval.
+- Added authorization, translation validation, variant filtering/isolation, and draft/published visibility tests. No schema migration or business-rule changes. Regenerated and synchronized both OpenAPI artifacts.
+- Validation: 5 focused endpoint tests passed; Catalog API regression suite had 22 passes and one pre-existing Arabic-data test excluded because the local PostgreSQL cluster is WIN1252 encoded. Django system check passed; deployment check had no errors and 18 environment/schema warnings; migration drift was clean; OpenAPI had zero errors and 28 warnings (12 unique); schema artifact parity, Black, Flake8, `git diff --check`, repository validator, and its 28 tests passed. No deployment or migration occurred.
+
 ## 2026-10-03 — Catalog and Designs frontend integration
 
 - Connected the existing Catalog and Designs frontend modules to the current `apps/catalog` API contracts, corrected request/response field and upload/query parameter mismatches, and removed mock-data success fallbacks so API failures are visible.

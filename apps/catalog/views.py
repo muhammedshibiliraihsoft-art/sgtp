@@ -20,9 +20,11 @@ from apps.catalog.models import (
     DesignVersionTranslation,
     FamilyOptionGroup,
     GarmentFamily,
+    GarmentFamilyTranslation,
     GarmentVariant,
     GarmentVariantTranslation,
     OptionGroup,
+    OptionGroupTranslation,
     StyleOption,
     StyleOptionImage,
     StyleOptionTranslation,
@@ -36,6 +38,8 @@ from apps.catalog.serializers import (
     DesignReferenceGallerySerializer,
     FamilyOptionGroupUpdateSerializer,
     FamilySerializer,
+    GlobalCatalogRecordInputSerializer,
+    GlobalVariantQuerySerializer,
     OptionGroupSerializer,
     PublishResponseSerializer,
     ReferenceImageUploadSerializer,
@@ -116,13 +120,54 @@ def _page_response(request, queryset, item_serializer, *, context=None):
 class FamilyListView(APIView):
     permission_classes = (IsAuthenticated, PasswordChangeGate)
 
-    @extend_schema(responses=_page_schema("CatalogFamilyPage", FamilySerializer))
+    @extend_schema(
+        responses=_page_schema("CatalogFamilyPage", FamilySerializer),
+        operation_id="catalog_families_list",
+    )
     def get(self, request):
         return _page_response(
             request,
             GarmentFamily.objects.all(),
             FamilySerializer,
             context={"locale": _locale(request)},
+        )
+
+    @extend_schema(
+        request=GlobalCatalogRecordInputSerializer,
+        responses=FamilySerializer,
+        operation_id="catalog_families_create",
+    )
+    def post(self, request):
+        if not ShopRolePolicy.is_main_supplier_admin(request.user):
+            raise PermissionDenied()
+        data = GlobalCatalogRecordInputSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        values = data.validated_data
+        try:
+            with transaction.atomic():
+                family = GarmentFamily.objects.create(
+                    code=values["code"],
+                    created_by=request.user,
+                    updated_by=request.user,
+                )
+                GarmentFamilyTranslation.objects.bulk_create(
+                    [
+                        GarmentFamilyTranslation(
+                            family=family,
+                            created_by=request.user,
+                            updated_by=request.user,
+                            **translation,
+                        )
+                        for translation in values["translations"]
+                    ]
+                )
+        except IntegrityError:
+            raise serializers.ValidationError(
+                {"code": "This global garment family code is already in use."}
+            ) from None
+        return Response(
+            FamilySerializer(family, context={"locale": _locale(request)}).data,
+            status=status.HTTP_201_CREATED,
         )
 
 
@@ -137,6 +182,71 @@ class OptionGroupListView(APIView):
             request,
             OptionGroup.objects.all().prefetch_related("families"),
             OptionGroupSerializer,
+            context={"locale": _locale(request)},
+        )
+
+    @extend_schema(
+        request=GlobalCatalogRecordInputSerializer,
+        responses=OptionGroupSerializer,
+        operation_id="catalog_option_groups_create",
+    )
+    def post(self, request):
+        if not ShopRolePolicy.is_main_supplier_admin(request.user):
+            raise PermissionDenied()
+        data = GlobalCatalogRecordInputSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        values = data.validated_data
+        try:
+            with transaction.atomic():
+                group = OptionGroup.objects.create(
+                    code=values["code"],
+                    created_by=request.user,
+                    updated_by=request.user,
+                )
+                OptionGroupTranslation.objects.bulk_create(
+                    [
+                        OptionGroupTranslation(
+                            option_group=group,
+                            created_by=request.user,
+                            updated_by=request.user,
+                            **translation,
+                        )
+                        for translation in values["translations"]
+                    ]
+                )
+        except IntegrityError:
+            raise serializers.ValidationError(
+                {"code": "This global option group code is already in use."}
+            ) from None
+        return Response(
+            OptionGroupSerializer(group, context={"locale": _locale(request)}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class GlobalVariantsView(APIView):
+    permission_classes = (IsAuthenticated, PasswordChangeGate, MainSupplierOnly)
+
+    @extend_schema(
+        parameters=[GlobalVariantQuerySerializer],
+        responses=_page_schema("GlobalVariantPage", VariantSerializer),
+        operation_id="catalog_global_variants_list",
+    )
+    def get(self, request):
+        query = GlobalVariantQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        variants = (
+            GarmentVariant.objects.filter(tenant__isnull=True)
+            .select_related("family")
+            .prefetch_related("translations")
+        )
+        family_id = query.validated_data.get("family")
+        if family_id:
+            variants = variants.filter(family_id=family_id)
+        return _page_response(
+            request,
+            variants,
+            VariantSerializer,
             context={"locale": _locale(request)},
         )
 
@@ -911,6 +1021,35 @@ class GlobalDesignTemplatesView(APIView):
             translations=values.get("translations"),
         )
         return Response(DesignSerializer(design).data, status=status.HTTP_201_CREATED)
+
+
+class GlobalDesignTemplateDetailView(APIView):
+    permission_classes = (IsAuthenticated, PasswordChangeGate)
+
+    @extend_schema(
+        responses=DesignSerializer,
+        operation_id="catalog_global_design_template_retrieve",
+    )
+    def get(self, request, design_id):
+        main_supplier = ShopRolePolicy.is_main_supplier_admin(request.user)
+        designs = Design.objects.filter(
+            tenant__isnull=True,
+            status=Design.Status.ACTIVE,
+        )
+        if not main_supplier:
+            designs = designs.filter(
+                versions__status=DesignVersion.Status.PUBLISHED
+            ).distinct()
+        design = get_object_or_404(designs, pk=design_id)
+        return Response(
+            DesignSerializer(
+                design,
+                context={
+                    "locale": _locale(request),
+                    "published_only": not main_supplier,
+                },
+            ).data
+        )
 
 
 class GlobalDesignSelectionView(APIView):

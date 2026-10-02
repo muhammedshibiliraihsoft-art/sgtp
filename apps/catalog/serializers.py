@@ -42,6 +42,25 @@ class TranslationInputSerializer(serializers.Serializer):
     description = serializers.CharField(required=False, allow_blank=True)
 
 
+class GlobalCatalogRecordInputSerializer(serializers.Serializer):
+    """Shared input contract for Main Supplier-owned global catalog records."""
+
+    code = serializers.SlugField(max_length=48)
+    translations = TranslationInputSerializer(many=True)
+
+    def validate_translations(self, value):
+        locales = [item["locale"] for item in value]
+        if len(locales) != len(set(locales)) or "en" not in locales:
+            raise serializers.ValidationError(
+                "Provide unique translations including English."
+            )
+        return value
+
+
+class GlobalVariantQuerySerializer(serializers.Serializer):
+    family = serializers.UUIDField(required=False)
+
+
 class VariantSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
 
