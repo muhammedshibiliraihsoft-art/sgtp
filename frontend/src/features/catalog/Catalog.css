@@ -1,0 +1,56 @@
+/* Catalog Styles */
+.tabs-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.tab-btn {
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.tab-btn.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+  font-weight: 600;
+}
+
+.tab-btn:hover:not(.active) {
+  color: var(--color-text);
+  border-bottom-color: var(--color-border);
+}
+
+.catalog-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.catalog-heading h1 { margin: 0 0 8px; font-size: 32px; font-weight: 600; letter-spacing: -.5px; }
+.catalog-heading p { margin: 0; color: var(--color-text-muted); font-size: 14px; }
+.catalog-tabs { display: flex; gap: 22px; margin: 24px 0; overflow-x: auto; border-bottom: 1px solid var(--color-border); }
+.catalog-tabs button { padding: 10px 0; flex: none; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--color-text-muted); cursor: pointer; }
+.catalog-tabs button.active { border-bottom-color: var(--color-primary); color: var(--color-primary); font-weight: 600; }
+.catalog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: 14px; }
+.catalog-card { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 16px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-surface); }
+.catalog-card > svg { flex: none; color: var(--color-primary); }
+.catalog-card > div { display: flex; flex: 1; flex-direction: column; min-width: 0; gap: 4px; }
+.catalog-card strong { overflow: hidden; text-overflow: ellipsis; }
+.catalog-card small, .catalog-dialog small { color: var(--color-text-muted); font-size: 12px; }
+.catalog-tag { flex: none; padding: 3px 8px; border-radius: 20px; background: var(--color-primary-soft); color: var(--color-primary); font-size: 11px; }
+.catalog-empty, .catalog-message { color: var(--color-text-muted); }
+.catalog-loading { display: grid; min-height: 180px; place-items: center; }
+.catalog-error { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 16px 0; padding: 12px 14px; border-radius: 8px; background: var(--color-danger-soft); color: var(--color-danger); font-size: 13px; }
+.catalog-error button { border: 0; background: transparent; color: inherit; cursor: pointer; font-weight: 650; }
+.catalog-info-note { display: flex; align-items: flex-start; gap: 10px; margin-top: 18px; padding: 13px 15px; border: 1px solid var(--color-border); border-radius: 9px; background: var(--color-surface-subtle); color: var(--color-text-muted); font-size: 13px; line-height: 1.5; }
+.catalog-info-note svg { flex: none; margin-top: 1px; color: var(--color-primary); }
+.catalog-dialog-backdrop { position: fixed; z-index: 1000; inset: 0; display: grid; place-items: center; padding: 18px; background: rgb(0 0 0 / 48%); }
+.catalog-dialog { display: flex; width: min(100%, 470px); flex-direction: column; gap: 16px; padding: 22px; border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-surface); color: var(--color-text); box-shadow: var(--shadow-card); }
+.catalog-dialog-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.catalog-dialog-heading h2 { margin: 0; font-size: 19px; }
+.catalog-icon-button { display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-surface); color: var(--color-text); cursor: pointer; }
+.catalog-dialog label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; }
+.catalog-dialog input, .catalog-dialog select { min-height: 40px; padding: 8px 10px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-surface); color: var(--color-text); font: inherit; font-weight: 400; }
+.catalog-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
+@media (max-width: 520px) { .catalog-dialog { padding: 18px; } .catalog-heading .primary-button { width: 100%; } }
