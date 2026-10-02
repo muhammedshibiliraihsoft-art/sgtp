@@ -7,6 +7,10 @@
 }
 
 /* Desktop Sidebar: Show only on fine pointer & laptop/desktop width */
+.desktop-sidebar-spacer {
+  display: none;
+}
+
 .desktop-sidebar {
   display: none;
   width: 252px;
@@ -14,28 +18,170 @@
   flex-direction: column;
   border-inline-end: 1px solid var(--color-border);
   background: var(--color-sidebar);
-  z-index: 10;
+  z-index: 40;
   padding: 16px 15px 14px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  transition: width 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s ease;
 }
 
 .sidebar-brand-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 4px 6px 18px 6px;
+}
+
+.sidebar-logo-icon {
+  display: none;
 }
 
 .sidebar-logo-img {
   height: 44px;
   width: auto;
   max-width: 100%;
-  object-fit: contain;
+  object-fit: cover;
+  object-position: left;
 }
 
 @media (pointer: fine) and (min-width: 1024px) {
+  .desktop-sidebar-spacer {
+    display: block;
+    width: 72px; /* COLLAPSED flow width */
+    flex-shrink: 0;
+    transition: width 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  
+  .desktop-sidebar-spacer.pinned {
+    width: 252px; /* PINNED flow width */
+  }
+
   .desktop-sidebar {
+    display: flex;
+    position: fixed;
+    inset-inline-start: 0;
+    top: 0;
+    bottom: 0;
+    width: 72px; /* default collapsed */
+  }
+  
+  .desktop-sidebar.peek {
+    width: 252px;
+    box-shadow: 6px 0 24px rgba(0, 0, 0, 0.1);
+  }
+  
+  .desktop-sidebar.pinned {
+    width: 252px;
+    box-shadow: none;
+  }
+
+  /* Logo visibility logic */
+  .desktop-sidebar.collapsed .sidebar-logo-img {
+    display: block;
+    width: 32px;
+    height: 32px;
+    margin: 0 auto;
+  }
+  
+  .desktop-sidebar.peek .sidebar-logo-img,
+  .desktop-sidebar.pinned .sidebar-logo-img {
+    display: block;
+    width: auto;
+    height: 44px;
+  }
+
+  /* Nav Labels */
+  .nav-label {
+    opacity: 0;
+    width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    transition: opacity 0.2s ease, width 0.2s ease;
+  }
+  
+  .desktop-sidebar.peek .nav-label,
+  .desktop-sidebar.pinned .nav-label {
+    opacity: 1;
+    width: auto;
+  }
+
+  /* Account Container transitions */
+  .desktop-sidebar.collapsed .account-shop-name,
+  .desktop-sidebar.collapsed .account-chevron {
+    display: none;
+  }
+
+
+  .desktop-sidebar.collapsed .account-trigger {
+    justify-content: center;
+  }
+  
+  /* Center icons when collapsed */
+  .desktop-sidebar.collapsed .nav-link-desktop {
+    padding: 10px 0;
+    justify-content: center;
+    gap: 0;
+  }
+  
+  .nav-link-desktop svg {
+    flex-shrink: 0;
+  }
+
+  .desktop-sidebar.collapsed .sidebar-toggle-btn {
+    display: none;
+  }
+
+  .desktop-sidebar.peek .sidebar-toggle-btn,
+  .desktop-sidebar.pinned .sidebar-toggle-btn {
+    display: flex;
+  }
+
+  .sidebar-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    margin-top: 16px;
+    align-self: flex-start;
+    margin-inline-start: 10px;
+  }
+  
+  .sidebar-toggle-btn:hover {
+    background: var(--color-surface-subtle);
+    color: var(--color-text);
+  }
+
+  /* TopHeader Toggle Button logic */
+  .top-header-toggle-btn.visible {
     display: flex;
   }
 }
+
+/* TopHeader Toggle Button Base */
+.top-header-toggle-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  margin-inline-end: 12px;
+}
+.top-header-toggle-btn:hover {
+  background: var(--color-surface-subtle);
+  color: var(--color-text);
+}
+
 
 .main-area {
   flex: 1;

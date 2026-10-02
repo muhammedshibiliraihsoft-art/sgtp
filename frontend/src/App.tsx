@@ -6,7 +6,8 @@ import {
   ClipboardList, Globe2, LayoutDashboard,
   Moon, MoreHorizontal, Plus, Search, Settings2, LogOut, ChevronUp, Sun,
   UsersRound, Scissors, CreditCard, BarChart3, Users,
-  Wand2, Store, Sliders, Shirt, PackageOpen, LayoutGrid, X, Clock, ChevronRight
+  Wand2, Store, Sliders, Shirt, PackageOpen, LayoutGrid, X, Clock, ChevronRight,
+  PanelLeftClose, PanelLeftOpen
 } from 'lucide-react'
 import './App.css'
 import { BrandLogo } from './components/BrandLogo'
@@ -351,7 +352,108 @@ function PasswordChangePage() {
   </div></section></main>
 }
 
-function DesktopSidebar() {
+function SidebarContainer({ 
+  isPinned, setIsPinned, 
+  children,
+  isAccountPopoverOpen
+}: { 
+  isPinned: boolean, 
+  setIsPinned: (v: boolean) => void,
+  children: React.ReactNode,
+  isAccountPopoverOpen?: boolean
+}) {
+  const [isPeek, setIsPeek] = useState(false);
+  const status = useRef({ hovered: false, focused: false });
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const evaluateState = (delay: number) => {
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      const active = status.current.hovered || status.current.focused || !!isAccountPopoverOpen;
+      setIsPeek(active);
+    }, delay);
+  };
+
+  useEffect(() => {
+    evaluateState(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAccountPopoverOpen]);
+
+  useEffect(() => {
+    return () => clearTimeout(timer.current);
+  }, []);
+
+  const handleMouseEnter = () => {
+    status.current.hovered = true;
+    evaluateState(150);
+  };
+
+  const handleMouseLeave = () => {
+    status.current.hovered = false;
+    evaluateState(250);
+  };
+
+  const handleFocus = () => {
+    status.current.focused = true;
+    evaluateState(0);
+  };
+
+  const handleBlur = (e: React.FocusEvent) => {
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      status.current.focused = false;
+      evaluateState(250);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape' && isPeek && !isPinned) {
+      status.current.hovered = false;
+      status.current.focused = false;
+      setIsPeek(false);
+      (document.activeElement as HTMLElement)?.blur();
+    }
+  };
+
+  const isExpanded = isPinned || isPeek;
+  const stateClass = isPinned ? 'pinned' : isPeek ? 'peek' : 'collapsed';
+
+  return (
+    <>
+      <div className={`desktop-sidebar-spacer ${stateClass}`} aria-hidden="true" />
+      <aside 
+        className={`desktop-sidebar ${stateClass}`}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
+      >
+        <div className="sidebar-brand-header">
+          <img src={sidebarLogo} alt="BirkOS" className="sidebar-logo-img" />
+          <button 
+            className="sidebar-toggle-btn"
+            onClick={() => {
+              const newPinned = !isPinned;
+              setIsPinned(newPinned);
+              if (!newPinned) {
+                status.current.hovered = false;
+                setIsPeek(false);
+              }
+            }}
+            aria-expanded={isExpanded}
+            aria-label={isPinned ? "Collapse sidebar" : "Expand sidebar"}
+            title={isPinned ? "Collapse sidebar" : "Expand sidebar"}
+          >
+            {isPinned ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
+          </button>
+        </div>
+        {children}
+      </aside>
+    </>
+  );
+}
+
+function DesktopSidebar({ isPinned, setIsPinned }: { isPinned: boolean, setIsPinned: (v: boolean) => void }) {
   const { t } = useTranslation()
   const { signOut, user } = useAuth()
   const navigate = useNavigate()
@@ -378,17 +480,13 @@ function DesktopSidebar() {
   }, [isAccountOpen])
 
   return (
-    <aside className="desktop-sidebar">
-      <div className="sidebar-brand-header">
-        <img src={sidebarLogo} alt="Logo" className="sidebar-logo-img" />
-      </div>
-
+    <SidebarContainer isPinned={isPinned} setIsPinned={setIsPinned} isAccountPopoverOpen={isAccountOpen}>
       <nav style={{ flex: 1 }} aria-label="Main navigation">
-        <NavLink to="/" end className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><LayoutDashboard size={18} /> {t('nav.dashboard')}</NavLink>
-        <NavLink to="/work" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Scissors size={18} /> {t('nav.work')}</NavLink>
-        <div className="nav-link-desktop nav-disabled" aria-disabled="true"><ClipboardList size={18} /> {t('nav.orders')}</div>
-        <NavLink to="/clients" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><UsersRound size={18} /> {t('nav.clients')}</NavLink>
-        <div className="nav-link-desktop nav-disabled" aria-disabled="true"><CreditCard size={18} /> {t('nav.billing')}</div>
+        <NavLink to="/" end className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><LayoutDashboard size={18} /> <span className="nav-label">{t('nav.dashboard')}</span></NavLink>
+        <NavLink to="/work" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Scissors size={18} /> <span className="nav-label">{t('nav.work')}</span></NavLink>
+        <div className="nav-link-desktop nav-disabled" aria-disabled="true"><ClipboardList size={18} /> <span className="nav-label">{t('nav.orders')}</span></div>
+        <NavLink to="/clients" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><UsersRound size={18} /> <span className="nav-label">{t('nav.clients')}</span></NavLink>
+        <div className="nav-link-desktop nav-disabled" aria-disabled="true"><CreditCard size={18} /> <span className="nav-label">{t('nav.billing')}</span></div>
       </nav>
 
       <div className="account-container" ref={accountRef}>
@@ -400,7 +498,7 @@ function DesktopSidebar() {
         >
           <div className="account-avatar glass-effect">AR</div>
           <span className="account-shop-name">Modern Tailors</span>
-          <ChevronUp size={14} style={{ transform: isAccountOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+          <ChevronUp size={14} style={{ transform: isAccountOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} className="account-chevron" />
         </button>
 
         {isAccountOpen && (
@@ -416,24 +514,57 @@ function DesktopSidebar() {
           </div>
         )}
       </div>
-    </aside>
+    </SidebarContainer>
   )
 }
 
-function BackOfficeSidebar() {
+function BackOfficeSidebar({ isPinned, setIsPinned }: { isPinned: boolean, setIsPinned: (v: boolean) => void }) {
   const { t } = useTranslation()
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
-  return <aside className="desktop-sidebar">
-    <div className="sidebar-brand-header"><img src={sidebarLogo} alt="BiRKy" className="sidebar-logo-img" /></div>
+  const [isAccountOpen, setIsAccountOpen] = useState(false)
+  const accountRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (accountRef.current && !accountRef.current.contains(event.target as Node)) {
+        setIsAccountOpen(false)
+      }
+    }
+    if (isAccountOpen) document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isAccountOpen])
+
+  return <SidebarContainer isPinned={isPinned} setIsPinned={setIsPinned} isAccountPopoverOpen={isAccountOpen}>
     <nav style={{ flex: 1 }} aria-label={t('backoffice.navigation')}>
-      <NavLink to="/backoffice" end className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><LayoutDashboard size={18} />{t('backoffice.dashboard')}</NavLink>
-      <NavLink to="/backoffice/shops" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Store size={18} />{t('backoffice.shops')}</NavLink>
+      <NavLink to="/backoffice" end className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><LayoutDashboard size={18} /><span className="nav-label">{t('backoffice.dashboard')}</span></NavLink>
+      <NavLink to="/backoffice/shops" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Store size={18} /><span className="nav-label">{t('backoffice.shops')}</span></NavLink>
     </nav>
-    <div className="bo-sidebar-account"><span className="account-avatar glass-effect">{user?.first_name?.slice(0, 1).toUpperCase() || 'M'}</span>
-      <div><strong>{user ? `${user.first_name} ${user.last_name}`.trim() : ''}</strong><small>{t('backoffice.mainSupplier')}</small></div></div>
-    <button type="button" className="nav-link-desktop bo-signout" onClick={() => { void signOut().catch(() => undefined).finally(() => navigate('/login', { replace: true })) }}><LogOut size={18} />{t('backoffice.signOut')}</button>
-  </aside>
+    <div className="account-container" ref={accountRef}>
+      <button
+        className="account-trigger"
+        onClick={() => setIsAccountOpen(!isAccountOpen)}
+        aria-expanded={isAccountOpen}
+        aria-label="Account menu"
+      >
+        <div className="account-avatar glass-effect">{user?.first_name?.slice(0, 1).toUpperCase() || 'M'}</div>
+        <span className="account-shop-name">{user ? `${user.first_name} ${user.last_name}`.trim() : ''}</span>
+        <ChevronUp size={14} style={{ transform: isAccountOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} className="account-chevron" />
+      </button>
+
+      {isAccountOpen && (
+        <div className="account-popover">
+          <div className="popover-header">
+            <span className="popover-shop-primary">{user ? `${user.first_name} ${user.last_name}`.trim() : ''}</span>
+            <span className="popover-user-secondary">{t('backoffice.mainSupplier')}</span>
+          </div>
+          <div className="popover-actions">
+            <button className="popover-action" onClick={() => { void signOut().catch(() => undefined).finally(() => navigate('/login', { replace: true })) }}><LogOut size={14} /> {t('backoffice.signOut')}</button>
+          </div>
+        </div>
+      )}
+    </div>
+  </SidebarContainer>
 }
 
 function BackOfficeBottomNavigation() {
@@ -447,7 +578,16 @@ function BackOfficeBottomNavigation() {
   </nav>
 }
 
-function TopHeader({ theme, setTheme, palette, setPalette }: { theme: Theme, setTheme: (v: Theme) => void, palette: Palette, setPalette: (v: Palette) => void }) {
+function TopHeader({ 
+  theme, setTheme, 
+  palette, setPalette,
+  isSidebarPinned, setIsSidebarPinned 
+}: { 
+  theme: Theme, setTheme: (v: Theme) => void, 
+  palette: Palette, setPalette: (v: Palette) => void,
+  isSidebarPinned?: boolean,
+  setIsSidebarPinned?: (v: boolean) => void
+}) {
   const location = useLocation()
   const isBackOffice = location.pathname.startsWith('/backoffice')
 
@@ -466,6 +606,16 @@ function TopHeader({ theme, setTheme, palette, setPalette }: { theme: Theme, set
   return (
     <header className="topbar">
       <div style={{ display: 'flex', alignItems: 'center' }}>
+        {setIsSidebarPinned && (
+          <button 
+            className={`top-header-toggle-btn ${!isSidebarPinned ? 'visible' : ''}`}
+            onClick={() => setIsSidebarPinned(!isSidebarPinned)}
+            aria-label="Expand sidebar"
+            title="Expand sidebar"
+          >
+            <PanelLeftOpen size={18} />
+          </button>
+        )}
         <Link to={isBackOffice ? '/backoffice' : '/'} style={{ display: 'flex', textDecoration: 'none' }}>
           <BrandLogo layout="header" />
         </Link>
@@ -668,6 +818,7 @@ function Workspace() {
   const [palette, setPalette] = usePalette()
   const location = useLocation()
   const [isMoreOpen, setIsMoreOpen] = useState(false)
+  const [isSidebarPinned, setIsSidebarPinned] = useState(false)
   const isLogin = location.pathname === '/login'
   const isPasswordChange = location.pathname === '/password-change'
 
@@ -679,9 +830,14 @@ function Workspace() {
   if (!user || passwordChangeRequired) return <Navigate to={passwordChangeRequired ? '/password-change' : '/login'} replace />
 
   if (user.is_main_supplier_admin) return <div className="app-shell">
-    <BackOfficeSidebar />
+    <BackOfficeSidebar isPinned={isSidebarPinned} setIsPinned={setIsSidebarPinned} />
     <main className="main-area">
-      <TopHeader theme={theme} setTheme={setTheme} palette={palette} setPalette={setPalette} />
+      <TopHeader 
+        theme={theme} setTheme={setTheme} 
+        palette={palette} setPalette={setPalette} 
+        isSidebarPinned={isSidebarPinned}
+        setIsSidebarPinned={setIsSidebarPinned}
+      />
       <Routes>
         <Route path="/backoffice" element={<BackOfficeDashboard />} />
         <Route path="/backoffice/shops" element={<ShopListPage />} />
@@ -696,9 +852,14 @@ function Workspace() {
   if (location.pathname.startsWith('/backoffice')) return <Navigate to="/" replace />
 
   return <div className="app-shell">
-    <DesktopSidebar />
+    <DesktopSidebar isPinned={isSidebarPinned} setIsPinned={setIsSidebarPinned} />
     <main className="main-area">
-      <TopHeader theme={theme} setTheme={setTheme} palette={palette} setPalette={setPalette} />
+      <TopHeader 
+        theme={theme} setTheme={setTheme} 
+        palette={palette} setPalette={setPalette} 
+        isSidebarPinned={isSidebarPinned}
+        setIsSidebarPinned={setIsSidebarPinned}
+      />
       <Routes>
         <Route path="/work" element={<WorkPreviewPage />} />
         <Route path="/clients" element={<ClientsPage />} />

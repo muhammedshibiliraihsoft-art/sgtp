@@ -21,6 +21,14 @@
     justify-content: space-between;
     align-items: flex-start;
   }
+  .clients-header .btn-primary {
+    height: 40px;
+  }
+}
+
+.clients-header .btn-primary {
+  height: 48px;
+  justify-content: center;
 }
 
 .clients-title-area h1 {
@@ -58,13 +66,14 @@
   border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 0 12px;
-  height: 40px;
+  height: 48px;
   flex: 1;
   max-width: 100%;
 }
 
 @media (min-width: 768px) {
   .clients-search {
+    height: 40px;
     max-width: 400px;
   }
 }
@@ -72,6 +81,7 @@
 .clients-search svg {
   color: var(--color-text-muted);
   margin-inline-end: 8px;
+  flex-shrink: 0;
 }
 
 .clients-search input {
@@ -79,6 +89,7 @@
   background: transparent;
   outline: none;
   width: 100%;
+  min-width: 0;
   font-size: 14px;
   color: var(--color-text);
 }
