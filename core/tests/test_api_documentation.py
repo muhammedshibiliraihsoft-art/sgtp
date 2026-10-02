@@ -110,7 +110,8 @@ class InternalApiDocumentationTests(TestCase):
         schema = yaml.safe_load(response.content)
         self.assertEqual(schema["openapi"], "3.0.3")
         self.assertIn("/api/v1/shops/{shop_id}/clients/", schema["paths"])
-        self.assertNotIn("/api/v1/shops/{shop_id}/designs/", schema["paths"])
+        self.assertIn("/api/v1/shops/{shop_id}/designs/", schema["paths"])
+        self.assertIn("/api/v1/catalog/design-templates/", schema["paths"])
         self.assertNotIn("cookieAuth", schema["components"]["securitySchemes"])
 
     def test_django_admin_login_returns_main_supplier_to_docs(self):

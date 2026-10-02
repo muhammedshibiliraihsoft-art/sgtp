@@ -1,0 +1,4432 @@
+openapi: 3.0.3
+info:
+  title: SGTP API
+  version: 1.0.0
+  description: Supplier-Centric Garment & Tailor Platform API
+paths:
+  /api/health/live/:
+    get:
+      operationId: api_health_live_retrieve
+      description: |-
+        Liveness probe. Lightweight check that the process is alive.
+        Returns 200 OK unconditionally.
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthLiveResponse'
+          description: ''
+  /api/health/ready/:
+    get:
+      operationId: api_health_ready_retrieve
+      description: |-
+        Readiness probe. Verifies database connectivity.
+        Returns 200 OK if ready, 503 Service Unavailable on dependency failure.
+        Does not expose internal DB details.
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthReadyResponse'
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthUnavailableResponse'
+          description: ''
+  /api/v1/auth/csrf/:
+    get:
+      operationId: api_v1_auth_csrf_retrieve
+      description: Returns only a CSRF token for credentialed browser clients on an
+        explicitly trusted origin; it does not authenticate the caller.
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsrfBootstrapResponse'
+          description: ''
+  /api/v1/auth/login/:
+    post:
+      operationId: api_v1_auth_login_create
+      description: Authenticate using the legacy email/password fields or identifier/password,
+        where identifier accepts User ID, email, or E.164 phone. The response contains
+        an access JWT and user profile; the refresh JWT is set only in the HttpOnly
+        cookie.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailOrIdentifierLoginRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EmailOrIdentifierLoginRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EmailOrIdentifierLoginRequestRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+          description: ''
+  /api/v1/auth/logout/:
+    post:
+      operationId: api_v1_auth_logout_create
+      description: Requires a valid access JWT. Blacklist the refresh token when present,
+        then clear the refresh and CSRF cookies. A valid CSRF cookie and matching
+        X-CSRFToken header are required.
+      parameters:
+      - in: header
+        name: X-CSRFToken
+        schema:
+          type: string
+        description: Masked token from the CSRF bootstrap response.
+        required: true
+      - in: cookie
+        name: refresh
+        schema:
+          type: string
+        description: HttpOnly refresh token cookie to blacklist and clear.
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutResponse'
+          description: ''
+  /api/v1/auth/password/reset/:
+    post:
+      operationId: api_v1_auth_password_reset_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequestRequest'
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordResetRequestResponse'
+          description: ''
+  /api/v1/auth/password/reset/confirm/:
+    post:
+      operationId: api_v1_auth_password_reset_confirm_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirmRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirmRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirmRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordResetConfirmResponse'
+          description: ''
+  /api/v1/auth/token/refresh/:
+    post:
+      operationId: api_v1_auth_token_refresh_create
+      description: Rotate the refresh token from the HttpOnly cookie. A valid CSRF
+        cookie and matching X-CSRFToken header are required. The refresh token is
+        never accepted from the request body.
+      parameters:
+      - in: header
+        name: X-CSRFToken
+        schema:
+          type: string
+        description: Masked token from the CSRF bootstrap response.
+        required: true
+      - in: cookie
+        name: refresh
+        schema:
+          type: string
+        description: Refresh token in HttpOnly cookie
+        required: true
+      tags:
+      - api
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshResponse'
+          description: ''
+  /api/v1/auth/users/:
+    get:
+      operationId: api_v1_auth_users_list
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUserList'
+          description: ''
+    post:
+      operationId: api_v1_auth_users_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserCreate'
+          description: ''
+  /api/v1/auth/users/{id}/:
+    get:
+      operationId: api_v1_auth_users_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this user.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    put:
+      operationId: api_v1_auth_users_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this user.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    patch:
+      operationId: api_v1_auth_users_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this user.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/v1/auth/users/{id}/reset-credentials/:
+    post:
+      operationId: api_v1_auth_users_reset_credentials_create
+      description: Main Supplier only. Returns one temporary credential with no-store
+        headers.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this user.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminCredentialResetResponse'
+          description: ''
+  /api/v1/auth/users/me/:
+    get:
+      operationId: api_v1_auth_users_me_retrieve
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/v1/auth/users/password/change/:
+    post:
+      operationId: api_v1_auth_users_password_change_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/v1/auth/users/update_profile/:
+    put:
+      operationId: api_v1_auth_users_update_profile_update
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    patch:
+      operationId: api_v1_auth_users_update_profile_partial_update
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/v1/catalog/design-references/{reference_id}/:
+    get:
+      operationId: catalog_global_design_reference_download
+      parameters:
+      - in: path
+        name: reference_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: string
+                format: binary
+          description: ''
+  /api/v1/catalog/design-templates/:
+    get:
+      operationId: catalog_global_design_templates_list
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalDesignTemplatePage'
+          description: ''
+    post:
+      operationId: catalog_global_design_template_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DesignCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DesignCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DesignCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Design'
+          description: ''
+  /api/v1/catalog/design-templates/{design_id}/archive/:
+    post:
+      operationId: catalog_global_design_archive
+      parameters:
+      - in: path
+        name: design_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Design'
+          description: ''
+  /api/v1/catalog/design-templates/{design_id}/versions/{version_id}/publish/:
+    post:
+      operationId: catalog_global_design_publish
+      parameters:
+      - in: path
+        name: design_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: version_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishResponse'
+          description: ''
+  /api/v1/catalog/design-templates/{design_id}/versions/{version_id}/references/:
+    get:
+      operationId: catalog_global_design_reference_gallery
+      parameters:
+      - in: path
+        name: design_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: version_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DesignReferenceGallery'
+          description: ''
+    post:
+      operationId: catalog_global_design_reference_upload
+      parameters:
+      - in: path
+        name: design_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: version_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReferenceImageUploadRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReferenceImageUploadRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReferenceImageUploadRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DesignReference'
+          description: ''
+  /api/v1/catalog/design-templates/{design_id}/versions/{version_id}/selections/:
+    post:
+      operationId: catalog_global_design_selection_create
+      parameters:
+      - in: path
+        name: design_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: version_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SelectionCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SelectionCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SelectionCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Selection'
+          description: ''
+  /api/v1/catalog/families/:
+    get:
+      operationId: api_v1_catalog_families_retrieve
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogFamilyPage'
+          description: ''
+  /api/v1/catalog/families/{family_id}/option-groups/:
+    get:
+      operationId: catalog_family_option_groups_list
+      description: Read or configure which global option groups apply to a family.
+      parameters:
+      - in: path
+        name: family_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OptionGroup'
+          description: ''
+    put:
+      operationId: catalog_family_option_groups_update
+      description: Read or configure which global option groups apply to a family.
+      parameters:
+      - in: path
+        name: family_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FamilyOptionGroupUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/FamilyOptionGroupUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FamilyOptionGroupUpdateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OptionGroup'
+          description: ''
+  /api/v1/catalog/option-groups/:
+    get:
+      operationId: api_v1_catalog_option_groups_retrieve
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogOptionGroupPage'
+          description: ''
+  /api/v1/catalog/style-options/:
+    get:
+      operationId: catalog_global_style_options_list
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalStyleOptionPage'
+          description: ''
+    post:
+      operationId: catalog_global_style_options_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShopStyleOptionInputRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ShopStyleOptionInputRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ShopStyleOptionInputRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StyleOption'
+          description: ''
+  /api/v1/catalog/style-options/{option_id}/:
+    patch:
+      operationId: api_v1_catalog_style_options_partial_update
+      parameters:
+      - in: path
+        name: option_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedStyleOptionActiveUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedStyleOptionActiveUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedStyleOptionActiveUpdateRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StyleOption'
+          description: ''
+  /api/v1/catalog/style-options/{option_id}/reference-images/:
+    post:
+      operationId: catalog_global_style_images_upload
+      parameters:
+      - in: path
+        name: option_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReferenceImageUploadRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReferenceImageUploadRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReferenceImageUploadRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StyleImage'
+          description: ''
+  /api/v1/catalog/style-options/{option_id}/reference-images/{image_id}/:
+    get:
+      operationId: catalog_global_style_image_retrieve
+      parameters:
+      - in: path
+        name: image_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: option_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: string
+                format: binary
+          description: ''
+  /api/v1/memberships/:
+    get:
+      operationId: api_v1_memberships_list
+      description: Manage Shop memberships through the transactional domain service.
+      parameters:
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: role
+        schema:
+          type: string
+          enum:
+          - ADMIN
+          - STAFF
+          - VIEWER
+        description: |-
+          The user's role within this Shop.
+
+          * `ADMIN` - Shop Admin
+          * `STAFF` - Shop Staff
+          * `VIEWER` - Shop Viewer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: tenant
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: user
+        schema:
+          type: string
+          format: uuid
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTenantMemberList'
+          description: ''
+    post:
+      operationId: api_v1_memberships_create
+      description: Manage Shop memberships through the transactional domain service.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantMemberRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TenantMemberRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TenantMemberRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantMember'
+          description: ''
+  /api/v1/memberships/{id}/:
+    get:
+      operationId: api_v1_memberships_retrieve
+      description: Manage Shop memberships through the transactional domain service.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Shop Membership.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantMember'
+          description: ''
+    put:
+      operationId: api_v1_memberships_update
+      description: Manage Shop memberships through the transactional domain service.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Shop Membership.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantMemberRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TenantMemberRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TenantMemberRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantMember'
+          description: ''
+    patch:
+      operationId: api_v1_memberships_partial_update
+      description: Manage Shop memberships through the transactional domain service.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Shop Membership.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTenantMemberRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedTenantMemberRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedTenantMemberRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantMember'
+          description: ''
+    delete:
+      operationId: api_v1_memberships_destroy
+      description: Manage Shop memberships through the transactional domain service.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Shop Membership.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/memberships/{id}/deactivate/:
+    post:
+      operationId: api_v1_memberships_deactivate_create
+      description: Manage Shop memberships through the transactional domain service.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Shop Membership.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantMemberRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TenantMemberRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TenantMemberRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantMember'
+          description: ''
+  /api/v1/memberships/{id}/reactivate/:
+    post:
+      operationId: api_v1_memberships_reactivate_create
+      description: Manage Shop memberships through the transactional domain service.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Shop Membership.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantMemberRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TenantMemberRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TenantMemberRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantMember'
+          description: ''
+  /api/v1/memberships/{id}/undo_remove/:
+    post:
+      operationId: api_v1_memberships_undo_remove_create
+      description: Manage Shop memberships through the transactional domain service.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Shop Membership.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantMemberRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TenantMemberRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TenantMemberRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantMember'
+          description: ''
+  /api/v1/shops/{shop_id}/catalog/style-options/:
+    get:
+      operationId: shop_style_options_list
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShopStyleOptionPage'
+          description: ''
+    post:
+      operationId: shop_style_options_create
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShopStyleOptionInputRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ShopStyleOptionInputRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ShopStyleOptionInputRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StyleOption'
+          description: ''
+  /api/v1/shops/{shop_id}/catalog/style-options/{option_id}/:
+    patch:
+      operationId: api_v1_shops_catalog_style_options_partial_update
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: option_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedShopStyleOptionActiveUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedShopStyleOptionActiveUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedShopStyleOptionActiveUpdateRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StyleOption'
+          description: ''
+  /api/v1/shops/{shop_id}/catalog/style-options/{option_id}/reference-images/:
+    post:
+      operationId: shop_style_images_upload
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: option_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReferenceImageUploadRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReferenceImageUploadRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReferenceImageUploadRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StyleImage'
+          description: ''
+  /api/v1/shops/{shop_id}/catalog/style-options/{option_id}/reference-images/{image_id}/:
+    get:
+      operationId: shop_style_image_retrieve
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: image_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: option_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: string
+                format: binary
+          description: ''
+  /api/v1/shops/{shop_id}/catalog/variants/:
+    get:
+      operationId: api_v1_shops_catalog_variants_retrieve
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShopVariantPage'
+          description: ''
+    post:
+      operationId: shop_variant_create
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShopVariantInputRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ShopVariantInputRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ShopVariantInputRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Variant'
+          description: ''
+  /api/v1/shops/{shop_id}/clients/:
+    get:
+      operationId: api_v1_shops_clients_list
+      description: List only Clients in the explicitly authorized Shop. Results are
+        page-number paginated and ordered by name and UUID. Search accepts a Unicode
+        name, normalized phone prefix, or exact UUID.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: search
+        schema:
+          type: string
+        description: Unicode name, normalized phone prefix, or exact Client UUID.
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedClientList'
+          description: ''
+    post:
+      operationId: api_v1_shops_clients_create
+      description: Create a Client in the selected Shop. Requires the approved Shop
+        write permission; duplicate phone/email matches return warnings and never
+        merge records.
+      parameters:
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ClientRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ClientRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactWriteResponse'
+          description: ''
+  /api/v1/shops/{shop_id}/clients/{client_id}/related-persons/:
+    get:
+      operationId: api_v1_shops_clients_related_persons_list
+      description: List Related Persons belonging to the URL Client in the selected
+        Shop. Results are page-number paginated and ordered by name and UUID; search
+        accepts a Unicode name, normalized phone prefix, or UUID.
+      parameters:
+      - in: path
+        name: client_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: search
+        schema:
+          type: string
+        description: Unicode name, normalized phone prefix, or exact RelatedPerson
+          UUID.
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedRelatedPersonList'
+          description: ''
+    post:
+      operationId: api_v1_shops_clients_related_persons_create
+      description: Create a Related Person under the selected Shop Client. The Primary
+        Client relationship is assigned from the URL and cannot be spoofed in the
+        request body.
+      parameters:
+      - in: path
+        name: client_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RelatedPersonRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RelatedPersonRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RelatedPersonRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RelatedPersonWriteResponse'
+          description: ''
+  /api/v1/shops/{shop_id}/clients/{client_id}/related-persons/{id}/:
+    get:
+      operationId: api_v1_shops_clients_related_persons_retrieve
+      description: Retrieve a Related Person beneath the authorized URL Client.
+      parameters:
+      - in: path
+        name: client_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RelatedPerson'
+          description: ''
+    put:
+      operationId: api_v1_shops_clients_related_persons_update
+      description: Update a Related Person under the authorized URL Client.
+      parameters:
+      - in: path
+        name: client_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RelatedPersonRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RelatedPersonRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RelatedPersonRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RelatedPersonWriteResponse'
+          description: ''
+    patch:
+      operationId: api_v1_shops_clients_related_persons_partial_update
+      description: Partially update a Related Person under the authorized URL Client.
+      parameters:
+      - in: path
+        name: client_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedRelatedPersonRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedRelatedPersonRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedRelatedPersonRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RelatedPersonWriteResponse'
+          description: ''
+    delete:
+      operationId: api_v1_shops_clients_related_persons_destroy
+      description: Soft-delete a Related Person beneath the authorized URL Client.
+      parameters:
+      - in: path
+        name: client_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/shops/{shop_id}/clients/{id}/:
+    get:
+      operationId: api_v1_shops_clients_retrieve
+      description: Retrieve a Client in the authorized Shop.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+          description: ''
+    put:
+      operationId: api_v1_shops_clients_update
+      description: Update a Client scoped to the authorized Shop.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ClientRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ClientRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactWriteResponse'
+          description: ''
+    patch:
+      operationId: api_v1_shops_clients_partial_update
+      description: Partially update a Client scoped to the authorized Shop.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedClientRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedClientRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedClientRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactWriteResponse'
+          description: ''
+    delete:
+      operationId: api_v1_shops_clients_destroy
+      description: Soft-delete a Client in the authorized Shop.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/shops/{shop_id}/context/:
+    get:
+      operationId: api_v1_shops_context_retrieve
+      description: Small authenticated endpoint proving the selected request context.
+      parameters:
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShopRequestContext'
+          description: ''
+  /api/v1/shops/{shop_id}/design-references/{reference_id}/:
+    get:
+      operationId: shop_design_reference_download
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: reference_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: string
+                format: binary
+          description: ''
+  /api/v1/shops/{shop_id}/design-versions/{version_id}/publish/:
+    post:
+      operationId: shop_design_version_publish
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: version_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishResponse'
+          description: ''
+  /api/v1/shops/{shop_id}/design-versions/{version_id}/references/:
+    get:
+      operationId: shop_design_reference_gallery
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: version_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DesignReferenceGallery'
+          description: ''
+    post:
+      operationId: shop_design_reference_upload
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: version_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReferenceImageUploadRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReferenceImageUploadRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReferenceImageUploadRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DesignReference'
+          description: ''
+  /api/v1/shops/{shop_id}/design-versions/{version_id}/selections/:
+    post:
+      operationId: shop_design_selection_create
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: version_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SelectionCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SelectionCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SelectionCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Selection'
+          description: ''
+  /api/v1/shops/{shop_id}/designs/:
+    get:
+      operationId: shop_design_list
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShopDesignPage'
+          description: ''
+    post:
+      operationId: shop_design_create
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DesignCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DesignCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DesignCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Design'
+          description: ''
+  /api/v1/shops/{shop_id}/designs/{design_id}/:
+    get:
+      operationId: shop_design_retrieve
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: design_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Design'
+          description: ''
+    patch:
+      operationId: shop_design_update_draft_name
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: design_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDesignDraftNameUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDesignDraftNameUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDesignDraftNameUpdateRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Design'
+          description: ''
+    delete:
+      operationId: shop_design_archive
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: design_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/shops/{shop_id}/memberships/{membership_id}/functions/:
+    get:
+      operationId: api_v1_shops_memberships_functions_retrieve
+      description: Read/replace the current Work-Function set for one Shop membership.
+      parameters:
+      - in: path
+        name: membership_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MembershipWorkFunctionSetResponse'
+          description: ''
+    put:
+      operationId: api_v1_shops_memberships_functions_update
+      description: Read/replace the current Work-Function set for one Shop membership.
+      parameters:
+      - in: path
+        name: membership_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MembershipWorkFunctionSetRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MembershipWorkFunctionSetRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MembershipWorkFunctionSetRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MembershipWorkFunctionSetResponse'
+          description: ''
+  /api/v1/shops/{shop_id}/users/:
+    post:
+      operationId: api_v1_shops_users_create
+      description: Create a Shop account using the URL-resolved Shop as trusted context.
+      parameters:
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShopUserCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ShopUserCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ShopUserCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShopUserCreated'
+          description: ''
+  /api/v1/tenants/:
+    get:
+      operationId: api_v1_tenants_list
+      description: Compatibility Shop API with authorization applied before all query
+        filters.
+      parameters:
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTenantSummaryList'
+          description: ''
+    post:
+      operationId: api_v1_tenants_create
+      description: Compatibility Shop API with authorization applied before all query
+        filters.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TenantCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TenantCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantCreate'
+          description: ''
+  /api/v1/tenants/{id}/:
+    get:
+      operationId: api_v1_tenants_retrieve
+      description: Compatibility Shop API with authorization applied before all query
+        filters.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Tenant.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantMemberProfile'
+          description: ''
+    put:
+      operationId: api_v1_tenants_update
+      description: Compatibility Shop API with authorization applied before all query
+        filters.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Tenant.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantMemberProfile'
+          description: ''
+    patch:
+      operationId: api_v1_tenants_partial_update
+      description: Compatibility Shop API with authorization applied before all query
+        filters.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Tenant.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantMemberProfile'
+          description: ''
+  /api/v1/tenants/{id}/activate/:
+    post:
+      operationId: api_v1_tenants_activate_create
+      description: Compatibility Shop API with authorization applied before all query
+        filters.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Tenant.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantMemberProfile'
+          description: ''
+  /api/v1/tenants/{id}/deactivate/:
+    post:
+      operationId: api_v1_tenants_deactivate_create
+      description: Compatibility Shop API with authorization applied before all query
+        filters.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Tenant.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantMemberProfile'
+          description: ''
+  /api/v1/tenants/{id}/member-lookup/:
+    get:
+      operationId: api_v1_tenants_member_lookup_retrieve
+      description: Compatibility Shop API with authorization applied before all query
+        filters.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Tenant.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantMemberProfile'
+          description: ''
+  /api/v1/tenants/{id}/stats/:
+    get:
+      operationId: api_v1_tenants_stats_retrieve
+      description: Compatibility Shop API with authorization applied before all query
+        filters.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Tenant.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantMemberProfile'
+          description: ''
+components:
+  schemas:
+    AdminCredentialResetResponse:
+      type: object
+      properties:
+        user_code:
+          type: string
+        temporary_password:
+          type: string
+      required:
+      - temporary_password
+      - user_code
+    AppearancePreferenceEnum:
+      enum:
+      - system
+      - light
+      - dark
+      type: string
+      description: |-
+        * `system` - System
+        * `light` - Light
+        * `dark` - Dark
+    BlankEnum:
+      enum:
+      - ''
+    CatalogFamilyPage:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          format: uri
+          nullable: true
+        previous:
+          type: string
+          format: uri
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Family'
+      required:
+      - count
+      - next
+      - previous
+      - results
+    CatalogOptionGroupPage:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          format: uri
+          nullable: true
+        previous:
+          type: string
+          format: uri
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/OptionGroup'
+      required:
+      - count
+      - next
+      - previous
+      - results
+    Client:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        phone:
+          type: string
+          maxLength: 40
+        phone_normalized:
+          type: string
+          readOnly: true
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - name
+      - phone_normalized
+      - updated_at
+    ClientRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        phone:
+          type: string
+          maxLength: 40
+        email:
+          type: string
+          format: email
+          maxLength: 254
+      required:
+      - name
+    CodeEnum:
+      enum:
+      - possible_duplicate
+      type: string
+      description: '* `possible_duplicate` - possible_duplicate'
+    ContactWriteResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        phone:
+          type: string
+        phone_normalized:
+          type: string
+        email:
+          type: string
+          format: email
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/DuplicateWarning'
+      required:
+      - created_at
+      - email
+      - id
+      - name
+      - phone
+      - phone_normalized
+      - updated_at
+      - warnings
+    CsrfBootstrapResponse:
+      type: object
+      properties:
+        csrf_token:
+          type: string
+      required:
+      - csrf_token
+    Design:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        tenant:
+          type: string
+          format: uuid
+          nullable: true
+        family:
+          type: string
+          format: uuid
+        variant:
+          type: string
+          format: uuid
+        name:
+          type: string
+          readOnly: true
+        status:
+          $ref: '#/components/schemas/DesignStatusEnum'
+        latest_version:
+          allOf:
+          - $ref: '#/components/schemas/DesignVersion'
+          nullable: true
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - family
+      - id
+      - latest_version
+      - name
+      - updated_at
+      - variant
+    DesignCreateRequest:
+      type: object
+      properties:
+        family_id:
+          type: string
+          format: uuid
+        variant_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+        translations:
+          type: array
+          items:
+            $ref: '#/components/schemas/TranslationInputRequest'
+        source_design_id:
+          type: string
+          format: uuid
+        source_version_id:
+          type: string
+          format: uuid
+      required:
+      - family_id
+      - name
+      - variant_id
+    DesignReference:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        mime_type:
+          type: string
+          maxLength: 32
+        byte_size:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        width:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        height:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        sort_order:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        alt_text:
+          type: string
+          maxLength: 240
+        content_url:
+          type: string
+          readOnly: true
+      required:
+      - byte_size
+      - content_url
+      - height
+      - id
+      - mime_type
+      - width
+    DesignReferenceGallery:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        source:
+          $ref: '#/components/schemas/SourceEnum'
+        mime_type:
+          type: string
+        byte_size:
+          type: integer
+        width:
+          type: integer
+        height:
+          type: integer
+        alt_text:
+          type: string
+        content_url:
+          type: string
+        style_option_id:
+          type: string
+          format: uuid
+        style_option_image_id:
+          type: string
+          format: uuid
+      required:
+      - alt_text
+      - byte_size
+      - content_url
+      - height
+      - id
+      - mime_type
+      - source
+      - width
+    DesignStatusEnum:
+      enum:
+      - ACTIVE
+      - ARCHIVED
+      type: string
+      description: |-
+        * `ACTIVE` - Active
+        * `ARCHIVED` - Archived
+    DesignVersion:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        number:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        name:
+          type: string
+          readOnly: true
+        translations:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          readOnly: true
+        status:
+          $ref: '#/components/schemas/DesignVersionStatusEnum'
+        published_at:
+          type: string
+          format: date-time
+          nullable: true
+        selections:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          readOnly: true
+        references:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          readOnly: true
+      required:
+      - id
+      - name
+      - number
+      - references
+      - selections
+      - translations
+    DesignVersionStatusEnum:
+      enum:
+      - DRAFT
+      - PUBLISHED
+      type: string
+      description: |-
+        * `DRAFT` - Draft
+        * `PUBLISHED` - Published
+    DuplicateMatch:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+      required:
+      - id
+      - name
+    DuplicateWarning:
+      type: object
+      properties:
+        code:
+          $ref: '#/components/schemas/CodeEnum'
+        field:
+          $ref: '#/components/schemas/FieldEnum'
+        matches:
+          type: array
+          items:
+            $ref: '#/components/schemas/DuplicateMatch'
+      required:
+      - code
+      - field
+      - matches
+    EmailOrIdentifierLoginRequestRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+        identifier:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - password
+    Family:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        code:
+          type: string
+          maxLength: 48
+          pattern: ^[-a-zA-Z0-9_]+$
+        name:
+          type: string
+          readOnly: true
+      required:
+      - code
+      - id
+      - name
+    FamilyOptionGroupUpdateRequest:
+      type: object
+      properties:
+        option_group_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required:
+      - option_group_ids
+    FieldEnum:
+      enum:
+      - phone
+      - email
+      type: string
+      description: |-
+        * `phone` - phone
+        * `email` - email
+    FirstShopAdmin:
+      type: object
+      properties:
+        first_name:
+          type: string
+          maxLength: 30
+        last_name:
+          type: string
+          maxLength: 30
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+      required:
+      - email
+      - first_name
+      - phone
+    FirstShopAdminRequest:
+      type: object
+      properties:
+        first_name:
+          type: string
+          minLength: 1
+          maxLength: 30
+        last_name:
+          type: string
+          maxLength: 30
+        email:
+          type: string
+          format: email
+          minLength: 1
+        phone:
+          type: string
+          minLength: 1
+      required:
+      - email
+      - first_name
+      - phone
+    FunctionsEnum:
+      enum:
+      - SALES
+      - MEASUREMENT
+      - CUTTING
+      - STITCHING
+      - FINISHING
+      - QC
+      - CASHIER
+      type: string
+      description: |-
+        * `SALES` - Sales
+        * `MEASUREMENT` - Measurement
+        * `CUTTING` - Cutting
+        * `STITCHING` - Stitching
+        * `FINISHING` - Finishing
+        * `QC` - Quality control
+        * `CASHIER` - Cashier
+    GlobalDesignTemplatePage:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          format: uri
+          nullable: true
+        previous:
+          type: string
+          format: uri
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Design'
+      required:
+      - count
+      - next
+      - previous
+      - results
+    GlobalStyleOptionPage:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          format: uri
+          nullable: true
+        previous:
+          type: string
+          format: uri
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/StyleOption'
+      required:
+      - count
+      - next
+      - previous
+      - results
+    HealthLiveResponse:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+      - status
+    HealthReadyResponse:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+      - status
+    HealthUnavailableResponse:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+      - status
+    Locale:
+      enum:
+      - en
+      - ar-KW
+      - bn
+      - ur
+      type: string
+      description: |-
+        * `en` - English
+        * `ar-KW` - Arabic (Kuwait)
+        * `bn` - Bangla
+        * `ur` - Urdu
+    LocaleEnum:
+      enum:
+      - en
+      - ar-KW
+      - bn
+      - ur
+      type: string
+      description: |-
+        * `en` - en
+        * `ar-KW` - ar-KW
+        * `bn` - bn
+        * `ur` - ur
+    LoginResponse:
+      type: object
+      properties:
+        access:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+      required:
+      - access
+      - user
+    LogoutResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+      - message
+    MembershipWorkFunctionSetRequest:
+      type: object
+      properties:
+        functions:
+          type: array
+          items:
+            $ref: '#/components/schemas/FunctionsEnum'
+          maxItems: 7
+      required:
+      - functions
+    MembershipWorkFunctionSetResponse:
+      type: object
+      properties:
+        membership_id:
+          type: string
+          format: uuid
+          readOnly: true
+        shop_id:
+          type: string
+          format: uuid
+          readOnly: true
+        functions:
+          type: array
+          items:
+            $ref: '#/components/schemas/FunctionsEnum'
+          readOnly: true
+      required:
+      - functions
+      - membership_id
+      - shop_id
+    NullEnum:
+      enum:
+      - null
+    OptionGroup:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        code:
+          type: string
+          maxLength: 48
+          pattern: ^[-a-zA-Z0-9_]+$
+        name:
+          type: string
+          readOnly: true
+        families:
+          type: array
+          items:
+            type: string
+            format: uuid
+          readOnly: true
+      required:
+      - code
+      - families
+      - id
+      - name
+    PaginatedClientList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Client'
+    PaginatedRelatedPersonList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/RelatedPerson'
+    PaginatedTenantMemberList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TenantMember'
+    PaginatedTenantSummaryList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TenantSummary'
+    PaginatedUserList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+    PasswordResetConfirmRequest:
+      type: object
+      properties:
+        uid:
+          type: string
+          minLength: 1
+        token:
+          type: string
+          minLength: 1
+        new_password:
+          type: string
+          writeOnly: true
+          minLength: 1
+        new_password_confirm:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - new_password
+      - new_password_confirm
+      - token
+      - uid
+    PasswordResetConfirmResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
+    PasswordResetRequestRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          nullable: true
+    PasswordResetRequestResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
+    PatchedClientRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        phone:
+          type: string
+          maxLength: 40
+        email:
+          type: string
+          format: email
+          maxLength: 254
+    PatchedDesignDraftNameUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+        translations:
+          type: array
+          items:
+            $ref: '#/components/schemas/TranslationInputRequest'
+    PatchedRelatedPersonRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        phone:
+          type: string
+          maxLength: 40
+        email:
+          type: string
+          format: email
+          maxLength: 254
+    PatchedShopStyleOptionActiveUpdateRequest:
+      type: object
+      properties:
+        is_active:
+          type: boolean
+    PatchedStyleOptionActiveUpdateRequest:
+      type: object
+      properties:
+        is_active:
+          type: boolean
+    PatchedTenantMemberRequest:
+      type: object
+      properties:
+        tenant:
+          type: string
+          format: uuid
+          description: The Shop this user is a member of.
+        user:
+          type: string
+          format: uuid
+          writeOnly: true
+        role:
+          allOf:
+          - $ref: '#/components/schemas/Role80eEnum'
+          description: |-
+            The user's role within this Shop.
+
+            * `ADMIN` - Shop Admin
+            * `STAFF` - Shop Staff
+            * `VIEWER` - Shop Viewer
+    PatchedUserRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          nullable: true
+        first_name:
+          type: string
+          minLength: 1
+          maxLength: 30
+        last_name:
+          type: string
+          maxLength: 30
+        preferred_locale:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/Locale'
+          - $ref: '#/components/schemas/BlankEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        appearance_preference:
+          $ref: '#/components/schemas/AppearancePreferenceEnum'
+    PublishResponse:
+      type: object
+      properties:
+        published:
+          $ref: '#/components/schemas/DesignVersion'
+        next_draft:
+          $ref: '#/components/schemas/DesignVersion'
+      required:
+      - next_draft
+      - published
+    ReferenceImageUploadRequest:
+      type: object
+      properties:
+        images:
+          type: array
+          items:
+            type: string
+            format: binary
+      required:
+      - images
+    RefreshResponse:
+      type: object
+      properties:
+        access:
+          type: string
+      required:
+      - access
+    RelatedPerson:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        phone:
+          type: string
+          maxLength: 40
+        phone_normalized:
+          type: string
+          readOnly: true
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        primary_client_id:
+          type: string
+          format: uuid
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - name
+      - phone_normalized
+      - primary_client_id
+      - updated_at
+    RelatedPersonRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        phone:
+          type: string
+          maxLength: 40
+        email:
+          type: string
+          format: email
+          maxLength: 254
+      required:
+      - name
+    RelatedPersonWriteResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        phone:
+          type: string
+        phone_normalized:
+          type: string
+        email:
+          type: string
+          format: email
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/DuplicateWarning'
+        primary_client_id:
+          type: string
+          format: uuid
+      required:
+      - created_at
+      - email
+      - id
+      - name
+      - phone
+      - phone_normalized
+      - primary_client_id
+      - updated_at
+      - warnings
+    Role76dEnum:
+      enum:
+      - ADMIN
+      - STAFF
+      - VIEWER
+      type: string
+      description: |-
+        * `ADMIN` - ADMIN
+        * `STAFF` - STAFF
+        * `VIEWER` - VIEWER
+    Role80eEnum:
+      enum:
+      - ADMIN
+      - STAFF
+      - VIEWER
+      type: string
+      description: |-
+        * `ADMIN` - Shop Admin
+        * `STAFF` - Shop Staff
+        * `VIEWER` - Shop Viewer
+    Selection:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        option_group:
+          type: string
+          format: uuid
+        style_option:
+          type: string
+          format: uuid
+        selected_code:
+          type: string
+          maxLength: 64
+        selected_name_en:
+          type: string
+          maxLength: 120
+        style_option_name:
+          type: string
+          readOnly: true
+        style_option_translations:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          readOnly: true
+        style_option_images:
+          type: array
+          items:
+            $ref: '#/components/schemas/StyleImage'
+          readOnly: true
+      required:
+      - id
+      - option_group
+      - selected_code
+      - selected_name_en
+      - style_option
+      - style_option_images
+      - style_option_name
+      - style_option_translations
+    SelectionCreateRequest:
+      type: object
+      properties:
+        style_option_id:
+          type: string
+          format: uuid
+      required:
+      - style_option_id
+    ShopDesignPage:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          format: uri
+          nullable: true
+        previous:
+          type: string
+          format: uri
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Design'
+      required:
+      - count
+      - next
+      - previous
+      - results
+    ShopRequestContext:
+      type: object
+      properties:
+        shop_id:
+          type: string
+          format: uuid
+        role:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/Role80eEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        is_main_supplier:
+          type: boolean
+      required:
+      - is_main_supplier
+      - role
+      - shop_id
+    ShopStyleOptionInputRequest:
+      type: object
+      properties:
+        option_group_id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          minLength: 1
+          maxLength: 64
+          pattern: ^[-a-zA-Z0-9_]+$
+        translations:
+          type: array
+          items:
+            $ref: '#/components/schemas/TranslationInputRequest'
+      required:
+      - code
+      - option_group_id
+      - translations
+    ShopStyleOptionPage:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          format: uri
+          nullable: true
+        previous:
+          type: string
+          format: uri
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/StyleOption'
+      required:
+      - count
+      - next
+      - previous
+      - results
+    ShopUserCreateRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          nullable: true
+        first_name:
+          type: string
+          minLength: 1
+          maxLength: 30
+        last_name:
+          type: string
+          maxLength: 30
+        phone:
+          type: string
+          writeOnly: true
+          nullable: true
+        role:
+          allOf:
+          - $ref: '#/components/schemas/Role76dEnum'
+          writeOnly: true
+      required:
+      - first_name
+      - role
+    ShopUserCreated:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        user_code:
+          type: string
+          readOnly: true
+        email:
+          type: string
+          format: email
+          nullable: true
+        first_name:
+          type: string
+          maxLength: 30
+        last_name:
+          type: string
+          maxLength: 30
+        is_active:
+          type: boolean
+          readOnly: true
+        date_joined:
+          type: string
+          format: date-time
+          readOnly: true
+        phone:
+          type: string
+          nullable: true
+        preferred_locale:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/Locale'
+          - $ref: '#/components/schemas/BlankEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        appearance_preference:
+          $ref: '#/components/schemas/AppearancePreferenceEnum'
+        must_change_password:
+          type: boolean
+          readOnly: true
+        is_main_supplier_admin:
+          type: boolean
+          readOnly: true
+        initial_password:
+          type: string
+      required:
+      - date_joined
+      - first_name
+      - id
+      - initial_password
+      - is_active
+      - is_main_supplier_admin
+      - must_change_password
+      - user_code
+    ShopVariantInputRequest:
+      type: object
+      properties:
+        family_id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          minLength: 1
+          maxLength: 64
+          pattern: ^[-a-zA-Z0-9_]+$
+        translations:
+          type: array
+          items:
+            $ref: '#/components/schemas/TranslationInputRequest'
+      required:
+      - code
+      - family_id
+      - translations
+    ShopVariantPage:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          format: uri
+          nullable: true
+        previous:
+          type: string
+          format: uri
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Variant'
+      required:
+      - count
+      - next
+      - previous
+      - results
+    SourceEnum:
+      enum:
+      - design
+      - style_option
+      type: string
+      description: |-
+        * `design` - design
+        * `style_option` - style_option
+    StyleImage:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        mime_type:
+          type: string
+          maxLength: 32
+        byte_size:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        width:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        height:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        sort_order:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        alt_text:
+          type: string
+          maxLength: 240
+        content_url:
+          type: string
+          readOnly: true
+      required:
+      - byte_size
+      - content_url
+      - height
+      - id
+      - mime_type
+      - width
+    StyleOption:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        option_group:
+          type: string
+          format: uuid
+        tenant:
+          type: string
+          format: uuid
+          nullable: true
+        code:
+          type: string
+          maxLength: 64
+          pattern: ^[-a-zA-Z0-9_]+$
+        name:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+        is_global:
+          type: boolean
+          readOnly: true
+        reference_images:
+          type: array
+          items:
+            $ref: '#/components/schemas/StyleImage'
+          readOnly: true
+      required:
+      - code
+      - id
+      - is_global
+      - name
+      - option_group
+      - reference_images
+      - tenant
+    TenantCreate:
+      type: object
+      description: Serializer for creating tenants with required fields.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          description: Display name of the tenant organization
+          maxLength: 100
+        slug:
+          type: string
+          description: URL-friendly identifier for the tenant
+          pattern: ^[a-z0-9-]+$
+          maxLength: 50
+        domain:
+          type: string
+          nullable: true
+          description: Custom domain for this tenant (optional)
+          maxLength: 253
+        is_active:
+          type: boolean
+          default: true
+        contact_email:
+          type: string
+          format: email
+          description: Primary contact email for this tenant
+          maxLength: 254
+        contact_phone:
+          type: string
+          description: Primary contact phone for this tenant
+          maxLength: 20
+        address_line1:
+          type: string
+          maxLength: 255
+        address_line2:
+          type: string
+          maxLength: 255
+        city:
+          type: string
+          maxLength: 100
+        state:
+          type: string
+          maxLength: 100
+        postal_code:
+          type: string
+          maxLength: 20
+        country:
+          type: string
+          maxLength: 100
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        max_users:
+          type: integer
+        user_count:
+          type: string
+          readOnly: true
+        is_at_user_limit:
+          type: string
+          readOnly: true
+        default_locale:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/Locale'
+          - $ref: '#/components/schemas/BlankEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        default_timezone:
+          type: string
+          nullable: true
+          maxLength: 64
+        default_currency:
+          type: string
+          nullable: true
+          maxLength: 3
+      required:
+      - created_at
+      - id
+      - is_at_user_limit
+      - max_users
+      - name
+      - slug
+      - updated_at
+      - user_count
+    TenantCreateRequest:
+      type: object
+      description: Serializer for creating tenants with required fields.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Display name of the tenant organization
+          maxLength: 100
+        slug:
+          type: string
+          minLength: 1
+          description: URL-friendly identifier for the tenant
+          pattern: ^[a-z0-9-]+$
+          maxLength: 50
+        domain:
+          type: string
+          nullable: true
+          description: Custom domain for this tenant (optional)
+          maxLength: 253
+        is_active:
+          type: boolean
+          default: true
+        contact_email:
+          type: string
+          format: email
+          description: Primary contact email for this tenant
+          maxLength: 254
+        contact_phone:
+          type: string
+          description: Primary contact phone for this tenant
+          maxLength: 20
+        address_line1:
+          type: string
+          maxLength: 255
+        address_line2:
+          type: string
+          maxLength: 255
+        city:
+          type: string
+          maxLength: 100
+        state:
+          type: string
+          maxLength: 100
+        postal_code:
+          type: string
+          maxLength: 20
+        country:
+          type: string
+          maxLength: 100
+        max_users:
+          type: integer
+        default_locale:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/Locale'
+          - $ref: '#/components/schemas/BlankEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        default_timezone:
+          type: string
+          nullable: true
+          maxLength: 64
+        default_currency:
+          type: string
+          nullable: true
+          maxLength: 3
+        first_admin:
+          allOf:
+          - $ref: '#/components/schemas/FirstShopAdminRequest'
+          writeOnly: true
+      required:
+      - first_admin
+      - max_users
+      - name
+      - slug
+    TenantMember:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        tenant:
+          type: string
+          format: uuid
+          description: The Shop this user is a member of.
+        tenant_name:
+          type: string
+          description: Display name of the tenant organization
+          readOnly: true
+        user_code:
+          type: string
+          readOnly: true
+        display_name:
+          type: string
+          readOnly: true
+        user_email:
+          type: string
+          format: email
+          nullable: true
+          readOnly: true
+        role:
+          allOf:
+          - $ref: '#/components/schemas/Role80eEnum'
+          description: |-
+            The user's role within this Shop.
+
+            * `ADMIN` - Shop Admin
+            * `STAFF` - Shop Staff
+            * `VIEWER` - Shop Viewer
+        is_active:
+          type: boolean
+          readOnly: true
+          description: Whether this membership is currently active.
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - display_name
+      - id
+      - is_active
+      - tenant
+      - tenant_name
+      - updated_at
+      - user_code
+      - user_email
+    TenantMemberProfile:
+      type: object
+      description: Minimal profile visible to a member of that Shop.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+          description: Display name of the tenant organization
+        is_active:
+          type: string
+          readOnly: true
+        contact_email:
+          type: string
+          format: email
+          readOnly: true
+          description: Primary contact email for this tenant
+        contact_phone:
+          type: string
+          readOnly: true
+          description: Primary contact phone for this tenant
+        address_line1:
+          type: string
+          readOnly: true
+        address_line2:
+          type: string
+          readOnly: true
+        city:
+          type: string
+          readOnly: true
+        state:
+          type: string
+          readOnly: true
+        postal_code:
+          type: string
+          readOnly: true
+        country:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - address_line1
+      - address_line2
+      - city
+      - contact_email
+      - contact_phone
+      - country
+      - created_at
+      - id
+      - is_active
+      - name
+      - postal_code
+      - state
+      - updated_at
+    TenantMemberRequest:
+      type: object
+      properties:
+        tenant:
+          type: string
+          format: uuid
+          description: The Shop this user is a member of.
+        user:
+          type: string
+          format: uuid
+          writeOnly: true
+        role:
+          allOf:
+          - $ref: '#/components/schemas/Role80eEnum'
+          description: |-
+            The user's role within this Shop.
+
+            * `ADMIN` - Shop Admin
+            * `STAFF` - Shop Staff
+            * `VIEWER` - Shop Viewer
+      required:
+      - tenant
+      - user
+    TenantSummary:
+      type: object
+      description: Small list representation for an authorized ordinary member.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          description: Display name of the tenant organization
+          maxLength: 100
+        is_active:
+          type: string
+          readOnly: true
+      required:
+      - id
+      - is_active
+      - name
+    TranslationInputRequest:
+      type: object
+      properties:
+        locale:
+          $ref: '#/components/schemas/LocaleEnum'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        description:
+          type: string
+      required:
+      - locale
+      - name
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        user_code:
+          type: string
+          readOnly: true
+        email:
+          type: string
+          format: email
+          nullable: true
+        first_name:
+          type: string
+          maxLength: 30
+        last_name:
+          type: string
+          maxLength: 30
+        is_active:
+          type: boolean
+          readOnly: true
+        date_joined:
+          type: string
+          format: date-time
+          readOnly: true
+        phone:
+          type: string
+          readOnly: true
+        preferred_locale:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/Locale'
+          - $ref: '#/components/schemas/BlankEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        appearance_preference:
+          $ref: '#/components/schemas/AppearancePreferenceEnum'
+        must_change_password:
+          type: boolean
+          readOnly: true
+        is_main_supplier_admin:
+          type: boolean
+          readOnly: true
+      required:
+      - date_joined
+      - first_name
+      - id
+      - is_active
+      - is_main_supplier_admin
+      - must_change_password
+      - phone
+      - user_code
+    UserCreate:
+      type: object
+      properties:
+        user_code:
+          type: string
+          readOnly: true
+        email:
+          type: string
+          format: email
+          nullable: true
+        first_name:
+          type: string
+          maxLength: 30
+        last_name:
+          type: string
+          maxLength: 30
+      required:
+      - first_name
+      - user_code
+    UserCreateRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          nullable: true
+        first_name:
+          type: string
+          minLength: 1
+          maxLength: 30
+        last_name:
+          type: string
+          maxLength: 30
+        phone:
+          type: string
+          writeOnly: true
+          nullable: true
+        shop:
+          type: string
+          format: uuid
+          writeOnly: true
+        role:
+          allOf:
+          - $ref: '#/components/schemas/Role76dEnum'
+          writeOnly: true
+      required:
+      - first_name
+      - role
+      - shop
+    UserRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          nullable: true
+        first_name:
+          type: string
+          minLength: 1
+          maxLength: 30
+        last_name:
+          type: string
+          maxLength: 30
+        preferred_locale:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/Locale'
+          - $ref: '#/components/schemas/BlankEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        appearance_preference:
+          $ref: '#/components/schemas/AppearancePreferenceEnum'
+      required:
+      - first_name
+    Variant:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        family:
+          type: string
+          format: uuid
+        code:
+          type: string
+          maxLength: 64
+          pattern: ^[-a-zA-Z0-9_]+$
+        name:
+          type: string
+          readOnly: true
+        is_default:
+          type: boolean
+      required:
+      - code
+      - family
+      - id
+      - name
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

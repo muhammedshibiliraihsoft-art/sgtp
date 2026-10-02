@@ -45,6 +45,8 @@ node_modules/
 # Ignore Django static files in production
 staticfiles/
 media/
+private-assets/
+.test-private-assets/
 
 # Ignore OS generated files
 .DS_Store

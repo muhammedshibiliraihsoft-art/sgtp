@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "apps.common",
     "apps.tenants",
     "apps.clients",
+    "apps.catalog",
 ]
 
 MIDDLEWARE = [
@@ -154,6 +155,16 @@ WHITENOISE_MAX_AGE = 60 * 60 * 24 * 7  # 1 week
 # Media files
 MEDIA_URL = "/assets/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "assets")
+PRIVATE_MEDIA_ROOT = os.path.join(BASE_DIR, "private-assets")
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"
+    },
+    "private_media": {
+        "BACKEND": "apps.catalog.storage.PrivateReferenceStorage",
+    },
+}
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

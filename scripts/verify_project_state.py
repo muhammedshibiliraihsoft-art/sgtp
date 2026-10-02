@@ -330,9 +330,26 @@ class ProjectStateValidator:
             )
         )
         if phase4_is_activated_consistently:
-            # Clients is the first permitted business app in active Phase 4.
-            # Future domain modules stay blocked until separately implemented.
-            present = [path for path in present if path != "apps/clients"]
+            # A task-specific confirmation is required before its business app
+            # may appear; Phase activation alone never unlocks future modules.
+            allowed = {"apps/clients"}
+            state_task = self.current_task("docs/PROJECT_STATE.md")
+            handoff_task = self.current_task("docs/HANDOFF.md")
+            if (
+                state_task == handoff_task == "T4-02"
+                and re.search(
+                    r"\bCONFIRM\s+TASK\s+T4-02\b",
+                    self.read("docs/PROJECT_STATE.md"),
+                    re.IGNORECASE,
+                )
+                and re.search(
+                    r"\bCONFIRM\s+TASK\s+T4-02\b",
+                    self.read("docs/HANDOFF.md"),
+                    re.IGNORECASE,
+                )
+            ):
+                allowed.add("apps/catalog")
+            present = [path for path in present if path not in allowed]
         if present:
             self.result.error(
                 "Business module paths are outside the currently authorized phase/task: "

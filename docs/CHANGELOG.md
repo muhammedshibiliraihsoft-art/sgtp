@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-02 — T4-02 Catalog and Designs local implementation
+
+- Added the Shop-scoped `apps/catalog` foundation: locked global garment/style defaults, translations, Shop custom catalog records, reusable private image references, versioned designs, immutable published snapshots, independent design/template copies, and Main Supplier global-template controls.
+- Shop-local design publication is allowed to an active Shop ADMIN or active STAFF assigned `STITCHING`; “Tailor” is this STAFF function, not an access role. No Work, measurement, material, billing, frontend, deployment, or production storage provider was added.
+- Local validation: catalog/docs/browser focused suite 30 passed; full PostgreSQL-backed application suite 350 passed; migration drift and Django checks passed; OpenAPI had zero errors (23 existing warnings). GitHub Actions validation is tracked against the exact publication commit SHA.
+
 ## 2026-10-01 — STAGING-MAIN-ADMIN-BOOTSTRAP-01 implementation
 
 - Added a staging-only, one-time Main Supplier Admin bootstrap management command and disabled-by-default Render entrypoint switch. It guards the exact staging environment/database, requires explicit confirmation and strong temporary credentials, creates no Shop, forces password change, and treats existing email/phone collisions as safe no-ops without changing accounts.

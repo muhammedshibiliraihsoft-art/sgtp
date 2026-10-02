@@ -25,15 +25,15 @@ Completed foundation tasks include T3-01–T3-04B-USER-SCOPE, T3-04C, and T3-05.
 
 ## Current task
 
-T4-01 — Clients and Related Persons — is COMPLETE and published.
-T4-02 is the next candidate only; it is NOT STARTED and NOT AUTHORIZED.
+Previous completed task: Clients and Related Persons is published.
+T4-02 — Catalog and Designs — was explicitly confirmed with `CONFIRM TASK T4-02`. Its local implementation and validation are complete: 30 focused tests and 350 PostgreSQL-backed application tests passed. Check GitHub Actions for validation of the publication commit; T4-03 is not authorized.
 The separate API-DOC-REFRESH-01 maintenance task is committed and published at checkpoint `9e93a77754ac03839d038e5e3a32458208bc02e9`; exact-SHA Project State Validation run `36850074419` succeeded. This maintenance task does not activate T4-02 or frontend work.
-API-BROWSABLE-PORTAL-01 is implemented and published at `304c9666f680e3e32aa05e4545b44aa049963e19`; exact-SHA Project State Validation run `36862739900` succeeded. Focused tests 10 passed, full PostgreSQL-backed suite 319 passed, validator PASS (319 discovered), validator tests 27 passed, and Django checks/migration check/collectstatic dry-run/OpenAPI/lint/format/diff checks passed. It adds `/api/browse/`, keeps Swagger at `/api/docs/`, and preserves JWT-only business API authentication. No T4-02, React frontend, or deployment work is authorized here.
+API-BROWSABLE-PORTAL-01 is a published historical maintenance task; it did not authorize or implement T4-02.
 T3-05A — Staging Backend Foundation — remains complete, committed, pushed, exact-SHA CI-green, and live-verified. Staging remains on the verified provider hostname; custom-domain DNS/TLS and frontend browser integration are deferred. Derive current `HEAD` from Git. The T4-01 implementation SHA and exact-CI run are recorded in `docs/PROJECT_STATE.md` and `docs/CHANGELOG.md`.
 
-`FRONTEND-DELIVERY-LOCK-01` established Contract-First Paired Delivery and the UI Reference Gate. The later-approved `PHASE4-PARALLEL-UNBLOCK-01` clarification allows backend Phase 4/5/6 and frontend integration to progress in parallel: frontend completion is not a backend prerequisite, while each frontend business slice still follows acceptance of its backend contract. The frontend foundation branch remains isolated and must not be modified from this worktree. Phase 4 is active; T4-01 is complete. T4-02 and Phase 5 require separate confirmation.
+`FRONTEND-DELIVERY-LOCK-01` established Contract-First Paired Delivery and the UI Reference Gate. The later-approved `PHASE4-PARALLEL-UNBLOCK-01` clarification allows backend Phase 4/5/6 and frontend integration to progress in parallel: frontend completion is not a backend prerequisite, while each frontend business slice still follows acceptance of its backend contract. The frontend foundation branch remains isolated and must not be modified from this worktree. Phase 4 is active; T4-01 is complete and T4-02 is locally implemented and validated. T4-03, Phase 5, and frontend tasks require separate confirmation.
 
-Derive current `HEAD`/`main` from Git rather than storing a current SHA in this handoff. T4-01 is complete; stop here. Do not begin T4-02, Phase 5, or frontend work without their separate authorization. Do not modify/merge frontend work. No Production deployment is allowed.
+Derive current `HEAD`/`main` from Git rather than storing a current SHA in this handoff. Do not begin T4-03, Phase 5, or frontend work without separate authorization. Do not modify/merge frontend work. No Production deployment is allowed.
 
 ## Current state and next gate
 
@@ -52,7 +52,7 @@ Derive current `HEAD`/`main` from Git rather than storing a current SHA in this 
 - Published implementation adds `User.owning_shop`, migration `accounts.0005_user_shop_ownership` with historical-membership preflight and database guards, atomic Shop-owned account creation, `/api/v1/shops/{shop_id}/users/`, same-Shop account reset authorization, and regression fixtures/tests.
 - Pre-publication local preflight found zero Users and memberships in the development DB. GitHub CI migration/application validation passed on its disposable PostgreSQL database. Neither establishes shared/staging/production data status; the migration aborts on ordinary Users with multiple or no determinable Shop. Shared/staging/production ownership preflight was NOT PERFORMED; no shared/staging/production migration was applied.
 - Pre-publication local validation: focused account/membership/auth regressions 138 passed; PostgreSQL-backed full suite 192 passed, including four concurrency cases; validator tests 14 passed; Django and migration checks passed; OpenAPI passed with two nonfatal role-enum naming warnings; Black/Flake8 passed on new Python files. GitHub Actions Project State Validation passed for the published exact SHA. Broad lint checks on touched legacy files still report existing style findings; they were not mass-formatted.
-- T3-04C, T3-05, and T3-05A are complete and published with exact-SHA CI green. Phase 4 is active; T4-01 is complete and published. T4-02 remains unstarted and unauthorized.
+- Historical Phase 3 checkpoint: T3-04C, T3-05, and T3-05A are complete and published with exact-SHA CI green. At that checkpoint T4-01 was complete and T4-02 had not started; current T4-02 status is recorded above.
 - T3-05 local validation: focused Shop/API/Admin/regression/concurrency tests 30 passed; complete PostgreSQL-backed application suite 231 passed (186 warnings); repository validator PASS (231 discovered); validator tests 14 passed; Django system/deploy checks and migration drift check passed; OpenAPI validation reported zero errors with nonfatal warnings; Black, Flake8, and `git diff --check` passed. The exact commit's GitHub Actions run `36614638187` passed all steps, including the PostgreSQL-backed application suite and migration check.
 
 ## Tests and checks
