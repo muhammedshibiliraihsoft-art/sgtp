@@ -2,12 +2,12 @@
 
 ## Current handoff — T4-03 Measurements + Materials (2026-10-02)
 
-- Phase 4 remains ACTIVE. T4-03 is the only active task, confirmed with `CONFIRM TASK T4-03`; T4-01 and T4-02 are complete/published. Historical T4-02 baseline commit `1287d61a1406bbdd3edddc778b91f59c9cca52df` passed GitHub Actions Project State Validation run `36970391503`.
-- T4-03 local implementation and final validation are complete in the existing `apps/catalog` runtime app. Scope is additive measurement/material models, Shop-context APIs/services, migrations, PostgreSQL tests and documentation/schema reconciliation. No Work/Order, inventory, billing, frontend, Phase 5, or deployment work is authorized.
-- Validation: focused T4-03 API/concurrency tests 20 passed; full PostgreSQL-backed application suite 370 passed; repository validator PASS (370 tests discovered); validator tests 30 passed. Django system check PASS; production `check --deploy` had no errors (12 nonfatal drf-spectacular warnings); migration drift clean; OpenAPI zero errors and 28 warnings (12 unique); Black/Flake8 PASS. Publication and exact-SHA CI remain pending.
+- Phase 4 remains ACTIVE. T4-01, T4-02, and T4-03 are complete and published. T4-03 was confirmed with `CONFIRM TASK T4-03`; T4-04, Phase 5, frontend, and deployment remain separately gated.
+- T4-03 implementation was added to the existing `apps/catalog` runtime app: Shop-context measurement/material models, services, APIs, migrations, PostgreSQL tests, and synchronized docs/schema. No Work/Order, inventory, billing, frontend, Phase 5, or deployment work was included.
+- Validation: focused T4-03 API/concurrency tests 20 passed; full PostgreSQL-backed application suite 370 passed; repository validator PASS (370 tests discovered); validator tests 30 passed. Django system check PASS; production `check --deploy` had no errors (12 nonfatal drf-spectacular warnings); migration drift clean; OpenAPI zero errors and 28 warnings (12 unique); Black/Flake8 and `git diff --check` PASS. Implementation commit `d9ca27bbab8587c2da5ceb8c1f61f913087fdc48` passed exact-SHA Project State Validation run `37006408609`.
 - Local development migration `catalog.0006_measurement_material_foundation` and deterministic seed migration `catalog.0007_seed_measurement_definitions` have been applied to the local development/test database only. No staging or production migration/deployment was performed.
 - Expected implementation policy: only Men's Shirt and Kuwaiti Dishdasha are seeded; sets/values/label snapshots are immutable; units must be explicit INCH/CM and are never converted; material is only an archive-first Shop reference record. See the T4-03 section in the Phase 4 playbook and API/database docs.
-- Publication step: inspect the final diff/scope, selectively commit and push only T4-03 work on `main`, and verify exact-SHA GitHub Actions. Do not start T4-04.
+- Next task: none authorized. T4-04 requires a separate explicit task confirmation. Do not begin T4-04, Phase 5, frontend work, or deployment.
 
 ## Historical handoff — STAGING-MAIN-ADMIN-BOOTSTRAP-01 (2026-10-01)
 
@@ -40,7 +40,7 @@ The separate API-DOC-REFRESH-01 maintenance task is committed and published at c
 API-BROWSABLE-PORTAL-01 is a published historical maintenance task; it did not authorize or implement T4-02.
 T3-05A — Staging Backend Foundation — remains complete, committed, pushed, exact-SHA CI-green, and live-verified. Staging remains on the verified provider hostname; custom-domain DNS/TLS and frontend browser integration are deferred. Derive current `HEAD` from Git. The T4-01 implementation SHA and exact-CI run are recorded in `docs/PROJECT_STATE.md` and `docs/CHANGELOG.md`.
 
-`FRONTEND-DELIVERY-LOCK-01` established Contract-First Paired Delivery and the UI Reference Gate. The later-approved `PHASE4-PARALLEL-UNBLOCK-01` clarification allows backend Phase 4/5/6 and frontend integration to progress in parallel: frontend completion is not a backend prerequisite, while each frontend business slice still follows acceptance of its backend contract. The frontend foundation branch remains isolated and must not be modified from this worktree. Phase 4 is active; T4-01/T4-02 are published. T4-03 is the only currently authorized task; T4-04, Phase 5, and frontend tasks remain separately gated.
+`FRONTEND-DELIVERY-LOCK-01` established Contract-First Paired Delivery and the UI Reference Gate. The later-approved `PHASE4-PARALLEL-UNBLOCK-01` clarification allows backend Phase 4/5/6 and frontend integration to progress in parallel: frontend completion is not a backend prerequisite, while each frontend business slice still follows acceptance of its backend contract. The frontend foundation branch remains isolated and must not be modified from this worktree. Phase 4 is active; T4-01/T4-02/T4-03 are published. T4-04, Phase 5, and frontend tasks remain separately gated.
 
 Derive current `HEAD`/`main` from Git rather than storing a current SHA in this handoff. Do not begin T4-04, Phase 5, or frontend work without separate authorization. Do not modify/merge frontend work. No deployment is allowed for T4-03.
 

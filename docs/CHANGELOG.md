@@ -4,7 +4,7 @@
 
 - Added Shop-scoped measurement definitions, localized labels, approved Men's Shirt and Kuwaiti Dishdasha seed templates, Client/Related Person measurement profiles, immutable versioned measurement sets and values, copy/compare operations, and minimal Shop-owned Material references.
 - Added explicit Shop-path APIs with role/function checks, cross-Shop non-disclosure, PostgreSQL locking/constraints, regression and concurrency tests, and refreshed the generated OpenAPI artifacts. No frontend, inventory, Work/Order, billing, Phase 5, or deployment work was included.
-- Implementation and publication status must be derived from Git and exact-SHA CI; do not treat this planning/changelog entry as proof of a commit, push, or CI result.
+- Published as implementation commit `d9ca27bbab8587c2da5ceb8c1f61f913087fdc48`; exact-SHA Project State Validation run `37006408609` completed successfully. No deployment occurred.
 
 ## 2026-10-02 — T4-02 Catalog and Designs local implementation
 
