@@ -238,4 +238,9 @@
 ## 2026-10-02 — T4-03A Inventory & Stock Foundation (completed locally)
 
 - Added additive Shop-scoped inventory classification, explicit legacy-Material enablement, zero-start materialized balances, immutable stock ledger, explicit opening/stock-in/adjustment APIs, inventory selector/history, and archive stock protection. Existing T4-03 measurement history remains separate; no Work, costing, procurement, frontend, or deployment behavior is included.
-- Validation: focused inventory plus T4-03 measurement regressions 41 passed; full PostgreSQL-backed suite 409 passed; repository validator PASS (409 tests discovered); validator tests 32 passed; Django system check PASS; production `check --deploy` has no errors and reports 12 existing nonfatal OpenAPI warnings; migration drift: no changes; OpenAPI: zero errors, 28 warnings (12 unique); Black, Flake8, schema artifact parity, and `git diff --check` PASS. Migrations were exercised on the disposable PostgreSQL test DB. Work is local and uncommitted/unpublished; no deployment or push occurred.
+- Validation: focused inventory plus T4-03 measurement regressions 41 passed; full PostgreSQL-backed suite 409 passed; repository validator PASS (409 tests discovered); validator tests 32 passed; Django system check PASS; production `check --deploy` has no errors and reports 12 warnings; migration drift: no changes; OpenAPI: zero errors, 28 warnings (12 unique); Black, Flake8, schema artifact parity, and `git diff --check` PASS. Migrations were exercised on the disposable PostgreSQL test DB. At the time this implementation entry was recorded, publication was still pending; no deployment occurred.
+
+## 2026-10-02 — T4-03A publication and exact-SHA CI
+
+- Published implementation commit `1e6e79a60a7337a43e6bb73c47aacf0c947c6570` to `main` with message `feat: add shop inventory and stock ledger foundation`.
+- GitHub Actions Project State Validation run `37045373602` completed successfully for that exact SHA. Local `main`, `origin/main`, and GitHub `main` matched after push; no deployment or shared/staging/production migration occurred.
