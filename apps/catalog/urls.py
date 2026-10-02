@@ -1,4 +1,5 @@
 from django.urls import path
+from apps.clients.models import Client, RelatedPerson
 
 from apps.catalog.views import (
     DesignDetailView,
@@ -26,8 +27,123 @@ from apps.catalog.views import (
     ShopStyleOptionDetailView,
     ShopVariantsView,
 )
+from apps.catalog.measurement_views import (
+    ClientMeasurementProfilesView,
+    MaterialArchiveView,
+    MaterialDetailView,
+    MaterialListCreateView,
+    MeasurementCompareView,
+    MeasurementDefinitionArchiveView,
+    MeasurementDefinitionDetailView,
+    MeasurementDefinitionListCreateView,
+    MeasurementProfileDetailView,
+    MeasurementSetCopyView,
+    MeasurementSetDetailView,
+    MeasurementSetListCreateView,
+    RelatedPersonMeasurementProfilesView,
+)
 
 urlpatterns = [
+    path(
+        "shops/<uuid:shop_id>/measurement-definitions/",
+        MeasurementDefinitionListCreateView.as_view(),
+        name="measurement-definition-list",
+    ),
+    path(
+        "shops/<uuid:shop_id>/measurement-definitions/<uuid:definition_id>/",
+        MeasurementDefinitionDetailView.as_view(),
+        name="measurement-definition-detail",
+    ),
+    path(
+        "shops/<uuid:shop_id>/measurement-definitions/<uuid:definition_id>/archive/",
+        MeasurementDefinitionArchiveView.as_view(),
+        name="measurement-definition-archive",
+    ),
+    path(
+        "shops/<uuid:shop_id>/clients/<uuid:client_id>/measurement-profiles/",
+        ClientMeasurementProfilesView.as_view(),
+        name="client-measurement-profile-list",
+    ),
+    path(
+        "shops/<uuid:shop_id>/clients/<uuid:client_id>/measurement-profiles/<uuid:profile_id>/",
+        MeasurementProfileDetailView.as_view(),
+        {"person_model": Client},
+        name="client-measurement-profile-detail",
+    ),
+    path(
+        "shops/<uuid:shop_id>/clients/<uuid:client_id>/measurement-profiles/<uuid:profile_id>/sets/",
+        MeasurementSetListCreateView.as_view(),
+        {"person_model": Client},
+        name="client-measurement-set-list",
+    ),
+    path(
+        "shops/<uuid:shop_id>/clients/<uuid:client_id>/measurement-profiles/<uuid:profile_id>/sets/<uuid:set_id>/",
+        MeasurementSetDetailView.as_view(),
+        {"person_model": Client},
+        name="client-measurement-set-detail",
+    ),
+    path(
+        "shops/<uuid:shop_id>/clients/<uuid:client_id>/measurement-profiles/<uuid:profile_id>/sets/<uuid:set_id>/copy/",
+        MeasurementSetCopyView.as_view(),
+        {"person_model": Client},
+        name="client-measurement-set-copy",
+    ),
+    path(
+        "shops/<uuid:shop_id>/clients/<uuid:client_id>/measurement-profiles/<uuid:profile_id>/compare/",
+        MeasurementCompareView.as_view(),
+        {"person_model": Client},
+        name="client-measurement-compare",
+    ),
+    path(
+        "shops/<uuid:shop_id>/clients/<uuid:client_id>/related-persons/<uuid:related_person_id>/measurement-profiles/",
+        RelatedPersonMeasurementProfilesView.as_view(),
+        name="related-person-measurement-profile-list",
+    ),
+    path(
+        "shops/<uuid:shop_id>/clients/<uuid:client_id>/related-persons/<uuid:related_person_id>/measurement-profiles/<uuid:profile_id>/",
+        MeasurementProfileDetailView.as_view(),
+        {"person_model": RelatedPerson},
+        name="related-person-measurement-profile-detail",
+    ),
+    path(
+        "shops/<uuid:shop_id>/clients/<uuid:client_id>/related-persons/<uuid:related_person_id>/measurement-profiles/<uuid:profile_id>/sets/",
+        MeasurementSetListCreateView.as_view(),
+        {"person_model": RelatedPerson},
+        name="related-person-measurement-set-list",
+    ),
+    path(
+        "shops/<uuid:shop_id>/clients/<uuid:client_id>/related-persons/<uuid:related_person_id>/measurement-profiles/<uuid:profile_id>/sets/<uuid:set_id>/",
+        MeasurementSetDetailView.as_view(),
+        {"person_model": RelatedPerson},
+        name="related-person-measurement-set-detail",
+    ),
+    path(
+        "shops/<uuid:shop_id>/clients/<uuid:client_id>/related-persons/<uuid:related_person_id>/measurement-profiles/<uuid:profile_id>/sets/<uuid:set_id>/copy/",
+        MeasurementSetCopyView.as_view(),
+        {"person_model": RelatedPerson},
+        name="related-person-measurement-set-copy",
+    ),
+    path(
+        "shops/<uuid:shop_id>/clients/<uuid:client_id>/related-persons/<uuid:related_person_id>/measurement-profiles/<uuid:profile_id>/compare/",
+        MeasurementCompareView.as_view(),
+        {"person_model": RelatedPerson},
+        name="related-person-measurement-compare",
+    ),
+    path(
+        "shops/<uuid:shop_id>/materials/",
+        MaterialListCreateView.as_view(),
+        name="shop-material-list",
+    ),
+    path(
+        "shops/<uuid:shop_id>/materials/<uuid:material_id>/",
+        MaterialDetailView.as_view(),
+        name="shop-material-detail",
+    ),
+    path(
+        "shops/<uuid:shop_id>/materials/<uuid:material_id>/archive/",
+        MaterialArchiveView.as_view(),
+        name="shop-material-archive",
+    ),
     path("catalog/families/", FamilyListView.as_view(), name="catalog-families"),
     path(
         "catalog/option-groups/",

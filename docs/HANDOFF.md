@@ -1,6 +1,15 @@
 # Handoff
 
-## Current handoff — STAGING-MAIN-ADMIN-BOOTSTRAP-01 (2026-10-01)
+## Current handoff — T4-03 Measurements + Materials (2026-10-02)
+
+- Phase 4 remains ACTIVE. T4-03 is the only active task, confirmed with `CONFIRM TASK T4-03`; T4-01 and T4-02 are complete/published. Historical T4-02 baseline commit `1287d61a1406bbdd3edddc778b91f59c9cca52df` passed GitHub Actions Project State Validation run `36970391503`.
+- T4-03 local implementation and final validation are complete in the existing `apps/catalog` runtime app. Scope is additive measurement/material models, Shop-context APIs/services, migrations, PostgreSQL tests and documentation/schema reconciliation. No Work/Order, inventory, billing, frontend, Phase 5, or deployment work is authorized.
+- Validation: focused T4-03 API/concurrency tests 20 passed; full PostgreSQL-backed application suite 370 passed; repository validator PASS (370 tests discovered); validator tests 30 passed. Django system check PASS; production `check --deploy` had no errors (12 nonfatal drf-spectacular warnings); migration drift clean; OpenAPI zero errors and 28 warnings (12 unique); Black/Flake8 PASS. Publication and exact-SHA CI remain pending.
+- Local development migration `catalog.0006_measurement_material_foundation` and deterministic seed migration `catalog.0007_seed_measurement_definitions` have been applied to the local development/test database only. No staging or production migration/deployment was performed.
+- Expected implementation policy: only Men's Shirt and Kuwaiti Dishdasha are seeded; sets/values/label snapshots are immutable; units must be explicit INCH/CM and are never converted; material is only an archive-first Shop reference record. See the T4-03 section in the Phase 4 playbook and API/database docs.
+- Publication step: inspect the final diff/scope, selectively commit and push only T4-03 work on `main`, and verify exact-SHA GitHub Actions. Do not start T4-04.
+
+## Historical handoff — STAGING-MAIN-ADMIN-BOOTSTRAP-01 (2026-10-01)
 
 - Task `STAGING-MAIN-ADMIN-BOOTSTRAP-01` is complete on `main` at `9b8fbc94741d85e018be10fdee41b34bd283af52`; exact-SHA Project State Validation run `36887320909` passed. The staging account was created in deploy `dep-dav83hhsrm7s73e9llsg`; cleanup deploy `dep-dav84r3bc2fs738dghi0` is live with the bootstrap switch disabled and all four temporary input values blank. The requested Main Supplier Admin has a forced password change on first login. No Shop, migration, or Production deploy was made.
 - Local verification: focused bootstrap tests 9 passed; `manage.py check`, no-migration-drift check, repository validator (PASS), its 21 tests, Black, Flake8, shell syntax, and `git diff --check` passed. The broader local suite did not complete because the local PostgreSQL process exited; exact-SHA CI passed.
@@ -23,17 +32,17 @@ Phase 3 is COMPLETE; it was activated with `CONFIRM PHASE 3`, and T3-05A is comp
 
 Completed foundation tasks include T3-01–T3-04B-USER-SCOPE, T3-04C, and T3-05. T3-05 is published and its exact-SHA Project State Validation succeeded for the implementation commit. Derive current `HEAD`/`main` from Git.
 
-## Current task
+## Historical task state before T4-03
 
 Previous completed task: Clients and Related Persons is published.
-T4-02 — Catalog and Designs — was explicitly confirmed with `CONFIRM TASK T4-02`. Its local implementation and validation are complete: 30 focused tests and 350 PostgreSQL-backed application tests passed. Check GitHub Actions for validation of the publication commit; T4-03 is not authorized.
+Historical T4-02 — Catalog and Designs — was explicitly confirmed with `CONFIRM TASK T4-02`. Its implementation and validation were completed and published at `1287d61a1406bbdd3edddc778b91f59c9cca52df`; exact-SHA Project State Validation run `36970391503` succeeded. T4-03 was subsequently authorized as the current task.
 The separate API-DOC-REFRESH-01 maintenance task is committed and published at checkpoint `9e93a77754ac03839d038e5e3a32458208bc02e9`; exact-SHA Project State Validation run `36850074419` succeeded. This maintenance task does not activate T4-02 or frontend work.
 API-BROWSABLE-PORTAL-01 is a published historical maintenance task; it did not authorize or implement T4-02.
 T3-05A — Staging Backend Foundation — remains complete, committed, pushed, exact-SHA CI-green, and live-verified. Staging remains on the verified provider hostname; custom-domain DNS/TLS and frontend browser integration are deferred. Derive current `HEAD` from Git. The T4-01 implementation SHA and exact-CI run are recorded in `docs/PROJECT_STATE.md` and `docs/CHANGELOG.md`.
 
-`FRONTEND-DELIVERY-LOCK-01` established Contract-First Paired Delivery and the UI Reference Gate. The later-approved `PHASE4-PARALLEL-UNBLOCK-01` clarification allows backend Phase 4/5/6 and frontend integration to progress in parallel: frontend completion is not a backend prerequisite, while each frontend business slice still follows acceptance of its backend contract. The frontend foundation branch remains isolated and must not be modified from this worktree. Phase 4 is active; T4-01 is complete and T4-02 is locally implemented and validated. T4-03, Phase 5, and frontend tasks require separate confirmation.
+`FRONTEND-DELIVERY-LOCK-01` established Contract-First Paired Delivery and the UI Reference Gate. The later-approved `PHASE4-PARALLEL-UNBLOCK-01` clarification allows backend Phase 4/5/6 and frontend integration to progress in parallel: frontend completion is not a backend prerequisite, while each frontend business slice still follows acceptance of its backend contract. The frontend foundation branch remains isolated and must not be modified from this worktree. Phase 4 is active; T4-01/T4-02 are published. T4-03 is the only currently authorized task; T4-04, Phase 5, and frontend tasks remain separately gated.
 
-Derive current `HEAD`/`main` from Git rather than storing a current SHA in this handoff. Do not begin T4-03, Phase 5, or frontend work without separate authorization. Do not modify/merge frontend work. No Production deployment is allowed.
+Derive current `HEAD`/`main` from Git rather than storing a current SHA in this handoff. Do not begin T4-04, Phase 5, or frontend work without separate authorization. Do not modify/merge frontend work. No deployment is allowed for T4-03.
 
 ## Current state and next gate
 
@@ -197,7 +206,7 @@ The starter is a Django 5.1.4 / DRF 3.15.2 PostgreSQL project with Docker, devco
 ## Phase 3+ Deferred Implementations
 
 - `BaseModelWithTenant.tenant` remains nullable. T3-03 establishes request context and T3-04 provides reusable query/object isolation primitives; future concrete Shop-owned endpoints must adopt and verify those primitives.
-- The starter is not yet the target product: Clients, Related Persons, Designs, Measurements, Materials, production stages, billing, reports/PDFs, frontend, persistent storage, workers, complete audit capture, monitoring, and end-to-end validation remain unimplemented. T3-03's pushed baseline passed GitHub Actions run #19. T3-04, T3-04A, T3-04B remediation, T3-04C, T3-05, and the T3-05A staging backend foundation are published; remaining work is individually gated.
+- The starter is not yet the target product: Clients/Related Persons, Catalog/Designs, and Measurements/Materials foundations now exist in the local implementation; Work/production stages, billing, reports/PDFs, frontend, persistent storage, workers, complete audit capture, monitoring, and full end-to-end validation remain incomplete. T3-03's pushed baseline passed GitHub Actions run #19. T3-04, T3-04A, T3-04B remediation, T3-04C, T3-05, and the T3-05A staging backend foundation are published; remaining work is individually gated.
 - The target requires React/Vite/Tailwind, but the starter has only an empty `frontend/` placeholder. English/ar-KW/Bangla/Urdu localization, RTL/LTR, and Light/Dark/System are planned V1 requirements, not implemented.
 - Tenant context is implemented as URL-path based (`/api/v1/shops/{shop_id}/...`); T3-04 primitives are available, and each future Shop-owned endpoint must apply them to queries and objects.
 - Related Person billing ownership is approved as Primary Client ownership and must be implemented/tested in Phase 5.

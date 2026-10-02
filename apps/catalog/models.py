@@ -532,3 +532,17 @@ class DesignReference(BaseModel):
                 "Published DesignVersion references cannot be deleted."
             )
         return super().delete(*args, **kwargs)
+
+
+# Keep the existing Catalog app as the runtime owner while keeping its
+# measurement/material domain models separate from the Design model definitions.
+from apps.catalog.measurement_models import (  # noqa: E402, F401
+    Material,
+    MeasurementDefinition,
+    MeasurementDefinitionMapping,
+    MeasurementDefinitionTranslation,
+    MeasurementProfile,
+    MeasurementSet,
+    MeasurementValue,
+    MeasurementValueTranslationSnapshot,
+)

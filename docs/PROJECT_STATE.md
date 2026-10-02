@@ -7,7 +7,8 @@
 - **Previous task: BACKOFFICE-01 backend implementation is published to `main` and live on Render staging.** Readiness and CSRF bootstrap endpoints returned 200 after deploy. The frontend feature is committed locally on `frontend/parallel-foundation`, with `main` merged; it remains unpushed because that branch push triggers the Cloudflare Pages client-preview deployment and explicit approval is pending. The Main Supplier Back Office reuses the existing frontend shell and uses live Shop APIs; the Work page mock content is not reused. Backend adds a derived read-only `is_main_supplier_admin` profile field and no migration. Exact deployment evidence is in the latest changelog and handoff entries.
 - Phase 1 and Phase 2 are complete.
 - Phase 3 is COMPLETE; it was activated with `CONFIRM PHASE 3` and the approved T3-05A staging foundation is complete (custom-domain DNS/TLS remains explicitly deferred).
-- Phase 4 is ACTIVE; Core Tailor Business activation was explicitly confirmed with `CONFIRM PHASE 4`. T4-01 is COMPLETE, committed, and published; T4-02 Catalog and Designs was explicitly confirmed with `CONFIRM TASK T4-02` and is locally implemented/validated, pending documentation checkpoint and publication. Later tasks remain unstarted and require their own confirmation.
+- Phase 4 is ACTIVE; Core Tailor Business activation was explicitly confirmed with `CONFIRM PHASE 4`. T4-01 and T4-02 are COMPLETE, committed, published, and CI-verified. T4-03 is the currently authorized task, explicitly confirmed with `CONFIRM TASK T4-03`; later tasks remain unstarted and require their own confirmation.
+- Historical T4-02 baseline `1287d61a1406bbdd3edddc778b91f59c9cca52df` passed Project State Validation run `36970391503`.
 - API-DOC-REFRESH-01 and API-BROWSABLE-PORTAL-01 are completed historical maintenance tasks; neither changed Phase 4 authorization.
 - Completed Phase 3 tasks include T3-01, T3-02, T3-02-REMEDIATION, T3-02A, T3-03, T3-04, T3-04A, T3-04B-REMEDIATION-01, T3-04B-USER-SCOPE, and T3-04C. T3-04C implementation commit `dfbf6eecdbcd36c014a45a5d297c26e4e27a4113` is published; exact-SHA Project State Validation run `36605653294` succeeded.
 - T3-04B-USER-SCOPE is COMPLETE, COMMITTED, and PUBLISHED on `main` at `ed845e89d7656bf9d9e1e24f03b79e7de0d3bd9c`; GitHub Actions Project State Validation run `36591864481` completed successfully for that exact SHA.
@@ -27,8 +28,8 @@
 - Target status: SGTP V1 is explicitly defined in `docs/PRODUCT_DEFINITION.md`
 - Starter foundation: exists in the cloned SGTP repository.
 - Phase 1 implementation: **Historical - Complete.**
-- Confirmation status: Phase 4, T4-01, and T4-02 were explicitly authorized. T4-01 is complete; T4-02 is locally implemented and under completion validation only.
-- Current task: T4-02 — Catalog and Designs. Local implementation and validation are complete; publication and exact-SHA CI status are derived from Git and GitHub Actions. T4-03, Phase 5, and frontend implementation are not authorized here.
+- Confirmation status: Phase 4, T4-01, T4-02, and T4-03 were explicitly authorized. T4-01/T4-02 are complete and published; T4-03 is active only under its explicit task confirmation. T4-04, Phase 5, and frontend implementation remain unauthorized.
+- Current task: T4-03 — Measurements + Materials Foundation. Implement only this task; derive branch, HEAD, remote parity, and publication status from Git/GitHub Actions. Do not begin T4-04, Phase 5, frontend, or deployment work.
 - Detailed phase playbooks: 01-10 present.
 - Later-phase decisions: Tenant context is approved as URL-path based (`/shops/{shop_id}/...`), and Related Person billing is owned by the Primary Client.
 - T3-05A (Staging Backend Foundation) is complete. Active backend: `https://birky-staging-api.onrender.com`; reserved future API hostname: `https://api-staging.birky.com` (not owned/controlled, configured, DNS-verified, or TLS-verified). On 2026-09-30, live checks with synthetic Main Supplier and Shop A/B accounts verified login without refresh-token JSON exposure; Secure/HttpOnly/SameSite=Lax refresh cookie; CSRF-required refresh/logout; rotation, old-token reuse rejection, cookie clearing, and post-logout refresh rejection. Membership list/detail, exact User-ID, stats, Work Function, and direct-object isolation were verified for Shop A→B and B→A; Main Supplier access to approved surfaces in both Shops was verified. Temporary credentials are blank and bootstrap/rotation flags are false. Final cleanup deploy is live and both health endpoints return 200. No real customer data was used. F7-01A remains planned only; frontend browser integration and custom-domain DNS/TLS are deferred. T3-02A implemented the account/preference data and API foundation; frontend localization, RTL/LTR layout, and full Light/Dark/System UI remain Phase 7 work.
@@ -37,6 +38,8 @@
 - T3-02A and T3-03 historical CI records remain below. The published T3-04 baseline and the later T3-REBASELINE-01 documentation checkpoint passed GitHub Actions Project State Validation (runs #36511111586 and #36524789793 respectively).
 
 ## Current Verification Results
+
+- **T4-03 local implementation, validation passed; publication pending:** focused measurement/material API and PostgreSQL concurrency tests: 20 passed; full PostgreSQL-backed application suite: 370 passed using project test settings with a UTF-8 disposable database. Repository validator: PASS (370 application tests discovered); validator suite: 30 passed. Django system check: PASS; `DJANGO_ENV=prod check --deploy`: no errors (12 nonfatal drf-spectacular warnings); migration drift: no changes. OpenAPI: zero errors, 28 warnings (12 unique, including type-hint/enum warnings and automatically disambiguated measurement operation IDs). Black, Flake8, and schema artifact parity passed. Changes/migrations are local only; exact-SHA CI has not run, no commit/push or deployment has occurred.
 
 - **API-DOC-REFRESH-01:** Internal `/api/docs/` and `/api/schema/` access is restricted to authenticated Main Supplier users via Django Admin session; anonymous access redirects to Admin login and other authenticated users receive a non-disclosing 404. Root redirects to docs; session auth is excluded from business APIs; Swagger authorization persistence is disabled. The stale public test page and unused `/api-auth/` route were removed. Live anonymous checks: root/docs/schema redirects verified; both health probes returned 200. Focused PostgreSQL-backed tests: 62 passed; full suite: 315 passed. Repository validator PASS (315 tests discovered); validator tests 27 passed; Django system and production deployment checks PASS; migration drift: no changes; OpenAPI: zero errors, 23 warnings (7 unique); Black, Flake8 and `git diff --check` PASS. Published at checkpoint `9e93a77754ac03839d038e5e3a32458208bc02e9`; exact-SHA CI run `36850074419` succeeded. No deployment occurred.
 - **API-BROWSABLE-PORTAL-01:** Added Main Supplier-only `/api/browse/` endpoint explorer from protected OpenAPI schema; root points to this page and Swagger remains at `/api/docs/`. Requests stay same-origin under `/api/v1/`; required API calls use Bearer JWT in page memory only, while Django Admin session alone still returns 401 from business APIs. CSRF bootstrap is used on unsafe requests; refresh/logout continue using their existing protected cookie lifecycle. Browser smoke showed 50 operations, static assets returned 200, and no console errors. Focused docs/browser tests: 10 passed; full PostgreSQL-backed suite: 319 passed. Repository validator PASS (319 application tests discovered); validator tests: 27 passed; Django system and production deployment checks PASS; migration drift: no changes; collectstatic dry-run PASS (166 assets discovered); OpenAPI: zero errors, 23 warnings (7 unique); Black, Flake8, JavaScript syntax check and `git diff --check` PASS. Published at implementation commit `304c9666f680e3e32aa05e4545b44aa049963e19`; exact-SHA GitHub Actions Project State Validation run `36862739900` succeeded. No model/API behavior, migration, dependency, React frontend, or deployment changes.
@@ -137,7 +140,7 @@
 
 - The project target is now a complete Supplier-Centric Garment & Tailor Platform, not merely a generic Django/DRF starter.
 - Tailor Management is the core V1 business module, with isolated shop workspaces under a supplier back office.
-- The required end-to-end workflow is documented. T4-01 now provides the Clients/Related Persons domain; catalog/designs, measurements, materials, production stages, billing, and reports remain unimplemented.
+- The required end-to-end workflow is documented. T4-01 provides Clients/Related Persons, T4-02 provides Catalog/Designs, and the currently authorized T4-03 adds Measurements/Materials. Work/production stages, billing, and reports remain unimplemented.
 - At this main-branch baseline, the target requires React/Vite/Tailwind but the repository has no tracked frontend application yet. Parallel frontend foundation work is isolated from `main`; the empty-directory/branch implementation state is verified separately by Git.
 - The target requires a service layer, object-level permissions, persistent object storage, background jobs, audit logging, CI, monitoring, and automatic documentation; the starter does not implement these as complete capabilities.
 - T3-03 request-local active-Shop context and T3-04 reusable queryset/object isolation primitives are implemented. T4-01 is the first business-resource API and adopts/tests them; later endpoints must do likewise.
@@ -147,7 +150,7 @@
 - `BaseModelWithTenant.tenant` remains nullable, but T4-01 Client/RelatedPerson models use required Shop FKs and endpoint isolation tests. Other future Shop-owned models/endpoints must enforce and test their own scope.
 - Tenant-context resolution is implemented at `/api/v1/shops/{shop_id}/...`; T4-01 adopts T3-04 shared query/object primitives. Remaining endpoint-specific isolation work is future work.
 - Billing ownership for work belonging to a Related Person is approved as Primary Client ownership and must be enforced in Phase 5.
-- Implemented business modules are Clients/Related Persons only, alongside accounts, tenants, and membership; the other Phase 4/5 domains remain unimplemented.
+- Implemented Phase 4 business modules are Clients/Related Persons, Catalog/Designs, and the T4-03 Measurements/Materials foundation, alongside accounts, tenants, and membership. Work/production workflow and Phase 5 billing/reporting remain unimplemented.
 
 ### PRE-P3-02 result
 
@@ -172,7 +175,7 @@
 - Tenant-aware base model permits `tenant = NULL`; T3-03 establishes trusted request context and T3-04 provides reusable query/object scoping, but neither changes model nullability nor creates domain queries.
 - Tenant-context resolution is implemented as URL-path based (`/api/v1/shops/{shop_id}/...`).
 - Billing ownership for work belonging to a Related Person is approved as Primary Client ownership and must be enforced in Phase 5.
-- Clients/Related Persons is implemented; catalog, works, billing, and reports business modules remain unimplemented.
+- Clients/Related Persons, Catalog/Designs, and Measurements/Materials are implemented in the current local T4-03 worktree; Work, billing, and reports remain unimplemented. T4-03 publication and exact-SHA CI are pending.
 
 ## Historical Phase 1 Verification results
 
@@ -189,7 +192,7 @@
 - `AGENTS.md`: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp\AGENTS.md`
 - Documentation: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp\docs\`
 - Remote: `https://github.com/muhammedshibiliraihsoft-art/sgtp.git`
-- `backend/` contains settings and shared model foundation code; runtime Django apps remain under root `apps/`. `apps/clients` is implemented. `frontend/` is maintained in the isolated frontend worktree; catalog, works, billing, and reports remain unimplemented.
+- `backend/` contains settings and shared model foundation code; runtime Django apps remain under root `apps/`. `apps/clients` and `apps/catalog` are implemented; current local T4-03 changes are not yet published. `frontend/` is maintained in the isolated frontend worktree; Work, billing, and reports remain unimplemented.
 
 ## Historical completed task — T3-04B-USER-SCOPE
 

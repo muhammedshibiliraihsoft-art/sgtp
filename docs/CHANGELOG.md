@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-02 — T4-03 Measurements and Materials implementation
+
+- Added Shop-scoped measurement definitions, localized labels, approved Men's Shirt and Kuwaiti Dishdasha seed templates, Client/Related Person measurement profiles, immutable versioned measurement sets and values, copy/compare operations, and minimal Shop-owned Material references.
+- Added explicit Shop-path APIs with role/function checks, cross-Shop non-disclosure, PostgreSQL locking/constraints, regression and concurrency tests, and refreshed the generated OpenAPI artifacts. No frontend, inventory, Work/Order, billing, Phase 5, or deployment work was included.
+- Implementation and publication status must be derived from Git and exact-SHA CI; do not treat this planning/changelog entry as proof of a commit, push, or CI result.
+
 ## 2026-10-02 — T4-02 Catalog and Designs local implementation
 
 - Added the Shop-scoped `apps/catalog` foundation: locked global garment/style defaults, translations, Shop custom catalog records, reusable private image references, versioned designs, immutable published snapshots, independent design/template copies, and Main Supplier global-template controls.

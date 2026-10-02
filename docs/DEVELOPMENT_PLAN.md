@@ -24,11 +24,11 @@ Phase confirmation activates only the named phase. It does not authorize all tas
 
 ## Phase 3 — shop / tenant
 
-- T3-02A, T3-03 URL-path context, T3-04 reusable query/object isolation primitives, T3-04A, T3-04B remediation, T3-04B-USER-SCOPE, T3-04C, and T3-05 are published. T3-04C exact-SHA Project State Validation succeeded. T3-05 exact-SHA Project State Validation succeeded in run `36614638187`; T3-05A is the current confirmed task. See the Phase 3 playbook and staging runbook.
+- T3-02A, T3-03 URL-path context, T3-04 reusable query/object isolation primitives, T3-04A, T3-04B remediation, T3-04B-USER-SCOPE, T3-04C, T3-05, and T3-05A are complete/published. T3-05 exact-SHA Project State Validation succeeded in run `36614638187`; T3-05A exact-SHA CI and staging verification are complete. See the Phase 3 playbook and staging runbook.
 
 ## Phase 4 — core tailor business
 
-- After Phase 3 identity/membership/Work-Function prerequisites, implement Clients/Related Persons and searchable duplicate-warning flow, Catalog/Designs and private reference metadata, extensible measurement templates with immutable history/compare, Materials, Work/Orders with approved priorities and derived date indicators, workflow, service layer, constraints and concurrency safeguards. Workflow remains canonical and fixed; staffing uses `Access Role + authorized Shop context + Work Function eligibility + specific assignment + explicit service policy`, not tailoring-job access roles. Work Function eligibility alone is not authorization. Stage/function mapping (including whether Check needs a distinct function) belongs to its Phase 4 task; no per-Shop workflow builder.
+- After Phase 3 identity/membership/Work-Function prerequisites, T4-01 Clients/Related Persons and T4-02 Catalog/Designs are implemented/published. T4-03 implements extensible measurement definitions, person-specific immutable history/compare, and the minimal Shop Material reference. Work/Orders, approved priorities/date indicators, production workflow, service layer and their safeguards remain later Phase 4 tasks. Workflow remains canonical and fixed; staffing uses `Access Role + authorized Shop context + Work Function eligibility + specific assignment + explicit service policy`, not tailoring-job access roles. Work Function eligibility alone is not authorization. Stage/function mapping (including whether Check needs a distinct function) belongs to its Phase 4 task; no per-Shop workflow builder.
 
 ## Phase 5 — billing + reports + reliability
 
