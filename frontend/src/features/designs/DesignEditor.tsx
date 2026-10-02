@@ -1,183 +1,161 @@
-import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { FormEvent } from 'react'
+import { Link, useParams } from 'react-router-dom'
 import { useCurrentShop } from '../../hooks/useCurrentShop'
-import { getShopDesign, publishShopDesignVersion, uploadShopDesignReference } from './api'
-import type { Design } from './types'
-import { useAuth } from '../../services/useAuth'
 import { usePrivateImage } from '../../hooks/usePrivateImage'
-import { Loader2, ArrowLeft, Upload, Check, AlertCircle } from 'lucide-react'
+import { useAuth } from '../../services/useAuth'
+import { ApiError } from '../../services/apiClient'
+import { getOptionGroups, getAllShopStyleOptions } from '../catalog/api'
+import type { OptionGroup, StyleOption } from '../catalog/types'
+import { addShopDesignSelection, getShopDesign, publishShopDesignVersion, uploadShopDesignReferences } from './api'
+import type { Design, DesignReference } from './types'
+import { AlertCircle, ArrowLeft, Check, Loader2, Upload, X } from 'lucide-react'
 
 function PrivateImage({ url }: { url: string }) {
   const { objectUrl, isLoading, error } = usePrivateImage(url)
-  
-  if (isLoading) return <div style={{ width: '100px', height: '100px', display: 'grid', placeItems: 'center', background: 'var(--color-surface-subtle)' }}><Loader2 className="animate-spin" /></div>
-  if (error || !objectUrl) return <div style={{ width: '100px', height: '100px', display: 'grid', placeItems: 'center', background: 'var(--color-danger-subtle)', color: 'var(--color-danger)' }}><AlertCircle size={20} /></div>
-  
-  return <img src={objectUrl} alt="Reference" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px' }} />
+  if (isLoading) return <div className="design-image-placeholder"><Loader2 className="animate-spin" /></div>
+  if (error || !objectUrl) return <div className="design-image-placeholder"><AlertCircle size={20} /></div>
+  return <img className="design-reference-image" src={objectUrl} alt="Design reference" />
+}
+
+function errorMessage(error: unknown) {
+  return error instanceof ApiError ? error.message : error instanceof Error ? error.message : 'Could not load the design.'
 }
 
 export function DesignEditor() {
   const { designId } = useParams()
   const { shopId, isLoading: isShopLoading } = useCurrentShop()
   const { user } = useAuth()
-  
   const [design, setDesign] = useState<Design | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  
+  const [groups, setGroups] = useState<OptionGroup[]>([])
+  const [styleOptions, setStyleOptions] = useState<StyleOption[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [isUploading, setIsUploading] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
-  
-  useEffect(() => {
-    if (isShopLoading || !shopId || !designId) return
-    let isMounted = true
-    setIsLoading(true)
-    
-    getShopDesign(shopId, designId)
-      .then(res => { if (isMounted) setDesign(res) })
-      .catch(err => {
-        if (isMounted) {
-          setDesign({
-            id: designId, tenant_id: shopId, family_id: 'f1', family_name: 'Mens Wear', variant_id: 'v1', variant_name: 'Standard Shirt', status: 'ACTIVE', created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-            latest_version: { id: 'v_1', design_id: designId, number: 1, status: 'PUBLISHED', created_at: new Date().toISOString(), published_at: new Date().toISOString(), 
-              selections: [
-                { id: 'sel1', style_option_id: 's1', style_option_name: 'Standard Collar', group_id: 'g1', group_name: 'Collar Types' },
-                { id: 'sel2', style_option_id: 's3', style_option_name: 'French Cuff', group_id: 'g2', group_name: 'Cuff Types' }
-              ], 
-              references: [] 
-            }
-          })
-        }
-      })
-      .finally(() => { if (isMounted) setIsLoading(false) })
-      
-    return () => { isMounted = false }
-  }, [shopId, designId, isShopLoading])
+  const [isAddingSelection, setIsAddingSelection] = useState(false)
+  const [selectionOpen, setSelectionOpen] = useState(false)
+  const [selectedStyleId, setSelectedStyleId] = useState('')
+  const [error, setError] = useState<string | null>(null)
 
-  const handlePublish = async () => {
-    if (!shopId || !design) return
-    const versionId = design.latest_version.id
-    if (!window.confirm('Publish this design version? It will become immutable.')) return
-    
-    setIsPublishing(true)
+  const loadDesign = useCallback(async () => {
+    if (!shopId || !designId) return
     try {
-      const res = await publishShopDesignVersion(shopId, versionId)
-      setDesign({
-        ...design,
-        latest_version: res.next_draft
-      })
-      alert('Design published successfully!')
-    } catch (err: any) {
-      alert(err.message || 'Failed to publish design')
+      const [record, groupRows, options] = await Promise.all([
+        getShopDesign(shopId, designId), getOptionGroups(), getAllShopStyleOptions(shopId),
+      ])
+      setError(null)
+      setDesign(record)
+      setGroups(groupRows)
+      setStyleOptions(options)
+    } catch (loadError) {
+      setError(errorMessage(loadError))
+      setDesign(null)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [shopId, designId])
+
+  useEffect(() => {
+    let active = true
+    if (!isShopLoading) queueMicrotask(() => { if (active) { setIsLoading(true); void loadDesign() } })
+    return () => { active = false }
+  }, [shopId, designId, isShopLoading, loadDesign])
+
+  const latest = design?.latest_version
+  const isDraft = latest?.status === 'DRAFT'
+  const groupNames = useMemo(() => new Map(groups.map(group => [group.id, group.name])), [groups])
+  const selectableOptions = useMemo(() => styleOptions.filter(option => {
+    const optionGroup = groups.find(group => group.id === option.option_group)
+    return option.is_active && Boolean(optionGroup?.families.includes(design?.family ?? ''))
+  }), [styleOptions, groups, design?.family])
+
+  async function handlePublish() {
+    if (!shopId || !latest) return
+    setIsPublishing(true)
+    setError(null)
+    try {
+      const result = await publishShopDesignVersion(shopId, latest.id)
+      setDesign(current => current ? { ...current, latest_version: result.next_draft } : current)
+    } catch (publishError) {
+      setError(errorMessage(publishError))
     } finally {
       setIsPublishing(false)
     }
   }
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !shopId || !design) return
-    
-    setIsUploading(true)
+  async function handleAddSelection(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!shopId || !latest || !selectedStyleId) return
+    setIsAddingSelection(true)
+    setError(null)
     try {
-      const versionId = design.latest_version.id
-      const newReferences = await uploadShopDesignReference(shopId, versionId, file)
-      
-      setDesign({
-        ...design,
-        latest_version: {
-          ...design.latest_version,
-          references: newReferences
-        }
-      })
-    } catch (err: any) {
-      alert(err.message || 'Failed to upload image')
+      await addShopDesignSelection(shopId, latest.id, { style_option_id: selectedStyleId })
+      const refreshed = await getShopDesign(shopId, designId!)
+      setDesign(refreshed)
+      setSelectionOpen(false)
+      setSelectedStyleId('')
+    } catch (selectionError) {
+      setError(errorMessage(selectionError))
     } finally {
-      setIsUploading(false)
-      if (e.target) e.target.value = ''
+      setIsAddingSelection(false)
     }
   }
 
-  if (isShopLoading || isLoading) {
-    return <div className="content-wrap" style={{ display: 'grid', placeItems: 'center', height: '300px' }}><Loader2 className="animate-spin" /></div>
+  async function handleUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? [])
+    if (!files.length || !shopId || !latest) return
+    setIsUploading(true)
+    setError(null)
+    try {
+      await uploadShopDesignReferences(shopId, latest.id, files)
+      setDesign(await getShopDesign(shopId, designId!))
+    } catch (uploadError) {
+      setError(errorMessage(uploadError))
+    } finally {
+      setIsUploading(false)
+      event.target.value = ''
+    }
   }
 
-  if (error || !design) {
-    return <div className="content-wrap"><div style={{ color: 'var(--color-danger)', padding: '16px', background: 'var(--color-danger-subtle)' }}>{error || 'Design not found'}</div></div>
-  }
+  if (isShopLoading || isLoading) return <div className="content-wrap design-loading"><Loader2 className="animate-spin" /></div>
+  if (!shopId || !design || !latest) return <div className="content-wrap design-error" role="alert">{error ?? 'Design not found.'}</div>
 
-  const isDraft = design.latest_version.status === 'DRAFT'
   const canPublish = user?.is_main_supplier_admin === false
+  const allReferences = latest.references
 
   return (
     <div className="content-wrap">
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-        <Link to="/designs" className="icon-button" style={{ textDecoration: 'none' }}><ArrowLeft size={20} /></Link>
-        <div>
-          <h1 style={{ fontSize: '24px', margin: 0 }}>{design.family_name} - {design.variant_name}</h1>
-          <p style={{ margin: '4px 0 0 0', color: 'var(--color-text-muted)', fontSize: '13px' }}>Version {design.latest_version.number} ({design.latest_version.status})</p>
-        </div>
+      <div className="design-editor-heading">
+        <Link to="/designs" className="icon-button" aria-label="Back to designs"><ArrowLeft size={20} /></Link>
+        <div><h1>{design.name || 'Design'}</h1><p>Version {latest.number} · {latest.status}</p></div>
       </div>
+      {error && <div className="design-error" role="alert">{error}<button onClick={() => { setIsLoading(true); setError(null); void loadDesign() }}>Retry</button></div>}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
-        <div className="editor-main" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          
-          <section className="selections-section" style={{ padding: '24px', background: 'var(--color-surface)', borderRadius: '12px', border: '1px solid var(--color-border)' }}>
-            <h2 style={{ fontSize: '18px', marginTop: 0, marginBottom: '16px' }}>Selections</h2>
-            {design.latest_version.selections.length === 0 ? (
-              <p style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>No selections made yet.</p>
-            ) : (
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {design.latest_version.selections.map(sel => (
-                  <li key={sel.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', border: '1px solid var(--color-border)', borderRadius: '8px' }}>
-                    <span style={{ fontWeight: 600 }}>{sel.group_name}</span>
-                    <span>{sel.style_option_name}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            
-            {isDraft && (
-              <div style={{ marginTop: '16px' }}>
-                <button className="secondary-button" onClick={() => alert('Add selection flow to be implemented')}>Add Selection</button>
-              </div>
-            )}
+      <div className="design-editor-layout">
+        <div className="design-editor-main">
+          <section className="design-panel">
+            <div className="design-panel-heading"><h2>Selections</h2>{isDraft && <button className="secondary-button" onClick={() => setSelectionOpen(true)}><Check size={15} /> Add selection</button>}</div>
+            {latest.selections.length === 0 ? <p className="design-muted">No style selections yet.</p> : <ul className="design-selection-list">{latest.selections.map(selection => <li key={selection.id}><span>{groupNames.get(selection.option_group) ?? selection.option_group}</span><strong>{selection.style_option_name}</strong></li>)}</ul>}
           </section>
 
-          <section className="references-section" style={{ padding: '24px', background: 'var(--color-surface)', borderRadius: '12px', border: '1px solid var(--color-border)' }}>
-            <h2 style={{ fontSize: '18px', marginTop: 0, marginBottom: '16px' }}>Reference Images</h2>
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              {design.latest_version.references.map(ref => (
-                <PrivateImage key={ref.id} url={ref.content_url} />
-              ))}
-              
-              {isDraft && (
-                <label style={{ width: '100px', height: '100px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', border: '2px dashed var(--color-border)', borderRadius: '8px', cursor: 'pointer', background: 'var(--color-surface-subtle)' }}>
-                  {isUploading ? <Loader2 className="animate-spin" /> : <Upload size={20} color="var(--color-text-muted)" />}
-                  <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Upload</span>
-                  <input type="file" style={{ display: 'none' }} accept="image/jpeg, image/png, image/webp" onChange={handleFileUpload} disabled={isUploading} />
-                </label>
-              )}
-            </div>
+          <section className="design-panel">
+            <div className="design-panel-heading"><h2>Reference images</h2>{isDraft && <label className="secondary-button design-upload">{isUploading ? <Loader2 className="animate-spin" size={16} /> : <Upload size={16} />} Upload<input type="file" accept="image/jpeg,image/png,image/webp" multiple hidden disabled={isUploading} onChange={event => void handleUpload(event)} /></label>}</div>
+            {allReferences.length === 0 ? <p className="design-muted">No reference images yet.</p> : <div className="design-reference-grid">{allReferences.map((reference: DesignReference) => <PrivateImage key={reference.id} url={reference.content_url} />)}</div>}
           </section>
-
         </div>
-        
-        <div className="editor-sidebar" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ padding: '24px', background: 'var(--color-surface)', borderRadius: '12px', border: '1px solid var(--color-border)' }}>
-            <h3 style={{ fontSize: '16px', marginTop: 0, marginBottom: '12px' }}>Actions</h3>
-            {isDraft ? (
-              <button className="primary-button" style={{ width: '100%' }} onClick={handlePublish} disabled={isPublishing || !canPublish}>
-                {isPublishing ? <Loader2 className="animate-spin" size={16} /> : <Check size={16} />}
-                Publish Version
-              </button>
-            ) : (
-              <p style={{ color: 'var(--color-text-muted)', fontSize: '13px', margin: 0 }}>This version is published and cannot be edited.</p>
-            )}
-            {!canPublish && isDraft && <p style={{ color: 'var(--color-warning)', fontSize: '12px', marginTop: '8px' }}>Only Shop Admin or Staff with STITCHING permission can publish.</p>}
-          </div>
-        </div>
+        <aside className="design-panel design-actions-panel">
+          <h2>Actions</h2>
+          {isDraft ? <><button className="primary-button" onClick={() => void handlePublish()} disabled={isPublishing || !canPublish}>{isPublishing ? <Loader2 className="animate-spin" size={16} /> : <Check size={16} />} Publish version</button>{!canPublish && <p className="design-muted">Publishing is available to authorized Shop staff only.</p>}</> : <p className="design-muted">Published versions cannot be changed. Publishing creates a new draft snapshot.</p>}
+        </aside>
       </div>
+
+      {selectionOpen && <div className="design-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setSelectionOpen(false) }}>
+        <form className="design-dialog" onSubmit={event => void handleAddSelection(event)} aria-labelledby="design-selection-title">
+          <div className="design-dialog-heading"><h2 id="design-selection-title">Add style selection</h2><button type="button" className="icon-button" onClick={() => setSelectionOpen(false)} aria-label="Close"><X size={18} /></button></div>
+          <label>Style option<select required value={selectedStyleId} onChange={event => setSelectedStyleId(event.target.value)}><option value="">Choose an option</option>{selectableOptions.map(option => <option key={option.id} value={option.id}>{groupNames.get(option.option_group) ?? option.option_group} · {option.name}</option>)}</select></label>
+          <div className="design-dialog-actions"><button type="button" className="secondary-button" onClick={() => setSelectionOpen(false)}>Cancel</button><button className="primary-button" type="submit" disabled={isAddingSelection || !selectableOptions.length}>{isAddingSelection ? <Loader2 className="animate-spin" size={16} /> : null} Add</button></div>
+        </form>
+      </div>}
     </div>
   )
 }

@@ -41,4 +41,12 @@ Frontend branch → Validation (typecheck/lint/test/build) → Reviewed commit �
 - Light, Dark, and System appearance preference; typed adapter/result contracts are not live endpoints or authorization logic.
 - Intentional `_headers` ensures the temporary preview is not indexed by search engines (`X-Robots-Tag: noindex, nofollow`).
 
+## Catalog and Designs integration status
+
+- Shop Catalog and Main Supplier Global Catalog read live catalog APIs; Shop users can create Shop variants and style options, and Main Supplier can create global style options.
+- Shop Designs and Global Design Templates use the backend design APIs for listing, archiving, draft selections, version publishing, and private reference-image uploads. Shop users can create a draft design from an existing family and Shop/global variant.
+- API responses and uploads follow the backend serializer contract. Catalog and design screens do not fall back to invented mock records when the service request fails.
+- Garment Family and Option Group creation are not offered because the backend currently provides read/configuration APIs but no create endpoints for those records. Global template creation is not offered because no API lists global variants independently of an explicitly selected Shop.
+- Clients, Shop Users, Work, and other unfinished business views remain mock-backed until their individual integrations are accepted. Measurements and Inventory have no frontend screens in this branch yet.
+
 Run `npm ci`, `npm run dev`, `npm run typecheck`, `npm run lint`, `npm test`, and `npm run build`. Ordinary Users have one backend-resolved owning Shop. Do not add a normal-user Shop selector. Read repository and frontend `AGENTS.md` before continuing.

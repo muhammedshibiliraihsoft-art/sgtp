@@ -1,110 +1,125 @@
-import { useState, useEffect } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { useCurrentShop } from '../../hooks/useCurrentShop'
-import { getShopDesigns, archiveShopDesign } from './api'
+import { ApiError } from '../../services/apiClient'
+import { getAllFamilies, getAllShopVariants } from '../catalog/api'
+import type { CatalogFamily, Variant } from '../catalog/types'
+import { archiveShopDesign, createShopDesign, getAllShopDesigns } from './api'
 import type { Design } from './types'
-import { Loader2, Plus,  Wand2, Archive } from 'lucide-react'
+import { AlertCircle, Loader2, Plus, Wand2, Archive } from 'lucide-react'
 import './Designs.css'
+
+function errorMessage(error: unknown) {
+  return error instanceof ApiError ? error.message : error instanceof Error ? error.message : 'Could not load designs. Please try again.'
+}
 
 export function DesignsPage() {
   const { t } = useTranslation()
   const { shopId, isLoading: isShopLoading } = useCurrentShop()
-  
   const [designs, setDesigns] = useState<Design[]>([])
-  const [isLoading, setIsLoading] = useState(false)
+  const [families, setFamilies] = useState<CatalogFamily[]>([])
+  const [variants, setVariants] = useState<Variant[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
-  useEffect(() => {
-    if (isShopLoading || !shopId) return
-    let isMounted = true
-    setIsLoading(true)
-    setError(null)
-    
-    getShopDesigns(shopId)
-      .then(res => {
-        if (isMounted) setDesigns(res.results)
-      })
-      .catch(err => {
-        if (isMounted) {
-          // Fallback to mock data
-          setDesigns([
-            {
-              id: 'd1', tenant_id: shopId, family_id: 'f1', family_name: 'Mens Wear', variant_id: 'v1', variant_name: 'Standard Shirt', status: 'ACTIVE', created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-              latest_version: { id: 'v_1', design_id: 'd1', number: 1, status: 'PUBLISHED', created_at: new Date().toISOString(), published_at: new Date().toISOString(), selections: [], references: [] }
-            },
-            {
-              id: 'd2', tenant_id: shopId, family_id: 'f1', family_name: 'Mens Wear', variant_id: 'v2', variant_name: 'Kurta', status: 'ACTIVE', created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-              latest_version: { id: 'v_2', design_id: 'd2', number: 2, status: 'DRAFT', created_at: new Date().toISOString(), published_at: null, selections: [], references: [] }
-            }
-          ])
-        }
-      })
-      .finally(() => {
-        if (isMounted) setIsLoading(false)
-      })
-      
-    return () => { isMounted = false }
-  }, [shopId, isShopLoading])
+  const [createOpen, setCreateOpen] = useState(false)
+  const [familyId, setFamilyId] = useState('')
+  const [variantId, setVariantId] = useState('')
+  const [designName, setDesignName] = useState('')
 
-  const handleArchive = async (designId: string) => {
+  const loadDesigns = useCallback(async () => {
     if (!shopId) return
-    if (!window.confirm('Are you sure you want to archive this design?')) return
     try {
-      await archiveShopDesign(shopId, designId)
-      setDesigns(designs.filter(d => d.id !== designId))
-    } catch (err: any) {
-      alert(err.message || 'Error archiving design')
+      const [designRows, familyRows, variantRows] = await Promise.all([
+        getAllShopDesigns(shopId), getAllFamilies(), getAllShopVariants(shopId),
+      ])
+      setError(null)
+      setDesigns(designRows)
+      setFamilies(familyRows)
+      setVariants(variantRows)
+    } catch (loadError) {
+      setError(errorMessage(loadError))
+    } finally {
+      setIsLoading(false)
+    }
+  }, [shopId])
+
+  useEffect(() => {
+    let active = true
+    if (!isShopLoading && shopId) queueMicrotask(() => { if (active) { setIsLoading(true); void loadDesigns() } })
+    return () => { active = false }
+  }, [shopId, isShopLoading, loadDesigns])
+
+  const familyVariants = useMemo(() => variants.filter(variant => variant.family === familyId), [variants, familyId])
+  const familyNames = useMemo(() => new Map(families.map(family => [family.id, family.name])), [families])
+  const variantNames = useMemo(() => new Map(variants.map(variant => [variant.id, variant.name])), [variants])
+
+  function openCreate() {
+    const firstFamily = families[0]?.id ?? ''
+    setFamilyId(firstFamily)
+    setVariantId(variants.find(variant => variant.family === firstFamily)?.id ?? '')
+    setDesignName('')
+    setCreateOpen(true)
+  }
+
+  async function submitCreate(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!shopId || !familyId || !variantId) return
+    setIsSaving(true)
+    setError(null)
+    try {
+      await createShopDesign(shopId, { family_id: familyId, variant_id: variantId, name: designName.trim() })
+      setCreateOpen(false)
+      await loadDesigns()
+    } catch (saveError) {
+      setError(errorMessage(saveError))
+    } finally {
+      setIsSaving(false)
     }
   }
 
-  if (isShopLoading) {
-    return <div className="content-wrap" style={{ display: 'grid', placeItems: 'center', height: '200px' }}><Loader2 className="animate-spin" /></div>
+  async function handleArchive(designId: string) {
+    if (!shopId || !window.confirm('Archive this design?')) return
+    try {
+      await archiveShopDesign(shopId, designId)
+      setDesigns(current => current.filter(design => design.id !== designId))
+    } catch (archiveError) {
+      setError(errorMessage(archiveError))
+    }
   }
 
-  if (!shopId) {
-    return <div className="content-wrap">No shop context found.</div>
-  }
+  if (isShopLoading) return <div className="content-wrap design-loading"><Loader2 className="animate-spin" /></div>
+  if (!shopId) return <div className="content-wrap design-error"><AlertCircle /> No authorized Shop context found.</div>
 
   return (
     <div className="content-wrap">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
-        <div>
-          <h1 style={{ fontSize: '32px', fontWeight: 600, margin: '0 0 8px 0', letterSpacing: '-0.5px' }}>{t('designs.title', 'Designs')}</h1>
-          <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '14px' }}>{t('designs.subtitle', 'Manage your shop designs')}</p>
+      <div className="design-page-heading">
+        <div><h1>{t('designs.title', 'Designs')}</h1><p>{t('designs.subtitle', 'Manage your shop designs')}</p></div>
+        <button className="primary-button" onClick={openCreate}><Plus size={16} /> New Design</button>
+      </div>
+      {error && <div className="design-error" role="alert">{error}<button onClick={() => { setIsLoading(true); setError(null); void loadDesigns() }} disabled={isLoading}>Retry</button></div>}
+      {isLoading ? <div className="design-loading"><Loader2 className="animate-spin" /></div> : (
+        <div className="design-grid">
+          {designs.map(design => <article key={design.id} className="design-card">
+            <div className="design-card-heading"><Wand2 size={20} /><Link to={`/designs/${design.id}`}>{design.name || `${familyNames.get(design.family) ?? design.family} · ${variantNames.get(design.variant) ?? design.variant}`}</Link><button className="icon-button" onClick={() => void handleArchive(design.id)} title="Archive design" aria-label="Archive design"><Archive size={16} /></button></div>
+            <p>Status: {design.status}</p>
+            <p>Version: {design.latest_version ? `${design.latest_version.number} (${design.latest_version.status})` : 'No version'}</p>
+          </article>)}
+          {designs.length === 0 && <p className="design-empty">No designs found.</p>}
         </div>
-        <button className="primary-button" onClick={() => alert('Create design flow to be implemented')}><Plus size={16} /> New Design</button>
-      </div>
+      )}
 
-      <div style={{ marginTop: '24px' }}>
-        {isLoading && <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}><Loader2 className="animate-spin" size={24} /></div>}
-        {error && <div style={{ color: 'var(--color-danger)', padding: '16px', background: 'var(--color-danger-subtle)', borderRadius: '8px' }}>{error}</div>}
-        
-        {!isLoading && !error && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
-            {designs.map(d => (
-              <div key={d.id} className="design-card" style={{ padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', background: 'var(--color-surface)', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Wand2 size={20} color="var(--color-primary)" />
-                    <Link to={`/designs/${d.id}`} style={{ fontSize: '16px', fontWeight: 600, textDecoration: 'none', color: 'var(--color-text)' }}>
-                      {d.family_name} - {d.variant_name}
-                    </Link>
-                  </div>
-                  <button className="icon-button" onClick={() => handleArchive(d.id)} title="Archive">
-                    <Archive size={16} color="var(--color-text-muted)" />
-                  </button>
-                </div>
-                <div style={{ marginTop: '12px', flex: 1 }}>
-                  <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', margin: '0 0 4px 0' }}>Status: {d.status}</p>
-                  <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', margin: '0 0 4px 0' }}>Latest Version: {d.latest_version.number} ({d.latest_version.status})</p>
-                </div>
-              </div>
-            ))}
-            {designs.length === 0 && <p style={{ color: 'var(--color-text-muted)' }}>No active designs found.</p>}
-          </div>
-        )}
-      </div>
+      {createOpen && <div className="design-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setCreateOpen(false) }}>
+        <form className="design-dialog" onSubmit={event => void submitCreate(event)} aria-labelledby="design-create-title">
+          <div className="design-dialog-heading"><h2 id="design-create-title">Create design</h2><button type="button" className="icon-button" onClick={() => setCreateOpen(false)} aria-label="Close">×</button></div>
+          <label>Design name<input required maxLength={160} value={designName} onChange={event => setDesignName(event.target.value)} /></label>
+          <label>Garment family<select required value={familyId} onChange={event => { setFamilyId(event.target.value); setVariantId(variants.find(variant => variant.family === event.target.value)?.id ?? '') }}>{families.map(family => <option key={family.id} value={family.id}>{family.name}</option>)}</select></label>
+          <label>Variant<select required value={variantId} onChange={event => setVariantId(event.target.value)}>{familyVariants.map(variant => <option key={variant.id} value={variant.id}>{variant.name} ({variant.code})</option>)}</select></label>
+          <div className="design-dialog-actions"><button type="button" className="secondary-button" onClick={() => setCreateOpen(false)}>Cancel</button><button type="submit" className="primary-button" disabled={isSaving || !familyVariants.length}>{isSaving ? <Loader2 size={16} className="animate-spin" /> : null} Create</button></div>
+        </form>
+      </div>}
     </div>
   )
 }

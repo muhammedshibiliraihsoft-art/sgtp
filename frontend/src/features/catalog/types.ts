@@ -1,88 +1,75 @@
+export type ApiPage<T> = {
+  count: number
+  next: string | null
+  previous: string | null
+  results: T[]
+}
+
 export interface CatalogFamily {
   id: string
   name: string
   code: string
-  description?: string
-  is_active: boolean
 }
 
-export interface CatalogFamilyPage {
-  count: number
-  next: string | null
-  previous: string | null
-  results: CatalogFamily[]
-}
+export type CatalogFamilyPage = ApiPage<CatalogFamily>
 
 export interface OptionGroup {
   id: string
   name: string
   code: string
-  description?: string
-  is_active: boolean
+  families: string[]
 }
 
-export interface CatalogOptionGroupPage {
-  count: number
-  next: string | null
-  previous: string | null
-  results: OptionGroup[]
-}
+export type CatalogOptionGroupPage = ApiPage<OptionGroup>
 
 export interface Variant {
   id: string
-  family_id: string
-  family_name: string
+  family: string
   name: string
   code: string
-  is_active: boolean
-  is_global: boolean
-  tenant_id: string | null
+  is_default: boolean
 }
 
-export interface ShopVariantPage {
-  count: number
-  next: string | null
-  previous: string | null
-  results: Variant[]
-}
+export type ShopVariantPage = ApiPage<Variant>
 
 export interface StyleImage {
   id: string
-  file_name: string
-  content_type: string
-  size_bytes: number
+  mime_type: string
+  byte_size: number
+  width: number
+  height: number
+  sort_order: number
+  alt_text: string
   content_url: string
-  uploaded_at: string
 }
 
 export interface StyleOption {
   id: string
-  group_id: string
-  group_name: string
+  option_group: string
+  tenant: string | null
   code: string
   name: string
   is_active: boolean
   is_global: boolean
-  tenant_id: string | null
   reference_images: StyleImage[]
 }
 
-export interface ShopStyleOptionPage {
-  count: number
-  next: string | null
-  previous: string | null
-  results: StyleOption[]
+export type ShopStyleOptionPage = ApiPage<StyleOption>
+
+export interface TranslationInput {
+  locale: 'en' | 'ar-KW' | 'bn' | 'ur'
+  name: string
+  description?: string
 }
 
-// Request Types
 export interface ShopVariantInputRequest {
   family_id: string
-  name: string
-  code?: string
+  code: string
+  translations: TranslationInput[]
 }
 
 export interface ShopStyleOptionInputRequest {
-  group_id: string
-  name: string
-  code?: string
+  option_group_id: string
+  code: string
+  translations: TranslationInput[]
 }
