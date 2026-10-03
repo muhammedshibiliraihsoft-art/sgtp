@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
-import { MockUserAdapter } from './mocks'
+import { usersApi } from './api'
 import type { MembershipDTO, WorkFunctionCode } from './types'
 
 import { Tag, Ruler, Scissors, Layers, Sparkles, ClipboardCheck, Calculator } from 'lucide-react'
 
 interface Props {
+  shopId: string
   membership: MembershipDTO
   onClose: () => void
 }
@@ -19,18 +20,18 @@ const FUNCTIONS: { code: WorkFunctionCode, label: string, icon: React.ReactNode 
   { code: 'CASHIER', label: 'Cashier', icon: <Calculator size={16} /> }
 ]
 
-export function WorkFunctionsModal({ membership, onClose }: Props) {
+export function WorkFunctionsModal({ shopId, membership, onClose }: Props) {
   const [functions, setFunctions] = useState<WorkFunctionCode[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    MockUserAdapter.getWorkFunctions(membership.id)
+    usersApi.functions(shopId, membership.id)
       .then(res => setFunctions(res.functions))
       .catch(() => setError('Failed to load work functions'))
       .finally(() => setIsLoading(false))
-  }, [membership.id])
+  }, [shopId, membership.id])
 
   const toggleFunction = (code: WorkFunctionCode) => {
     if (functions.includes(code)) {
@@ -44,7 +45,7 @@ export function WorkFunctionsModal({ membership, onClose }: Props) {
     setIsSaving(true)
     setError(null)
     try {
-      await MockUserAdapter.setWorkFunctions(membership.id, functions)
+      await usersApi.setFunctions(shopId, membership.id, functions)
       onClose()
     } catch (e: any) {
       setError(e.message || 'Failed to save work functions')

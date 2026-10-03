@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { addShopDesignSelection, createShopDesign, uploadShopDesignReferences } from './api'
+import { addShopDesignSelection, createShopDesign, getAllShopDesigns, getShopDesigns, uploadShopDesignReferences } from './api'
 
 function stubJsonFetch(body: unknown) {
   const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(body), {
@@ -42,5 +42,23 @@ describe('Design API contract', () => {
     const body = fetchMock.mock.calls[0][1]?.body as FormData
     expect(body.getAll('images')).toEqual([file])
     expect(body.get('file')).toBeNull()
+  })
+
+  it('passes the selected Family to the Shop Designs list API', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ count: 0, next: null, previous: null, results: [] }), {
+      status: 200, headers: { 'Content-Type': 'application/json' },
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+    await getShopDesigns('shop-1', 1, 'family-1')
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/shops/shop-1/designs/?page=1&locale=en&family=family-1')
+  })
+
+  it('composes the exact Family and Variant filters for Design listing', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ count: 0, next: null, previous: null, results: [] }), {
+      status: 200, headers: { 'Content-Type': 'application/json' },
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+    await getAllShopDesigns('shop-1', { family: 'family-1', variant: 'variant-1' })
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/shops/shop-1/designs/?page=1&locale=en&family=family-1&variant=variant-1')
   })
 })

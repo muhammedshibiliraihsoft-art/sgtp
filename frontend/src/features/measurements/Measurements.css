@@ -1,0 +1,261 @@
+.measurement-workspace {
+  display: grid;
+  gap: 18px;
+  width: min(100%, 1320px);
+}
+
+.measurement-page-heading,
+.measurement-section-heading,
+.measurement-review-heading,
+.measurement-entry-header,
+.measurement-client-selected,
+.measurement-history-select,
+.measurement-comparison-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.measurement-page-heading { align-items: flex-start; }
+.measurement-page-heading h1 { margin: 6px 0; font-size: clamp(26px, 4vw, 34px); }
+.measurement-page-heading p,
+.measurement-section-heading p { margin: 4px 0 0; color: var(--color-text-muted); }
+.measurement-workspace .info-card {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.measurement-context-card { display: grid; gap: 8px; max-width: 680px; }
+.measurement-context-card label,
+.measurement-garment-selectors label,
+.measurement-profile-controls label,
+.measurement-design-persistence label,
+.measurement-compare-controls label,
+.measurement-wearer-select {
+  display: grid;
+  gap: 8px;
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+.measurement-context-card select,
+.measurement-garment-selectors select,
+.measurement-profile-controls select,
+.measurement-design-persistence input,
+.measurement-design-persistence select,
+.measurement-compare-controls select,
+.measurement-wearer-select select,
+.measurement-client-picker input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-canvas);
+  color: var(--color-text);
+  font: inherit;
+}
+.measurement-context-card small,
+.measurement-design-persistence small,
+.measurement-workflow-card > small { color: var(--color-text-muted); }
+
+.measurement-workflow-card { display: grid; gap: 18px; }
+.measurement-section-heading { justify-content: flex-start; }
+.measurement-section-heading h2 { margin: 0; font-size: 20px; }
+.measurement-step-number {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.measurement-client-picker { display: grid; gap: 10px; max-width: 760px; }
+.measurement-client-results { display: grid; gap: 8px; }
+.measurement-client-results button,
+.measurement-fabric-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  min-height: 58px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-canvas);
+  color: var(--color-text);
+  text-align: start;
+  cursor: pointer;
+}
+.measurement-client-results button:hover,
+.measurement-fabric-option:hover { border-color: var(--color-primary); }
+.measurement-client-results button strong,
+.measurement-client-results button span,
+.measurement-fabric-option strong,
+.measurement-fabric-option small { display: block; }
+.measurement-client-results button span,
+.measurement-fabric-option small { margin-top: 4px; color: var(--color-text-muted); font-size: 12px; }
+.measurement-client-selected { justify-content: flex-start; flex-wrap: wrap; }
+.measurement-client-selected > div { display: grid; gap: 4px; margin-inline-end: auto; }
+.measurement-client-selected small { color: var(--color-text-muted); }
+.measurement-wearer-select { max-width: 560px; }
+
+.measurement-garment-selectors,
+.measurement-profile-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+  gap: 14px;
+}
+.measurement-profile-controls { grid-template-columns: minmax(0, 1fr) auto; }
+.measurement-profile-controls .btn-secondary { min-height: 44px; }
+.measurement-design-persistence { display: grid; gap: 12px; padding-top: 18px; border-top: 1px solid var(--color-border); }
+.measurement-design-picker-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 12px; }
+.measurement-design-picker-row button { min-height: 44px; white-space: nowrap; }
+
+.measurement-style-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.measurement-style-group { min-width: 0; overflow: hidden; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-canvas); }
+.measurement-style-group.is-open { grid-column: 1 / -1; border-color: var(--color-primary); }
+.measurement-style-group-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 66px;
+  padding: 12px 14px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  text-align: start;
+  cursor: pointer;
+}
+.measurement-style-group-toggle > svg:first-of-type { color: var(--color-primary); }
+.measurement-style-group-toggle > svg:last-child { margin-inline-start: auto; }
+.measurement-style-group-copy { display: grid; gap: 4px; min-width: 0; }
+.measurement-style-group-copy small { overflow: hidden; color: var(--color-text-muted); text-overflow: ellipsis; white-space: nowrap; }
+.measurement-style-group-body { padding: 12px; border-top: 1px solid var(--color-border); }
+.measurement-option-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.measurement-option-card {
+  display: grid;
+  grid-template-rows: 132px auto auto;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-align: start;
+  cursor: pointer;
+}
+.measurement-option-card:hover { border-color: var(--color-primary); }
+.measurement-option-card.is-selected { border-color: var(--color-primary); box-shadow: 0 0 0 2px var(--color-primary-soft); }
+.measurement-option-image,
+.measurement-image-fallback { width: 100%; height: 132px; border-radius: 8px; object-fit: cover; }
+.measurement-reference-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 4px; height: 132px; overflow: hidden; border-radius: 8px; }
+.measurement-reference-gallery .measurement-option-image,
+.measurement-reference-gallery .measurement-image-fallback { height: 132px; min-width: 0; border-radius: 6px; }
+.measurement-image-fallback { display: grid; place-items: center; background: var(--color-surface-subtle); color: var(--color-text-muted); }
+.measurement-image-skeleton { width: 100%; height: 100%; border-radius: inherit; background: linear-gradient(100deg, var(--color-surface-subtle) 25%, var(--color-border) 45%, var(--color-surface-subtle) 65%); background-size: 200% 100%; animation: measurement-image-pulse 1.2s ease-in-out infinite; }
+@keyframes measurement-image-pulse { to { background-position-x: -200%; } }
+.measurement-option-copy { display: grid; gap: 3px; padding: 9px 3px 4px; overflow-wrap: anywhere; }
+.measurement-option-copy small,
+.measurement-option-source { color: var(--color-text-muted); font-size: 11px; }
+.measurement-option-source { justify-self: start; padding: 3px 7px; border-radius: 20px; background: var(--color-surface-subtle); }
+.measurement-error-inline { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--color-danger); }
+
+.measurement-entry { display: grid; gap: 18px; }
+.measurement-entry-header { align-items: flex-start; }
+.measurement-entry-header h3,
+.measurement-review h3 { margin: 0; }
+.measurement-entry-header p { margin: 6px 0 0; color: var(--color-text-muted); font-size: 13px; }
+.measurement-field-group h4 { margin: 0 0 10px; text-transform: capitalize; }
+.measurement-field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.measurement-field { display: grid; align-content: start; gap: 7px; font-size: 13px; font-weight: 600; }
+.measurement-field-inputs { display: grid; grid-template-columns: minmax(0, 1fr) 102px; gap: 8px; }
+.measurement-field input,
+.measurement-field select { min-width: 0; min-height: 44px; padding: 9px 10px; border: 1px solid var(--color-border); border-radius: 9px; background: var(--color-canvas); color: var(--color-text); font: inherit; }
+.measurement-field small { color: var(--color-text-muted); font-size: 12px; font-weight: 400; }
+.measurement-unit-note { margin: 0; color: var(--color-text-muted); font-size: 12px; }
+.measurement-empty { padding: 14px; border: 1px dashed var(--color-border); border-radius: 10px; color: var(--color-text-muted); }
+.measurement-inline-retry { margin-inline-start: 12px; border: 0; background: transparent; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; }
+
+.measurement-history-list { display: grid; gap: 10px; }
+.measurement-history-card { display: grid; gap: 12px; padding: 14px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-canvas); }
+.measurement-history-card.is-selected { border-color: var(--color-primary); }
+.measurement-history-select { justify-content: flex-start; flex-wrap: wrap; width: 100%; padding: 0; border: 0; background: transparent; color: var(--color-text); text-align: start; cursor: pointer; }
+.measurement-history-select > span { color: var(--color-text-muted); font-size: 12px; }
+.measurement-history-select small { flex-basis: 100%; color: var(--color-text-muted); }
+.measurement-history-values,
+.measurement-review-values-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.measurement-history-values > div,
+.measurement-review-values-grid > div { display: flex; justify-content: space-between; gap: 10px; padding: 9px 10px; border-radius: 8px; background: var(--color-surface); font-size: 12px; }
+.measurement-history-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.measurement-compare-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) auto; align-items: end; gap: 10px; padding-top: 16px; border-top: 1px solid var(--color-border); }
+.measurement-compare-controls .btn-secondary { min-height: 44px; }
+.measurement-comparison { display: grid; gap: 12px; }
+.measurement-comparison-table { overflow-x: auto; border: 1px solid var(--color-border); border-radius: 10px; }
+.measurement-comparison-row { display: grid; grid-template-columns: minmax(150px, 1.4fr) repeat(3, minmax(110px, 1fr)); gap: 10px; min-width: 540px; padding: 10px 12px; border-top: 1px solid var(--color-border); }
+.measurement-comparison-row.is-header { border-top: 0; background: var(--color-surface-subtle); font-weight: 700; }
+
+.measurement-fabric-list { display: grid; gap: 8px; }
+.measurement-fabric-option { flex-wrap: wrap; }
+.measurement-fabric-option > span { min-width: 180px; }
+.measurement-fabric-option.is-selected { border-color: var(--color-primary); box-shadow: 0 0 0 2px var(--color-primary-soft); }
+.measurement-fabric-option b { color: var(--color-primary); font-size: 13px; }
+
+.measurement-review { display: grid; gap: 18px; }
+.measurement-review-heading { align-items: flex-start; }
+.measurement-review-heading h2 { margin: 5px 0 0; }
+.measurement-review-count { padding: 6px 10px; border-radius: 20px; background: var(--color-primary-soft); color: var(--color-primary); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.measurement-review-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.measurement-review-grid article { min-width: 0; padding: 14px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-canvas); }
+.measurement-review-grid article p { margin: 9px 0 5px; overflow-wrap: anywhere; }
+.measurement-review-grid article small { color: var(--color-text-muted); }
+.measurement-review-selections,
+.measurement-review-values { display: grid; gap: 12px; padding-top: 14px; border-top: 1px solid var(--color-border); }
+.measurement-review-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.measurement-review-groups section { min-width: 0; padding: 12px; border: 1px solid var(--color-border); border-radius: 10px; }
+.measurement-review-groups h4 { margin: 0 0 8px; }
+.measurement-review-groups ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.measurement-review-groups li { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: center; gap: 10px; }
+.measurement-review-groups .measurement-option-image,
+.measurement-review-groups .measurement-image-fallback { width: 52px; height: 52px; border-radius: 8px; }
+.measurement-review-groups li > span { display: grid; gap: 4px; min-width: 0; }
+.measurement-review-groups li small { color: var(--color-text-muted); }
+
+@media (max-width: 760px) {
+  .measurement-workspace .info-card { padding: 15px; }
+  .measurement-garment-selectors,
+  .measurement-field-grid,
+  .measurement-style-groups,
+  .measurement-review-grid,
+  .measurement-review-groups { grid-template-columns: 1fr; }
+  .measurement-profile-controls,
+  .measurement-design-picker-row,
+  .measurement-compare-controls { grid-template-columns: 1fr; }
+  .measurement-profile-controls .btn-secondary,
+  .measurement-design-picker-row button,
+  .measurement-compare-controls .btn-secondary { width: 100%; }
+  .measurement-entry-header { align-items: stretch; flex-direction: column; }
+  .measurement-entry-header .btn-primary { width: 100%; min-height: 46px; }
+  .measurement-page-heading { flex-direction: column; }
+  .measurement-option-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .measurement-review-heading { flex-direction: column; }
+}
+
+@media (max-width: 420px) {
+  .measurement-field-inputs { grid-template-columns: minmax(0, 1fr) 88px; }
+  .measurement-option-grid { grid-template-columns: 1fr; }
+  .measurement-history-actions { display: grid; grid-template-columns: 1fr; }
+}

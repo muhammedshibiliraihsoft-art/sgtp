@@ -62,6 +62,13 @@ export type ShopPage = {
   results: ShopSummary[]
 }
 
+export type ShopRequestContext = {
+  shop_id: string
+  role: 'ADMIN' | 'STAFF' | 'VIEWER' | null
+  is_main_supplier: boolean
+  work_functions: string[]
+}
+
 const basePath = '/api/v1/tenants/'
 
 export const shopsService = {
@@ -72,6 +79,9 @@ export const shopsService = {
     if (filters.active && filters.active !== 'all') query.set('is_active', filters.active)
     if (filters.ordering) query.set('ordering', filters.ordering)
     return apiRequest<ShopPage>(`${basePath}${query.size ? `?${query}` : ''}`)
+  },
+  context(id: string): Promise<ShopRequestContext> {
+    return apiRequest<ShopRequestContext>(`/api/v1/shops/${encodeURIComponent(id)}/context/`)
   },
   detail(id: string): Promise<ShopDetail> {
     return apiRequest<ShopDetail>(`${basePath}${encodeURIComponent(id)}/`)

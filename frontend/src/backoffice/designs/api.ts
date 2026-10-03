@@ -4,18 +4,19 @@ import type { Design, DesignCreateRequest, DesignReference, DesignSelection, Pub
 
 const basePath = '/api/v1/catalog/design-templates/'
 
-export function getGlobalDesigns(page = 1, familyId?: string): Promise<ShopDesignPage> {
+export function getGlobalDesigns(page = 1, familyId?: string, locale = 'en'): Promise<ShopDesignPage> {
   const url = new URL(basePath, window.location.origin)
   url.searchParams.set('page', String(page))
+  url.searchParams.set('locale', locale)
   if (familyId) url.searchParams.set('family', familyId)
   return apiRequest<ShopDesignPage>(url.pathname + url.search)
 }
 
-export async function getAllGlobalDesigns(): Promise<Design[]> {
+export async function getAllGlobalDesigns(familyId?: string, locale = 'en'): Promise<Design[]> {
   const designs: Design[] = []
   let page = 1
   while (true) {
-    const response = await getGlobalDesigns(page)
+    const response = await getGlobalDesigns(page, familyId, locale)
     designs.push(...response.results)
     if (!response.next) return designs
     page += 1

@@ -1,7 +1,8 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus, Search, ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react'
-import { MockUserAdapter } from './mocks'
+import { usersApi } from './api'
+import { useCurrentShop } from '../../hooks/useCurrentShop'
 import type { MembershipDTO, ShopStats } from './types'
 import { UserForm } from './UserForm'
 import { WorkFunctionsModal } from './WorkFunctionsModal'
@@ -12,10 +13,13 @@ import './users.css'
 
 export function UsersPage() {
   const { t } = useTranslation()
+  const { shopId, role, isLoading: isShopLoading } = useCurrentShop()
   
   const [memberships, setMemberships] = useState<MembershipDTO[]>([])
   const [stats, setStats] = useState<ShopStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [count, setCount] = useState(0)
   
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState<'ALL' | 'ADMIN' | 'STAFF' | 'VIEWER'>('ALL')
@@ -30,53 +34,31 @@ export function UsersPage() {
   const [manageWorkFunctions, setManageWorkFunctions] = useState<MembershipDTO | null>(null)
   const [activeMemberMenu, setActiveMemberMenu] = useState<MembershipDTO | null>(null)
   const [actionMember, setActionMember] = useState<{ member: MembershipDTO, action: 'DEACTIVATE' | 'REACTIVATE' | 'REMOVE' | 'PROMOTE_STAFF' | 'DEMOTE_VIEWER' } | null>(null)
-  const loadData = async () => {
+  const canManage = role === 'ADMIN'
+  const loadData = useCallback(async () => {
+    if (!shopId || isShopLoading) { setIsLoading(isShopLoading); return }
+    if (!canManage) { setMemberships([]); setCount(0); setStats(null); setIsLoading(false); return }
     setIsLoading(true)
+    setError('')
     try {
-      const [mems, st] = await Promise.all([
-        MockUserAdapter.getMemberships(),
-        MockUserAdapter.getShopStats()
+      const [pageData, st] = await Promise.all([
+        usersApi.memberships(shopId, { search: searchQuery, role: roleFilter, active: statusFilter, page }),
+        canManage ? usersApi.stats(shopId) : Promise.resolve(null)
       ])
-      setMemberships(mems)
-      setStats(st)
+      setMemberships(pageData.results); setCount(pageData.count); setStats(st)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Unable to load team members.')
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [shopId, isShopLoading, searchQuery, roleFilter, statusFilter, page, canManage])
 
   useEffect(() => {
     void loadData()
-  }, [])
+  }, [loadData])
 
-  const filteredMemberships = useMemo(() => {
-    let result = memberships
-    
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase()
-      result = result.filter(m => 
-        m.display_name.toLowerCase().includes(q) || 
-        m.user_code.toLowerCase().includes(q)
-      )
-    }
-    
-    if (roleFilter !== 'ALL') {
-      result = result.filter(m => m.role === roleFilter)
-    }
-    
-    if (statusFilter !== 'ALL') {
-      const isActive = statusFilter === 'ACTIVE'
-      result = result.filter(m => m.is_active === isActive)
-    }
-    
-    return result
-  }, [memberships, searchQuery, roleFilter, statusFilter])
-
-  const paginatedMemberships = useMemo(() => {
-    const start = (page - 1) * pageSize
-    return filteredMemberships.slice(start, start + pageSize)
-  }, [filteredMemberships, page])
-
-  const totalPages = Math.ceil(filteredMemberships.length / pageSize)
+  const paginatedMemberships = memberships
+  const totalPages = Math.ceil(count / pageSize)
 
   const handleActionConfirm = async () => {
     if (!actionMember) return
@@ -84,19 +66,19 @@ export function UsersPage() {
     
     try {
       if (action === 'DEACTIVATE') {
-        await MockUserAdapter.updateMembershipStatus(member.id, false)
+        await usersApi.deactivate(member.id)
       } else if (action === 'REACTIVATE') {
-        await MockUserAdapter.updateMembershipStatus(member.id, true)
+        await usersApi.reactivate(member.id)
       } else if (action === 'REMOVE') {
-        await MockUserAdapter.removeMembership(member.id)
+        await usersApi.remove(member.id)
       } else if (action === 'PROMOTE_STAFF') {
-        await MockUserAdapter.updateMembershipRole(member.id, 'STAFF')
+        await usersApi.setRole(member.id, 'STAFF')
       } else if (action === 'DEMOTE_VIEWER') {
-        await MockUserAdapter.updateMembershipRole(member.id, 'VIEWER')
+        await usersApi.setRole(member.id, 'VIEWER')
       }
       await loadData()
-    } catch (e) {
-      console.error(e)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Unable to update membership.')
     } finally {
       setActionMember(null)
     }
@@ -113,14 +95,14 @@ export function UsersPage() {
             </p>
           )}
         </div>
-        <button 
+        {canManage && <button
           className="btn-primary" 
           disabled={stats?.is_at_user_limit || isLoading}
           onClick={() => setIsFormOpen(true)}
           style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
         >
           <Plus size={16} /> {t('users.addUser', 'Add user')}
-        </button>
+        </button>}
       </div>
 
       <div className="users-controls">
@@ -157,9 +139,10 @@ export function UsersPage() {
         </div>
       </div>
 
+      {error && <div className="login-error-message" role="alert">{error}</div>}
       {isLoading ? (
         <div className="users-loading">Loading...</div>
-      ) : filteredMemberships.length === 0 ? (
+      ) : !shopId ? <div className="empty-state"><h3>Shop context unavailable</h3><p>Sign in with a Shop admin account to manage team members.</p></div> : paginatedMemberships.length === 0 ? (
         <div className="empty-state">
           <h3>No team members found</h3>
           <p>Try adjusting your search or filters.</p>
@@ -198,7 +181,7 @@ export function UsersPage() {
                     </td>
                     <td className="col-actions">
                       <div className="action-buttons">
-                        {m.role !== 'ADMIN' ? (
+                        {canManage && m.role !== 'ADMIN' ? (
                           <button className="btn-icon" title="Manage Member" onClick={() => setActiveMemberMenu(m)}>
                             <MoreHorizontal size={18} />
                           </button>
@@ -228,7 +211,7 @@ export function UsersPage() {
                   </div>
                 </div>
                 <div className="uc-actions">
-                  {m.role !== 'ADMIN' ? (
+                  {canManage && m.role !== 'ADMIN' ? (
                     <button className="btn-secondary" onClick={() => setActiveMemberMenu(m)} style={{ width: '100%', justifyContent: 'center' }}>
                       Manage Member
                     </button>
@@ -254,8 +237,9 @@ export function UsersPage() {
         </>
       )}
 
-      {isFormOpen && (
-        <UserForm 
+      {isFormOpen && shopId && (
+        <UserForm
+          shopId={shopId}
           onClose={() => setIsFormOpen(false)} 
           onSuccess={(creds) => {
             setIsFormOpen(false)
@@ -306,7 +290,8 @@ export function UsersPage() {
       )}
 
       {manageWorkFunctions && (
-        <WorkFunctionsModal 
+        <WorkFunctionsModal
+          shopId={shopId || ''}
           membership={manageWorkFunctions} 
           onClose={() => setManageWorkFunctions(null)} 
         />

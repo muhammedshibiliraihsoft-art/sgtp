@@ -1,53 +1,42 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { binaryRequest } from '../services/apiClient'
 
+type LoadedImage = {
+  source: string
+  objectUrl: string | null
+  error: Error | null
+}
+
 export function usePrivateImage(url: string | null | undefined) {
-  const [objectUrl, setObjectUrl] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<Error | null>(null)
+  const [image, setImage] = useState<LoadedImage | null>(null)
 
   useEffect(() => {
-    if (!url) {
-      setObjectUrl(null)
-      setIsLoading(false)
-      setError(null)
-      return
-    }
+    if (!url) return
 
-    let isMounted = true
-    setIsLoading(true)
-    setError(null)
+    let cancelled = false
+    let createdUrl: string | null = null
 
     binaryRequest(url)
       .then(blob => {
-        if (!isMounted) return
-        const createdUrl = URL.createObjectURL(blob)
-        setObjectUrl(createdUrl)
-        setIsLoading(false)
+        if (cancelled) return
+        createdUrl = URL.createObjectURL(blob)
+        setImage({ source: url, objectUrl: createdUrl, error: null })
       })
       .catch(err => {
-        if (!isMounted) return
-        setError(err instanceof Error ? err : new Error(String(err)))
-        setIsLoading(false)
+        if (cancelled) return
+        setImage({ source: url, objectUrl: null, error: err instanceof Error ? err : new Error(String(err)) })
       })
 
     return () => {
-      isMounted = false
-      if (objectUrl) {
-         // this closure has stale objectUrl if we don't handle carefully, 
-         // but wait, we need to revoke the CURRENT object url when url changes
-      }
+      cancelled = true
+      if (createdUrl) URL.revokeObjectURL(createdUrl)
     }
   }, [url])
 
-  // Better cleanup logic
-  useEffect(() => {
-    return () => {
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl)
-      }
-    }
-  }, [objectUrl])
-
-  return { objectUrl, isLoading, error }
+  const matchesCurrentUrl = Boolean(url && image?.source === url)
+  return {
+    objectUrl: matchesCurrentUrl ? image?.objectUrl ?? null : null,
+    isLoading: Boolean(url && (!matchesCurrentUrl || (!image?.objectUrl && !image?.error))),
+    error: matchesCurrentUrl ? image?.error ?? null : null,
+  }
 }

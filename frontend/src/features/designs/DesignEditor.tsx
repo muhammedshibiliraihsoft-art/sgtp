@@ -64,10 +64,13 @@ export function DesignEditor() {
   const latest = design?.latest_version
   const isDraft = latest?.status === 'DRAFT'
   const groupNames = useMemo(() => new Map(groups.map(group => [group.id, group.name])), [groups])
-  const selectableOptions = useMemo(() => styleOptions.filter(option => {
-    const optionGroup = groups.find(group => group.id === option.option_group)
-    return option.is_active && Boolean(optionGroup?.families.includes(design?.family ?? ''))
-  }), [styleOptions, groups, design?.family])
+  const selectableGroups = useMemo(() => groups
+    .filter(group => group.families.includes(design?.family ?? ''))
+    .map(group => ({
+      ...group,
+      options: styleOptions.filter(option => option.is_active && option.option_group === group.id),
+    })), [styleOptions, groups, design?.family])
+  const selectableOptions = useMemo(() => selectableGroups.flatMap(group => group.options), [selectableGroups])
 
   async function handlePublish() {
     if (!shopId || !latest) return
@@ -124,7 +127,7 @@ export function DesignEditor() {
   const allReferences = latest.references
 
   return (
-    <div className="content-wrap">
+    <div className="content-wrap design-page">
       <div className="design-editor-heading">
         <Link to="/designs" className="icon-button" aria-label="Back to designs"><ArrowLeft size={20} /></Link>
         <div><h1>{design.name || 'Design'}</h1><p>Version {latest.number} · {latest.status}</p></div>
@@ -152,7 +155,20 @@ export function DesignEditor() {
       {selectionOpen && <div className="design-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setSelectionOpen(false) }}>
         <form className="design-dialog" onSubmit={event => void handleAddSelection(event)} aria-labelledby="design-selection-title">
           <div className="design-dialog-heading"><h2 id="design-selection-title">Add style selection</h2><button type="button" className="icon-button" onClick={() => setSelectionOpen(false)} aria-label="Close"><X size={18} /></button></div>
-          <label>Style option<select required value={selectedStyleId} onChange={event => setSelectedStyleId(event.target.value)}><option value="">Choose an option</option>{selectableOptions.map(option => <option key={option.id} value={option.id}>{groupNames.get(option.option_group) ?? option.option_group} · {option.name}</option>)}</select></label>
+          {selectableOptions.length ? <div className="design-choice-groups" aria-label="Available style options">
+            {selectableGroups.filter(group => group.options.length > 0).map(group => <fieldset className="design-choice-group" key={group.id}>
+              <legend>{group.name}<span>{group.options.length}</span></legend>
+              <div className="design-choice-options">{group.options.map(option => <label className={`design-choice-option${selectedStyleId === option.id ? ' selected' : ''}`} key={option.id}>
+                <input type="radio" name="style-option" required value={option.id} checked={selectedStyleId === option.id} onChange={() => setSelectedStyleId(option.id)} />
+                <span><strong>{option.name}</strong><small>{option.code}</small></span>
+              </label>)}</div>
+            </fieldset>)}
+          </div> : <div className="design-choice-empty" role="status">
+            <AlertCircle size={19} />
+            <p>{selectableGroups.length
+              ? 'No active style options are available for this garment family yet.'
+              : 'No option groups are linked to this garment family yet. Ask your Main Supplier to configure the family options.'}</p>
+          </div>}
           <div className="design-dialog-actions"><button type="button" className="secondary-button" onClick={() => setSelectionOpen(false)}>Cancel</button><button className="primary-button" type="submit" disabled={isAddingSelection || !selectableOptions.length}>{isAddingSelection ? <Loader2 className="animate-spin" size={16} /> : null} Add</button></div>
         </form>
       </div>}
