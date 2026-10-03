@@ -11,7 +11,12 @@
 
 - Completed the additive Variant backend contract: active/archive lifecycle and migration `catalog.0011_garmentvariant_is_active`; authoritative list/detail DTOs; Shop and Main Supplier detail, translation, lifecycle and default routes; paginated server-side search/family/status/source filters; exact Variant Design filters; and archived Variant rejection for new dependent records.
 - Preserved historical references and the existing Family/Measurement implementation. Variant thumbnail is deferred; no inventory/cost semantics were introduced.
-- Validation: full PostgreSQL application suite 430 passed; focused Catalog/Measurement/Variant API/concurrency suite 56 passed; validator tests 30 passed; repository state validator PASS (430 tests discovered); Django checks, migration drift, OpenAPI, Black/Flake8, schema parity and diff check PASS. OpenAPI reported 0 errors/28 warnings (12 unique). Migration was tested only in disposable UTF-8 PostgreSQL databases. No commit, push, merge, deployment or shared/staging/production migration.
+- Validation: full PostgreSQL application suite 430 passed; focused Catalog/Measurement/Variant API/concurrency suite 56 passed; validator tests 30 passed; repository state validator PASS (430 tests discovered); Django checks, migration drift, OpenAPI, Black/Flake8, schema parity and diff check PASS. OpenAPI reported 0 errors/28 warnings (12 unique). Before the later staging authorization, migration was tested only in disposable UTF-8 PostgreSQL databases; the staging application is recorded below.
+
+## 2026-10-03 — GARMENT-VARIANTS-01 staging deployment
+
+- Published implementation commit `ca1285cd73814139350c076ce426c2273f4ca81a` to `main` after exact-SHA Project State Validation run `37099853077` passed. Manually deployed Render staging service `birky-staging-api` as deploy `dep-db095b0u01pc739cl4n0` (live; auto-deploy remains off).
+- Startup applied the Family image/status migration and Variant active-state migration successfully. `/api/health/live/` and `/api/health/ready/` returned 200. Unauthenticated requests to Family detail and Shop Variant detail returned 401, confirming both routes are registered; authenticated browser verification remains pending. Production was not deployed or migrated.
 
 ## 2026-10-03 — GARMENT-FAMILIES-01 (backend phase)
 
