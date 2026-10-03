@@ -1,7 +1,7 @@
 """Shop-context APIs for measurement history and material references."""
 
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Exists, OuterRef, Q
 from rest_framework import serializers, status
 from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.pagination import PageNumberPagination
@@ -15,6 +15,7 @@ from apps.accounts.permissions import PasswordChangeGate
 from apps.catalog.measurement_models import (
     Material,
     MeasurementDefinition,
+    MeasurementDefinitionMapping,
     MeasurementDefinitionTranslation,
     MeasurementProfile,
     MeasurementSet,
@@ -180,16 +181,19 @@ class MeasurementDefinitionListCreateView(ShopContextMixin, TenantScopedMixin, A
             serializers.UUIDField().run_validation(variant_raw) if variant_raw else None
         )
         if family_id:
-            rows = rows.filter(mappings__family_id=family_id)
-            rows = (
-                rows.filter(
-                    Q(mappings__variant__isnull=True)
-                    | Q(mappings__variant_id=variant_id)
-                    if variant_id
-                    else Q(mappings__variant__isnull=True)
+            applicable_mappings = MeasurementDefinitionMapping.objects.filter(
+                definition_id=OuterRef("pk"),
+                family_id=family_id,
+                deleted__isnull=True,
+            )
+            if variant_id:
+                applicable_mappings = applicable_mappings.filter(
+                    Q(variant__isnull=True) | Q(variant_id=variant_id)
                 )
-                .distinct()
-                .order_by("mappings__sort_order", "code", "id")
+            else:
+                applicable_mappings = applicable_mappings.filter(variant__isnull=True)
+            rows = rows.filter(Exists(applicable_mappings)).order_by(
+                "sort_order", "code", "id"
             )
         return _paginated(
             request,

@@ -178,6 +178,32 @@ class MeasurementMaterialApiTests(APITestCase):
             ).exists()
         )
 
+    def test_variant_filter_returns_definition_once_for_family_and_variant_mappings(
+        self,
+    ):
+        from apps.catalog.measurement_models import MeasurementDefinitionMapping
+
+        MeasurementDefinitionMapping.objects.get_or_create(
+            definition=self.chest,
+            family=self.family,
+            variant=self.variant,
+            defaults={"sort_order": 99},
+        )
+        self.client.force_authenticate(self.admin)
+
+        response = self.client.get(
+            self.definitions_url()
+            + f"?family_id={self.family.pk}&variant_id={self.variant.pk}"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        definition_ids = [item["id"] for item in response.data["results"]]
+        self.assertEqual(len(definition_ids), len(set(definition_ids)))
+        self.assertEqual(
+            sum(item["id"] == str(self.chest.pk) for item in response.data["results"]),
+            1,
+        )
+
     def test_shop_profiles_are_independent_for_client_and_related_person(self):
         client_profile = self.create_profile()
         related_profile = self.create_profile(person="related")
