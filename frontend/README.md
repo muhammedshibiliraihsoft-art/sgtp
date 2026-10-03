@@ -43,10 +43,40 @@ Frontend branch → Validation (typecheck/lint/test/build) → Reviewed commit �
 
 ## Catalog and Designs integration status
 
-- Shop Catalog and Main Supplier Global Catalog read live catalog APIs; Shop users can create Shop variants and style options, and Main Supplier can create global style options.
+- Shop Catalog and Main Supplier Global Catalog read live catalog APIs. Shop users can browse/search paginated active garment families, inspect assigned style groups, and open family-filtered variants/designs. Main Supplier can create and edit global garment families, maintain translations, assign/reorder option groups, upload/remove a private family image, and archive/reactivate families.
+- Shop style options are grouped under their backend Option Groups (for example, Collar and Cuff); each group card expands to show its options and provides a group-specific add action.
 - Shop Designs and Global Design Templates use the backend design APIs for listing, archiving, draft selections, version publishing, and private reference-image uploads. Shop users can create a draft design from an existing family and Shop/global variant.
 - API responses and uploads follow the backend serializer contract. Catalog and design screens do not fall back to invented mock records when the service request fails.
-- Backend endpoints now support Main Supplier creation of Garment Families and Option Groups, global-variant listing, and Global Design Template detail retrieval. The current frontend still needs UI forms to call the new Family/Option Group create endpoints; Global Template creation UI also remains incomplete. These are frontend tasks, not missing backend routes.
-- Clients, Shop Users, Work, and other unfinished business views remain mock-backed until their individual integrations are accepted. Measurements and Inventory have no frontend screens in this branch yet.
+- The current UI does not offer Option Group or Global Template creation forms. Those controls need their own reviewed frontend slice even though the backend has the corresponding protected API contracts.
+- Clients and Shop Users use their accepted live integrations. The Measurement workspace uses real Client, catalog/design, inventory-read, and immutable Measurement APIs. Work and other unfinished business views remain mock-backed until their individual integrations are accepted. Inventory management has no dedicated frontend screen in this branch yet.
+
+## Measurement workflow integration
+
+- `/clients/:clientId/measurements` uses selected-Shop context, backend Client/Related Person data, active Family/Variant catalog data, the ordered backend Family → Option Group mapping, global and Shop Designs, backend Measurement Definitions, immutable Profiles/Sets, and the inventory selector’s read-only availability data.
+- Men’s Shirt has three backend-published defaults: Classic Formal Shirt, Smart Casual Shirt, and Modern Evening Shirt. The visible style sections come only from the backend Family mapping; the UI does not construct a separate style list.
+- Values require an explicit CM or INCH choice and Decimal input. Save, profile creation, design save, and copy actions are guarded against duplicate in-flight requests. Existing versions remain read-only; correction means saving a new version.
+- No Work record, Cutting stage, stock reservation, or inventory deduction is created by the workflow.
+
+## Local handoff — Catalog style grouping (2026-10-03)
+
+- The Shop Catalog `Style Options` tab now renders backend Option Groups as expandable cards; options are listed inside their own group, with a group-specific add action. The current backend already provides the groups and Shop-scoped options, so no API or schema changes were needed.
+- Local validation: `npm run build` PASS; `python scripts/verify_project_state.py` PASS with the expected dirty-worktree and test-discovery warnings; `git diff --check` PASS. Tests were not run.
+- The active Vite server in `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp-frontend\frontend` serves the updated Catalog module at port 5173. Open Catalog → Style Options, then expand Collar or Cuff. These changes are local-only and are not committed, pushed, or deployed.
+
+## Local handoff — Shop Catalog and Design selection UX (2026-10-03)
+
+- Kept the Shop Catalog on backend-provided Option Group cards and widened Catalog/Design content on desktop while keeping the existing app shell and compact layouts at mobile/tablet widths.
+- Design style selection now presents active options grouped into selectable cards. If the selected family has no active groups or options, it explains the missing configuration and points Shop users to the Main Supplier; no Shop-side global configuration permission was added.
+- Shop Design list cards show family, variant, status, and version; the empty state guides design creation. Creation is disabled unless the Shop has a family with an available variant, and links to Catalog when a Shop variant is needed.
+- Validation: `npm run typecheck`, `npm run build`, and `npm test -- --run` PASS (47 tests); `npm run lint` exits 0 with six warnings in unchanged files; `git diff --check` PASS; `python scripts/verify_project_state.py` PASS with dirty-worktree and test-discovery warnings.
+- Local only. No commit, push, or deployment was performed.
+
+## Local handoff — Garment Families integration (2026-10-03)
+
+- Main Supplier Global Catalog now uses the authenticated Family endpoints for server-side search/status/pagination, Family creation, translation updates, archive/reactivate, private image upload/removal, and ordered Option Group assignment. Family codes remain read-only after creation. Existing Group and Global Style Option screens remain available.
+- Shop Catalog now presents active Families as browse-only cards, supports backend search/pagination, opens Family details and assigned style groups, and filters the existing Shop Variant/Design views by selected Family. Family management controls remain in the Main Supplier Back Office.
+- Kept the existing app shell, design tokens, mobile drawer layout, and en/ar-KW/bn/ur locale resources. The API remains authoritative for authorization and archived Family restrictions.
+- Validation: `npm run typecheck`, `npm test` (59 tests), and `npm run build` PASS; `git diff --check` PASS (Git printed expected CRLF/LF working-copy notices). `npm run lint` exits 0 with six existing warnings in unchanged shared files (`App.tsx`, `useCurrentShop.ts`, `usePrivateImage.ts`, `ClientForm.tsx`, and `UsersPage.tsx`).
+- Responsive layout uses fluid card columns (250px minimum), one-column phone layout, a full-height phone sheet, semantic layout tokens, and logical inline positioning for RTL. Automated component/API tests cover list, search, count/pagination, browse-only detail, family-filtered Variants/Design navigation, Main Supplier create/edit/mapping/lifecycle/image controls. Authenticated visual checks at the requested desktop/tablet/phone sizes were not performed because the open localhost tab is at `/login`; credentials remain for the user to enter.
 
 Run `npm ci`, `npm run dev`, `npm run typecheck`, `npm run lint`, `npm test`, and `npm run build`. Ordinary Users have one backend-resolved owning Shop. Do not add a normal-user Shop selector. Read repository and frontend `AGENTS.md` before continuing.

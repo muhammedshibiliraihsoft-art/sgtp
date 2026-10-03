@@ -3,18 +3,16 @@ import tailwindcss from '@tailwindcss/vite'
 import { loadEnv } from 'vite'
 import { defineConfig } from 'vitest/config'
 
-const APPROVED_STAGING_API_ORIGIN = 'https://birky-staging-api.onrender.com'
-
 function validateProxyTarget(value: string | undefined) {
   if (!value) return undefined
   let url: URL
   try {
     url = new URL(value)
   } catch {
-    throw new Error('AUTH_API_PROXY_TARGET must be the approved staging API origin.')
+    throw new Error('AUTH_API_PROXY_TARGET must be a complete HTTPS API origin.')
   }
-  if (url.origin !== APPROVED_STAGING_API_ORIGIN || url.pathname !== '/' || url.search || url.hash || url.username || url.password) {
-    throw new Error('AUTH_API_PROXY_TARGET must be the approved staging API origin.')
+  if (url.protocol !== 'https:' || url.origin !== value || url.pathname !== '/' || url.search || url.hash || url.username || url.password) {
+    throw new Error('AUTH_API_PROXY_TARGET must be a complete HTTPS API origin.')
   }
   return url.origin
 }

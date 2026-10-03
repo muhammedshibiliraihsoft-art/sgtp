@@ -7,7 +7,7 @@ import {
   Moon, MoreHorizontal, Plus, Search, Settings2, LogOut, ChevronUp, Sun,
   UsersRound, Scissors, CreditCard, BarChart3, Users,
   Wand2, Store, Sliders, Shirt, PackageOpen, LayoutGrid, X, Clock, ChevronRight,
-  PanelLeftClose, PanelLeftOpen, Shield
+  PanelLeftClose, PanelLeftOpen, Shield, Ruler
 } from 'lucide-react'
 import { UsersPage } from './features/users/UsersPage'
 import './App.css'
@@ -28,6 +28,8 @@ import { DesignEditor } from './features/designs/DesignEditor'
 import { GlobalCatalogPage } from './backoffice/catalog/GlobalCatalogPage'
 import { GlobalDesignTemplatesPage } from './backoffice/designs/GlobalDesignTemplatesPage'
 import { GlobalTemplateEditor } from './backoffice/designs/GlobalTemplateEditor'
+import { MaterialsInventoryPage } from './features/materials/MaterialsInventoryPage'
+import { ClientMeasurementsPage } from './features/measurements/ClientMeasurementsPage'
 
 type Theme = 'light' | 'dark' | 'system'
 const themeKey = 'sgtp-theme'
@@ -549,6 +551,7 @@ function BackOfficeSidebar({ isPinned, setIsPinned }: { isPinned: boolean, setIs
     <nav style={{ flex: 1 }} aria-label={t('backoffice.navigation')}>
       <NavLink to="/backoffice" end className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><LayoutDashboard size={18} /><span className="nav-label">{t('backoffice.dashboard')}</span></NavLink>
       <NavLink to="/backoffice/shops" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Store size={18} /><span className="nav-label">{t('backoffice.shops')}</span></NavLink>
+      <NavLink to="/backoffice/measurements" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Ruler size={18} /><span className="nav-label">{t('measurements.title')}</span></NavLink>
       <NavLink to="/backoffice/designs" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Wand2 size={18} /><span className="nav-label">{t('backoffice.designs', 'Global Designs')}</span></NavLink>
       <NavLink to="/backoffice/catalog" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Shirt size={18} /><span className="nav-label">{t('backoffice.catalog', 'Global Catalog')}</span></NavLink>
     </nav>
@@ -586,6 +589,7 @@ function BackOfficeBottomNavigation() {
   return <nav className="bottom-nav bo-bottom-nav" aria-label={t('backoffice.navigation')}>
     <NavLink to="/backoffice" end className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}><LayoutDashboard size={20} />{t('backoffice.dashboard')}</NavLink>
     <NavLink to="/backoffice/shops" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}><Store size={20} />{t('backoffice.shops')}</NavLink>
+    <NavLink to="/backoffice/measurements" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}><Ruler size={20} />{t('measurements.title')}</NavLink>
     <button type="button" className="nav-item" onClick={() => { void signOut().catch(() => undefined).finally(() => navigate('/login', { replace: true })) }}><LogOut size={20} />{t('backoffice.signOut')}</button>
   </nav>
 }
@@ -604,7 +608,7 @@ function TopHeader({
   const isBackOffice = location.pathname.startsWith('/backoffice')
 
   const getPageContext = () => {
-    if (isBackOffice) return { main: location.pathname === '/backoffice' ? 'Back Office' : location.pathname.endsWith('/new') ? 'Create Shop' : 'Shops' }
+    if (isBackOffice) return { main: location.pathname === '/backoffice' ? 'Back Office' : location.pathname === '/backoffice/measurements' ? 'Measurements' : location.pathname.endsWith('/new') ? 'Create Shop' : 'Shops' }
     if (location.pathname === '/work') return { main: 'Work' }
     if (location.pathname === '/') return { main: 'Dashboard' }
     if (location.pathname.startsWith('/orders')) return { main: 'Orders' }
@@ -689,6 +693,8 @@ function MoreSheet({ isOpen, onClose, theme, setTheme }: { isOpen: boolean, onCl
           <Link to="/users" onClick={onClose} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><Users size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('more.members')}</span></Link>
           <Link to="/designs" onClick={onClose} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><Wand2 size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('nav.designs', 'Designs')}</span></Link>
           <Link to="/catalog" onClick={onClose} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><Shirt size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('nav.catalog', 'Catalog')}</span></Link>
+          <Link to="/measurements" onClick={onClose} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><Ruler size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('measurements.title')}</span></Link>
+          <Link to="/materials" onClick={onClose} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><PackageOpen size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>Materials & Inventory</span></Link>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><LayoutGrid size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('more.workFunctions')}</span></div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><Settings2 size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('more.settings')}</span></div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><Store size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('more.shopProfile')}</span></div>
@@ -858,6 +864,7 @@ function Workspace() {
         <Route path="/backoffice/shops" element={<ShopListPage />} />
         <Route path="/backoffice/shops/new" element={<CreateShopPage />} />
         <Route path="/backoffice/shops/:shopId" element={<ShopDetailPage />} />
+        <Route path="/backoffice/measurements" element={<ClientMeasurementsPage />} />
         <Route path="/backoffice/catalog" element={<GlobalCatalogPage />} />
         <Route path="/backoffice/designs" element={<GlobalDesignTemplatesPage />} />
         <Route path="/backoffice/designs/:designId" element={<GlobalTemplateEditor />} />
@@ -882,7 +889,10 @@ function Workspace() {
         <Route path="/work" element={<WorkPreviewPage />} />
         <Route path="/clients" element={<ClientsPage />} />
         <Route path="/clients/:clientId" element={<ClientDetailPage />} />
+        <Route path="/clients/:clientId/measurements" element={<ClientMeasurementsPage />} />
+        <Route path="/measurements" element={<ClientMeasurementsPage />} />
         <Route path="/users" element={<UsersPage />} />
+        <Route path="/materials" element={<MaterialsInventoryPage />} />
         <Route path="/catalog" element={<CatalogPage />} />
         <Route path="/designs" element={<DesignsPage />} />
         <Route path="/designs/:designId" element={<DesignEditor />} />

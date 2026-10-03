@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { MockUserAdapter } from './mocks'
+import { usersApi } from './api'
 import type { CreateShopUserRequest, CreateShopUserResult, WorkFunctionCode } from './types'
 import { Tag, Ruler, Scissors, Layers, Sparkles, ClipboardCheck, Calculator } from 'lucide-react'
 import { CustomSelect } from '../../components/CustomSelect'
@@ -15,11 +15,12 @@ const FUNCTIONS: { code: WorkFunctionCode, label: string, icon: React.ReactNode 
 ]
 
 interface UserFormProps {
+  shopId: string
   onClose: () => void
   onSuccess: (result: CreateShopUserResult) => void
 }
 
-export function UserForm({ onClose, onSuccess }: UserFormProps) {
+export function UserForm({ shopId, onClose, onSuccess }: UserFormProps) {
   const [formData, setFormData] = useState<CreateShopUserRequest>({
     first_name: '',
     last_name: '',
@@ -37,9 +38,12 @@ export function UserForm({ onClose, onSuccess }: UserFormProps) {
     setError(null)
     
     try {
-      const result = await MockUserAdapter.createShopUser(formData)
+      const result = await usersApi.createUser(shopId, formData)
       if (formData.role === 'STAFF' && selectedFunctions.length > 0) {
-        await MockUserAdapter.setWorkFunctions(result.id, selectedFunctions)
+        const memberships = await usersApi.findCreatedMembership(shopId, result.user_code || '')
+        const createdMembership = memberships.results.find(member => member.user_code === result.user_code)
+        if (!createdMembership) throw new Error('User was created, but the Shop membership could not be loaded to assign work functions.')
+        await usersApi.setFunctions(shopId, createdMembership.id, selectedFunctions)
       }
       onSuccess(result)
     } catch (err: any) {

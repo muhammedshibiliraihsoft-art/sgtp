@@ -27,7 +27,7 @@ export function ConfirmActionModal({ member, action, onConfirm, onCancel }: Prop
       break
     case 'REMOVE':
       title = 'Remove from Shop'
-      message = `Are you sure you want to remove ${member.display_name} from this shop? This will permanently remove their membership.`
+      message = `Remove ${member.display_name} from this Shop? Their membership will be marked removed and will no longer grant access.`
       confirmText = 'Remove'
       btnClass = 'btn-primary danger'
       break

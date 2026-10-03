@@ -3,8 +3,8 @@
 ## Architecture
 
 - The browser always calls relative `/api/...` paths. The backend URL is not embedded in frontend assets or `VITE_*` variables. The CSRF client validates the expected JSON shape and shows a clear proxy-configuration error if Pages serves the SPA HTML fallback.
-- Local Vite development proxies `/api` to the approved Render staging origin from the server-only `AUTH_API_PROXY_TARGET` variable in ignored `frontend/.env`.
-- Cloudflare Pages uses `functions/api/[[path]].ts` as a same-origin `/api/*` proxy. It accepts only the approved Render staging API origin and requires an exact `FRONTEND_ORIGIN` variable matching the Pages request origin.
+- Local Vite development proxies `/api` to the HTTPS API origin supplied by the server-only `AUTH_API_PROXY_TARGET` variable in ignored `frontend/.env`.
+- Cloudflare Pages uses `functions/api/[[path]].ts` as a same-origin `/api/*` proxy. It requires a complete HTTPS `STAGING_API_ORIGIN` and an exact `FRONTEND_ORIGIN` variable matching the Pages request origin.
 - No direct cross-site browser requests are used. The Pages function checks unsafe request Origins, forwards Cookie and `X-CSRFToken`, rewrites the already-validated Origin to the API origin for Django CSRF validation, strips upstream cookie Domain attributes so cookies become host-only on the Pages hostname, and returns API responses as `private, no-store`.
 - Access-token memory handling, HttpOnly refresh cookie, CSRF bootstrap, bounded refresh retry, single-flight refresh, forced password change and logout clearing remain in the existing auth client.
 
@@ -27,7 +27,7 @@ The repository has no Pages or Wrangler config, so confirm the Cloudflare Pages 
 
 Use this exact Pages origin; do not use a wildcard. For local `wrangler pages dev`, copy `.dev.vars.example` to `.dev.vars` and set `FRONTEND_ORIGIN` to the actual local Pages dev origin (normally `http://localhost:8788`). The Pages function fails closed if variables are missing or invalid. No deployment was performed.
 
-Because the browser talks only to its own origin, browser CORS is not used. Django still receives CSRF protection: the proxy accepts unsafe browser requests only from its exact configured frontend origin before supplying the approved API Origin to the backend CSRF middleware. The auth CSRF cookie and refresh cookie are forwarded back as host-only cookies on the frontend origin; existing Secure, HttpOnly, and SameSite flags are preserved. Authenticated API responses are not cached.
+Because the browser talks only to its own origin, browser CORS is not used. Django still receives CSRF protection: the proxy accepts unsafe browser requests only from its exact configured frontend origin before supplying the configured API Origin to the backend CSRF middleware. The auth CSRF cookie and refresh cookie are forwarded back as host-only cookies on the frontend origin; existing Secure, HttpOnly, and SameSite flags are preserved. Authenticated API responses are not cached.
 
 ## Validation and limits
 

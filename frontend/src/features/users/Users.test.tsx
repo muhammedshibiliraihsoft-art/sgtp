@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import { UsersPage } from './UsersPage'
-import { MockUserAdapter } from './mocks'
+import { usersApi } from './api'
 
 // Mock i18n
 vi.mock('react-i18next', () => ({
@@ -12,19 +12,8 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
-// Mock adapter
-vi.mock('./mocks', () => ({
-  MockUserAdapter: {
-    getMemberships: vi.fn(),
-    getShopStats: vi.fn(),
-    createShopUser: vi.fn(),
-    updateMembershipRole: vi.fn(),
-    updateMembershipStatus: vi.fn(),
-    removeMembership: vi.fn(),
-    getWorkFunctions: vi.fn(),
-    setWorkFunctions: vi.fn()
-  }
-}))
+vi.mock('./api', () => ({ usersApi: { memberships: vi.fn(), stats: vi.fn(), createUser: vi.fn(), setRole: vi.fn(), deactivate: vi.fn(), reactivate: vi.fn(), remove: vi.fn(), functions: vi.fn(), setFunctions: vi.fn(), findCreatedMembership: vi.fn() } }))
+vi.mock('../../hooks/useCurrentShop', () => ({ useCurrentShop: () => ({ shopId: 't1', role: 'ADMIN', isLoading: false }) }))
 
 const mockStats = { user_count: 5, max_users: 15, is_at_user_limit: false }
 const mockMembers = [
@@ -57,8 +46,8 @@ const mockMembers = [
 describe('UsersPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(MockUserAdapter.getMemberships).mockResolvedValue(mockMembers as any)
-    vi.mocked(MockUserAdapter.getShopStats).mockResolvedValue(mockStats)
+    vi.mocked(usersApi.memberships).mockResolvedValue({ count: mockMembers.length, next: null, previous: null, results: mockMembers } as any)
+    vi.mocked(usersApi.stats).mockResolvedValue(mockStats)
   })
 
   it('renders page and backend-aligned Membership fields', async () => {

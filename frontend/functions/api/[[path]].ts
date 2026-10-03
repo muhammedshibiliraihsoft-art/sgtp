@@ -1,5 +1,3 @@
-const APPROVED_STAGING_API_ORIGIN = 'https://birky-staging-api.onrender.com'
-
 type ProxyEnvironment = {
   STAGING_API_ORIGIN?: string
   FRONTEND_ORIGIN?: string
@@ -26,12 +24,12 @@ function allowedFrontendOrigin(value: string | undefined, requestOrigin: string)
   }
 }
 
-function approvedApiOrigin(value: string | undefined): value is string {
+function configuredApiOrigin(value: string | undefined): value is string {
   if (!value) return false
   try {
     const configured = new URL(value)
-    return configured.origin === value
-      && configured.origin === APPROVED_STAGING_API_ORIGIN
+    return configured.protocol === 'https:'
+      && configured.origin === value
       && configured.pathname === '/'
       && !configured.search
       && !configured.hash
@@ -54,7 +52,7 @@ function setCookieHeaders(headers: Headers, cookies: string[]) {
 export async function onRequest({ request, env }: PagesRequestContext): Promise<Response> {
   const incomingUrl = new URL(request.url)
   if (!incomingUrl.pathname.startsWith('/api/')) return jsonError(404, 'Not found.')
-  if (!approvedApiOrigin(env.STAGING_API_ORIGIN)) return jsonError(503, 'The staging API proxy is not configured.')
+  if (!configuredApiOrigin(env.STAGING_API_ORIGIN)) return jsonError(503, 'The staging API proxy is not configured.')
   if (!allowedFrontendOrigin(env.FRONTEND_ORIGIN, incomingUrl.origin)) return jsonError(503, 'The frontend origin is not configured.')
 
   const method = request.method.toUpperCase()

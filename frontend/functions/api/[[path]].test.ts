@@ -44,7 +44,7 @@ describe('Cloudflare Pages API proxy', () => {
     ])
   })
 
-  it('rejects untrusted origins and refuses an unapproved upstream', async () => {
+  it('rejects untrusted origins and refuses an invalid configured upstream', async () => {
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
     const badOriginRequest = new Request(`${frontendOrigin}/api/v1/auth/login/`, {
@@ -56,7 +56,7 @@ describe('Cloudflare Pages API proxy', () => {
     })
     const badUpstream = await onRequest({
       request: new Request(`${frontendOrigin}/api/v1/auth/csrf/`),
-      env: { STAGING_API_ORIGIN: 'https://attacker.example', FRONTEND_ORIGIN: frontendOrigin },
+      env: { STAGING_API_ORIGIN: 'http://insecure.example', FRONTEND_ORIGIN: frontendOrigin },
     })
 
     expect(badOrigin.status).toBe(403)
