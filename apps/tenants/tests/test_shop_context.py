@@ -6,7 +6,13 @@ from rest_framework_simplejwt.tokens import AccessToken
 
 from apps.accounts.models import User
 from apps.tenants.context import resolve_shop_context
-from apps.tenants.models import ShopRole, Supplier, Tenant, TenantMember
+from apps.tenants.models import (
+    MembershipWorkFunction,
+    ShopRole,
+    Supplier,
+    Tenant,
+    TenantMember,
+)
 from core.permissions import IsTenantMember
 
 
@@ -26,7 +32,9 @@ class ShopContextAPITests(APITestCase):
             is_active=active,
         )
 
-    def make_user(self, email, *, superuser=False, password_change=False, owning_shop=None):
+    def make_user(
+        self, email, *, superuser=False, password_change=False, owning_shop=None
+    ):
         if not superuser and owning_shop is None:
             owning_shop = self.shop_a
         return User.objects.create_user(
@@ -81,7 +89,9 @@ class ShopContextAPITests(APITestCase):
     def test_active_membership_all_roles_can_enter_context(self):
         for index, role in enumerate(ShopRole.values):
             with self.subTest(role=role):
-                user = self.make_user(f"role-{index}@example.test", owning_shop=self.shop_a)
+                user = self.make_user(
+                    f"role-{index}@example.test", owning_shop=self.shop_a
+                )
                 TenantMember.objects.create(
                     tenant=self.shop_a, user=user, role=role, is_active=True
                 )
@@ -91,6 +101,23 @@ class ShopContextAPITests(APITestCase):
                 self.assertEqual(response.data["shop_id"], str(self.shop_a.pk))
                 self.assertEqual(response.data["role"], role)
                 self.assertFalse(response.data["is_main_supplier"])
+                self.assertEqual(response.data["work_functions"], [])
+
+    def test_context_returns_only_current_membership_work_functions(self):
+        membership = TenantMember.objects.create(
+            tenant=self.shop_a, user=self.user, role=ShopRole.STAFF
+        )
+        MembershipWorkFunction.objects.create(
+            membership=membership, function_code="MEASUREMENT"
+        )
+        MembershipWorkFunction.objects.create(
+            membership=membership, function_code="CUTTING"
+        )
+
+        response = self.request_context(self.user, self.shop_a.pk)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["work_functions"], ["MEASUREMENT", "CUTTING"])
 
     def test_foreign_nonexistent_inactive_and_deleted_shops_are_identical_404(self):
         TenantMember.objects.create(
@@ -211,6 +238,7 @@ class ShopContextAPITests(APITestCase):
         self.assertEqual(second.data["shop_id"], str(self.shop_b.pk))
         self.assertIsNone(first.data["role"])
         self.assertTrue(first.data["is_main_supplier"])
+        self.assertEqual(first.data["work_functions"], [])
 
         inactive_shop = self.make_shop("Inactive", "inactive-main", active=False)
         denied = self.request_context(main_admin, inactive_shop.pk)
@@ -305,7 +333,10 @@ class ShopContextAPITests(APITestCase):
         response = self.request_context(self.user, self.shop_a.pk)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(set(response.data), {"shop_id", "role", "is_main_supplier"})
+        self.assertEqual(
+            set(response.data),
+            {"shop_id", "role", "is_main_supplier", "work_functions"},
+        )
 
     def test_resolver_requires_authenticated_active_user(self):
         from django.contrib.auth.models import AnonymousUser

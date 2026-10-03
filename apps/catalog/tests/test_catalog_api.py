@@ -63,7 +63,12 @@ class CatalogDesignApiTests(APITestCase):
         self.family = GarmentFamily.objects.get(code="mens-shirt")
         self.variant = GarmentVariant.objects.get(family=self.family, is_default=True)
         self.group = OptionGroup.objects.get(code="cuff")
-        FamilyOptionGroup.objects.create(family=self.family, option_group=self.group)
+        # The Men’s Shirt defaults now map Cuff during migrations.  The API
+        # scenarios below require the mapping, whether it came from the
+        # production seed or a minimal isolated fixture.
+        FamilyOptionGroup.objects.get_or_create(
+            family=self.family, option_group=self.group
+        )
         self.global_option = StyleOption.objects.get(
             tenant__isnull=True, option_group=self.group, code="normal-cuff"
         )
@@ -240,7 +245,7 @@ class CatalogDesignApiTests(APITestCase):
         detail = self.client.get(detail_url)
         self.assertEqual(detail.status_code, status.HTTP_200_OK)
         self.assertEqual(detail.data["code"], "mens-shirt")
-        self.assertEqual(detail.data["option_groups"][0]["code"], "cuff")
+        self.assertIn("cuff", {group["code"] for group in detail.data["option_groups"]})
         original_english_name = self.family.translations.get(locale="en").name
         self.assertEqual(
             self.client.patch(detail_url, {"code": "renamed-shirt"}).status_code,

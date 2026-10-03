@@ -25,6 +25,7 @@ PHASE_STATUS_RE = re.compile(
 TASK_RE = re.compile(
     r"\b(?:PRE-P3-\d{2}(?:-[A-Z0-9]+)*|"
     r"GARMENT-(?:FAMILIES|VARIANTS)-\d{2}|"
+    r"MEASUREMENT-E2E-\d{2}|"
     r"[A-Z]\d{1,2}-\d{2}[A-Z]?(?:-[A-Z0-9]+)*)\b"
 )
 TEST_COUNT_RE = re.compile(
@@ -421,6 +422,20 @@ class ProjectStateValidator:
                 )
             ):
                 allowed.add("apps/catalog")
+            if (
+                state_task == handoff_task == "MEASUREMENT-E2E-01"
+                and re.search(
+                    r"\bCONFIRM\s+TASK\s+MEASUREMENT-E2E-01\b",
+                    self._current_section(self.read("docs/PROJECT_STATE.md"), "Status"),
+                    re.IGNORECASE,
+                )
+                and re.search(
+                    r"\bCONFIRM\s+TASK\s+MEASUREMENT-E2E-01\b",
+                    current_handoff_text,
+                    re.IGNORECASE,
+                )
+            ):
+                allowed.update({"apps/catalog", "apps/tenants"})
             # A later frontend-only task may be the current handoff after the
             # backend Catalog foundation is already complete. Preserve the
             # guard for new/unapproved modules while recognizing that

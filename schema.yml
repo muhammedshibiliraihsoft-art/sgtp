@@ -6486,10 +6486,15 @@ components:
           - $ref: '#/components/schemas/NullEnum'
         is_main_supplier:
           type: boolean
+        work_functions:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkFunctionsEnum'
       required:
       - is_main_supplier
       - role
       - shop_id
+      - work_functions
     ShopStyleOptionInputRequest:
       type: object
       properties:
@@ -7437,6 +7442,24 @@ components:
       required:
       - locale
       - name
+    WorkFunctionsEnum:
+      enum:
+      - SALES
+      - MEASUREMENT
+      - CUTTING
+      - STITCHING
+      - FINISHING
+      - QC
+      - CASHIER
+      type: string
+      description: |-
+        * `SALES` - Sales
+        * `MEASUREMENT` - Measurement
+        * `CUTTING` - Cutting
+        * `STITCHING` - Stitching
+        * `FINISHING` - Finishing
+        * `QC` - Quality control
+        * `CASHIER` - Cashier
   securitySchemes:
     jwtAuth:
       type: http

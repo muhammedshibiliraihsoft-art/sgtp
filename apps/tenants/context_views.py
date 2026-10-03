@@ -9,7 +9,7 @@ from rest_framework import serializers
 
 from apps.accounts.permissions import PasswordChangeGate
 from apps.tenants.context import resolve_shop_context
-from apps.tenants.models import ShopRole
+from apps.tenants.models import MembershipWorkFunction, ShopRole, WorkFunctionCode
 
 
 class ShopContextMixin:
@@ -53,15 +53,30 @@ class ShopContextView(ShopContextMixin, APIView):
                     choices=ShopRole.choices, allow_null=True
                 ),
                 "is_main_supplier": serializers.BooleanField(),
+                "work_functions": serializers.ListField(
+                    child=serializers.ChoiceField(choices=WorkFunctionCode.choices)
+                ),
             },
         ),
     )
     def get(self, request, shop_id):
         context = request.shop_context
+        work_functions = []
+        if context.membership is not None:
+            assigned = set(
+                MembershipWorkFunction.objects.filter(
+                    membership=context.membership,
+                    deleted__isnull=True,
+                ).values_list("function_code", flat=True)
+            )
+            work_functions = [
+                code for code, _label in WorkFunctionCode.choices if code in assigned
+            ]
         return Response(
             {
                 "shop_id": str(context.shop.pk),
                 "role": context.role,
                 "is_main_supplier": context.is_main_supplier,
+                "work_functions": work_functions,
             }
         )

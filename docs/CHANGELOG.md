@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-03 — MEASUREMENT-E2E-01 local integration
+
+- Integrated the existing Client, Garment Family/Variant, grouped Style Options, Shop Design, Client/Related Person Measurement Profile, localized measurement definitions, explicit CM/INCH entry, immutable version history, copy, compare, and final review APIs into the local frontend Measurements workflow. Fabric selection reads ACTIVE stock availability for display only and does not reserve or deduct inventory. No fake Work record or workflow stage was introduced.
+- Added the deterministic Men’s Shirt style seed: Sleeve, Collar, Cuff, Pocket, Placket, Embroidery, and Color are mapped to Men’s Shirt, and Classic Formal Shirt, Smart Casual Shirt, and Modern Evening Shirt are published global Standard Shirt templates. The data migration is reversible for historical migration tests without changing schema.
+- Cleared stale unsaved measurements whenever client, Family, Variant, or saved Profile context changes; removed the implicit CM default; selected the adjacent latest versions for compare; guarded duplicate profile/design/measurement/copy mutations; and render every available private option image. API origins are now supplied only by server-side environment configuration rather than a compiled staging URL.
+- Extended the read-only Shop context response with the current membership's assigned Work Function codes so the UI can honor the existing `MEASUREMENT` STAFF gate. Main Supplier has no membership assignment and receives an empty list. Updated API/OpenAPI artifacts and architecture/API documentation. No model migration.
+- Validation: PostgreSQL-backed full application suite 433 passed; focused Measurement API/concurrency/default-template and Shop context suite 40 passed. Frontend tests 84 passed; typecheck/build passed; lint exits 0 with existing React state-in-effect warnings. Django system check passed; production deploy check had 13 drf-spectacular warnings; OpenAPI had 0 errors and 29 warnings (13 unique). No model changes detected; local migration-history consistency could not be verified because configured base database `testdb` is absent. Backend/frontend `git diff --check` and schema artifact parity passed.
+- Backend work remains local/uncommitted on `main`; frontend work remains local/uncommitted on `frontend/parallel-foundation`, whose existing 14 commits-ahead and dirty integration work are preserved. No commit, push, merge, deployment, or shared/staging/production migration. Authenticated browser verification remains pending.
+
 ## 2026-10-03 — GARMENT-VARIANTS-01 (frontend phase)
 
 - Added the Catalog Variants second tab using real paginated backend APIs: debounced server-side search, Family/status/source filters, backend count, pagination, compact responsive cards, and the existing Family → View Variants continuation. The existing Shop context API supplies role-aware Shop controls.

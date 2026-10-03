@@ -166,6 +166,30 @@ GARMENT-VARIANTS-01 is in progress.
         self.assertTrue(result.ok, result.errors)
         self.assertEqual(result.facts["current_task"], "GARMENT-VARIANTS-01")
 
+    def test_measurement_e2e_confirmation_allows_scoped_catalog_and_shop_context(self):
+        state = """## Status
+- Phase 3 is complete; activation: CONFIRM PHASE 3.
+- Phase 4 is active; activation: CONFIRM PHASE 4.
+- Current task: MEASUREMENT-E2E-01 is in progress; CONFIRM TASK MEASUREMENT-E2E-01.
+## Current Verification Results
+- Application tests: 2 tests verified passing.
+"""
+        handoff = """## Current phase
+Phase 3 is complete; activation: CONFIRM PHASE 3. Phase 4 is active; activation: CONFIRM PHASE 4.
+## Current handoff — MEASUREMENT-E2E-01
+- CONFIRM TASK MEASUREMENT-E2E-01.
+## Current task
+MEASUREMENT-E2E-01 is in progress.
+## Tests and checks
+- Validation performed: 2 tests pass.
+"""
+        root = make_repo(state, handoff)
+        (root / "apps/catalog").mkdir(parents=True)
+        (root / "apps/tenants").mkdir(parents=True)
+        result = self.validator(root).run()
+        self.assertTrue(result.ok, result.errors)
+        self.assertEqual(result.facts["current_task"], "MEASUREMENT-E2E-01")
+
     def test_phase_three_active_with_matching_activation_records_is_accepted(self):
         result = self.validator(make_repo(ACTIVE_STATE, ACTIVE_HANDOFF)).run()
         self.assertTrue(result.ok, result.errors)
