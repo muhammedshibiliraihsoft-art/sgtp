@@ -120,6 +120,52 @@ class ValidatorTests(unittest.TestCase):
         self.assertTrue(result.ok, result.errors)
         self.assertEqual(result.facts["current_task"], "T3-04B-USER-SCOPE")
 
+    def test_garment_families_confirmation_allows_catalog_backend_scope(self):
+        state = """## Status
+- Phase 3 is complete; activation: CONFIRM PHASE 3.
+- Phase 4 is active; activation: CONFIRM PHASE 4.
+- Current task: GARMENT-FAMILIES-01 is in progress; CONFIRM TASK GARMENT-FAMILIES-01.
+## Current Verification Results
+- Application tests: 2 tests verified passing.
+"""
+        handoff = """## Current phase
+Phase 3 is complete; activation: CONFIRM PHASE 3. Phase 4 is active; activation: CONFIRM PHASE 4.
+## Current handoff — GARMENT-FAMILIES-01
+- CONFIRM TASK GARMENT-FAMILIES-01.
+## Current task
+GARMENT-FAMILIES-01 is in progress.
+## Tests and checks
+- Validation performed: 2 tests pass.
+"""
+        root = make_repo(state, handoff)
+        (root / "apps/catalog").mkdir(parents=True)
+        result = self.validator(root).run()
+        self.assertTrue(result.ok, result.errors)
+        self.assertEqual(result.facts["current_task"], "GARMENT-FAMILIES-01")
+
+    def test_garment_variants_confirmation_allows_catalog_backend_scope(self):
+        state = """## Status
+- Phase 3 is complete; activation: CONFIRM PHASE 3.
+- Phase 4 is active; activation: CONFIRM PHASE 4.
+- Current task: GARMENT-VARIANTS-01 is in progress; CONFIRM TASK GARMENT-VARIANTS-01.
+## Current Verification Results
+- Application tests: 2 tests verified passing.
+"""
+        handoff = """## Current phase
+Phase 3 is complete; activation: CONFIRM PHASE 3. Phase 4 is active; activation: CONFIRM PHASE 4.
+## Current handoff — GARMENT-VARIANTS-01
+- CONFIRM TASK GARMENT-VARIANTS-01.
+## Current task
+GARMENT-VARIANTS-01 is in progress.
+## Tests and checks
+- Validation performed: 2 tests pass.
+"""
+        root = make_repo(state, handoff)
+        (root / "apps/catalog").mkdir(parents=True)
+        result = self.validator(root).run()
+        self.assertTrue(result.ok, result.errors)
+        self.assertEqual(result.facts["current_task"], "GARMENT-VARIANTS-01")
+
     def test_phase_three_active_with_matching_activation_records_is_accepted(self):
         result = self.validator(make_repo(ACTIVE_STATE, ACTIVE_HANDOFF)).run()
         self.assertTrue(result.ok, result.errors)

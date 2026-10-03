@@ -486,6 +486,17 @@ paths:
   /api/v1/catalog/design-templates/:
     get:
       operationId: catalog_global_design_templates_list
+      parameters:
+      - in: query
+        name: family
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: variant
+        schema:
+          type: string
+          format: uuid
       tags:
       - api
       security:
@@ -702,6 +713,26 @@ paths:
   /api/v1/catalog/families/:
     get:
       operationId: catalog_families_list
+      parameters:
+      - in: query
+        name: search
+        schema:
+          type: string
+          maxLength: 120
+      - in: query
+        name: status
+        schema:
+          enum:
+          - ACTIVE
+          - ARCHIVED
+          - all
+          type: string
+          default: ACTIVE
+          minLength: 1
+        description: |-
+          * `ACTIVE` - ACTIVE
+          * `ARCHIVED` - ARCHIVED
+          * `all` - all
       tags:
       - api
       security:
@@ -738,6 +769,149 @@ paths:
               schema:
                 $ref: '#/components/schemas/Family'
           description: ''
+  /api/v1/catalog/families/{family_id}/:
+    get:
+      operationId: catalog_family_retrieve
+      parameters:
+      - in: path
+        name: family_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FamilyDetail'
+          description: ''
+    patch:
+      operationId: catalog_family_update
+      parameters:
+      - in: path
+        name: family_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedFamilyUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedFamilyUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedFamilyUpdateRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FamilyDetail'
+          description: ''
+  /api/v1/catalog/families/{family_id}/archive/:
+    post:
+      operationId: catalog_family_archive
+      parameters:
+      - in: path
+        name: family_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Family'
+          description: ''
+  /api/v1/catalog/families/{family_id}/image/:
+    get:
+      operationId: catalog_family_image_retrieve
+      parameters:
+      - in: path
+        name: family_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: string
+                format: binary
+          description: ''
+    post:
+      operationId: catalog_family_image_upload
+      parameters:
+      - in: path
+        name: family_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FamilyImageUploadRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/FamilyImageUploadRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FamilyImageUploadRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FamilyImageMetadata'
+          description: ''
+    delete:
+      operationId: catalog_family_image_remove
+      parameters:
+      - in: path
+        name: family_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/v1/catalog/families/{family_id}/option-groups/:
     get:
       operationId: catalog_family_option_groups_list
@@ -796,6 +970,27 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/OptionGroup'
+          description: ''
+  /api/v1/catalog/families/{family_id}/reactivate/:
+    post:
+      operationId: catalog_family_reactivate
+      parameters:
+      - in: path
+        name: family_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Family'
           description: ''
   /api/v1/catalog/option-groups/:
     get:
@@ -979,6 +1174,25 @@ paths:
         schema:
           type: string
           format: uuid
+      - in: query
+        name: search
+        schema:
+          type: string
+          maxLength: 120
+      - in: query
+        name: status
+        schema:
+          enum:
+          - ACTIVE
+          - ARCHIVED
+          - all
+          type: string
+          default: ACTIVE
+          minLength: 1
+        description: |-
+          * `ACTIVE` - ACTIVE
+          * `ARCHIVED` - ARCHIVED
+          * `all` - all
       tags:
       - api
       security:
@@ -989,6 +1203,146 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GlobalVariantPage'
+          description: ''
+    post:
+      operationId: catalog_global_variant_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GlobalVariantInputRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GlobalVariantInputRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GlobalVariantInputRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VariantDetail'
+          description: ''
+  /api/v1/catalog/variants/{variant_id}/:
+    get:
+      operationId: catalog_global_variant_retrieve
+      parameters:
+      - in: path
+        name: variant_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VariantDetail'
+          description: ''
+    patch:
+      operationId: catalog_global_variant_update
+      parameters:
+      - in: path
+        name: variant_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedVariantUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedVariantUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedVariantUpdateRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VariantDetail'
+          description: ''
+  /api/v1/catalog/variants/{variant_id}/archive/:
+    post:
+      operationId: api_v1_catalog_variants_archive_create
+      parameters:
+      - in: path
+        name: variant_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VariantDetail'
+          description: ''
+  /api/v1/catalog/variants/{variant_id}/reactivate/:
+    post:
+      operationId: api_v1_catalog_variants_reactivate_create
+      parameters:
+      - in: path
+        name: variant_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VariantDetail'
+          description: ''
+  /api/v1/catalog/variants/{variant_id}/set-default/:
+    post:
+      operationId: api_v1_catalog_variants_set_default_create
+      parameters:
+      - in: path
+        name: variant_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VariantDetail'
           description: ''
   /api/v1/memberships/:
     get:
@@ -1463,16 +1817,54 @@ paths:
           description: ''
   /api/v1/shops/{shop_id}/catalog/variants/:
     get:
-      operationId: api_v1_shops_catalog_variants_retrieve
+      operationId: shop_variant_list
       description: Resolve and attach Shop context after DRF authentication, before
         permissions.
       parameters:
+      - in: query
+        name: family
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: search
+        schema:
+          type: string
+          maxLength: 120
       - in: path
         name: shop_id
         schema:
           type: string
           format: uuid
         required: true
+      - in: query
+        name: source
+        schema:
+          enum:
+          - all
+          - global
+          - shop
+          type: string
+          default: all
+          minLength: 1
+        description: |-
+          * `all` - all
+          * `global` - global
+          * `shop` - shop
+      - in: query
+        name: status
+        schema:
+          enum:
+          - ACTIVE
+          - ARCHIVED
+          - all
+          type: string
+          default: ACTIVE
+          minLength: 1
+        description: |-
+          * `ACTIVE` - ACTIVE
+          * `ARCHIVED` - ARCHIVED
+          * `all` - all
       tags:
       - api
       security:
@@ -1517,6 +1909,132 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Variant'
+          description: ''
+  /api/v1/shops/{shop_id}/catalog/variants/{variant_id}/:
+    get:
+      operationId: shop_variant_retrieve
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: variant_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VariantDetail'
+          description: ''
+    patch:
+      operationId: shop_variant_update
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: variant_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedVariantUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedVariantUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedVariantUpdateRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VariantDetail'
+          description: ''
+  /api/v1/shops/{shop_id}/catalog/variants/{variant_id}/archive/:
+    post:
+      operationId: api_v1_shops_catalog_variants_archive_create
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: variant_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VariantDetail'
+          description: ''
+  /api/v1/shops/{shop_id}/catalog/variants/{variant_id}/reactivate/:
+    post:
+      operationId: api_v1_shops_catalog_variants_reactivate_create
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: variant_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VariantDetail'
           description: ''
   /api/v1/shops/{shop_id}/clients/:
     get:
@@ -2828,12 +3346,22 @@ paths:
       description: Resolve and attach Shop context after DRF authentication, before
         permissions.
       parameters:
+      - in: query
+        name: family
+        schema:
+          type: string
+          format: uuid
       - in: path
         name: shop_id
         schema:
           type: string
           format: uuid
         required: true
+      - in: query
+        name: variant
+        schema:
+          type: string
+          format: uuid
       tags:
       - api
       security:
@@ -4436,10 +4964,94 @@ components:
         name:
           type: string
           readOnly: true
+        status:
+          $ref: '#/components/schemas/StatusF58Enum'
+        has_image:
+          type: boolean
+          readOnly: true
+        image_content_url:
+          type: string
+          readOnly: true
       required:
       - code
+      - has_image
       - id
+      - image_content_url
       - name
+    FamilyDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        code:
+          type: string
+          maxLength: 48
+          pattern: ^[-a-zA-Z0-9_]+$
+        name:
+          type: string
+          readOnly: true
+        status:
+          $ref: '#/components/schemas/StatusF58Enum'
+        has_image:
+          type: boolean
+          readOnly: true
+        image_content_url:
+          type: string
+          readOnly: true
+        translations:
+          type: array
+          items:
+            $ref: '#/components/schemas/FamilyTranslation'
+          readOnly: true
+        option_groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/OptionGroup'
+          readOnly: true
+      required:
+      - code
+      - has_image
+      - id
+      - image_content_url
+      - name
+      - option_groups
+      - translations
+    FamilyImageMetadata:
+      type: object
+      properties:
+        has_image:
+          type: boolean
+        image_content_url:
+          type: string
+          nullable: true
+        mime_type:
+          type: string
+        byte_size:
+          type: integer
+          nullable: true
+        width:
+          type: integer
+          nullable: true
+        height:
+          type: integer
+          nullable: true
+      required:
+      - byte_size
+      - has_image
+      - height
+      - image_content_url
+      - mime_type
+      - width
+    FamilyImageUploadRequest:
+      type: object
+      properties:
+        image:
+          type: string
+          format: binary
+      required:
+      - image
     FamilyOptionGroupUpdateRequest:
       type: object
       properties:
@@ -4450,6 +5062,19 @@ components:
             format: uuid
       required:
       - option_group_ids
+    FamilyTranslation:
+      type: object
+      properties:
+        locale:
+          $ref: '#/components/schemas/LocaleEnum'
+        name:
+          type: string
+          maxLength: 120
+        description:
+          type: string
+      required:
+      - locale
+      - name
     FieldEnum:
       enum:
       - phone
@@ -4575,6 +5200,25 @@ components:
       - next
       - previous
       - results
+    GlobalVariantInputRequest:
+      type: object
+      properties:
+        family_id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          minLength: 1
+          maxLength: 64
+          pattern: ^[-a-zA-Z0-9_]+$
+        translations:
+          type: array
+          items:
+            $ref: '#/components/schemas/TranslationInputRequest'
+      required:
+      - code
+      - family_id
+      - translations
     GlobalVariantPage:
       type: object
       properties:
@@ -5493,6 +6137,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TranslationInputRequest'
+    PatchedFamilyUpdateRequest:
+      type: object
+      properties:
+        translations:
+          type: array
+          items:
+            $ref: '#/components/schemas/TranslationInputRequest'
     PatchedInventoryItemUpdateRequest:
       type: object
       properties:
@@ -5603,6 +6254,13 @@ components:
           - $ref: '#/components/schemas/NullEnum'
         appearance_preference:
           $ref: '#/components/schemas/AppearancePreferenceEnum'
+    PatchedVariantUpdateRequest:
+      type: object
+      properties:
+        translations:
+          type: array
+          items:
+            $ref: '#/components/schemas/TranslationInputRequest'
     PublishResponse:
       type: object
       properties:
@@ -6705,10 +7363,79 @@ components:
           readOnly: true
         is_default:
           type: boolean
+        is_global:
+          type: boolean
+          readOnly: true
+        is_active:
+          type: boolean
       required:
       - code
       - family
       - id
+      - is_global
+      - name
+    VariantDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        family:
+          type: string
+          format: uuid
+        code:
+          type: string
+          maxLength: 64
+          pattern: ^[-a-zA-Z0-9_]+$
+        name:
+          type: string
+          readOnly: true
+        is_default:
+          type: boolean
+        is_global:
+          type: boolean
+          readOnly: true
+        is_active:
+          type: boolean
+        description:
+          type: string
+          readOnly: true
+        translations:
+          type: array
+          items:
+            $ref: '#/components/schemas/VariantTranslation'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - code
+      - created_at
+      - description
+      - family
+      - id
+      - is_global
+      - name
+      - translations
+      - updated_at
+    VariantTranslation:
+      type: object
+      properties:
+        locale:
+          $ref: '#/components/schemas/LocaleEnum'
+        name:
+          type: string
+          maxLength: 120
+        description:
+          type: string
+      required:
+      - locale
       - name
   securitySchemes:
     jwtAuth:

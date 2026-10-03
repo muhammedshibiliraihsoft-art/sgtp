@@ -2,6 +2,7 @@
 
 from django.core.files.base import ContentFile
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 import uuid
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
@@ -16,11 +17,374 @@ from apps.catalog.models import (
     DesignVersion,
     DesignVersionTranslation,
     GarmentFamily,
+    GarmentFamilyTranslation,
+    GarmentVariant,
+    GarmentVariantTranslation,
     StyleOption,
     StyleOptionImage,
 )
 from apps.tenants.models import MembershipWorkFunction, Tenant, TenantMember
 from apps.tenants.policy import ShopRolePolicy
+
+
+def _main_supplier(actor):
+    if not ShopRolePolicy.is_main_supplier_admin(actor):
+        raise PermissionDenied()
+
+
+@transaction.atomic
+def update_family_translations(*, family_id, translations, actor):
+    _main_supplier(actor)
+    try:
+        family = GarmentFamily.objects.select_for_update().get(pk=family_id)
+    except (GarmentFamily.DoesNotExist, ValueError):
+        raise NotFound() from None
+
+    existing = {
+        row.locale: row
+        for row in GarmentFamilyTranslation.objects.select_for_update().filter(
+            family=family
+        )
+    }
+    for item in translations:
+        values = dict(item)
+        current = existing.get(values["locale"])
+        if current:
+            current.name = values["name"]
+            current.description = values.get("description", current.description)
+            current.updated_by = actor
+            current.save(
+                update_fields=("name", "description", "updated_by", "updated_at")
+            )
+        else:
+            GarmentFamilyTranslation.objects.create(
+                family=family,
+                created_by=actor,
+                updated_by=actor,
+                description=values.get("description", ""),
+                **{key: value for key, value in values.items() if key != "description"},
+            )
+
+    if not family.translations.filter(locale="en").exists():
+        raise ValidationError({"translations": "An English family name is required."})
+    family.updated_by = actor
+    family.save(update_fields=("updated_by", "updated_at"))
+    return family
+
+
+@transaction.atomic
+def set_family_status(*, family_id, status, actor):
+    _main_supplier(actor)
+    try:
+        family = GarmentFamily.objects.select_for_update().get(pk=family_id)
+    except (GarmentFamily.DoesNotExist, ValueError):
+        raise NotFound() from None
+    if status not in GarmentFamily.Status.values:
+        raise ValidationError({"status": "Invalid family status."})
+    family.status = status
+    family.updated_by = actor
+    family.save(update_fields=("status", "updated_by", "updated_at"))
+    return family
+
+
+def _replace_variant_translations(*, variant, translations, actor):
+    values_by_locale = {item["locale"]: item for item in translations}
+    if "en" not in values_by_locale:
+        raise ValidationError({"translations": "An English variant name is required."})
+
+    current = {
+        row.locale: row
+        for row in GarmentVariantTranslation.objects.select_for_update().filter(
+            variant=variant
+        )
+    }
+    for locale, values in values_by_locale.items():
+        translation = current.get(locale)
+        if translation:
+            translation.name = values["name"]
+            translation.description = values.get("description", "")
+            translation.updated_by = actor
+            translation.save(
+                update_fields=("name", "description", "updated_by", "updated_at")
+            )
+        else:
+            GarmentVariantTranslation.objects.create(
+                variant=variant,
+                locale=locale,
+                name=values["name"],
+                description=values.get("description", ""),
+                created_by=actor,
+                updated_by=actor,
+            )
+    for locale, translation in current.items():
+        if locale not in values_by_locale:
+            translation.delete()
+
+
+@transaction.atomic
+def create_shop_variant(*, shop_id, actor, family_id, code, translations):
+    shop, _membership = _shop_actor(shop_id=shop_id, actor=actor, write=True)
+    family = (
+        GarmentFamily.objects.select_for_update()
+        .filter(pk=family_id, status=GarmentFamily.Status.ACTIVE)
+        .first()
+    )
+    if family is None:
+        raise NotFound()
+    variant = GarmentVariant.objects.create(
+        tenant=shop,
+        family=family,
+        code=code,
+        is_default=False,
+        is_active=True,
+        created_by=actor,
+        updated_by=actor,
+    )
+    _replace_variant_translations(
+        variant=variant, translations=translations, actor=actor
+    )
+    return variant
+
+
+def _locked_shop_variant(*, shop, variant_id):
+    initial = (
+        GarmentVariant.objects.filter(tenant=shop, pk=variant_id)
+        .values("family_id")
+        .first()
+    )
+    if initial is None:
+        raise NotFound()
+    GarmentFamily.objects.select_for_update().get(pk=initial["family_id"])
+    variant = (
+        GarmentVariant.objects.select_for_update()
+        .filter(tenant=shop, pk=variant_id)
+        .select_related("family")
+        .first()
+    )
+    if variant is None:
+        raise NotFound()
+    return variant
+
+
+@transaction.atomic
+def update_shop_variant(*, shop_id, actor, variant_id, translations):
+    shop, _membership = _shop_actor(shop_id=shop_id, actor=actor, write=True)
+    variant = _locked_shop_variant(shop=shop, variant_id=variant_id)
+    _replace_variant_translations(
+        variant=variant, translations=translations, actor=actor
+    )
+    variant.updated_by = actor
+    variant.save(update_fields=("updated_by", "updated_at"))
+    return variant
+
+
+@transaction.atomic
+def set_shop_variant_active(*, shop_id, actor, variant_id, is_active):
+    shop, _membership = _shop_actor(shop_id=shop_id, actor=actor, write=True)
+    variant = _locked_shop_variant(shop=shop, variant_id=variant_id)
+    if is_active and variant.family.status != GarmentFamily.Status.ACTIVE:
+        raise ValidationError(
+            {"variant": "A variant under an archived family cannot be reactivated."}
+        )
+    variant.is_active = is_active
+    variant.updated_by = actor
+    variant.save(update_fields=("is_active", "updated_by", "updated_at"))
+    return variant
+
+
+@transaction.atomic
+def create_global_variant(*, actor, family_id, code, translations):
+    _main_supplier(actor)
+    family = (
+        GarmentFamily.objects.select_for_update()
+        .filter(pk=family_id, status=GarmentFamily.Status.ACTIVE)
+        .first()
+    )
+    if family is None:
+        raise NotFound()
+    variant = GarmentVariant.objects.create(
+        tenant=None,
+        family=family,
+        code=code,
+        is_default=False,
+        is_active=True,
+        created_by=actor,
+        updated_by=actor,
+    )
+    _replace_variant_translations(
+        variant=variant, translations=translations, actor=actor
+    )
+    return variant
+
+
+@transaction.atomic
+def update_global_variant(*, actor, variant_id, translations):
+    _main_supplier(actor)
+    initial = (
+        GarmentVariant.objects.filter(tenant__isnull=True, pk=variant_id)
+        .values("family_id")
+        .first()
+    )
+    if initial is None:
+        raise NotFound()
+    GarmentFamily.objects.select_for_update().get(pk=initial["family_id"])
+    variant = (
+        GarmentVariant.objects.select_for_update()
+        .filter(tenant__isnull=True, pk=variant_id)
+        .select_related("family")
+        .first()
+    )
+    if variant is None:
+        raise NotFound()
+    _replace_variant_translations(
+        variant=variant, translations=translations, actor=actor
+    )
+    variant.updated_by = actor
+    variant.save(update_fields=("updated_by", "updated_at"))
+    return variant
+
+
+@transaction.atomic
+def set_global_variant_active(*, actor, variant_id, is_active):
+    _main_supplier(actor)
+    initial = (
+        GarmentVariant.objects.filter(tenant__isnull=True, pk=variant_id)
+        .values("family_id")
+        .first()
+    )
+    if initial is None:
+        raise NotFound()
+    family = GarmentFamily.objects.select_for_update().get(pk=initial["family_id"])
+    variant = (
+        GarmentVariant.objects.select_for_update()
+        .filter(tenant__isnull=True, pk=variant_id)
+        .select_related("family")
+        .first()
+    )
+    if variant is None:
+        raise NotFound()
+    if is_active and family.status != GarmentFamily.Status.ACTIVE:
+        raise ValidationError(
+            {"variant": "A variant under an archived family cannot be reactivated."}
+        )
+    variant.is_active = is_active
+    if not is_active and variant.is_default:
+        variant.is_default = False
+    variant.updated_by = actor
+    variant.save(update_fields=("is_active", "is_default", "updated_by", "updated_at"))
+    return variant
+
+
+@transaction.atomic
+def set_global_variant_default(*, actor, variant_id):
+    _main_supplier(actor)
+    initial = (
+        GarmentVariant.objects.filter(tenant__isnull=True, pk=variant_id)
+        .values("family_id")
+        .first()
+    )
+    if initial is None:
+        raise NotFound()
+    family = GarmentFamily.objects.select_for_update().get(pk=initial["family_id"])
+    if family.status != GarmentFamily.Status.ACTIVE:
+        raise ValidationError({"variant": "The variant family must be active."})
+    variant = (
+        GarmentVariant.objects.select_for_update()
+        .filter(tenant__isnull=True, pk=variant_id)
+        .select_related("family")
+        .first()
+    )
+    if variant is None:
+        raise NotFound()
+    if not variant.is_active:
+        raise ValidationError({"variant": "Only active variants can be default."})
+    previous_defaults = (
+        GarmentVariant.objects.select_for_update()
+        .filter(tenant__isnull=True, family=family, is_default=True)
+        .exclude(pk=variant.pk)
+    )
+    for previous in previous_defaults:
+        previous.is_default = False
+        previous.updated_by = actor
+        previous.save(update_fields=("is_default", "updated_by", "updated_at"))
+    variant.is_default = True
+    variant.updated_by = actor
+    variant.save(update_fields=("is_default", "updated_by", "updated_at"))
+    return variant
+
+
+@transaction.atomic
+def upload_family_image(*, family_id, upload, actor):
+    _main_supplier(actor)
+    try:
+        family = GarmentFamily.objects.select_for_update().get(pk=family_id)
+    except (GarmentFamily.DoesNotExist, ValueError):
+        raise NotFound() from None
+
+    optimized, byte_size, width, height = optimize_reference(
+        upload, error_field="image"
+    )
+    storage = GarmentFamily._meta.get_field("image").storage
+    previous_name = family.image.name if family.image else ""
+    try:
+        family.image.save(optimized.name, optimized, save=False)
+        new_name = family.image.name
+        family.image_mime_type = "image/webp"
+        family.image_byte_size = byte_size
+        family.image_width = width
+        family.image_height = height
+        family.updated_by = actor
+        family.save(
+            update_fields=(
+                "image",
+                "image_mime_type",
+                "image_byte_size",
+                "image_width",
+                "image_height",
+                "updated_by",
+                "updated_at",
+            )
+        )
+    except Exception:
+        if family.image and family.image.name and family.image.name != previous_name:
+            storage.delete(family.image.name)
+        raise
+
+    if previous_name and previous_name != new_name:
+        transaction.on_commit(lambda: storage.delete(previous_name))
+    return family
+
+
+@transaction.atomic
+def remove_family_image(*, family_id, actor):
+    _main_supplier(actor)
+    try:
+        family = GarmentFamily.objects.select_for_update().get(pk=family_id)
+    except (GarmentFamily.DoesNotExist, ValueError):
+        raise NotFound() from None
+    previous_name = family.image.name if family.image else ""
+    family.image = ""
+    family.image_mime_type = ""
+    family.image_byte_size = None
+    family.image_width = None
+    family.image_height = None
+    family.updated_by = actor
+    family.save(
+        update_fields=(
+            "image",
+            "image_mime_type",
+            "image_byte_size",
+            "image_width",
+            "image_height",
+            "updated_by",
+            "updated_at",
+        )
+    )
+    if previous_name:
+        transaction.on_commit(
+            lambda: GarmentFamily._meta.get_field("image").storage.delete(previous_name)
+        )
+    return family
 
 
 def _actor_active(actor):
@@ -182,6 +546,26 @@ def create_design(
     *, shop_id, actor, family, variant, name, source=None, translations=None
 ):
     shop, _membership = _shop_actor(shop_id=shop_id, actor=actor, write=True)
+    try:
+        family = GarmentFamily.objects.select_for_update().get(
+            pk=family.pk, status=GarmentFamily.Status.ACTIVE
+        )
+    except GarmentFamily.DoesNotExist:
+        raise ValidationError(
+            {"family_id": "Select an active garment family."}
+        ) from None
+    variant = (
+        GarmentVariant.objects.select_for_update()
+        .filter(pk=variant.pk, family=family, is_active=True)
+        .filter(Q(tenant__isnull=True) | Q(tenant=shop))
+        .first()
+    )
+    if variant is None:
+        raise ValidationError(
+            {
+                "variant_id": "Select an active variant available to this Shop and family."
+            }
+        )
     design = Design.objects.create(
         tenant=shop,
         family=family,
@@ -203,6 +587,18 @@ def copy_design_version(
     *, shop_id, actor, family, variant, name, source, source_version, translations=None
 ):
     shop, _membership = _shop_actor(shop_id=shop_id, actor=actor, write=True)
+    variant = (
+        GarmentVariant.objects.select_for_update()
+        .filter(pk=variant.pk, family=family, is_active=True)
+        .filter(Q(tenant__isnull=True) | Q(tenant=shop))
+        .first()
+    )
+    if variant is None:
+        raise ValidationError(
+            {
+                "variant_id": "Select an active variant available to this Shop and family."
+            }
+        )
     if (
         source_version.design_id != source.pk
         or source_version.status != DesignVersion.Status.PUBLISHED
@@ -435,9 +831,26 @@ def publish_version(*, shop_id, actor, version_id):
 
 @transaction.atomic
 def create_global_design(*, actor, family, variant, name, translations=None):
-    if not ShopRolePolicy.is_main_supplier_admin(actor):
-        raise PermissionDenied()
-    if variant.tenant_id is not None or variant.family_id != family.pk:
+    _main_supplier(actor)
+    try:
+        family = GarmentFamily.objects.select_for_update().get(
+            pk=family.pk, status=GarmentFamily.Status.ACTIVE
+        )
+    except GarmentFamily.DoesNotExist:
+        raise ValidationError(
+            {"family_id": "Select an active garment family."}
+        ) from None
+    variant = (
+        GarmentVariant.objects.select_for_update()
+        .filter(
+            pk=variant.pk,
+            tenant__isnull=True,
+            family=family,
+            is_active=True,
+        )
+        .first()
+    )
+    if variant is None:
         raise ValidationError({"variant": "Select a global variant for this family."})
     design = Design.objects.create(
         tenant=None,

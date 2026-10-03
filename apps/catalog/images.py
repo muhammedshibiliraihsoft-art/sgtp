@@ -12,19 +12,19 @@ MAX_STORED_BYTES = 2 * 1024 * 1024
 ACCEPTED_FORMATS = {"JPEG", "PNG", "WEBP"}
 
 
-def optimize_reference(upload):
+def optimize_reference(upload, *, error_field="images"):
     try:
         upload.seek(0)
         with Image.open(upload) as opened:
             if opened.format not in ACCEPTED_FORMATS:
                 raise ValidationError(
-                    {"images": "Only JPG, PNG, and WebP images are supported."}
+                    {error_field: "Only JPG, PNG, and WebP images are supported."}
                 )
             image = ImageOps.exif_transpose(opened)
             image.load()
     except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as error:
         raise ValidationError(
-            {"images": "The uploaded file is not a valid supported image."}
+            {error_field: "The uploaded file is not a valid supported image."}
         ) from error
     finally:
         upload.seek(0)
@@ -51,5 +51,5 @@ def optimize_reference(upload):
         )
 
     raise ValidationError(
-        {"images": "Image could not be optimized below the 2 MB limit."}
+        {error_field: "Image could not be optimized below the 2 MB limit."}
     )

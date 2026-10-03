@@ -81,11 +81,17 @@ def _valid_profile_relations(*, shop, person_model, person_id, family_id, varian
     person = person_qs.filter(pk=person_id, tenant=shop).first()
     if person is None:
         raise NotFound()
-    family = get_object_or_404(GarmentFamily.objects, pk=family_id)
+    family = get_object_or_404(
+        GarmentFamily.objects.select_for_update().filter(
+            status=GarmentFamily.Status.ACTIVE
+        ),
+        pk=family_id,
+    )
     variant = None
     if variant_id:
         variant = (
-            GarmentVariant.objects.filter(pk=variant_id, family=family)
+            GarmentVariant.objects.select_for_update()
+            .filter(pk=variant_id, family=family, is_active=True)
             .filter(Q(tenant__isnull=True) | Q(tenant=shop))
             .first()
         )
@@ -333,13 +339,18 @@ def create_measurement_definition(
         )
     seen_mappings = set()
     for item in mappings:
-        family = GarmentFamily.objects.filter(pk=item["family_id"]).first()
+        family = (
+            GarmentFamily.objects.select_for_update()
+            .filter(pk=item["family_id"], status=GarmentFamily.Status.ACTIVE)
+            .first()
+        )
         if family is None:
             raise ValidationError({"mappings": "Unknown garment family."})
         variant = None
         if item.get("variant_id"):
             variant = (
-                GarmentVariant.objects.filter(pk=item["variant_id"], family=family)
+                GarmentVariant.objects.select_for_update()
+                .filter(pk=item["variant_id"], family=family, is_active=True)
                 .filter(Q(tenant__isnull=True) | Q(tenant=shop))
                 .first()
             )

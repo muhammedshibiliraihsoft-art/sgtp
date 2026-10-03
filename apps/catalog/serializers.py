@@ -7,8 +7,11 @@ from apps.catalog.models import (
     DesignReference,
     DesignSelection,
     DesignVersion,
+    FamilyOptionGroup,
     GarmentFamily,
+    GarmentFamilyTranslation,
     GarmentVariant,
+    GarmentVariantTranslation,
     OptionGroup,
     StyleOption,
     StyleOptionImage,
@@ -16,24 +19,38 @@ from apps.catalog.models import (
 
 
 def translated_name(record, locale):
-    translations = record.translations.all()
+    translations = {item.locale: item.name for item in record.translations.all()}
     return (
-        translations.filter(locale=locale).values_list("name", flat=True).first()
-        or translations.filter(locale="en").values_list("name", flat=True).first()
+        translations.get(locale)
+        or translations.get("en")
         or getattr(record, "code", "")
     )
 
 
 class FamilySerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
+    has_image = serializers.SerializerMethodField()
+    image_content_url = serializers.SerializerMethodField()
 
     class Meta:
         model = GarmentFamily
-        fields = ("id", "code", "name")
+        fields = ("id", "code", "name", "status", "has_image", "image_content_url")
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_name(self, obj):
         return translated_name(obj, self.context.get("locale", "en"))
+
+    @extend_schema_field(OpenApiTypes.BOOL)
+    def get_has_image(self, obj):
+        return bool(obj.image)
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_image_content_url(self, obj):
+        if not obj.image:
+            return None
+        from django.urls import reverse
+
+        return reverse("v1:catalog-family-image", kwargs={"family_id": obj.pk})
 
 
 class TranslationInputSerializer(serializers.Serializer):
@@ -57,23 +74,123 @@ class GlobalCatalogRecordInputSerializer(serializers.Serializer):
         return value
 
 
+class FamilyListQuerySerializer(serializers.Serializer):
+    search = serializers.CharField(required=False, allow_blank=True, max_length=120)
+    status = serializers.ChoiceField(
+        choices=("ACTIVE", "ARCHIVED", "all"), required=False, default="ACTIVE"
+    )
+
+
+class FamilyUpdateSerializer(serializers.Serializer):
+    translations = TranslationInputSerializer(many=True, required=False)
+
+    def validate(self, attrs):
+        if set(self.initial_data) - {"translations"}:
+            raise serializers.ValidationError(
+                "Only family translations may be changed; the family code is immutable."
+            )
+        if not attrs:
+            raise serializers.ValidationError("Provide translations to update.")
+        translations = attrs.get("translations")
+        if translations is not None:
+            locales = [item["locale"] for item in translations]
+            if len(locales) != len(set(locales)):
+                raise serializers.ValidationError(
+                    {"translations": "Each locale may appear only once."}
+                )
+        return attrs
+
+
+class FamilyTranslationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GarmentFamilyTranslation
+        fields = ("locale", "name", "description")
+
+
+class FamilyImageUploadSerializer(serializers.Serializer):
+    image = serializers.FileField()
+
+
+class FamilyImageMetadataSerializer(serializers.Serializer):
+    has_image = serializers.BooleanField()
+    image_content_url = serializers.CharField(allow_null=True)
+    mime_type = serializers.CharField(allow_blank=True)
+    byte_size = serializers.IntegerField(allow_null=True)
+    width = serializers.IntegerField(allow_null=True)
+    height = serializers.IntegerField(allow_null=True)
+
+
 class GlobalVariantQuerySerializer(serializers.Serializer):
     family = serializers.UUIDField(required=False)
+    search = serializers.CharField(required=False, allow_blank=True, max_length=120)
+    status = serializers.ChoiceField(
+        choices=("ACTIVE", "ARCHIVED", "all"), required=False, default="ACTIVE"
+    )
+
+
+class ShopVariantQuerySerializer(GlobalVariantQuerySerializer):
+    source = serializers.ChoiceField(
+        choices=("all", "global", "shop"), required=False, default="all"
+    )
+
+
+class DesignListQuerySerializer(serializers.Serializer):
+    family = serializers.UUIDField(required=False)
+    variant = serializers.UUIDField(required=False)
 
 
 class VariantSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
+    is_global = serializers.SerializerMethodField()
 
     class Meta:
         model = GarmentVariant
-        fields = ("id", "family", "code", "name", "is_default")
+        fields = (
+            "id",
+            "family",
+            "code",
+            "name",
+            "is_default",
+            "is_global",
+            "is_active",
+        )
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_name(self, obj):
         return translated_name(obj, self.context.get("locale", "en"))
 
+    @extend_schema_field(OpenApiTypes.BOOL)
+    def get_is_global(self, obj):
+        return obj.tenant_id is None
 
-class ShopVariantInputSerializer(serializers.Serializer):
+
+class VariantTranslationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GarmentVariantTranslation
+        fields = ("locale", "name", "description")
+
+
+class VariantDetailSerializer(VariantSerializer):
+    description = serializers.SerializerMethodField()
+    translations = VariantTranslationSerializer(many=True, read_only=True)
+
+    class Meta(VariantSerializer.Meta):
+        fields = VariantSerializer.Meta.fields + (
+            "description",
+            "translations",
+            "created_at",
+            "updated_at",
+        )
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_description(self, obj):
+        locale = self.context.get("locale", "en")
+        translations = {item.locale: item for item in obj.translations.all()}
+        selected = translations.get(locale) or translations.get("en")
+        return selected.description if selected else ""
+
+
+class GlobalVariantInputSerializer(serializers.Serializer):
     family_id = serializers.UUIDField()
     code = serializers.SlugField(max_length=64)
     translations = TranslationInputSerializer(many=True)
@@ -87,6 +204,27 @@ class ShopVariantInputSerializer(serializers.Serializer):
         return value
 
 
+class VariantUpdateSerializer(serializers.Serializer):
+    translations = TranslationInputSerializer(many=True)
+
+    def validate(self, attrs):
+        if set(self.initial_data) != {"translations"}:
+            raise serializers.ValidationError(
+                "Only translations may be changed; variant code and family are immutable."
+            )
+        translations = attrs["translations"]
+        locales = [item["locale"] for item in translations]
+        if len(locales) != len(set(locales)) or "en" not in locales:
+            raise serializers.ValidationError(
+                {"translations": "Provide unique translations including English."}
+            )
+        return attrs
+
+
+class ShopVariantInputSerializer(GlobalVariantInputSerializer):
+    pass
+
+
 class OptionGroupSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
     families = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
@@ -98,6 +236,24 @@ class OptionGroupSerializer(serializers.ModelSerializer):
     @extend_schema_field(OpenApiTypes.STR)
     def get_name(self, obj):
         return translated_name(obj, self.context.get("locale", "en"))
+
+
+class FamilyDetailSerializer(FamilySerializer):
+    translations = FamilyTranslationSerializer(many=True, read_only=True)
+    option_groups = serializers.SerializerMethodField()
+
+    class Meta(FamilySerializer.Meta):
+        fields = FamilySerializer.Meta.fields + ("translations", "option_groups")
+
+    @extend_schema_field(OptionGroupSerializer(many=True))
+    def get_option_groups(self, obj):
+        groups = [
+            row.option_group
+            for row in FamilyOptionGroup.objects.filter(family=obj)
+            .select_related("option_group")
+            .prefetch_related("option_group__translations")
+        ]
+        return OptionGroupSerializer(groups, many=True, context=self.context).data
 
 
 class StyleImageSerializer(serializers.ModelSerializer):

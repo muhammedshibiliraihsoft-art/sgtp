@@ -15,8 +15,14 @@ from apps.catalog.views import (
     GlobalDesignSelectionView,
     GlobalDesignTemplatesView,
     FamilyListView,
+    FamilyDetailView,
+    FamilyArchiveView,
+    FamilyReactivateView,
+    FamilyImageView,
     FamilyOptionGroupsView,
     GlobalVariantsView,
+    GlobalVariantDetailView,
+    GlobalVariantLifecycleView,
     GlobalStyleImageView,
     GlobalStyleImageUploadView,
     GlobalStyleOptionsView,
@@ -28,6 +34,8 @@ from apps.catalog.views import (
     ShopStyleOptionsView,
     ShopStyleOptionDetailView,
     ShopVariantsView,
+    ShopVariantDetailView,
+    ShopVariantLifecycleView,
 )
 from apps.catalog.measurement_views import (
     ClientMeasurementProfilesView,
@@ -198,6 +206,26 @@ urlpatterns = [
     ),
     path("catalog/families/", FamilyListView.as_view(), name="catalog-families"),
     path(
+        "catalog/families/<uuid:family_id>/",
+        FamilyDetailView.as_view(),
+        name="catalog-family-detail",
+    ),
+    path(
+        "catalog/families/<uuid:family_id>/archive/",
+        FamilyArchiveView.as_view(),
+        name="catalog-family-archive",
+    ),
+    path(
+        "catalog/families/<uuid:family_id>/reactivate/",
+        FamilyReactivateView.as_view(),
+        name="catalog-family-reactivate",
+    ),
+    path(
+        "catalog/families/<uuid:family_id>/image/",
+        FamilyImageView.as_view(),
+        name="catalog-family-image",
+    ),
+    path(
         "catalog/option-groups/",
         OptionGroupListView.as_view(),
         name="catalog-option-groups",
@@ -206,6 +234,29 @@ urlpatterns = [
         "catalog/variants/",
         GlobalVariantsView.as_view(),
         name="catalog-global-variants",
+    ),
+    path(
+        "catalog/variants/<uuid:variant_id>/",
+        GlobalVariantDetailView.as_view(),
+        name="catalog-global-variant-detail",
+    ),
+    path(
+        "catalog/variants/<uuid:variant_id>/archive/",
+        GlobalVariantLifecycleView.as_view(),
+        {"action": "archive"},
+        name="catalog-global-variant-archive",
+    ),
+    path(
+        "catalog/variants/<uuid:variant_id>/reactivate/",
+        GlobalVariantLifecycleView.as_view(),
+        {"action": "reactivate"},
+        name="catalog-global-variant-reactivate",
+    ),
+    path(
+        "catalog/variants/<uuid:variant_id>/set-default/",
+        GlobalVariantLifecycleView.as_view(),
+        {"action": "set-default"},
+        name="catalog-global-variant-set-default",
     ),
     path(
         "catalog/families/<uuid:family_id>/option-groups/",
@@ -271,6 +322,23 @@ urlpatterns = [
         "shops/<uuid:shop_id>/catalog/variants/",
         ShopVariantsView.as_view(),
         name="shop-catalog-variants",
+    ),
+    path(
+        "shops/<uuid:shop_id>/catalog/variants/<uuid:variant_id>/",
+        ShopVariantDetailView.as_view(),
+        name="shop-catalog-variant-detail",
+    ),
+    path(
+        "shops/<uuid:shop_id>/catalog/variants/<uuid:variant_id>/archive/",
+        ShopVariantLifecycleView.as_view(),
+        {"action": "archive"},
+        name="shop-catalog-variant-archive",
+    ),
+    path(
+        "shops/<uuid:shop_id>/catalog/variants/<uuid:variant_id>/reactivate/",
+        ShopVariantLifecycleView.as_view(),
+        {"action": "reactivate"},
+        name="shop-catalog-variant-reactivate",
     ),
     path(
         "shops/<uuid:shop_id>/catalog/style-options/",

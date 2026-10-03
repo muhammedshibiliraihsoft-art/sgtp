@@ -27,8 +27,29 @@ class ShopScopedCatalogModel(BaseModel):
         abstract = True
 
 
+def family_image_upload_path(_instance, filename):
+    suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else "webp"
+    return f"catalog/families/{uuid.uuid4().hex}.{suffix}"
+
+
 class GarmentFamily(BaseModel):
+    class Status(models.TextChoices):
+        ACTIVE = "ACTIVE", "Active"
+        ARCHIVED = "ARCHIVED", "Archived"
+
     code = models.SlugField(max_length=48, unique=True)
+    status = models.CharField(
+        max_length=16, choices=Status.choices, default=Status.ACTIVE
+    )
+    image = models.FileField(
+        upload_to=family_image_upload_path,
+        storage=storages["private_media"],
+        blank=True,
+    )
+    image_mime_type = models.CharField(max_length=32, blank=True)
+    image_byte_size = models.PositiveIntegerField(null=True, blank=True)
+    image_width = models.PositiveIntegerField(null=True, blank=True)
+    image_height = models.PositiveIntegerField(null=True, blank=True)
 
     class Meta:
         ordering = ("code",)
@@ -59,6 +80,7 @@ class GarmentVariant(ShopScopedCatalogModel):
     )
     code = models.SlugField(max_length=64)
     is_default = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
 
     class Meta:
         ordering = ("family__code", "code")

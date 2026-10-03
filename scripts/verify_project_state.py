@@ -23,7 +23,9 @@ PHASE_STATUS_RE = re.compile(
     re.IGNORECASE,
 )
 TASK_RE = re.compile(
-    r"\b(?:PRE-P3-\d{2}(?:-[A-Z0-9]+)*|" r"[A-Z]\d{1,2}-\d{2}[A-Z]?(?:-[A-Z0-9]+)*)\b"
+    r"\b(?:PRE-P3-\d{2}(?:-[A-Z0-9]+)*|"
+    r"GARMENT-(?:FAMILIES|VARIANTS)-\d{2}|"
+    r"[A-Z]\d{1,2}-\d{2}[A-Z]?(?:-[A-Z0-9]+)*)\b"
 )
 TEST_COUNT_RE = re.compile(
     r"\b(?P<count>\d+)\s+tests?\s+(?:verified\s+)?" r"(?:pass|passed|passing|green)\b",
@@ -386,6 +388,34 @@ class ProjectStateValidator:
                 )
                 and re.search(
                     r"\bCONFIRM\s+TASK\s+T4-03A\b",
+                    current_handoff_text,
+                    re.IGNORECASE,
+                )
+            ):
+                allowed.add("apps/catalog")
+            if (
+                state_task == handoff_task == "GARMENT-FAMILIES-01"
+                and re.search(
+                    r"\bCONFIRM\s+TASK\s+GARMENT-FAMILIES-01\b",
+                    self._current_section(self.read("docs/PROJECT_STATE.md"), "Status"),
+                    re.IGNORECASE,
+                )
+                and re.search(
+                    r"\bCONFIRM\s+TASK\s+GARMENT-FAMILIES-01\b",
+                    current_handoff_text,
+                    re.IGNORECASE,
+                )
+            ):
+                allowed.add("apps/catalog")
+            if (
+                state_task == handoff_task == "GARMENT-VARIANTS-01"
+                and re.search(
+                    r"\bCONFIRM\s+TASK\s+GARMENT-VARIANTS-01\b",
+                    self._current_section(self.read("docs/PROJECT_STATE.md"), "Status"),
+                    re.IGNORECASE,
+                )
+                and re.search(
+                    r"\bCONFIRM\s+TASK\s+GARMENT-VARIANTS-01\b",
                     current_handoff_text,
                     re.IGNORECASE,
                 )

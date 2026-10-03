@@ -149,6 +149,10 @@ class MeasurementDefinitionMapping(BaseModel):
                 {"variant": "Variant must belong to the selected family."}
             )
         if self.definition_id and self.variant_id:
+            if self._state.adding and not self.variant.is_active:
+                raise ValidationError(
+                    {"variant": "New measurement mappings require an active variant."}
+                )
             if (
                 self.definition.tenant_id != self.variant.tenant_id
                 and self.variant.tenant_id
@@ -263,6 +267,10 @@ class MeasurementProfile(BaseModel):
         if self.variant_id and self.variant.tenant_id not in (None, self.tenant_id):
             raise ValidationError(
                 {"variant": "Variant must be global or belong to this Shop."}
+            )
+        if self._state.adding and self.variant_id and not self.variant.is_active:
+            raise ValidationError(
+                {"variant": "New measurement profiles require an active variant."}
             )
 
     def save(self, *args, **kwargs):

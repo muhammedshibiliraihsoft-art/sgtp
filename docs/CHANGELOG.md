@@ -1,5 +1,32 @@
 # Changelog
 
+## 2026-10-03 — GARMENT-VARIANTS-01 (frontend phase)
+
+- Added the Catalog Variants second tab using real paginated backend APIs: debounced server-side search, Family/status/source filters, backend count, pagination, compact responsive cards, and the existing Family → View Variants continuation. The existing Shop context API supplies role-aware Shop controls.
+- Added Shop Variant detail/edit/archive/reactivate and create flows, read-only Global Variants in Shop Catalog, and Main Supplier global Variant create/edit/archive/reactivate/set-default management under the existing Back Office Global Catalog.
+- Connected Variant detail “View Designs” to the exact backend `?family=<uuid>&variant=<uuid>` filter. Kept translation editing progressive, preserved RTL/theme tokens and drawer keyboard handling. No thumbnails were added.
+- Validation on `frontend/parallel-foundation`: typecheck PASS; seventy frontend test cases across 13 files PASS; lint exits 0 with six existing warnings in unchanged shared files; production build PASS with a bundle-size advisory; `git diff --check` PASS. Authenticated viewport verification remains pending user login. No commit, push, merge, or deployment.
+
+## 2026-10-03 — GARMENT-VARIANTS-01 (backend phase)
+
+- Completed the additive Variant backend contract: active/archive lifecycle and migration `catalog.0011_garmentvariant_is_active`; authoritative list/detail DTOs; Shop and Main Supplier detail, translation, lifecycle and default routes; paginated server-side search/family/status/source filters; exact Variant Design filters; and archived Variant rejection for new dependent records.
+- Preserved historical references and the existing Family/Measurement implementation. Variant thumbnail is deferred; no inventory/cost semantics were introduced.
+- Validation: full PostgreSQL application suite 430 passed; focused Catalog/Measurement/Variant API/concurrency suite 56 passed; validator tests 30 passed; repository state validator PASS (430 tests discovered); Django checks, migration drift, OpenAPI, Black/Flake8, schema parity and diff check PASS. OpenAPI reported 0 errors/28 warnings (12 unique). Migration was tested only in disposable UTF-8 PostgreSQL databases. No commit, push, merge, deployment or shared/staging/production migration.
+
+## 2026-10-03 — GARMENT-FAMILIES-01 (backend phase)
+
+- Completed backend Phase A for global Garment Families: reversible ACTIVE/ARCHIVED lifecycle, immutable code and safe Main Supplier translation editing, detail response, database-wide case-insensitive code/translated-name search before pagination, and a single optional private optimized Family thumbnail with authenticated content delivery.
+- Archived Families are hidden from ordinary browse and rejected for new Shop Variant/Design, Global Design Template, Measurement Profile, and Measurement Definition mapping creation. Existing records and Measurement history remain available. The existing ordered global Family → Option Group mapping contract is preserved.
+- Added migration `catalog.0010_garmentfamily_image_garmentfamily_image_byte_size_and_more`; validated by disposable UTF-8 PostgreSQL tests only. Updated OpenAPI/schema and canonical API/database/state docs. Expanded the repository validator for the explicitly authorized Family Catalog scope.
+- Validation: full PostgreSQL application suite 419 passed; Catalog API suite 27 passed; Catalog/Measurement API and concurrency regressions 23 passed; validator tests 35 passed; repository validator PASS (419 tests discovered); Django check and production deploy check passed (12 existing OpenAPI warnings); migration drift clean; OpenAPI 0 errors/28 warnings (12 unique); Black, Flake8, schema parity, and `git diff --check` passed. No commit, push, merge, or deployment.
+
+## 2026-10-03 — GARMENT-FAMILIES-01 (frontend phase)
+
+- Integrated Shop Garment Families browsing with authenticated list/detail/image APIs, debounced server search, API pagination count, a compact responsive card and detail sheet, applicable Style Groups, and existing Family-filtered Shop Variants/Design routes. Shop users receive no Family management controls.
+- Added Main Supplier Back Office Family creation/editing with stable read-only code, optional localized names/descriptions, ACTIVE/ARCHIVED filter, reversible lifecycle controls, authenticated private image upload/replace/remove, and ordered Family → Option Group mapping. Existing Style Group and Global Style Option surfaces remain available.
+- Frontend validation on `frontend/parallel-foundation`: typecheck PASS; 59 tests PASS; build PASS; diff check PASS; lint exits 0 with six warnings in unchanged shared files. Unit/component tests cover API contracts and lifecycle, Family image, mapping, search, pagination, detail, and Shop view behavior.
+- Authenticated visual checks at 1440–320 viewport sizes were not performed because the local browser is at sign-in and credentials remain for the user to enter. No commit, push, merge, deployment, or shared/staging/production database migration.
+
 ## 2026-10-03 — T4-02 Catalog and Design API completion endpoints
 
 - Added authenticated, password-change-complete API routes for Main Supplier-only Family and Option Group creation with atomic translated records, a paginated Main Supplier-only global variant selector, and visibility-safe Global Design Template detail retrieval.

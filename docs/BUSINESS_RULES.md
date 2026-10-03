@@ -338,6 +338,26 @@ Undo is valid only within the exact 5-second window. Current Shop capacity must 
 
 ## T4-03 implemented measurement and material contract
 
+## T4-02 GARMENT-VARIANTS-01 approved Variant rules
+
+### BR-CAT-VAR-001 — Reversible Variant lifecycle
+**Status:** CONFIRMED
+**Rule:** Variants have ACTIVE and ARCHIVED states. Archiving never hard-deletes or changes historical Design/Measurement references. Normal browse defaults to ACTIVE; management may discover archived records. New business records cannot select an archived Variant. Reactivation is permitted only when the parent Family is active.
+
+### BR-CAT-VAR-002 — Global default selection
+**Status:** CONFIRMED
+**Rule:** A Family may have zero or one Global default Variant; exactly one is not required. Only an active Global Variant under an active Family may be explicitly selected as default. Selecting it clears any previous Family default atomically. Archiving the current default clears its default flag; reactivation never restores that flag automatically. Shop Variants are never Global defaults.
+
+### BR-CAT-VAR-003 — Ownership and mutation
+**Status:** CONFIRMED
+**Rule:** Global Variants have no Shop owner; Shop Variants belong to exactly one Shop. Main Supplier manages Global Variants. In an explicit Shop context, existing Shop ADMIN/STAFF write policy may manage same-Shop Variants; VIEWER is read-only. Global Variants are read-only through Shop routes, and foreign-Shop records are non-disclosing. Variant code, Family, and owner are immutable after creation; translations remain editable.
+
+### BR-CAT-VAR-004 — No Variant costing or stock semantics
+**Status:** CONFIRMED
+**Rule:** Variant records do not own inventory, pricing, costs, supplier, warehouse, BOM, or quantity semantics. Inventory remains a separate Material-owned domain.
+
+## T4-03 implemented measurement and material contract
+
 T4-03 implementation preserves these approved boundaries:
 
 - A measurement profile belongs to exactly one Shop-owned Client or Related Person. A Related Person remains linked to its existing Primary Client, which remains the future billing owner; this task adds no billing model or behavior.

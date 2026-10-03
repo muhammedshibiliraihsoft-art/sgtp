@@ -1,6 +1,7 @@
 from django.http import FileResponse
 from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404
+from django.urls import reverse
 from rest_framework import serializers, status
 from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.permissions import BasePermission, IsAuthenticated
@@ -22,7 +23,6 @@ from apps.catalog.models import (
     GarmentFamily,
     GarmentFamilyTranslation,
     GarmentVariant,
-    GarmentVariantTranslation,
     OptionGroup,
     OptionGroupTranslation,
     StyleOption,
@@ -30,6 +30,7 @@ from apps.catalog.models import (
     StyleOptionTranslation,
 )
 from apps.catalog.serializers import (
+    DesignListQuerySerializer,
     DesignCreateSerializer,
     DesignDraftNameUpdateSerializer,
     DesignReferenceSerializer,
@@ -37,8 +38,14 @@ from apps.catalog.serializers import (
     DesignVersionSerializer,
     DesignReferenceGallerySerializer,
     FamilyOptionGroupUpdateSerializer,
+    FamilyDetailSerializer,
+    FamilyImageMetadataSerializer,
+    FamilyImageUploadSerializer,
+    FamilyListQuerySerializer,
     FamilySerializer,
+    FamilyUpdateSerializer,
     GlobalCatalogRecordInputSerializer,
+    GlobalVariantInputSerializer,
     GlobalVariantQuerySerializer,
     OptionGroupSerializer,
     PublishResponseSerializer,
@@ -46,9 +53,12 @@ from apps.catalog.serializers import (
     SelectionCreateSerializer,
     ShopStyleOptionInputSerializer,
     ShopVariantInputSerializer,
+    ShopVariantQuerySerializer,
     SelectionSerializer,
     StyleImageSerializer,
     StyleOptionSerializer,
+    VariantDetailSerializer,
+    VariantUpdateSerializer,
     VariantSerializer,
 )
 from apps.catalog.services import (
@@ -59,10 +69,21 @@ from apps.catalog.services import (
     copy_design_version,
     create_design,
     create_global_design,
+    create_global_variant,
+    create_shop_variant,
     publish_global_version,
     publish_version,
+    remove_family_image,
+    set_family_status,
+    set_global_variant_active,
+    set_global_variant_default,
+    set_shop_variant_active,
     upload_design_references,
+    upload_family_image,
     upload_style_images,
+    update_family_translations,
+    update_global_variant,
+    update_shop_variant,
 )
 from apps.accounts.permissions import PasswordChangeGate
 from apps.tenants.context_views import ShopContextMixin
@@ -121,13 +142,28 @@ class FamilyListView(APIView):
     permission_classes = (IsAuthenticated, PasswordChangeGate)
 
     @extend_schema(
+        parameters=[FamilyListQuerySerializer],
         responses=_page_schema("CatalogFamilyPage", FamilySerializer),
         operation_id="catalog_families_list",
     )
     def get(self, request):
+        query = FamilyListQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        is_main_supplier = ShopRolePolicy.is_main_supplier_admin(request.user)
+        family_status = query.validated_data["status"]
+        if not is_main_supplier and family_status != GarmentFamily.Status.ACTIVE:
+            raise PermissionDenied()
+        families = GarmentFamily.objects.all()
+        if family_status != "all":
+            families = families.filter(status=family_status)
+        search = query.validated_data.get("search", "").strip()
+        if search:
+            families = families.filter(
+                Q(code__icontains=search) | Q(translations__name__icontains=search)
+            ).distinct()
         return _page_response(
             request,
-            GarmentFamily.objects.all(),
+            families.prefetch_related("translations"),
             FamilySerializer,
             context={"locale": _locale(request)},
         )
@@ -171,6 +207,158 @@ class FamilyListView(APIView):
         )
 
 
+class FamilyDetailView(APIView):
+    permission_classes = (IsAuthenticated, PasswordChangeGate)
+
+    def _family(self, request, family_id):
+        family = get_object_or_404(
+            GarmentFamily.objects.prefetch_related("translations"), pk=family_id
+        )
+        if (
+            family.status != GarmentFamily.Status.ACTIVE
+            and not ShopRolePolicy.is_main_supplier_admin(request.user)
+        ):
+            raise NotFound()
+        return family
+
+    @extend_schema(
+        responses=FamilyDetailSerializer,
+        operation_id="catalog_family_retrieve",
+    )
+    def get(self, request, family_id):
+        family = self._family(request, family_id)
+        return Response(
+            FamilyDetailSerializer(family, context={"locale": _locale(request)}).data
+        )
+
+    @extend_schema(
+        request=FamilyUpdateSerializer,
+        responses=FamilyDetailSerializer,
+        operation_id="catalog_family_update",
+    )
+    def patch(self, request, family_id):
+        if not ShopRolePolicy.is_main_supplier_admin(request.user):
+            raise PermissionDenied()
+        data = FamilyUpdateSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        family = update_family_translations(
+            family_id=family_id,
+            translations=data.validated_data.get("translations", []),
+            actor=request.user,
+        )
+        family = self._family(request, family_id)
+        return Response(
+            FamilyDetailSerializer(family, context={"locale": _locale(request)}).data
+        )
+
+
+class FamilyArchiveView(APIView):
+    permission_classes = (IsAuthenticated, PasswordChangeGate)
+
+    @extend_schema(
+        request=None,
+        responses=FamilySerializer,
+        operation_id="catalog_family_archive",
+    )
+    def post(self, request, family_id):
+        family = set_family_status(
+            family_id=family_id,
+            status=GarmentFamily.Status.ARCHIVED,
+            actor=request.user,
+        )
+        return Response(
+            FamilySerializer(family, context={"locale": _locale(request)}).data
+        )
+
+
+class FamilyReactivateView(APIView):
+    permission_classes = (IsAuthenticated, PasswordChangeGate)
+
+    @extend_schema(
+        request=None,
+        responses=FamilySerializer,
+        operation_id="catalog_family_reactivate",
+    )
+    def post(self, request, family_id):
+        family = set_family_status(
+            family_id=family_id,
+            status=GarmentFamily.Status.ACTIVE,
+            actor=request.user,
+        )
+        return Response(
+            FamilySerializer(family, context={"locale": _locale(request)}).data
+        )
+
+
+class FamilyImageView(APIView):
+    permission_classes = (IsAuthenticated, PasswordChangeGate)
+
+    def _family(self, request, family_id):
+        family = get_object_or_404(GarmentFamily.objects.all(), pk=family_id)
+        if (
+            family.status != GarmentFamily.Status.ACTIVE
+            and not ShopRolePolicy.is_main_supplier_admin(request.user)
+        ):
+            raise NotFound()
+        return family
+
+    @extend_schema(
+        responses=OpenApiTypes.BINARY,
+        operation_id="catalog_family_image_retrieve",
+    )
+    def get(self, request, family_id):
+        family = self._family(request, family_id)
+        if not family.image:
+            raise NotFound()
+        return _private_file_response(family.image, family.image_mime_type)
+
+    @extend_schema(
+        request=FamilyImageUploadSerializer,
+        responses=FamilyImageMetadataSerializer,
+        operation_id="catalog_family_image_upload",
+    )
+    def post(self, request, family_id):
+        if not ShopRolePolicy.is_main_supplier_admin(request.user):
+            raise PermissionDenied()
+        if (
+            set(request.FILES.keys()) != {"image"}
+            or len(request.FILES.getlist("image")) != 1
+        ):
+            raise serializers.ValidationError(
+                {"image": "Upload exactly one image file."}
+            )
+        data = FamilyImageUploadSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        family = upload_family_image(
+            family_id=family_id, upload=data.validated_data["image"], actor=request.user
+        )
+        return Response(self._metadata(family), status=status.HTTP_200_OK)
+
+    @extend_schema(responses={204: None}, operation_id="catalog_family_image_remove")
+    def delete(self, request, family_id):
+        if not ShopRolePolicy.is_main_supplier_admin(request.user):
+            raise PermissionDenied()
+        remove_family_image(family_id=family_id, actor=request.user)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @staticmethod
+    def _metadata(family):
+        return FamilyImageMetadataSerializer(
+            {
+                "has_image": bool(family.image),
+                "image_content_url": (
+                    reverse("v1:catalog-family-image", kwargs={"family_id": family.pk})
+                    if family.image
+                    else None
+                ),
+                "mime_type": family.image_mime_type,
+                "byte_size": family.image_byte_size,
+                "width": family.image_width,
+                "height": family.image_height,
+            }
+        ).data
+
+
 class OptionGroupListView(APIView):
     permission_classes = (IsAuthenticated, PasswordChangeGate)
 
@@ -180,7 +368,7 @@ class OptionGroupListView(APIView):
     def get(self, request):
         return _page_response(
             request,
-            OptionGroup.objects.all().prefetch_related("families"),
+            OptionGroup.objects.all().prefetch_related("families", "translations"),
             OptionGroupSerializer,
             context={"locale": _locale(request)},
         )
@@ -240,14 +428,112 @@ class GlobalVariantsView(APIView):
             .select_related("family")
             .prefetch_related("translations")
         )
-        family_id = query.validated_data.get("family")
+        values = query.validated_data
+        family_id = values.get("family")
         if family_id:
             variants = variants.filter(family_id=family_id)
+        if values["status"] != "all":
+            variants = variants.filter(is_active=values["status"] == "ACTIVE")
+        search = values.get("search", "").strip()
+        if search:
+            variants = variants.filter(
+                Q(code__icontains=search) | Q(translations__name__icontains=search)
+            ).distinct()
         return _page_response(
             request,
             variants,
             VariantSerializer,
             context={"locale": _locale(request)},
+        )
+
+    @extend_schema(
+        request=GlobalVariantInputSerializer,
+        responses={201: VariantDetailSerializer},
+        operation_id="catalog_global_variant_create",
+    )
+    def post(self, request):
+        data = GlobalVariantInputSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        try:
+            variant = create_global_variant(actor=request.user, **data.validated_data)
+        except IntegrityError:
+            raise serializers.ValidationError(
+                {"code": "This global variant code is already in use for this family."}
+            ) from None
+        variant = GarmentVariant.objects.prefetch_related("translations").get(
+            pk=variant.pk
+        )
+        return Response(
+            VariantDetailSerializer(variant, context={"locale": _locale(request)}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class GlobalVariantDetailView(APIView):
+    permission_classes = (IsAuthenticated, PasswordChangeGate, MainSupplierOnly)
+
+    def _variant(self, variant_id):
+        return get_object_or_404(
+            GarmentVariant.objects.filter(tenant__isnull=True)
+            .select_related("family")
+            .prefetch_related("translations"),
+            pk=variant_id,
+        )
+
+    @extend_schema(
+        responses=VariantDetailSerializer,
+        operation_id="catalog_global_variant_retrieve",
+    )
+    def get(self, request, variant_id):
+        return Response(
+            VariantDetailSerializer(
+                self._variant(variant_id), context={"locale": _locale(request)}
+            ).data
+        )
+
+    @extend_schema(
+        request=VariantUpdateSerializer,
+        responses=VariantDetailSerializer,
+        operation_id="catalog_global_variant_update",
+    )
+    def patch(self, request, variant_id):
+        data = VariantUpdateSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        variant = update_global_variant(
+            actor=request.user,
+            variant_id=variant_id,
+            **data.validated_data,
+        )
+        variant = GarmentVariant.objects.prefetch_related("translations").get(
+            pk=variant.pk
+        )
+        return Response(
+            VariantDetailSerializer(variant, context={"locale": _locale(request)}).data
+        )
+
+
+class GlobalVariantLifecycleView(APIView):
+    permission_classes = (IsAuthenticated, PasswordChangeGate, MainSupplierOnly)
+
+    @extend_schema(request=None, responses=VariantDetailSerializer)
+    def post(self, request, variant_id, action):
+        if action == "set-default":
+            variant = set_global_variant_default(
+                actor=request.user, variant_id=variant_id
+            )
+        else:
+            variant = set_global_variant_active(
+                actor=request.user,
+                variant_id=variant_id,
+                is_active=action == "reactivate",
+            )
+        variant = (
+            GarmentVariant.objects.select_related("family")
+            .prefetch_related("translations")
+            .get(pk=variant.pk)
+        )
+        return Response(
+            VariantDetailSerializer(variant, context={"locale": _locale(request)}).data
         )
 
 
@@ -262,8 +548,15 @@ class FamilyOptionGroupsView(APIView):
     )
     def get(self, request, family_id):
         family = get_object_or_404(GarmentFamily.objects.all(), pk=family_id)
-        rows = FamilyOptionGroup.objects.filter(family=family).select_related(
-            "option_group"
+        if (
+            family.status != GarmentFamily.Status.ACTIVE
+            and not ShopRolePolicy.is_main_supplier_admin(request.user)
+        ):
+            raise NotFound()
+        rows = (
+            FamilyOptionGroup.objects.filter(family=family)
+            .select_related("option_group")
+            .prefetch_related("option_group__translations")
         )
         return Response(
             OptionGroupSerializer(
@@ -405,18 +698,41 @@ class GlobalStyleOptionDetailView(APIView):
 class ShopVariantsView(ShopContextMixin, APIView):
     permission_classes = (IsAuthenticated,)
 
-    @extend_schema(responses=_page_schema("ShopVariantPage", VariantSerializer))
+    @extend_schema(
+        parameters=[ShopVariantQuerySerializer],
+        responses=_page_schema("ShopVariantPage", VariantSerializer),
+        operation_id="shop_variant_list",
+    )
     def get(self, request, shop_id):
+        query = ShopVariantQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        values = query.validated_data
+        if values["status"] != "ACTIVE" and not _shop_write_allowed(
+            request.shop_context
+        ):
+            raise PermissionDenied()
         variants = (
             GarmentVariant.objects.filter(
                 Q(tenant__isnull=True) | Q(tenant=request.shop_context.shop)
             )
+            .filter(family__status=GarmentFamily.Status.ACTIVE)
             .select_related("family")
             .prefetch_related("translations")
         )
-        family_id = request.query_params.get("family")
+        family_id = values.get("family")
         if family_id:
             variants = variants.filter(family_id=family_id)
+        if values["status"] != "all":
+            variants = variants.filter(is_active=values["status"] == "ACTIVE")
+        if values["source"] == "global":
+            variants = variants.filter(tenant__isnull=True)
+        elif values["source"] == "shop":
+            variants = variants.filter(tenant=request.shop_context.shop)
+        search = values.get("search", "").strip()
+        if search:
+            variants = variants.filter(
+                Q(code__icontains=search) | Q(translations__name__icontains=search)
+            ).distinct()
         return _page_response(
             request, variants, VariantSerializer, context={"locale": _locale(request)}
         )
@@ -426,7 +742,6 @@ class ShopVariantsView(ShopContextMixin, APIView):
         responses=VariantSerializer,
         operation_id="shop_variant_create",
     )
-    @transaction.atomic
     def post(self, request, shop_id):
         _lock_shop_write_context(request, shop_id)
         if not _shop_write_allowed(request.shop_context):
@@ -434,31 +749,106 @@ class ShopVariantsView(ShopContextMixin, APIView):
         data = ShopVariantInputSerializer(data=request.data)
         data.is_valid(raise_exception=True)
         values = data.validated_data
-        family = get_object_or_404(GarmentFamily.objects.all(), pk=values["family_id"])
         try:
-            with transaction.atomic():
-                variant = GarmentVariant.objects.create(
-                    tenant=request.shop_context.shop,
-                    family=family,
-                    code=values["code"],
-                    is_default=False,
-                    created_by=request.user,
-                    updated_by=request.user,
-                )
-                for translation in values["translations"]:
-                    GarmentVariantTranslation.objects.create(
-                        variant=variant,
-                        created_by=request.user,
-                        updated_by=request.user,
-                        **translation,
-                    )
+            variant = create_shop_variant(shop_id=shop_id, actor=request.user, **values)
         except IntegrityError:
             raise serializers.ValidationError(
                 {"code": "This Shop variant code is already in use."}
             ) from None
+        variant = (
+            GarmentVariant.objects.select_related("family")
+            .prefetch_related("translations")
+            .get(pk=variant.pk)
+        )
         return Response(
-            VariantSerializer(variant, context={"locale": _locale(request)}).data,
+            VariantDetailSerializer(variant, context={"locale": _locale(request)}).data,
             status=status.HTTP_201_CREATED,
+        )
+
+
+class ShopVariantDetailView(ShopContextMixin, APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def _variant(self, request, variant_id):
+        visible = GarmentVariant.objects.filter(
+            Q(tenant__isnull=True, is_active=True) | Q(tenant=request.shop_context.shop)
+        )
+        return get_object_or_404(
+            visible.select_related("family").prefetch_related("translations"),
+            pk=variant_id,
+        )
+
+    @extend_schema(
+        responses=VariantDetailSerializer, operation_id="shop_variant_retrieve"
+    )
+    def get(self, request, shop_id, variant_id):
+        return Response(
+            VariantDetailSerializer(
+                self._variant(request, variant_id),
+                context={"locale": _locale(request)},
+            ).data
+        )
+
+    @extend_schema(
+        request=VariantUpdateSerializer,
+        responses=VariantDetailSerializer,
+        operation_id="shop_variant_update",
+    )
+    def patch(self, request, shop_id, variant_id):
+        _lock_shop_write_context(request, shop_id)
+        if not _shop_write_allowed(request.shop_context):
+            raise PermissionDenied()
+        variant = self._variant(request, variant_id)
+        if variant.tenant_id is None:
+            raise PermissionDenied("Shop users cannot change global variants.")
+        data = VariantUpdateSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        variant = update_shop_variant(
+            shop_id=shop_id,
+            actor=request.user,
+            variant_id=variant_id,
+            **data.validated_data,
+        )
+        variant = (
+            GarmentVariant.objects.select_related("family")
+            .prefetch_related("translations")
+            .get(pk=variant.pk)
+        )
+        return Response(
+            VariantDetailSerializer(variant, context={"locale": _locale(request)}).data
+        )
+
+
+class ShopVariantLifecycleView(ShopContextMixin, APIView):
+    permission_classes = (IsAuthenticated,)
+
+    @extend_schema(request=None, responses=VariantDetailSerializer)
+    def post(self, request, shop_id, variant_id, action):
+        _lock_shop_write_context(request, shop_id)
+        if not _shop_write_allowed(request.shop_context):
+            raise PermissionDenied()
+        variant = get_object_or_404(
+            GarmentVariant.objects.filter(tenant=request.shop_context.shop),
+            pk=variant_id,
+        )
+        try:
+            variant = set_shop_variant_active(
+                shop_id=shop_id,
+                actor=request.user,
+                variant_id=variant_id,
+                is_active=action == "reactivate",
+            )
+        except IntegrityError:
+            raise serializers.ValidationError(
+                {"variant": "This variant cannot be reactivated."}
+            ) from None
+        variant = (
+            GarmentVariant.objects.select_related("family")
+            .prefetch_related("translations")
+            .get(pk=variant.pk)
+        )
+        return Response(
+            VariantDetailSerializer(variant, context={"locale": _locale(request)}).data
         )
 
 
@@ -667,18 +1057,24 @@ class DesignListCreateView(ShopContextMixin, TenantScopedMixin, APIView):
         return Design.objects.filter(tenant=context.shop)
 
     @extend_schema(
+        parameters=[DesignListQuerySerializer],
         responses=_page_schema("ShopDesignPage", DesignSerializer),
         operation_id="shop_design_list",
     )
     def get(self, request, shop_id):
+        query = DesignListQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
         designs = (
             self.get_queryset()
             .filter(status=Design.Status.ACTIVE)
             .prefetch_related("versions")
         )
-        family_id = request.query_params.get("family")
+        family_id = query.validated_data.get("family")
         if family_id:
             designs = designs.filter(family_id=family_id)
+        variant_id = query.validated_data.get("variant")
+        if variant_id:
+            designs = designs.filter(variant_id=variant_id)
         return _page_response(
             request,
             designs,
@@ -697,10 +1093,14 @@ class DesignListCreateView(ShopContextMixin, TenantScopedMixin, APIView):
         data = DesignCreateSerializer(data=request.data)
         data.is_valid(raise_exception=True)
         values = data.validated_data
-        family = get_object_or_404(GarmentFamily.objects.all(), pk=values["family_id"])
+        family = get_object_or_404(
+            GarmentFamily.objects.filter(status=GarmentFamily.Status.ACTIVE),
+            pk=values["family_id"],
+        )
         variant = get_object_or_404(
             GarmentVariant.objects.filter(
-                Q(tenant__isnull=True) | Q(tenant=request.shop_context.shop)
+                (Q(tenant__isnull=True) | Q(tenant=request.shop_context.shop)),
+                is_active=True,
             ),
             pk=values["variant_id"],
             family=family,
@@ -970,10 +1370,13 @@ class GlobalDesignTemplatesView(APIView):
     permission_classes = (IsAuthenticated, PasswordChangeGate)
 
     @extend_schema(
+        parameters=[DesignListQuerySerializer],
         responses=_page_schema("GlobalDesignTemplatePage", DesignSerializer),
         operation_id="catalog_global_design_templates_list",
     )
     def get(self, request):
+        query = DesignListQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
         designs = Design.objects.filter(
             tenant__isnull=True, status=Design.Status.ACTIVE
         )
@@ -982,9 +1385,12 @@ class GlobalDesignTemplatesView(APIView):
             designs = designs.filter(
                 versions__status=DesignVersion.Status.PUBLISHED
             ).distinct()
-        family_id = request.query_params.get("family")
+        family_id = query.validated_data.get("family")
         if family_id:
             designs = designs.filter(family_id=family_id)
+        variant_id = query.validated_data.get("variant")
+        if variant_id:
+            designs = designs.filter(variant_id=variant_id)
         return _page_response(
             request,
             designs,
@@ -1007,9 +1413,12 @@ class GlobalDesignTemplatesView(APIView):
             raise serializers.ValidationError(
                 "Global defaults cannot be copied from Shop designs."
             )
-        family = get_object_or_404(GarmentFamily.objects.all(), pk=values["family_id"])
+        family = get_object_or_404(
+            GarmentFamily.objects.filter(status=GarmentFamily.Status.ACTIVE),
+            pk=values["family_id"],
+        )
         variant = get_object_or_404(
-            GarmentVariant.objects.filter(tenant__isnull=True),
+            GarmentVariant.objects.filter(tenant__isnull=True, is_active=True),
             pk=values["variant_id"],
             family=family,
         )

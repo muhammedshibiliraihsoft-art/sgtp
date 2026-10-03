@@ -8,7 +8,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from PIL import Image
 from rest_framework import status
 from rest_framework.exceptions import ValidationError as DRFValidationError
-from rest_framework.test import APITestCase
+from rest_framework.test import APIRequestFactory, APITestCase, force_authenticate
 
 from apps.accounts.models import User
 from apps.catalog.models import (
@@ -20,12 +20,14 @@ from apps.catalog.models import (
     DesignVersionTranslation,
     FamilyOptionGroup,
     GarmentFamily,
+    GarmentFamilyTranslation,
     GarmentVariant,
     OptionGroup,
     StyleOption,
     StyleOptionImage,
     StyleOptionTranslation,
 )
+from apps.catalog.views import FamilyImageView
 from apps.tenants.models import (
     MembershipWorkFunction,
     ShopRole,
@@ -102,6 +104,18 @@ class CatalogDesignApiTests(APITestCase):
         Image.new("RGB", (640, 480), color).save(buffer, format="PNG")
         return SimpleUploadedFile(name, buffer.getvalue(), content_type="image/png")
 
+    @staticmethod
+    def family_image_upload(image_format="PNG", name=None, color=(30, 100, 170)):
+        buffer = BytesIO()
+        Image.new("RGB", (320, 240), color).save(buffer, format=image_format)
+        extension = {"JPEG": "jpg", "PNG": "png", "WEBP": "webp"}[image_format]
+        content_type = {"JPEG": "image/jpeg", "PNG": "image/png", "WEBP": "image/webp"}[
+            image_format
+        ]
+        return SimpleUploadedFile(
+            name or f"family.{extension}", buffer.getvalue(), content_type=content_type
+        )
+
     def create_design(self, *, client=None, shop=None, name="Blue Shirt"):
         client = client or self.client
         shop = shop or self.shop_a
@@ -177,6 +191,253 @@ class CatalogDesignApiTests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(GarmentFamily.objects.filter(code="mens-coat").exists())
+
+    def test_family_search_is_case_insensitive_and_runs_before_pagination(self):
+        GarmentFamilyTranslation.objects.create(
+            family=self.family, locale="ur", name="School Shirt"
+        )
+        for index in range(24):
+            family = GarmentFamily.objects.create(code=f"search-family-{index:02d}")
+            GarmentFamilyTranslation.objects.create(
+                family=family, locale="en", name=f"Search Family {index:02d}"
+            )
+        self.client.force_authenticate(self.admin)
+
+        code_result = self.client.get("/api/v1/catalog/families/?search=MENs-SHIRT")
+        self.assertEqual(code_result.status_code, status.HTTP_200_OK)
+        self.assertEqual(code_result.data["count"], 1)
+        self.assertEqual(code_result.data["results"][0]["id"], str(self.family.pk))
+
+        localized_result = self.client.get("/api/v1/catalog/families/?search=school")
+        self.assertEqual(localized_result.data["count"], 1)
+        self.assertEqual(localized_result.data["results"][0]["id"], str(self.family.pk))
+
+        late_result = self.client.get(
+            "/api/v1/catalog/families/?search=Search%20Family%2023"
+        )
+        self.assertEqual(late_result.status_code, status.HTTP_200_OK)
+        self.assertEqual(late_result.data["count"], 1)
+        self.assertEqual(late_result.data["results"][0]["code"], "search-family-23")
+
+    def test_family_detail_update_archive_and_reactivate_permissions(self):
+        detail_url = f"/api/v1/catalog/families/{self.family.pk}/"
+        archive_url = f"/api/v1/catalog/families/{self.family.pk}/archive/"
+        reactivate_url = f"/api/v1/catalog/families/{self.family.pk}/reactivate/"
+        self.client.force_authenticate(self.admin)
+        self.assertEqual(self.client.get(detail_url).status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            self.client.patch(detail_url, {"translations": []}).status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+        self.assertEqual(
+            self.client.post(archive_url).status_code, status.HTTP_403_FORBIDDEN
+        )
+        self.assertEqual(
+            self.client.post(reactivate_url).status_code, status.HTTP_403_FORBIDDEN
+        )
+
+        self.client.force_authenticate(self.main)
+        detail = self.client.get(detail_url)
+        self.assertEqual(detail.status_code, status.HTTP_200_OK)
+        self.assertEqual(detail.data["code"], "mens-shirt")
+        self.assertEqual(detail.data["option_groups"][0]["code"], "cuff")
+        original_english_name = self.family.translations.get(locale="en").name
+        self.assertEqual(
+            self.client.patch(detail_url, {"code": "renamed-shirt"}).status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+        duplicate_locale = self.client.patch(
+            detail_url,
+            {
+                "translations": [
+                    {"locale": "bn", "name": "Shirt"},
+                    {"locale": "bn", "name": "Shirts"},
+                ]
+            },
+            format="json",
+        )
+        self.assertEqual(duplicate_locale.status_code, status.HTTP_400_BAD_REQUEST)
+        updated = self.client.patch(
+            detail_url,
+            {"translations": [{"locale": "bn", "name": "Shirt"}]},
+            format="json",
+        )
+        self.assertEqual(updated.status_code, status.HTTP_200_OK)
+        self.assertEqual(updated.data["code"], "mens-shirt")
+        self.assertEqual(
+            self.family.translations.get(locale="en").name, original_english_name
+        )
+        self.assertEqual(self.family.translations.get(locale="bn").name, "Shirt")
+
+        archived = self.client.post(archive_url)
+        self.assertEqual(archived.status_code, status.HTTP_200_OK)
+        self.assertEqual(archived.data["status"], GarmentFamily.Status.ARCHIVED)
+        self.assertEqual(
+            GarmentFamily.objects.get(pk=self.family.pk).status,
+            GarmentFamily.Status.ARCHIVED,
+        )
+        self.client.force_authenticate(self.admin)
+        self.assertEqual(
+            self.client.get(detail_url).status_code, status.HTTP_404_NOT_FOUND
+        )
+        self.assertEqual(
+            self.client.get(
+                f"/api/v1/catalog/families/{self.family.pk}/option-groups/"
+            ).status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
+        self.client.force_authenticate(self.main)
+        self.assertEqual(self.client.get(detail_url).status_code, status.HTTP_200_OK)
+        archived_list = self.client.get("/api/v1/catalog/families/?status=ARCHIVED")
+        self.assertEqual(archived_list.data["count"], 1)
+        active_list = self.client.get("/api/v1/catalog/families/")
+        self.assertFalse(
+            any(row["id"] == str(self.family.pk) for row in active_list.data["results"])
+        )
+        self.client.force_authenticate(self.admin)
+        self.assertEqual(
+            self.client.get("/api/v1/catalog/families/?status=ARCHIVED").status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+        self.client.force_authenticate(self.main)
+        reactivated = self.client.post(reactivate_url)
+        self.assertEqual(reactivated.status_code, status.HTTP_200_OK)
+        self.assertEqual(reactivated.data["status"], GarmentFamily.Status.ACTIVE)
+        self.assertTrue(GarmentFamily.objects.filter(pk=self.family.pk).exists())
+
+    def test_archived_family_cannot_be_used_for_new_shop_or_global_records(self):
+        self.client.force_authenticate(self.admin)
+        existing = self.create_design(name="Historical archived-family design")
+        self.assertEqual(existing.status_code, status.HTTP_201_CREATED)
+        self.client.force_authenticate(self.main)
+        self.assertEqual(
+            self.client.post(
+                f"/api/v1/catalog/families/{self.family.pk}/archive/"
+            ).status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.client.force_authenticate(self.admin)
+        variant = self.client.post(
+            self.shop_url(self.shop_a, "catalog/variants/"),
+            {
+                "family_id": str(self.family.pk),
+                "code": "after-archive",
+                "translations": [{"locale": "en", "name": "After Archive"}],
+            },
+            format="json",
+        )
+        self.assertEqual(variant.status_code, status.HTTP_404_NOT_FOUND)
+        design = self.create_design(name="Rejected archived-family design")
+        self.assertEqual(design.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(
+            self.client.get(self.shop_url(self.shop_a, "designs/")).data["count"], 1
+        )
+        self.client.force_authenticate(self.main)
+        global_variant = self.client.post(
+            "/api/v1/catalog/variants/",
+            {
+                "family_id": str(self.family.pk),
+                "code": "global-after-family-archive",
+                "translations": [{"locale": "en", "name": "After Archive"}],
+            },
+            format="json",
+        )
+        self.assertEqual(global_variant.status_code, status.HTTP_404_NOT_FOUND)
+        global_design = self.client.post(
+            "/api/v1/catalog/design-templates/",
+            {
+                "family_id": str(self.family.pk),
+                "variant_id": str(self.variant.pk),
+                "name": "Rejected Archived Template",
+            },
+            format="json",
+        )
+        self.assertEqual(global_design.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_family_thumbnail_upload_replace_read_remove_and_validation(self):
+        endpoint = f"/api/v1/catalog/families/{self.family.pk}/image/"
+        storage = GarmentFamily._meta.get_field("image").storage
+        self.client.force_authenticate(self.admin)
+        denied = self.client.post(endpoint, {"image": self.family_image_upload()})
+        self.assertEqual(denied.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.client.force_authenticate(self.main)
+        for image_format in ("JPEG", "PNG", "WEBP"):
+            with self.captureOnCommitCallbacks(execute=True):
+                uploaded = self.client.post(
+                    endpoint,
+                    {"image": self.family_image_upload(image_format)},
+                    format="multipart",
+                )
+            self.assertEqual(uploaded.status_code, status.HTTP_200_OK)
+            self.assertTrue(uploaded.data["has_image"])
+            self.assertEqual(uploaded.data["mime_type"], "image/webp")
+            self.assertTrue(
+                storage.exists(GarmentFamily.objects.get(pk=self.family.pk).image.name)
+            )
+
+        family = GarmentFamily.objects.get(pk=self.family.pk)
+        old_name = family.image.name
+        with self.captureOnCommitCallbacks(execute=True):
+            replaced = self.client.post(
+                endpoint,
+                {"image": self.family_image_upload("PNG", color=(190, 35, 80))},
+                format="multipart",
+            )
+        self.assertEqual(replaced.status_code, status.HTTP_200_OK)
+        self.assertFalse(storage.exists(old_name))
+
+        self.client.force_authenticate(self.admin)
+        image_request = APIRequestFactory().get(endpoint)
+        force_authenticate(image_request, user=self.admin)
+        image_response = FamilyImageView.as_view()(
+            image_request, family_id=self.family.pk
+        )
+        self.assertEqual(image_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(image_response["Content-Type"], "image/webp")
+        self.assertEqual(image_response["Cache-Control"], "private, no-store")
+        image_response.file_to_stream.close()
+        invalid = self.client.post(
+            endpoint,
+            {
+                "image": SimpleUploadedFile(
+                    "broken.png", b"not an image", content_type="image/png"
+                )
+            },
+            format="multipart",
+        )
+        self.assertEqual(invalid.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.client.force_authenticate(self.main)
+        invalid = self.client.post(
+            endpoint,
+            {
+                "image": SimpleUploadedFile(
+                    "broken.png", b"not an image", content_type="image/png"
+                )
+            },
+            format="multipart",
+        )
+        self.assertEqual(invalid.status_code, status.HTTP_400_BAD_REQUEST)
+        multiple = self.client.post(
+            endpoint,
+            {"image": [self.family_image_upload(), self.family_image_upload()]},
+            format="multipart",
+        )
+        self.assertEqual(multiple.status_code, status.HTTP_400_BAD_REQUEST)
+
+        old_name = GarmentFamily.objects.get(pk=self.family.pk).image.name
+        with self.captureOnCommitCallbacks(execute=True):
+            removed = self.client.delete(endpoint)
+        self.assertEqual(removed.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(storage.exists(old_name))
+        family = GarmentFamily.objects.get(pk=self.family.pk)
+        self.assertFalse(family.image)
+        self.assertIsNone(family.image_byte_size)
+        self.assertEqual(
+            self.client.get(endpoint).status_code, status.HTTP_404_NOT_FOUND
+        )
 
     def test_main_supplier_can_create_global_option_group(self):
         payload = {

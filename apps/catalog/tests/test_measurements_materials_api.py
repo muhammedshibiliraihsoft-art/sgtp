@@ -312,6 +312,76 @@ class MeasurementMaterialApiTests(APITestCase):
             ).exists()
         )
 
+    def test_archived_family_preserves_measurements_but_rejects_new_use(self):
+        profile = self.create_profile()
+        self.client.force_authenticate(self.main)
+        archived = self.client.post(
+            f"/api/v1/catalog/families/{self.family.pk}/archive/", {}, format="json"
+        )
+        self.assertEqual(archived.status_code, status.HTTP_200_OK)
+
+        self.client.force_authenticate(self.admin)
+        historical_profile = self.client.get(
+            f"{self.client_profiles_url()}{profile['id']}/"
+        )
+        self.assertEqual(historical_profile.status_code, status.HTTP_200_OK)
+        new_profile = self.client.post(
+            self.client_profiles_url(),
+            {"family_id": str(self.family.pk), "variant_id": str(self.variant.pk)},
+            format="json",
+        )
+        self.assertEqual(new_profile.status_code, status.HTTP_404_NOT_FOUND)
+
+        new_definition = self.client.post(
+            self.definitions_url(),
+            {
+                "code": "archived-family-check",
+                "translations": [{"locale": "en", "name": "Archived Family"}],
+                "mappings": [{"family_id": str(self.family.pk)}],
+            },
+            format="json",
+        )
+        self.assertEqual(new_definition.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_archived_variant_preserves_measurement_history_but_rejects_new_records(
+        self,
+    ):
+        profile = self.create_profile()
+        self.client.force_authenticate(self.main)
+        archived = self.client.post(
+            f"/api/v1/catalog/variants/{self.variant.pk}/archive/", {}, format="json"
+        )
+        self.assertEqual(archived.status_code, status.HTTP_200_OK)
+
+        self.client.force_authenticate(self.admin)
+        historical_profile = self.client.get(
+            f"{self.client_profiles_url()}{profile['id']}/"
+        )
+        self.assertEqual(historical_profile.status_code, status.HTTP_200_OK)
+
+        new_profile = self.client.post(
+            self.client_profiles_url(),
+            {"family_id": str(self.family.pk), "variant_id": str(self.variant.pk)},
+            format="json",
+        )
+        self.assertEqual(new_profile.status_code, status.HTTP_400_BAD_REQUEST)
+
+        new_definition = self.client.post(
+            self.definitions_url(),
+            {
+                "code": "archived-variant-check",
+                "translations": [{"locale": "en", "name": "Archived Variant"}],
+                "mappings": [
+                    {
+                        "family_id": str(self.family.pk),
+                        "variant_id": str(self.variant.pk),
+                    }
+                ],
+            },
+            format="json",
+        )
+        self.assertEqual(new_definition.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_custom_definition_is_not_visible_or_usable_in_another_shop(self):
         self.client.force_authenticate(self.main)
         created = self.client.post(
