@@ -6,7 +6,7 @@ services:
     region: frankfurt
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    autoDeployTrigger: "off"
+    autoDeployTrigger: "commit"
     healthCheckPath: /api/health/ready/
     envVars:
       - key: DJANGO_ENV
