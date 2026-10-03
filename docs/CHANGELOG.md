@@ -1,13 +1,13 @@
 # Changelog
 
-## 2026-10-03 — MEASUREMENT-E2E-01 local integration
+## 2026-10-03 — MEASUREMENT-E2E-01 remediation and publication
 
 - Integrated the existing Client, Garment Family/Variant, grouped Style Options, Shop Design, Client/Related Person Measurement Profile, localized measurement definitions, explicit CM/INCH entry, immutable version history, copy, compare, and final review APIs into the local frontend Measurements workflow. Fabric selection reads ACTIVE stock availability for display only and does not reserve or deduct inventory. No fake Work record or workflow stage was introduced.
 - Added the deterministic Men’s Shirt style seed: Sleeve, Collar, Cuff, Pocket, Placket, Embroidery, and Color are mapped to Men’s Shirt, and Classic Formal Shirt, Smart Casual Shirt, and Modern Evening Shirt are published global Standard Shirt templates. The data migration is reversible for historical migration tests without changing schema.
 - Cleared stale unsaved measurements whenever client, Family, Variant, or saved Profile context changes; removed the implicit CM default; selected the adjacent latest versions for compare; guarded duplicate profile/design/measurement/copy mutations; and render every available private option image. API origins are now supplied only by server-side environment configuration rather than a compiled staging URL.
 - Extended the read-only Shop context response with the current membership's assigned Work Function codes so the UI can honor the existing `MEASUREMENT` STAFF gate. Main Supplier has no membership assignment and receives an empty list. Updated API/OpenAPI artifacts and architecture/API documentation. No model migration.
 - Validation: PostgreSQL-backed full application suite 433 passed; focused Measurement API/concurrency/default-template and Shop context suite 40 passed. Frontend tests 84 passed; typecheck/build passed; lint exits 0 with existing React state-in-effect warnings. Django system check passed; production deploy check had 13 drf-spectacular warnings; OpenAPI had 0 errors and 29 warnings (13 unique). No model changes detected; local migration-history consistency could not be verified because configured base database `testdb` is absent. Backend/frontend `git diff --check` and schema artifact parity passed.
-- Backend remediation is committed locally on `main`; the frontend integration is committed on `frontend/parallel-foundation` and merged locally into `main`. Remote publication, Render staging deployment, and authenticated browser verification remain pending.
+- Backend remediation and the merged frontend integration are published to `main` at `a619ca6cd395cf47f85bc09b75ee34dc977dfb6c`; local and remote SHA parity was verified. GitHub Actions Project State Validation run `37114613711` passed for that exact SHA. Render staging deployment and authenticated browser verification remain pending because Render account access is unavailable in this workspace.
 
 ## 2026-10-03 — GARMENT-VARIANTS-01 (frontend phase)
 
