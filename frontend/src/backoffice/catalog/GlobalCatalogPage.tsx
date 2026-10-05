@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { AlertCircle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ImagePlus, Loader2, ListTree, Plus, Search, Shirt, Trash2, X } from 'lucide-react'
 import { ApiError } from '../../services/apiClient'
 import { usePrivateImage } from '../../hooks/usePrivateImage'
-import { createGlobalFamily, createGlobalStyleOption, getAllFamilies, getAllGlobalStyleOptions, getFamilyDetail, getFamilies, getOptionGroups, removeGlobalFamilyImage, setGlobalFamilyStatus, updateFamilyOptionGroups, updateGlobalFamily, uploadGlobalFamilyImage } from '../../features/catalog/api'
+import { createGlobalFamily, createGlobalStyleOption, getAllFamilies, getAllGlobalStyleOptions, getFamilyDetail, getFamilies, getOptionGroups, removeGlobalFamilyImage, setGlobalFamilyStatus, updateFamilyOptionGroups, updateGlobalFamily, uploadGlobalFamilyImage, uploadGlobalStyleOptionImages } from '../../features/catalog/api'
 import type { CatalogFamily, CatalogFamilyDetail, CatalogFamilyPage, OptionGroup, ShopStyleOptionInputRequest, StyleOption, TranslationInput } from '../../features/catalog/types'
 import { VariantsPanel } from '../../features/catalog/VariantsPanel'
 
@@ -51,7 +51,9 @@ export function GlobalCatalogPage() {
   const [styleName, setStyleName] = useState('')
   const [styleCode, setStyleCode] = useState('')
   const [styleGroupId, setStyleGroupId] = useState('')
+  const [newStyleImages, setNewStyleImages] = useState<File[]>([])
   const [imageBusy, setImageBusy] = useState(false)
+  const [styleImageBusyId, setStyleImageBusyId] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const closeSurfaceRef = useRef<HTMLButtonElement>(null)
   const familyImage = usePrivateImage(selectedFamily?.image_content_url)
@@ -239,15 +241,46 @@ export function GlobalCatalogPage() {
     setError(null)
     const data: ShopStyleOptionInputRequest = { option_group_id: styleGroupId, code: styleCode.trim(), translations: [{ locale: 'en', name: styleName.trim() }] }
     try {
-      await createGlobalStyleOption(data)
+      const created = await createGlobalStyleOption(data)
       setCreateStyleOpen(false)
       setStyleName('')
       setStyleCode('')
+      setNewStyleImages([])
+      let imageUploadError: unknown = null
+      if (newStyleImages.length) {
+        try {
+          await uploadGlobalStyleOptionImages(created.id, newStyleImages)
+          setNotice(t('globalCatalog.styleCreatedWithImages', 'Style option created and reference images uploaded.'))
+        } catch (uploadError) {
+          imageUploadError = uploadError
+        }
+      } else {
+        setNotice(t('globalCatalog.styleCreated', 'Style option created.'))
+      }
       await loadCatalog()
+      if (imageUploadError) setError(t('globalCatalog.styleImageUploadFailed', 'Style option was created, but its image upload failed: {{message}}', { message: errorMessage(imageUploadError) }))
     } catch (saveError) {
       setError(errorMessage(saveError))
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  async function uploadStyleImages(option: StyleOption, event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? [])
+    if (!files.length) return
+    setStyleImageBusyId(option.id)
+    setError(null)
+    setNotice(null)
+    try {
+      await uploadGlobalStyleOptionImages(option.id, files)
+      setNotice(t('globalCatalog.styleImagesUploaded', 'Reference images uploaded for {{name}}.', { name: option.name }))
+      await loadCatalog()
+    } catch (uploadError) {
+      setError(errorMessage(uploadError))
+    } finally {
+      setStyleImageBusyId(null)
+      event.target.value = ''
     }
   }
 
@@ -278,7 +311,7 @@ export function GlobalCatalogPage() {
       {isLoading ? <div className="catalog-loading"><Loader2 className="animate-spin" /></div> : <div className="catalog-grid">
         {activeTab === 'families' && families.map(family => <button type="button" className="catalog-card catalog-family-card" key={family.id} onClick={() => void openFamily(family.id)}><Shirt size={20} aria-hidden="true" /><span><strong>{family.name}</strong><small>{family.code}</small></span><span className={`catalog-tag ${family.status === 'ARCHIVED' ? 'catalog-tag-muted' : ''}`}>{family.status === 'ARCHIVED' ? t('globalCatalog.archivedFilter', 'Archived') : t('globalCatalog.active', 'Active')}</span><ChevronRight size={16} aria-hidden="true" /></button>)}
         {activeTab === 'groups' && groups.map(group => <article className="catalog-card" key={group.id}><ListTree size={20} /><div><strong>{group.name}</strong><small>{group.code}</small></div></article>)}
-        {activeTab === 'styles' && styleOptions.map(option => <article className="catalog-card" key={option.id}><Shirt size={20} /><div><strong>{option.name}</strong><small>{groupNames.get(option.option_group) ?? option.option_group} · {option.code}</small></div><span className="catalog-tag">{option.is_active ? t('globalCatalog.active', 'Active') : t('globalCatalog.inactive', 'Inactive')}</span></article>)}
+        {activeTab === 'styles' && styleOptions.map(option => <article className="catalog-card" key={option.id}><Shirt size={20} /><div><strong>{option.name}</strong><small>{groupNames.get(option.option_group) ?? option.option_group} · {option.code}</small><small>{t('globalCatalog.referenceImageCount', '{{count}} reference images', { count: option.reference_images?.length ?? 0 })}</small></div><span className="catalog-tag">{option.is_active ? t('globalCatalog.active', 'Active') : t('globalCatalog.inactive', 'Inactive')}</span><label className="secondary-button global-upload-button">{styleImageBusyId === option.id ? <Loader2 className="animate-spin" size={15} /> : <ImagePlus size={15} />}{t('globalCatalog.addImage', 'Add image')}<input aria-label={t('globalCatalog.addImageFor', 'Add image for {{name}}', { name: option.name })} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden disabled={styleImageBusyId === option.id} onChange={event => void uploadStyleImages(option, event)} /></label></article>)}
         {activeTab === 'families' && families.length === 0 && <p className="catalog-empty">{t('globalCatalog.noFamilies', 'No garment families found.')}</p>}
         {activeTab === 'groups' && groups.length === 0 && <p className="catalog-empty">{t('globalCatalog.noGroups', 'No option groups found.')}</p>}
         {activeTab === 'styles' && styleOptions.length === 0 && <p className="catalog-empty">{t('globalCatalog.noStyles', 'No global style options found.')}</p>}
@@ -304,7 +337,7 @@ export function GlobalCatalogPage() {
         </>}
       </section></div>}
 
-      {createStyleOpen && <div className="catalog-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setCreateStyleOpen(false) }}><form className="catalog-dialog" role="dialog" aria-modal="true" onSubmit={event => void submitStyle(event)} aria-labelledby="global-style-create-title"><div className="catalog-dialog-heading"><h2 id="global-style-create-title">{t('globalCatalog.createStyleTitle', 'Create global style option')}</h2><button ref={closeSurfaceRef} type="button" className="catalog-icon-button" onClick={() => setCreateStyleOpen(false)} aria-label={t('globalCatalog.close', 'Close')}><X size={18} /></button></div><label>{t('globalCatalog.nameEnglish', 'Name (English)')}<input required maxLength={120} value={styleName} onChange={event => setStyleName(event.target.value)} /></label><label>{t('globalCatalog.code', 'Code')}<input required maxLength={64} pattern="[a-zA-Z0-9_-]+" value={styleCode} onChange={event => setStyleCode(event.target.value)} /></label><label>{t('globalCatalog.groups', 'Option group')}<select required value={styleGroupId} onChange={event => setStyleGroupId(event.target.value)}>{groups.map(group => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label><div className="catalog-dialog-actions"><button type="button" className="secondary-button" onClick={() => setCreateStyleOpen(false)}>{t('globalCatalog.cancel', 'Cancel')}</button><button className="primary-button" type="submit" disabled={isSaving || groups.length === 0}>{isSaving ? <Loader2 size={16} className="animate-spin" /> : null} {t('globalCatalog.create', 'Create')}</button></div></form></div>}
+      {createStyleOpen && <div className="catalog-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setCreateStyleOpen(false) }}><form className="catalog-dialog" role="dialog" aria-modal="true" onSubmit={event => void submitStyle(event)} aria-labelledby="global-style-create-title"><div className="catalog-dialog-heading"><h2 id="global-style-create-title">{t('globalCatalog.createStyleTitle', 'Create global style option')}</h2><button ref={closeSurfaceRef} type="button" className="catalog-icon-button" onClick={() => setCreateStyleOpen(false)} aria-label={t('globalCatalog.close', 'Close')}><X size={18} /></button></div><label>{t('globalCatalog.nameEnglish', 'Name (English)')}<input required maxLength={120} value={styleName} onChange={event => setStyleName(event.target.value)} /></label><label>{t('globalCatalog.code', 'Code')}<input required maxLength={64} pattern="[a-zA-Z0-9_-]+" value={styleCode} onChange={event => setStyleCode(event.target.value)} /></label><label>{t('globalCatalog.groups', 'Option group')}<select required value={styleGroupId} onChange={event => setStyleGroupId(event.target.value)}>{groups.map(group => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label><label>{t('globalCatalog.referenceImagesOptional', 'Reference images (optional)')}<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={event => setNewStyleImages(Array.from(event.target.files ?? []))} /><small>{t('globalCatalog.referenceImagesR2Hint', 'Images upload privately to R2 after the style option is created.')}</small></label><div className="catalog-dialog-actions"><button type="button" className="secondary-button" onClick={() => setCreateStyleOpen(false)}>{t('globalCatalog.cancel', 'Cancel')}</button><button className="primary-button" type="submit" disabled={isSaving || groups.length === 0}>{isSaving ? <Loader2 size={16} className="animate-spin" /> : null} {t('globalCatalog.create', 'Create')}</button></div></form></div>}
     </div>
   )
 }

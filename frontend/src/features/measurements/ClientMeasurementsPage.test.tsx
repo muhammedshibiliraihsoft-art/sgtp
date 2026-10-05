@@ -12,7 +12,7 @@ const mock = vi.hoisted(() => ({
   clientList: vi.fn(), clientDetail: vi.fn(),
   getAllFamilies: vi.fn(), getAllShopVariants: vi.fn(), getOptionGroups: vi.fn(), getAllShopStyleOptions: vi.fn(),
   getAllShopDesigns: vi.fn(), getAllGlobalDesigns: vi.fn(), createShopDesign: vi.fn(), getShopDesign: vi.fn(), addShopDesignSelection: vi.fn(),
-  definitions: vi.fn(), profiles: vi.fn(), createProfile: vi.fn(), sets: vi.fn(), saveSet: vi.fn(), copySet: vi.fn(), compare: vi.fn(), fabrics: vi.fn(),
+  definitions: vi.fn(), profiles: vi.fn(), createProfile: vi.fn(), sets: vi.fn(), saveSet: vi.fn(), copySet: vi.fn(), compare: vi.fn(), fabrics: vi.fn(), exportWorksheet: vi.fn(),
 }))
 
 vi.mock('../../hooks/useCurrentShop', () => ({ useCurrentShop: () => mock.context }))
@@ -32,6 +32,7 @@ vi.mock('../../backoffice/designs/api', () => ({ getAllGlobalDesigns: mock.getAl
 vi.mock('./api', () => ({ measurementApi: {
   definitions: mock.definitions, profiles: mock.profiles, createProfile: mock.createProfile,
   sets: mock.sets, saveSet: mock.saveSet, copySet: mock.copySet, compare: mock.compare, fabrics: mock.fabrics,
+  exportWorksheet: mock.exportWorksheet,
 } }))
 vi.mock('../../hooks/usePrivateImage', () => ({ usePrivateImage: () => ({ objectUrl: null, isLoading: false, error: null }) }))
 
@@ -83,6 +84,7 @@ describe('Client Measurement workflow', () => {
     mock.copySet.mockResolvedValue(makeSet('set-copy', 3, '102.5'))
     mock.compare.mockResolvedValue({ from_set_id: 'set-1', to_set_id: 'set-2', results: [{ definition_id: definition.id, code: 'CHEST', label: 'Chest', from_value: '100', from_unit: 'CM', to_value: '42', to_unit: 'INCH', difference: null, unit_mismatch: true }] })
     mock.fabrics.mockResolvedValue([])
+    mock.exportWorksheet.mockResolvedValue(new Blob(['%PDF-1.4']))
   })
 
   afterEach(cleanup)
@@ -103,15 +105,66 @@ describe('Client Measurement workflow', () => {
     fireEvent.click(screen.getByRole('button', { name: /Create profile/ }))
     const chestInput = await screen.findByLabelText('Chest')
     fireEvent.change(chestInput, { target: { value: '61.2500' } })
-    fireEvent.change(screen.getByLabelText('Chest unit'), { target: { value: 'INCH' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Chest unit: INCH' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save new version' }))
 
     expect((await screen.findAllByText('Version 1')).length).toBeGreaterThan(0)
     expect(mock.saveSet).toHaveBeenCalledWith('shop-1', client.id, { kind: 'client' }, profile.id, [
       { definition_id: definition.id, value: '61.2500', unit: 'INCH' },
     ])
+    expect(mock.saveSet).toHaveBeenCalledTimes(1)
+    expect(screen.getAllByRole('button', { name: /^Version 1/ })).toHaveLength(1)
     expect(screen.getAllByText('61.2500 INCH').length).toBeGreaterThan(0)
     expect(screen.getAllByText(/Sleeve/).length).toBeGreaterThan(0)
+  })
+
+  it('exports the selected authorized Measurement version as a PDF', async () => {
+    const first = makeSet('set-1', 1, '95.25')
+    mock.profiles.mockResolvedValue([profile])
+    mock.sets.mockResolvedValue([first])
+    const createObjectUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:worksheet')
+    const revokeObjectUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+
+    renderPage()
+    fireEvent.change(await screen.findByLabelText('Garment family'), { target: { value: family.id } })
+    fireEvent.change(screen.getByLabelText('Variant'), { target: { value: variant.id } })
+    fireEvent.click(await screen.findByRole('button', { name: /Open existing profile/ }))
+    const exportButton = await screen.findByRole('button', { name: 'Export Version 1 PDF' })
+    fireEvent.click(exportButton)
+
+    await waitFor(() => expect(mock.exportWorksheet).toHaveBeenCalledWith(
+      'shop-1', client.id, { kind: 'client' }, profile.id, first.id, undefined,
+    ))
+    expect(click).toHaveBeenCalledOnce()
+    expect(createObjectUrl).toHaveBeenCalledOnce()
+    expect(revokeObjectUrl).toHaveBeenCalledOnce()
+
+    createObjectUrl.mockRestore()
+    revokeObjectUrl.mockRestore()
+    click.mockRestore()
+  })
+
+  it('creates exactly one Measurement version when Save is activated rapidly twice', async () => {
+    mock.profiles.mockResolvedValue([profile])
+    let finishSave: ((value: ReturnType<typeof makeSet>) => void) | undefined
+    mock.saveSet.mockImplementationOnce(() => new Promise(resolve => { finishSave = resolve }))
+
+    renderPage()
+    fireEvent.change(await screen.findByLabelText('Garment family'), { target: { value: family.id } })
+    fireEvent.change(screen.getByLabelText('Variant'), { target: { value: variant.id } })
+    fireEvent.click(await screen.findByRole('button', { name: /Open existing profile/ }))
+    fireEvent.change(await screen.findByLabelText('Chest'), { target: { value: '100' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Chest unit: CM' }))
+
+    const saveButton = screen.getByRole('button', { name: 'Save new version' })
+    fireEvent.click(saveButton)
+    fireEvent.click(saveButton)
+    expect(mock.saveSet).toHaveBeenCalledTimes(1)
+
+    finishSave?.(makeSet('set-once', 1, '100', 'CM'))
+    expect(await screen.findByText('New measurement version saved.')).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: /^Version 1/ })).toHaveLength(1)
   })
 
   it('creates a persisted Shop Design from the selected group-based styles', async () => {
@@ -148,7 +201,7 @@ describe('Client Measurement workflow', () => {
     await waitFor(() => expect(mock.createProfile).toHaveBeenCalledWith('shop-1', client.id, { kind: 'related_person', id: relatedPerson.id }, family.id, null))
     await waitFor(() => expect(mock.sets).toHaveBeenCalledWith('shop-1', client.id, { kind: 'related_person', id: relatedPerson.id }, 'related-profile'))
     fireEvent.change(await screen.findByLabelText('Chest'), { target: { value: '88.5' } })
-    fireEvent.change(screen.getByLabelText('Chest unit'), { target: { value: 'CM' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Chest unit: CM' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save new version' }))
     await waitFor(() => expect(mock.saveSet).toHaveBeenCalledWith('shop-1', client.id, { kind: 'related_person', id: relatedPerson.id }, 'related-profile', [
       { definition_id: definition.id, value: '88.5', unit: 'CM' },
@@ -172,14 +225,15 @@ describe('Client Measurement workflow', () => {
     fireEvent.change(await screen.findByLabelText('Garment family'), { target: { value: family.id } })
     fireEvent.click(await screen.findByRole('button', { name: 'Create profile' }))
     fireEvent.change(await screen.findByLabelText('Chest'), { target: { value: '61.2500' } })
-    fireEvent.change(screen.getByLabelText('Chest unit'), { target: { value: 'INCH' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Chest unit: INCH' }))
 
     fireEvent.change(screen.getByLabelText('Garment family'), { target: { value: secondFamily.id } })
     await waitFor(() => expect(mock.definitions).toHaveBeenCalledWith('shop-1', secondFamily.id, null, 'en'))
     fireEvent.click(await screen.findByRole('button', { name: 'Create profile' }))
 
     expect((await screen.findByLabelText('Chest') as HTMLInputElement).value).toBe('')
-    expect(screen.getByLabelText('Chest unit')).toHaveValue('')
+    expect(screen.getByRole('button', { name: 'Chest unit: CM' })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByRole('button', { name: 'Chest unit: INCH' })).toHaveAttribute('aria-pressed', 'false')
   })
 
   it('prevents a second copy request while the first one is pending', async () => {

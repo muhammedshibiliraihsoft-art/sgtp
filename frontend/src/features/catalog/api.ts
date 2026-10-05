@@ -1,4 +1,5 @@
 import { apiRequest, multipartRequest } from '../../services/apiClient'
+import { uploadPrivateMediaBatch } from '../../services/privateMediaUpload'
 import type {
   ApiPage,
   CatalogFamily,
@@ -145,6 +146,13 @@ export async function createShopStyleOption(shopId: string, data: ShopStyleOptio
   })
 }
 
+export async function updateShopStyleOptionTranslations(shopId: string, optionId: string, translations: TranslationInput[]): Promise<StyleOption> {
+  return apiRequest<StyleOption>(`/api/v1/shops/${shopId}/catalog/style-options/${optionId}/`, {
+    method: 'PATCH',
+    body: { translations },
+  })
+}
+
 export async function toggleShopStyleOptionActive(shopId: string, optionId: string, is_active: boolean): Promise<StyleOption> {
   return apiRequest<StyleOption>(`/api/v1/shops/${shopId}/catalog/style-options/${optionId}/`, {
     method: 'PATCH',
@@ -152,10 +160,12 @@ export async function toggleShopStyleOptionActive(shopId: string, optionId: stri
   })
 }
 
-export async function uploadShopStyleOptionImages(shopId: string, optionId: string, files: File[]): Promise<StyleImage[]> {
-  const formData = new FormData()
-  files.forEach(file => formData.append('images', file))
-  return multipartRequest<StyleImage[]>(`/api/v1/shops/${shopId}/catalog/style-options/${optionId}/reference-images/`, formData)
+export async function uploadShopStyleOptionImages(shopId: string, optionId: string, files: File[], onProgress?: (fileIndex: number, percent: number) => void): Promise<StyleImage[]> {
+  const legacyPath = `/api/v1/shops/${shopId}/catalog/style-options/${optionId}/reference-images/`
+  return uploadPrivateMediaBatch<StyleImage[]>({
+    path: `/api/v1/shops/${shopId}/catalog/media/uploads/`, kind: 'style_option', targetId: optionId, files, onProgress,
+    fallback: () => { const formData = new FormData(); files.forEach(file => formData.append('images', file)); return multipartRequest<StyleImage[]>(legacyPath, formData) },
+  })
 }
 
 export async function getGlobalStyleOptions(page = 1): Promise<ShopStyleOptionPage> {
@@ -178,9 +188,11 @@ export async function toggleGlobalStyleOptionActive(optionId: string, is_active:
 }
 
 export async function uploadGlobalStyleOptionImages(optionId: string, files: File[]): Promise<StyleImage[]> {
-  const formData = new FormData()
-  files.forEach(file => formData.append('images', file))
-  return multipartRequest<StyleImage[]>(`/api/v1/catalog/style-options/${optionId}/reference-images/`, formData)
+  const legacyPath = `/api/v1/catalog/style-options/${optionId}/reference-images/`
+  return uploadPrivateMediaBatch<StyleImage[]>({
+    path: '/api/v1/catalog/media/uploads/', kind: 'style_option', targetId: optionId, files,
+    fallback: () => { const formData = new FormData(); files.forEach(file => formData.append('images', file)); return multipartRequest<StyleImage[]>(legacyPath, formData) },
+  })
 }
 
 export async function getGlobalFamiliesPage(page = 1): Promise<CatalogFamilyPage> {
@@ -219,9 +231,11 @@ export function setGlobalFamilyStatus(familyId: string, active: boolean): Promis
 }
 
 export function uploadGlobalFamilyImage(familyId: string, image: File): Promise<CatalogFamilyImageMetadata> {
-  const formData = new FormData()
-  formData.append('image', image)
-  return multipartRequest<CatalogFamilyImageMetadata>(`/api/v1/catalog/families/${familyId}/image/`, formData)
+  const legacyPath = `/api/v1/catalog/families/${familyId}/image/`
+  return uploadPrivateMediaBatch<CatalogFamilyImageMetadata>({
+    path: '/api/v1/catalog/media/uploads/', kind: 'family', targetId: familyId, files: [image],
+    fallback: () => { const formData = new FormData(); formData.append('image', image); return multipartRequest<CatalogFamilyImageMetadata>(legacyPath, formData) },
+  })
 }
 
 export function removeGlobalFamilyImage(familyId: string): Promise<void> {

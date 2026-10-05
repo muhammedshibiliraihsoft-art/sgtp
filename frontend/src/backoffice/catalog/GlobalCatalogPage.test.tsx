@@ -6,7 +6,7 @@ import i18n from '../../i18n'
 const api = vi.hoisted(() => ({
   createGlobalFamily: vi.fn(), createGlobalStyleOption: vi.fn(), getAllGlobalStyleOptions: vi.fn(),
   getAllFamilies: vi.fn(), getFamilyDetail: vi.fn(), getFamilies: vi.fn(), getOptionGroups: vi.fn(), removeGlobalFamilyImage: vi.fn(),
-  setGlobalFamilyStatus: vi.fn(), updateFamilyOptionGroups: vi.fn(), updateGlobalFamily: vi.fn(), uploadGlobalFamilyImage: vi.fn(),
+  setGlobalFamilyStatus: vi.fn(), updateFamilyOptionGroups: vi.fn(), updateGlobalFamily: vi.fn(), uploadGlobalFamilyImage: vi.fn(), uploadGlobalStyleOptionImages: vi.fn(),
 }))
 
 vi.mock('../../features/catalog/api', () => api)
@@ -16,6 +16,7 @@ vi.mock('../../services/useAuth', () => ({ useAuth: () => ({ user: { is_main_sup
 const family = { id: 'family-1', code: 'shirt', name: 'Shirt', status: 'ACTIVE' as const, has_image: false, image_content_url: null }
 const group1 = { id: 'group-1', name: 'Collar', code: 'collar', families: ['family-1'] }
 const group2 = { id: 'group-2', name: 'Cuff', code: 'cuff', families: ['family-1'] }
+const styleOption = { id: 'style-1', option_group: 'group-1', tenant: null, code: 'band-collar', name: 'Band Collar', is_active: true, is_global: true, reference_images: [] }
 
 describe('Main Supplier Global Catalog Families', () => {
   beforeEach(async () => {
@@ -76,5 +77,30 @@ describe('Main Supplier Global Catalog Families', () => {
     await waitFor(() => expect(api.uploadGlobalFamilyImage).toHaveBeenCalledWith('family-1', file))
     fireEvent.click(await screen.findByRole('button', { name: 'Remove image' }))
     await waitFor(() => expect(api.removeGlobalFamilyImage).toHaveBeenCalledWith('family-1'))
+  })
+
+  it('uploads a private reusable image to an existing global Style Option', async () => {
+    api.getAllGlobalStyleOptions.mockResolvedValue([styleOption])
+    render(<GlobalCatalogPage />)
+    fireEvent.click(await screen.findByRole('tab', { name: 'Style Options' }))
+    const file = new File(['image'], 'band-collar.jpg', { type: 'image/jpeg' })
+    fireEvent.change(await screen.findByLabelText('Add image for Band Collar'), { target: { files: [file] } })
+    await waitFor(() => expect(api.uploadGlobalStyleOptionImages).toHaveBeenCalledWith('style-1', [file]))
+  })
+
+  it('allows optional private R2 images when creating a new global Style Option', async () => {
+    api.createGlobalStyleOption.mockResolvedValue(styleOption)
+    api.uploadGlobalStyleOptionImages.mockResolvedValue([])
+    render(<GlobalCatalogPage />)
+    fireEvent.click(await screen.findByRole('tab', { name: 'Style Options' }))
+    fireEvent.click(screen.getByRole('button', { name: 'New Style Option' }))
+    fireEvent.change(screen.getByLabelText('Name (English)'), { target: { value: 'Band Collar' } })
+    fireEvent.change(screen.getByLabelText('Code'), { target: { value: 'band-collar' } })
+    fireEvent.change(screen.getByLabelText('Option Groups'), { target: { value: 'group-1' } })
+    const file = new File(['image'], 'band-collar.jpg', { type: 'image/jpeg' })
+    fireEvent.change(screen.getByLabelText(/Reference images/), { target: { files: [file] } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }))
+    await waitFor(() => expect(api.createGlobalStyleOption).toHaveBeenCalledWith({ option_group_id: 'group-1', code: 'band-collar', translations: [{ locale: 'en', name: 'Band Collar' }] }))
+    await waitFor(() => expect(api.uploadGlobalStyleOptionImages).toHaveBeenCalledWith('style-1', [file]))
   })
 })

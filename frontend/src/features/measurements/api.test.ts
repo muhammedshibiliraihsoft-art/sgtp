@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const api = vi.hoisted(() => ({ apiRequest: vi.fn() }))
-vi.mock('../../services/apiClient', () => ({ apiRequest: api.apiRequest }))
+const api = vi.hoisted(() => ({ apiRequest: vi.fn(), binaryRequest: vi.fn() }))
+vi.mock('../../services/apiClient', () => ({ apiRequest: api.apiRequest, binaryRequest: api.binaryRequest }))
 
 import { measurementApi } from './api'
 
@@ -50,5 +50,20 @@ describe('Measurement API contract adapter', () => {
       '/api/v1/shops/shop-1/clients/client-1/measurement-profiles/profile-1/compare/?from_set_id=set-1&to_set_id=set-2',
       '/api/v1/shops/shop-1/inventory/items/?category=FABRIC',
     ])
+  })
+
+  it('requests a secured worksheet for the chosen version and optional design', async () => {
+    const blob = new Blob(['%PDF-1.4'])
+    api.binaryRequest.mockResolvedValue(blob)
+
+    const result = await measurementApi.exportWorksheet(
+      'shop-1', 'client-1', { kind: 'related_person', id: 'person-1' },
+      'profile-1', 'set-2', 'design-3',
+    )
+
+    expect(api.binaryRequest).toHaveBeenCalledWith(
+      '/api/v1/shops/shop-1/clients/client-1/related-persons/person-1/measurement-profiles/profile-1/worksheet.pdf?measurement_set_id=set-2&design_id=design-3',
+    )
+    expect(result).toBe(blob)
   })
 })

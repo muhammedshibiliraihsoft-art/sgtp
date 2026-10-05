@@ -1,10 +1,20 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createGlobalFamily, createGlobalVariant, createShopStyleOption, createShopVariant, getAllShopVariants, getFamilies, getFamilyDetail, getGlobalVariant, getGlobalVariantsPage, getShopVariantsPage, removeGlobalFamilyImage, setGlobalFamilyStatus, setGlobalVariantDefault, setGlobalVariantStatus, setShopVariantStatus, updateFamilyOptionGroups, updateGlobalFamily, updateGlobalVariant, updateShopVariant, uploadGlobalFamilyImage, uploadShopStyleOptionImages } from './api'
+import { createGlobalFamily, createGlobalVariant, createShopStyleOption, createShopVariant, getAllShopVariants, getFamilies, getFamilyDetail, getGlobalVariant, getGlobalVariantsPage, getShopVariantsPage, removeGlobalFamilyImage, setGlobalFamilyStatus, setGlobalVariantDefault, setGlobalVariantStatus, setShopVariantStatus, updateFamilyOptionGroups, updateGlobalFamily, updateGlobalVariant, updateShopStyleOptionTranslations, updateShopVariant, uploadGlobalFamilyImage, uploadShopStyleOptionImages } from './api'
 
 function stubJsonFetch(responses: unknown[]) {
   const fetchMock = vi.fn()
   responses.forEach(body => fetchMock.mockResolvedValueOnce(new Response(JSON.stringify(body), {
     status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  })))
+  vi.stubGlobal('fetch', fetchMock)
+  return fetchMock
+}
+
+function stubResponses(responses: Array<{ body: unknown; status: number }>) {
+  const fetchMock = vi.fn()
+  responses.forEach(({ body, status }) => fetchMock.mockResolvedValueOnce(new Response(JSON.stringify(body), {
+    status,
     headers: { 'Content-Type': 'application/json' },
   })))
   vi.stubGlobal('fetch', fetchMock)
@@ -34,6 +44,15 @@ describe('Catalog API contract', () => {
     expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual(payload)
   })
 
+  it('PATCHes only supplied Shop style-option translations on the Shop-context route', async () => {
+    const fetchMock = stubJsonFetch([{ id: 'style-1', name: 'Classic Collar' }])
+    const translations = [{ locale: 'en' as const, name: 'Classic Collar' }]
+    await updateShopStyleOptionTranslations('shop-1', 'style-1', translations)
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/shops/shop-1/catalog/style-options/style-1/')
+    expect(fetchMock.mock.calls[0][1]?.method).toBe('PATCH')
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({ translations })
+  })
+
   it('keeps pagination calls on the frontend origin while following backend next links', async () => {
     const fetchMock = stubJsonFetch([
       { count: 2, next: 'https://birky-staging-api.onrender.com/api/v1/shops/shop-1/catalog/variants/?page=2', previous: null, results: [{ id: 'v1' }] },
@@ -50,14 +69,19 @@ describe('Catalog API contract', () => {
   })
 
   it('uploads style images under the backend images field', async () => {
-    const fetchMock = stubJsonFetch([[]])
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response('<!doctype html><title>Not Found</title>', { status: 404, headers: { 'Content-Type': 'text/html' } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 201, headers: { 'Content-Type': 'application/json' } }))
+    vi.stubGlobal('fetch', fetchMock)
     const file = new File(['image'], 'reference.png', { type: 'image/png' })
 
     await uploadShopStyleOptionImages('shop-1', 'style-1', [file])
 
-    const body = fetchMock.mock.calls[0][1]?.body as FormData
+    const body = fetchMock.mock.calls[1][1]?.body as FormData
     expect(body.getAll('images')).toEqual([file])
     expect(body.get('file')).toBeNull()
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/shops/shop-1/catalog/media/uploads/')
+    expect(fetchMock.mock.calls[1][0]).toBe('/api/v1/shops/shop-1/catalog/style-options/style-1/reference-images/')
   })
 
   it('uses the Family list search, status, and pagination query contract', async () => {
@@ -130,7 +154,14 @@ describe('Catalog API contract', () => {
   })
 
   it('uses the family lifecycle and private image routes with the image field', async () => {
-    const fetchMock = stubJsonFetch([{ id: 'family-1', translations: [], option_groups: [] }, { id: 'family-1', status: 'ARCHIVED' }, { id: 'family-1', status: 'ACTIVE' }, { has_image: true }, undefined])
+    const fetchMock = stubResponses([
+      { body: { id: 'family-1', translations: [], option_groups: [] }, status: 200 },
+      { body: { id: 'family-1', status: 'ARCHIVED' }, status: 200 },
+      { body: { id: 'family-1', status: 'ACTIVE' }, status: 200 },
+      { body: { detail: 'Private direct upload is not configured.' }, status: 503 },
+      { body: { has_image: true }, status: 200 },
+      { body: undefined, status: 204 },
+    ])
     await getFamilyDetail('family-1')
     await setGlobalFamilyStatus('family-1', false)
     await setGlobalFamilyStatus('family-1', true)
@@ -141,10 +172,11 @@ describe('Catalog API contract', () => {
     expect(fetchMock.mock.calls[1][0]).toBe('/api/v1/catalog/families/family-1/archive/')
     expect(fetchMock.mock.calls[1][1]?.method).toBe('POST')
     expect(fetchMock.mock.calls[2][0]).toBe('/api/v1/catalog/families/family-1/reactivate/')
-    const body = fetchMock.mock.calls[3][1]?.body as FormData
+    const body = fetchMock.mock.calls[4][1]?.body as FormData
     expect(body.get('image')).toBe(file)
-    expect(fetchMock.mock.calls[3][0]).toBe('/api/v1/catalog/families/family-1/image/')
+    expect(fetchMock.mock.calls[3][0]).toBe('/api/v1/catalog/media/uploads/')
     expect(fetchMock.mock.calls[4][0]).toBe('/api/v1/catalog/families/family-1/image/')
-    expect(fetchMock.mock.calls[4][1]?.method).toBe('DELETE')
+    expect(fetchMock.mock.calls[5][0]).toBe('/api/v1/catalog/families/family-1/image/')
+    expect(fetchMock.mock.calls[5][1]?.method).toBe('DELETE')
   })
 })

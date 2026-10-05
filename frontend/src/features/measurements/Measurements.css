@@ -60,6 +60,24 @@
   color: var(--color-text);
   font: inherit;
 }
+.measurement-context-card select:hover:not(:disabled),
+.measurement-garment-selectors select:hover:not(:disabled),
+.measurement-profile-controls select:hover:not(:disabled),
+.measurement-design-persistence select:hover:not(:disabled),
+.measurement-compare-controls select:hover:not(:disabled),
+.measurement-wearer-select select:hover:not(:disabled) { border-color: var(--color-primary); }
+.measurement-context-card select:focus-visible,
+.measurement-garment-selectors select:focus-visible,
+.measurement-profile-controls select:focus-visible,
+.measurement-design-persistence select:focus-visible,
+.measurement-compare-controls select:focus-visible,
+.measurement-wearer-select select:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.measurement-context-card select:disabled,
+.measurement-garment-selectors select:disabled,
+.measurement-profile-controls select:disabled,
+.measurement-design-persistence select:disabled,
+.measurement-compare-controls select:disabled,
+.measurement-wearer-select select:disabled { cursor: not-allowed; opacity: .65; }
 .measurement-context-card small,
 .measurement-design-persistence small,
 .measurement-workflow-card > small { color: var(--color-text-muted); }
@@ -174,17 +192,32 @@
 .measurement-option-source { justify-self: start; padding: 3px 7px; border-radius: 20px; background: var(--color-surface-subtle); }
 .measurement-error-inline { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--color-danger); }
 
-.measurement-entry { display: grid; gap: 18px; }
+.measurement-entry { display: grid; gap: 14px; }
 .measurement-entry-header { align-items: flex-start; }
 .measurement-entry-header h3,
 .measurement-review h3 { margin: 0; }
 .measurement-entry-header p { margin: 6px 0 0; color: var(--color-text-muted); font-size: 13px; }
 .measurement-field-group h4 { margin: 0 0 10px; text-transform: capitalize; }
-.measurement-field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-.measurement-field { display: grid; align-content: start; gap: 7px; font-size: 13px; font-weight: 600; }
-.measurement-field-inputs { display: grid; grid-template-columns: minmax(0, 1fr) 102px; gap: 8px; }
-.measurement-field input,
-.measurement-field select { min-width: 0; min-height: 44px; padding: 9px 10px; border: 1px solid var(--color-border); border-radius: 9px; background: var(--color-canvas); color: var(--color-text); font: inherit; }
+.measurement-entry-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 10px 0 12px; border-bottom: 1px solid var(--color-border); }
+.measurement-global-unit-hint { margin: 0; color: var(--color-text-muted); font-size: 12px; }
+.measurement-unit-control { display: grid; min-width: 0; margin: 0; padding: 0; border: 0; }
+.measurement-unit-control legend { margin-bottom: 6px; color: var(--color-text-muted); font-size: 11px; font-weight: 600; }
+.measurement-unit-options { display: inline-grid; grid-template-columns: repeat(2, minmax(54px, 1fr)); gap: 2px; min-height: 42px; padding: 3px; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-surface-subtle); }
+.measurement-unit-options button { min-width: 50px; min-height: 34px; padding: 5px 9px; border: 0; border-radius: 7px; background: transparent; color: var(--color-text-muted); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.measurement-unit-options button:hover:not(:disabled) { color: var(--color-text); }
+.measurement-unit-options button.is-selected { background: var(--color-surface); color: var(--color-primary); box-shadow: var(--shadow-sm); }
+.measurement-unit-options button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.measurement-unit-options button:disabled { cursor: not-allowed; opacity: .55; }
+.measurement-unit-control.is-compact .measurement-unit-options { min-height: 44px; }
+.measurement-unit-control.is-compact .measurement-unit-options button { min-height: 36px; }
+.measurement-field-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 14px; }
+.measurement-field { display: grid; align-content: start; gap: 6px; min-width: 0; font-size: 13px; font-weight: 600; }
+.measurement-field > label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.measurement-field-inputs { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; }
+.measurement-field input { width: 100%; box-sizing: border-box; min-width: 0; min-height: 44px; padding: 9px 10px; border: 1px solid var(--color-border); border-radius: 9px; background: var(--color-canvas); color: var(--color-text); font: inherit; appearance: textfield; }
+.measurement-field input::-webkit-inner-spin-button,
+.measurement-field input::-webkit-outer-spin-button { margin: 0; appearance: none; }
+.measurement-field input:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 .measurement-field small { color: var(--color-text-muted); font-size: 12px; font-weight: 400; }
 .measurement-unit-note { margin: 0; color: var(--color-text-muted); font-size: 12px; }
 .measurement-empty { padding: 14px; border: 1px dashed var(--color-border); border-radius: 10px; color: var(--color-text-muted); }
@@ -234,6 +267,11 @@
 .measurement-review-groups li > span { display: grid; gap: 4px; min-width: 0; }
 .measurement-review-groups li small { color: var(--color-text-muted); }
 
+@media (min-width: 761px) and (max-width: 1100px) {
+  .measurement-field-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; }
+  .measurement-workspace .info-card { padding: 17px; }
+}
+
 @media (max-width: 760px) {
   .measurement-workspace .info-card { padding: 15px; }
   .measurement-garment-selectors,
@@ -249,13 +287,17 @@
   .measurement-compare-controls .btn-secondary { width: 100%; }
   .measurement-entry-header { align-items: stretch; flex-direction: column; }
   .measurement-entry-header .btn-primary { width: 100%; min-height: 46px; }
+  .measurement-entry-tools { align-items: flex-start; flex-direction: column; }
   .measurement-page-heading { flex-direction: column; }
   .measurement-option-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .measurement-review-heading { flex-direction: column; }
 }
 
 @media (max-width: 420px) {
-  .measurement-field-inputs { grid-template-columns: minmax(0, 1fr) 88px; }
+  .measurement-field-grid { gap: 12px; }
+  .measurement-field-inputs { grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+  .measurement-unit-options { grid-template-columns: repeat(2, minmax(48px, 1fr)); }
+  .measurement-unit-options button { min-width: 46px; padding-inline: 6px; }
   .measurement-option-grid { grid-template-columns: 1fr; }
   .measurement-history-actions { display: grid; grid-template-columns: 1fr; }
 }

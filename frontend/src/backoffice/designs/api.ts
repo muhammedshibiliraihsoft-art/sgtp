@@ -1,4 +1,5 @@
 import { apiRequest, multipartRequest } from '../../services/apiClient'
+import { uploadPrivateMediaBatch } from '../../services/privateMediaUpload'
 import type { ApiPage } from '../../features/catalog/types'
 import type { Design, DesignCreateRequest, DesignReference, DesignSelection, PublishResponse, SelectionCreateRequest, ShopDesignPage } from '../../features/designs/types'
 
@@ -50,9 +51,11 @@ export function getGlobalDesignReferences(designId: string, versionId: string): 
 }
 
 export function uploadGlobalDesignReferences(designId: string, versionId: string, files: File[]): Promise<DesignReference[]> {
-  const formData = new FormData()
-  files.forEach(file => formData.append('images', file))
-  return multipartRequest<DesignReference[]>(`${basePath}${designId}/versions/${versionId}/references/`, formData)
+  const legacyPath = `${basePath}${designId}/versions/${versionId}/references/`
+  return uploadPrivateMediaBatch<DesignReference[]>({
+    path: '/api/v1/catalog/media/uploads/', kind: 'design_version', targetId: versionId, files,
+    fallback: () => { const formData = new FormData(); files.forEach(file => formData.append('images', file)); return multipartRequest<DesignReference[]>(legacyPath, formData) },
+  })
 }
 
 export async function getGlobalDesignPage(page = 1): Promise<ApiPage<Design>> {

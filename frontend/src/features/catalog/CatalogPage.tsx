@@ -5,14 +5,15 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useCurrentShop } from '../../hooks/useCurrentShop'
 import { usePrivateImage } from '../../hooks/usePrivateImage'
 import { ApiError } from '../../services/apiClient'
-import { createShopStyleOption, createShopVariant, getAllFamilies, getAllShopStyleOptions, getFamilyDetail, getFamilies, getOptionGroups } from './api'
+import { createShopStyleOption, createShopVariant, getAllFamilies, getAllShopStyleOptions, getFamilyDetail, getFamilies, getOptionGroups, updateShopStyleOptionTranslations, uploadShopStyleOptionImages } from './api'
 import type { CatalogFamily, CatalogFamilyDetail, OptionGroup, StyleOption } from './types'
 import { VariantsPanel } from './VariantsPanel'
-import { AlertCircle, ArrowRight, ChevronDown, ChevronLeft, ChevronRight, Layers3, Loader2, Plus, Search, Shirt, X } from 'lucide-react'
+import { AlertCircle, ArrowRight, Check, ChevronDown, ChevronLeft, ChevronRight, ImagePlus, Layers3, Loader2, Plus, Search, Shirt, X } from 'lucide-react'
 import './Catalog.css'
 
 type Tab = 'families' | 'variants' | 'styles'
 type CreateKind = 'variant' | 'style' | null
+type FailedStyleUpload = { optionId: string; files: File[] }
 
 function ShopFamilyCard({ family, onOpen }: { family: CatalogFamily; onOpen: (familyId: string) => void }) {
   const image = usePrivateImage(family.image_content_url)
@@ -24,6 +25,13 @@ function ShopFamilyCard({ family, onOpen }: { family: CatalogFamily; onOpen: (fa
 
 function errorMessage(error: unknown) {
   return error instanceof ApiError ? error.message : 'Could not load the catalog. Please try again.'
+}
+
+function StyleReferenceThumbnail({ image }: { image: StyleOption['reference_images'][number] }) {
+  const privateImage = usePrivateImage(image.content_url)
+  return <div className="catalog-style-reference" aria-label={image.alt_text || 'Style reference image'}>
+    {privateImage.objectUrl ? <img src={privateImage.objectUrl} alt={image.alt_text || 'Style reference'} loading="lazy" /> : <ImagePlus size={22} aria-hidden="true" />}
+  </div>
 }
 
 export function CatalogPage() {
@@ -46,6 +54,11 @@ export function CatalogPage() {
   const [families, setFamilies] = useState<CatalogFamily[]>([])
   const [groups, setGroups] = useState<OptionGroup[]>([])
   const [styleOptions, setStyleOptions] = useState<StyleOption[]>([])
+  const [selectedStyleId, setSelectedStyleId] = useState<string | null>(null)
+  const [editStyleName, setEditStyleName] = useState('')
+  const [isStyleSaving, setIsStyleSaving] = useState(false)
+  const [styleUploadProgress, setStyleUploadProgress] = useState<number | null>(null)
+  const [styleNotice, setStyleNotice] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [createKind, setCreateKind] = useState<CreateKind>(null)
@@ -53,11 +66,14 @@ export function CatalogPage() {
   const [code, setCode] = useState('')
   const [selectedFamily, setSelectedFamily] = useState('')
   const [selectedGroup, setSelectedGroup] = useState('')
+  const [newStyleImages, setNewStyleImages] = useState<File[]>([])
+  const [failedStyleUpload, setFailedStyleUpload] = useState<FailedStyleUpload | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const closeDrawerRef = useRef<HTMLButtonElement>(null)
   const familyFilter = searchParams.get('family') || ''
   const groupFilter = searchParams.get('option_group') || ''
   const familyImage = usePrivateImage(openedFamily?.image_content_url)
+  const selectedStyle = styleOptions.find(option => option.id === selectedStyleId) ?? null
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -98,9 +114,10 @@ export function CatalogPage() {
   const loadCatalog = useCallback(async () => {
     if (!shopId) return
     try {
-      const [familyResult, groupRows] = await Promise.all([
-        activeTab === 'families' ? getFamilies(familyPage, familySearch) : getAllFamilies(),
+      const [familyResult, groupRows, optionRows] = await Promise.all([
+        activeTab === 'families' ? getFamilies(familyPage, familySearch) : activeTab === 'variants' ? getAllFamilies() : Promise.resolve([]),
         activeTab === 'styles' ? getOptionGroups() : Promise.resolve([]),
+        activeTab === 'styles' ? getAllShopStyleOptions(shopId, groupFilter || undefined) : Promise.resolve([]),
       ])
       const familyRows = Array.isArray(familyResult) ? familyResult : familyResult.results
       if (!Array.isArray(familyResult)) {
@@ -112,7 +129,7 @@ export function CatalogPage() {
       setFamilies(familyRows)
       setGroups(groupRows)
       if (activeTab === 'styles') {
-        setStyleOptions(await getAllShopStyleOptions(shopId, groupFilter || undefined))
+        setStyleOptions(optionRows)
       }
     } catch (loadError) {
       setError(errorMessage(loadError))
@@ -143,6 +160,47 @@ export function CatalogPage() {
     setCode('')
     setSelectedFamily(families[0]?.id ?? '')
     setSelectedGroup(groupId ?? groups[0]?.id ?? '')
+    setNewStyleImages([])
+  }
+
+  function selectStyle(option: StyleOption) {
+    setSelectedStyleId(option.id)
+    setEditStyleName(option.name)
+    setStyleNotice(null)
+  }
+
+  async function saveStyleName() {
+    if (!shopId || !selectedStyle || selectedStyle.is_global || role === 'VIEWER' || !editStyleName.trim()) return
+    setIsStyleSaving(true)
+    setError(null)
+    try {
+      const updated = await updateShopStyleOptionTranslations(shopId, selectedStyle.id, [{ locale: 'en', name: editStyleName.trim() }])
+      setStyleOptions(current => current.map(option => option.id === updated.id ? { ...option, ...updated } : option))
+      setEditStyleName(updated.name || editStyleName.trim())
+      setStyleNotice(t('catalog.styleSaved', 'Style option name saved.'))
+    } catch (saveError) {
+      setError(errorMessage(saveError))
+    } finally {
+      setIsStyleSaving(false)
+    }
+  }
+
+  async function uploadStyleReferences(files: FileList | null) {
+    if (!shopId || !selectedStyle || selectedStyle.is_global || role === 'VIEWER' || !files?.length) return
+    setStyleUploadProgress(0)
+    setStyleNotice(null)
+    setError(null)
+    try {
+      const addedImages = await uploadShopStyleOptionImages(shopId, selectedStyle.id, Array.from(files), (_index, percent) => setStyleUploadProgress(percent))
+      setStyleOptions(current => current.map(option => option.id === selectedStyle.id
+        ? { ...option, reference_images: [...option.reference_images, ...addedImages] }
+        : option))
+      setStyleNotice(t('catalog.styleImagesUploaded', 'Reference images uploaded successfully.'))
+    } catch (uploadError) {
+      setError(errorMessage(uploadError))
+    } finally {
+      setStyleUploadProgress(null)
+    }
   }
 
   async function openFamily(familyId: string) {
@@ -173,6 +231,21 @@ export function CatalogPage() {
     navigate(`/designs?family=${encodeURIComponent(familyId)}`)
   }
 
+  async function retryFailedStyleUpload() {
+    if (!shopId || !failedStyleUpload) return
+    setIsSaving(true)
+    setError(null)
+    try {
+      await uploadShopStyleOptionImages(shopId, failedStyleUpload.optionId, failedStyleUpload.files)
+      setFailedStyleUpload(null)
+      await loadCatalog()
+    } catch (uploadError) {
+      setError(t('catalog.styleImageUploadFailed', 'Style option was created, but its image upload failed: {{message}}', { message: errorMessage(uploadError) }))
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   async function submitCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!shopId || !createKind) return
@@ -184,8 +257,24 @@ export function CatalogPage() {
       if (createKind === 'variant') {
         await createShopVariant(shopId, { family_id: selectedFamily, code: code.trim(), translations })
       } else {
-        await createShopStyleOption(shopId, { option_group_id: selectedGroup, code: code.trim(), translations })
+        const created = await createShopStyleOption(shopId, { option_group_id: selectedGroup, code: code.trim(), translations })
         setExpandedGroupId(selectedGroup)
+        let imageUploadError: unknown = null
+        if (newStyleImages.length) {
+          try {
+            await uploadShopStyleOptionImages(shopId, created.id, newStyleImages)
+          } catch (uploadError) {
+            imageUploadError = uploadError
+          }
+        }
+        setCreateKind(null)
+        setFailedStyleUpload(imageUploadError ? { optionId: created.id, files: newStyleImages } : null)
+        setNewStyleImages([])
+        await loadCatalog()
+        if (imageUploadError) {
+          setError(t('catalog.styleImageUploadFailed', 'Style option was created, but its image upload failed: {{message}}', { message: errorMessage(imageUploadError) }))
+        }
+        return
       }
       setCreateKind(null)
       await loadCatalog()
@@ -210,7 +299,7 @@ export function CatalogPage() {
         {activeTab === 'styles' && <button className="primary-button" onClick={() => openCreate('style')} disabled={!groups.length}><Plus size={16} />{t('catalog.newItem', { item: t('catalog.styleOption', 'Style option') })}</button>}
       </div>
 
-      {error && <div className="catalog-error" role="alert">{error}<button onClick={() => { setIsLoading(true); setError(null); void loadCatalog() }} disabled={isLoading}>Retry</button></div>}
+      {error && <div className="catalog-error" role="alert">{error}<button onClick={() => { if (failedStyleUpload) void retryFailedStyleUpload(); else { setIsLoading(true); setError(null); void loadCatalog() } }} disabled={isLoading || isSaving}>Retry</button></div>}
 
       {activeTab === 'families' && <div className="catalog-family-toolbar"><label className="catalog-search"><Search size={17} aria-hidden="true" /><span className="sr-only">{t('catalog.searchFamilies', 'Search garment families')}</span><input type="search" value={familySearchInput} onChange={event => setFamilySearchInput(event.target.value)} placeholder={t('catalog.searchPlaceholder', 'Search families by name or code')} /></label><span className="catalog-family-count">{t('catalog.familyCount', { count: familyCount })}</span></div>}
 
@@ -222,9 +311,10 @@ export function CatalogPage() {
       {!isLoading && !error && activeTab === 'variants' && !families.length && <div className="catalog-info-note" role="status"><AlertCircle size={18} /><span>{t('catalog.noFamiliesHint', 'No garment families are available. Ask your Main Supplier to add them to the global catalog.')}</span></div>}
 
       {activeTab === 'variants' ? <VariantsPanel shopId={shopId} families={families} initialFamily={familyFilter} canManageVariants={role === 'ADMIN' || role === 'STAFF'} /> : isLoading ? <div className="catalog-loading"><Loader2 className="animate-spin" /></div> : (
-        <div className="catalog-grid">
+        <div className={`catalog-grid${activeTab === 'styles' ? ' catalog-styles-grid' : ''}`}>
         {activeTab === 'families' && families.map(family => <ShopFamilyCard family={family} key={family.id} onOpen={familyId => void openFamily(familyId)} />)}
-          {activeTab === 'styles' && <div className="catalog-group-grid">
+          {activeTab === 'styles' && <div className={`catalog-style-workspace${selectedStyle ? ' has-selection' : ''}`}>
+            <div className={`catalog-group-grid${selectedStyle ? ' catalog-style-list' : ''}`}>
             {groups.filter(group => !groupFilter || group.id === groupFilter).map(group => {
               const groupOptions = optionsByGroup.get(group.id) ?? []
               const isExpanded = expandedGroupId === group.id
@@ -245,15 +335,34 @@ export function CatalogPage() {
                   <button className="catalog-group-add" type="button" onClick={() => openCreate('style', group.id)} aria-label={t('catalog.addOptionTo', { name: group.name })} title={t('catalog.addOptionTo', { name: group.name })}><Plus size={16} /></button>
                 </div>
                 {isExpanded && <div className="catalog-group-options" id={optionsRegionId}>
-                  {groupOptions.length ? groupOptions.map(option => <article className="catalog-option-card" key={option.id}>
+                  {groupOptions.length ? groupOptions.map(option => <button className={`catalog-option-card catalog-style-option${selectedStyle?.id === option.id ? ' selected' : ''}`} key={option.id} type="button" aria-pressed={selectedStyle?.id === option.id} onClick={() => selectStyle(option)}>
                     <Shirt size={18} aria-hidden="true" />
                     <div><strong>{option.name}</strong><small>{option.code}</small></div>
                     <span className="catalog-tag">{option.is_global ? t('catalog.global', 'Global') : t('catalog.shop', 'Shop')}</span>
-                  </article>) : <div className="catalog-group-empty"><p>{t('catalog.noOptions', 'No options in this group yet.')}</p><button className="secondary-button" type="button" onClick={() => openCreate('style', group.id)}><Plus size={15} /> {t('catalog.addFirstOption', 'Add first option')}</button></div>}
+                  </button>) : <div className="catalog-group-empty"><p>{t('catalog.noOptions', 'No options in this group yet.')}</p><button className="secondary-button" type="button" onClick={() => openCreate('style', group.id)}><Plus size={15} /> {t('catalog.addFirstOption', 'Add first option')}</button></div>}
                 </div>}
               </section>
             })}
             {!groups.length && !isLoading && <p className="catalog-empty">No option groups found.</p>}
+            </div>
+            {selectedStyle && <aside className="catalog-style-editor" aria-label={t('catalog.stylePreview', 'Style option preview and editor')}>
+              <div className="catalog-style-editor-heading"><div><p>{t('catalog.stylePreview', 'Style option preview')}</p><h2>{selectedStyle.name}</h2></div><button className="catalog-icon-button catalog-style-mobile-close" type="button" onClick={() => setSelectedStyleId(null)} aria-label={t('catalog.backToStyles', 'Back to style options')}><X size={18} /></button></div>
+              <p className="catalog-style-code">{selectedStyle.code} · {selectedStyle.is_global ? t('catalog.global', 'Global') : t('catalog.shop', 'Shop')}</p>
+              <div className="catalog-style-gallery" aria-label={t('catalog.referenceImages', 'Reference images')}>
+                {selectedStyle.reference_images.map(image => <StyleReferenceThumbnail key={image.id} image={image} />)}
+                {!selectedStyle.reference_images.length && <p className="catalog-style-empty">{t('catalog.noReferenceImages', 'No reference images have been added yet.')}</p>}
+              </div>
+              {!selectedStyle.is_global && <div className="catalog-style-edit-form">
+                <label>{t('catalog.nameEnglish', 'Name (English)')}<input value={editStyleName} onChange={event => setEditStyleName(event.target.value)} maxLength={120} disabled={role === 'VIEWER'} /></label>
+                <button className="primary-button" type="button" onClick={() => void saveStyleName()} disabled={isStyleSaving || !editStyleName.trim() || editStyleName.trim() === selectedStyle.name}>{isStyleSaving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}{t('catalog.saveStyle', 'Save name')}</button>
+                <label className="catalog-style-upload">{t('catalog.addReferenceImages', 'Add reference images')}<input type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={role === 'VIEWER' || styleUploadProgress !== null} onChange={event => { void uploadStyleReferences(event.target.files); event.currentTarget.value = '' }} /></label>
+                <small>{t('catalog.styleImageHint', 'Images are added to this Shop style option; existing references are kept.')}</small>
+                {styleUploadProgress !== null && <div role="status" className="catalog-style-progress"><span>{t('catalog.uploading', 'Uploading…')} {styleUploadProgress}%</span><progress max="100" value={styleUploadProgress} /></div>}
+                {role === 'VIEWER' && <small>{t('catalog.styleReadOnly', 'Your role can view this option but cannot edit or upload.')}</small>}
+              </div>}
+              {selectedStyle.is_global && <p className="catalog-style-readonly">{t('catalog.globalStyleReadonly', 'Global style defaults are managed by the Main Supplier.')}</p>}
+              {styleNotice && <p className="catalog-style-success" role="status"><Check size={16} />{styleNotice}</p>}
+            </aside>}
           </div>}
           {!families.length && activeTab === 'families' && !error && <p className="catalog-empty">{familySearch ? <>{t('catalog.noFamilyMatches', 'No families match your search.')} <button type="button" className="catalog-text-button" onClick={() => setFamilySearchInput('')}>{t('catalog.clearSearch', 'Clear search')}</button></> : t('catalog.noFamilies', 'No garment families available.')}</p>}
           {!styleOptions.length && activeTab === 'styles' && !groups.length && !isLoading && !error && <p className="catalog-empty">{t('catalog.noStyles', 'No style options found.')}</p>}
@@ -270,6 +379,7 @@ export function CatalogPage() {
           <label>{t('catalog.nameEnglish', 'Name (English)')}<input required maxLength={120} value={name} onChange={event => setName(event.target.value)} /></label>
           <label>{t('catalog.code', 'Code')}<input required maxLength={64} pattern="[a-zA-Z0-9_-]+" value={code} onChange={event => setCode(event.target.value)} /><small>{t('catalog.codeHint', 'Use letters, numbers, hyphens, or underscores.')}</small></label>
           {createKind === 'variant' ? <label>{t('catalog.family', 'Garment family')}<select required value={selectedFamily} onChange={event => setSelectedFamily(event.target.value)}>{families.map(family => <option value={family.id} key={family.id}>{family.name}</option>)}</select></label> : <label>{t('catalog.optionGroup', 'Option group')}<select required value={selectedGroup} onChange={event => setSelectedGroup(event.target.value)}>{groups.map(group => <option value={group.id} key={group.id}>{group.name}</option>)}</select></label>}
+          {createKind === 'style' && <label>{t('catalog.referenceImagesOptional', 'Reference images (optional)')}<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={event => setNewStyleImages(Array.from(event.target.files ?? []))} /><small>{t('catalog.referenceImagesR2Hint', 'Images upload privately after the style option is created.')}</small>{newStyleImages.length > 0 && <small>{t('catalog.selectedImageCount', '{{count}} image(s) selected', { count: newStyleImages.length })}</small>}</label>}
           <div className="catalog-dialog-actions"><button type="button" className="secondary-button" onClick={() => setCreateKind(null)}>{t('catalog.cancel', 'Cancel')}</button><button type="submit" className="primary-button" disabled={isSaving || !(createKind === 'variant' ? families.length : groups.length)}>{isSaving ? <Loader2 size={16} className="animate-spin" /> : null} {t('catalog.create', 'Create')}</button></div>
         </form>
       </div>}
