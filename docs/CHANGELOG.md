@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-05 — Local backend/frontend integration checkpoint
+
+- Committed the previously validated private-media/measurement worksheet and Shop Style Option API backend work locally, then merged `frontend/parallel-foundation` into local `main` without conflicts. The frontend branch was pushed first; the integrated `main` has not yet been pushed, and no exact-SHA CI or staging migration/deployment is claimed.
+- `main` publication requires an explicit staging side-effect decision: checked-in Render configuration requests automatic staging deploys on commit, while live auto-deploy and required R2 secret provisioning are not independently verified. The local integrated validation results and remaining remote latency limit are recorded in the current handoff.
+
 ## 2026-10-05 — Frontend integration and local loading optimization checkpoint
 
 - Committed and pushed the existing Measurement/R2 UI and Shop Style Option preview/editor on `frontend/parallel-foundation` at `9ff32bc30d94744cfa0c432e4bb1c57d4182a20c`; the branch is not yet merged into `main`. The editor supports Shop-owned English-name PATCH, additive private reference-image upload and preview, progress/retry feedback, and read-only global options.
