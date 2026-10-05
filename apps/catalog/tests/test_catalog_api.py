@@ -5,6 +5,7 @@ from unittest.mock import patch
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
 from PIL import Image
 from rest_framework import status
 from rest_framework.exceptions import ValidationError as DRFValidationError
@@ -23,11 +24,13 @@ from apps.catalog.models import (
     GarmentFamilyTranslation,
     GarmentVariant,
     OptionGroup,
+    PrivateMediaUpload,
     StyleOption,
     StyleOptionImage,
     StyleOptionTranslation,
 )
 from apps.catalog.views import FamilyImageView
+from apps.catalog.storage import PrivateReferenceStorage
 from apps.tenants.models import (
     MembershipWorkFunction,
     ShopRole,
@@ -652,6 +655,105 @@ class CatalogDesignApiTests(APITestCase):
             )
         )
 
+    def test_shop_style_option_translation_edit_is_scoped_and_preserves_identity(self):
+        option = self.make_option(
+            tenant=self.shop_a, code="editable-cuff", label="Original Cuff"
+        )
+        StyleOptionTranslation.objects.create(
+            style_option=option,
+            locale="ar-KW",
+            name="كفة أصلية",
+            description="Existing localized description",
+        )
+        endpoint = self.shop_url(self.shop_a, f"catalog/style-options/{option.pk}/")
+        self.client.force_authenticate(self.admin)
+        updated = self.client.patch(
+            endpoint,
+            {"translations": [{"locale": "en", "name": "Updated Cuff"}]},
+            format="json",
+        )
+        self.assertEqual(updated.status_code, status.HTTP_200_OK)
+        self.assertEqual(updated.data["name"], "Updated Cuff")
+        option.refresh_from_db()
+        self.assertEqual(option.code, "editable-cuff")
+        self.assertEqual(option.tenant_id, self.shop_a.pk)
+        self.assertEqual(option.option_group_id, self.group.pk)
+        self.assertEqual(option.translations.get(locale="en").name, "Updated Cuff")
+        arabic = option.translations.get(locale="ar-KW")
+        self.assertEqual(arabic.name, "كفة أصلية")
+        self.assertEqual(arabic.description, "Existing localized description")
+
+        self.client.force_authenticate(self.staff)
+        staff_update = self.client.patch(
+            endpoint,
+            {"translations": [{"locale": "en", "name": "Staff Updated Cuff"}]},
+            format="json",
+        )
+        self.assertEqual(staff_update.status_code, status.HTTP_200_OK)
+
+        archived = self.client.patch(endpoint, {"is_active": False}, format="json")
+        self.assertEqual(archived.status_code, status.HTTP_200_OK)
+        self.assertFalse(archived.data["is_active"])
+
+    def test_shop_style_option_edit_denies_viewer_and_hides_foreign_or_global_options(
+        self,
+    ):
+        local_option = self.make_option(
+            tenant=self.shop_a, code="private-edit-cuff", label="Private Cuff"
+        )
+        payload = {"translations": [{"locale": "en", "name": "Changed"}]}
+        self.client.force_authenticate(self.viewer)
+        denied = self.client.patch(
+            self.shop_url(self.shop_a, f"catalog/style-options/{local_option.pk}/"),
+            payload,
+            format="json",
+        )
+        self.assertEqual(denied.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.client.force_authenticate(self.other_admin)
+        foreign = self.client.patch(
+            self.shop_url(self.shop_b, f"catalog/style-options/{local_option.pk}/"),
+            payload,
+            format="json",
+        )
+        self.assertEqual(foreign.status_code, status.HTTP_404_NOT_FOUND)
+        global_option = self.client.patch(
+            self.shop_url(
+                self.shop_b, f"catalog/style-options/{self.global_option.pk}/"
+            ),
+            payload,
+            format="json",
+        )
+        self.assertEqual(global_option.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(
+            self.global_option.translations.get(locale="en").name, "Normal Cuff"
+        )
+
+    def test_shop_style_option_edit_rejects_identity_changes_and_bad_translation_sets(
+        self,
+    ):
+        option = self.make_option(
+            tenant=self.shop_a, code="immutable-edit-cuff", label="Original"
+        )
+        endpoint = self.shop_url(self.shop_a, f"catalog/style-options/{option.pk}/")
+        self.client.force_authenticate(self.admin)
+        invalid_payloads = (
+            {"translations": []},
+            {
+                "translations": [
+                    {"locale": "en", "name": "First"},
+                    {"locale": "en", "name": "Second"},
+                ]
+            },
+            {"translations": [{"locale": "en", "name": "Changed"}], "code": "new"},
+            {"name": "Changed"},
+        )
+        for payload in invalid_payloads:
+            with self.subTest(payload=payload):
+                response = self.client.patch(endpoint, payload, format="json")
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(option.translations.get(locale="en").name, "Original")
+
     def test_viewer_cannot_create_design_and_admin_can_create_blank_draft(self):
         self.client.force_authenticate(self.viewer)
         denied = self.create_design()
@@ -796,6 +898,8 @@ class CatalogDesignApiTests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         image = StyleOptionImage.objects.get(pk=response.data[0]["id"])
+        self.assertNotIn("\\", image.image.name)
+        self.assertLessEqual(len(image.image.name), 512)
         self.assertLessEqual(image.byte_size, 2 * 1024 * 1024)
         self.assertEqual(image.mime_type, "image/webp")
         self.assertFalse(
@@ -1031,3 +1135,102 @@ class CatalogDesignApiTests(APITestCase):
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @override_settings(
+        R2_ENABLED=True,
+        R2_BUCKET_NAME="birkos-staging-private",
+        R2_ENDPOINT="https://example-account.r2.cloudflarestorage.com",
+        R2_ACCESS_KEY_ID="test-access-key",
+        R2_SECRET_ACCESS_KEY="test-secret-key",
+        R2_REGION="auto",
+    )
+    @patch.object(
+        PrivateReferenceStorage,
+        "presigned_upload",
+        return_value="https://r2.example.invalid/signed-put",
+    )
+    def test_shop_private_upload_authorization_is_scoped_and_non_cacheable(
+        self, _presigned
+    ):
+        shop_option = self.make_option(
+            tenant=self.shop_a, code="upload-cuff-a", label="Shop A Cuff"
+        )
+        foreign_option = self.make_option(
+            tenant=self.shop_b, code="upload-cuff-b", label="Shop B Cuff"
+        )
+        self.client.force_authenticate(self.admin)
+
+        response = self.client.post(
+            self.shop_url(self.shop_a, "catalog/media/uploads/"),
+            {
+                "action": "authorize",
+                "kind": "style_option",
+                "target_id": str(shop_option.pk),
+                "content_type": "image/png",
+                "byte_size": 128,
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response["Cache-Control"], "no-store")
+        self.assertEqual(
+            response.data["upload_url"], "https://r2.example.invalid/signed-put"
+        )
+        ticket = PrivateMediaUpload.objects.get()
+        self.assertEqual(ticket.tenant_id, self.shop_a.pk)
+        self.assertEqual(ticket.actor_id, self.admin.pk)
+        self.assertEqual(ticket.target_id, shop_option.pk)
+        self.assertTrue(
+            ticket.object_key.startswith(f"pending/shops/{self.shop_a.pk}/")
+        )
+        self.assertNotIn("Shop A", ticket.object_key)
+
+        denied = self.client.post(
+            self.shop_url(self.shop_a, "catalog/media/uploads/"),
+            {
+                "action": "authorize",
+                "kind": "style_option",
+                "target_id": str(foreign_option.pk),
+                "content_type": "image/png",
+                "byte_size": 128,
+            },
+            format="json",
+        )
+        self.assertEqual(denied.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(PrivateMediaUpload.objects.count(), 1)
+
+    @override_settings(
+        R2_ENABLED=True,
+        R2_BUCKET_NAME="birkos-staging-private",
+        R2_ENDPOINT="https://example-account.r2.cloudflarestorage.com",
+        R2_ACCESS_KEY_ID="test-access-key",
+        R2_SECRET_ACCESS_KEY="test-secret-key",
+        R2_REGION="auto",
+    )
+    @patch.object(
+        PrivateReferenceStorage,
+        "presigned_upload",
+        return_value="https://r2.example.invalid/signed-put",
+    )
+    def test_private_upload_rejects_invalid_mime_and_oversized_files(self, _presigned):
+        option = self.make_option(
+            tenant=self.shop_a, code="upload-validation-cuff", label="Validation Cuff"
+        )
+        self.client.force_authenticate(self.admin)
+        for content_type, byte_size in (
+            ("image/svg+xml", 32),
+            ("image/png", 10 * 1024 * 1024 + 1),
+        ):
+            response = self.client.post(
+                self.shop_url(self.shop_a, "catalog/media/uploads/"),
+                {
+                    "action": "authorize",
+                    "kind": "style_option",
+                    "target_id": str(option.pk),
+                    "content_type": content_type,
+                    "byte_size": byte_size,
+                },
+                format="json",
+            )
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(PrivateMediaUpload.objects.exists())

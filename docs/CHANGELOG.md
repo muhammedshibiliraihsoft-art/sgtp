@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-10-05 — Frontend integration and local loading optimization checkpoint
+
+- Committed and pushed the existing Measurement/R2 UI and Shop Style Option preview/editor on `frontend/parallel-foundation` at `9ff32bc30d94744cfa0c432e4bb1c57d4182a20c`; the branch is not yet merged into `main`. The editor supports Shop-owned English-name PATCH, additive private reference-image upload and preview, progress/retry feedback, and read-only global options.
+- Reduced unnecessary client work with route-level lazy loading, one viewport-appropriate login illustration, concurrent Styles-tab requests without unrelated Family fetches, and in-flight deduplication of identical default GET requests (no persistent cache). Frontend checks: 99 tests, typecheck, and build passed; lint exits 0 with existing React effect warnings. The initial built JavaScript entry fell from about 591 KB to 399 KB raw; local API calls still traverse the staging proxy and measured roughly 0.4–0.7 seconds for health/CSRF.
+- Local backend regression suite: 445 PostgreSQL-backed tests passed with test settings and local DB host; validator tests 37 passed; Django check PASS; migration drift reports no model changes with base `testdb` history unavailable; changed Python Black/Flake8 PASS. Backend commit/`main` merge/push, exact-SHA CI, and shared-environment migrations were not completed at this checkpoint. The checked-in Render config requests staging auto-deploy on `main` commits, but the live provider setting is unverified.
+
+## 2026-10-05 — CATALOG-STYLE-OPTION-EDIT-API-01
+
+- Added Shop-scoped `PATCH` translation editing for Shop-owned Style Options while preserving the existing `is_active` lifecycle update. Updates merge only supplied locales; code, group, owner, and omitted translations are preserved. Existing Shop write authorization and foreign-Shop 404 behavior remain in force.
+- No image replacement/deletion, model, migration, dependency, frontend, commit, push, or deployment change. Existing private reference-image upload remains additive.
+- Validation: focused Catalog API 32 passed; full PostgreSQL-backed suite 445 passed; repository validator PASS (445 discovered); validator tests 37 passed; Django check PASS; no migration generated (local migration-history consistency could not be checked because base `testdb` is absent); OpenAPI validation 0 errors/29 warnings (13 unique); changed-file Black/Flake8 PASS; frontend suite 95 passed, typecheck/build PASS, lint exits 0 with existing React effect warnings; schema copies and `git diff --check` PASS.
+
+## 2026-10-04 — MEASUREMENT-R2-UI-01 local validation
+
+- Added local/R2 private catalog-media storage integration, short-lived actor/Shop/target-bound upload tickets, and private A4 Measurement/Design worksheet PDF export. Added Unicode font shaping/rendering support for Arabic/Urdu, Bangla, and Malayalam names; no billing record or persisted Design↔Measurement relation is created.
+- Corrected Windows private-media key separator/length handling; added additive migration `catalog.0014_private_reference_path_length`. `catalog.0013_privatemediaupload` and `0014` passed disposable UTF-8 PostgreSQL tests. No shared/staging/production database was migrated.
+- Validation: focused Catalog/Measurement tests 54 passed; full PostgreSQL-backed suite 442 passed; repository validator PASS (442 tests discovered); validator tests 37 passed; Django system check PASS; production deploy check 0 errors/13 warnings; migration drift PASS; OpenAPI 0 errors/29 warnings (13 unique); changed Python Black/Flake8 PASS. Frontend 89 tests passed; typecheck/build PASS; lint exits 0 with React effect warnings; build has a large-chunk advisory.
+- R2 bucket verification/listing succeeded. The three compressed sample JPEGs were uploaded to the existing private `birky-desgin-test/` prefix and individually verified by size/content type; no Shop/StyleOption business records were created. No commit, push, CI run, or deployment occurred.
+
 ## 2026-10-03 — MEASUREMENT-E2E-01 remediation and publication
 
 - Integrated the existing Client, Garment Family/Variant, grouped Style Options, Shop Design, Client/Related Person Measurement Profile, localized measurement definitions, explicit CM/INCH entry, immutable version history, copy, compare, and final review APIs into the local frontend Measurements workflow. Fabric selection reads ACTIVE stock availability for display only and does not reserve or deduct inventory. No fake Work record or workflow stage was introduced.

@@ -156,6 +156,35 @@ WHITENOISE_MAX_AGE = 60 * 60 * 24 * 7  # 1 week
 MEDIA_URL = "/assets/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "assets")
 PRIVATE_MEDIA_ROOT = os.path.join(BASE_DIR, "private-assets")
+R2_BUCKET_NAME = os.environ.get("R2_BUCKET_NAME", "").strip()
+R2_ENDPOINT = os.environ.get("R2_ENDPOINT", "").strip()
+R2_ACCESS_KEY_ID = os.environ.get("R2_ACCESS_KEY_ID", "").strip()
+R2_SECRET_ACCESS_KEY = os.environ.get("R2_SECRET_ACCESS_KEY", "").strip()
+R2_REGION = os.environ.get("R2_REGION", "auto").strip()
+_r2_values = (R2_BUCKET_NAME, R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY)
+R2_ENABLED = any(_r2_values)
+if R2_ENABLED:
+    if not all(_r2_values):
+        raise ImproperlyConfigured(
+            "R2_BUCKET_NAME, R2_ENDPOINT, R2_ACCESS_KEY_ID, and "
+            "R2_SECRET_ACCESS_KEY must be configured together."
+        )
+    _r2_endpoint = urlsplit(R2_ENDPOINT)
+    if (
+        _r2_endpoint.scheme != "https"
+        or not _r2_endpoint.hostname
+        or not _r2_endpoint.hostname.endswith(".r2.cloudflarestorage.com")
+        or _r2_endpoint.path not in ("", "/")
+        or _r2_endpoint.query
+        or _r2_endpoint.fragment
+        or _r2_endpoint.username
+        or _r2_endpoint.password
+        or R2_REGION != "auto"
+    ):
+        raise ImproperlyConfigured(
+            "R2_ENDPOINT must be an account-level HTTPS R2 endpoint and "
+            "R2_REGION must be 'auto'."
+        )
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {

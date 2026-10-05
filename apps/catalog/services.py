@@ -22,6 +22,7 @@ from apps.catalog.models import (
     GarmentVariantTranslation,
     StyleOption,
     StyleOptionImage,
+    StyleOptionTranslation,
 )
 from apps.tenants.models import MembershipWorkFunction, Tenant, TenantMember
 from apps.tenants.policy import ShopRolePolicy
@@ -960,6 +961,50 @@ def upload_style_images(*, style_option, uploads, actor, shop=None):
             )
         raise
     return records
+
+
+@transaction.atomic
+def update_shop_style_option(*, shop, option_id, translations, actor):
+    """Update supplied translations on one Shop-owned style option only."""
+    try:
+        option = StyleOption.objects.select_for_update().get(
+            pk=option_id, tenant=shop, deleted__isnull=True
+        )
+    except (StyleOption.DoesNotExist, ValueError):
+        raise NotFound() from None
+
+    existing = {
+        row.locale: row
+        for row in StyleOptionTranslation.objects.select_for_update().filter(
+            style_option=option
+        )
+    }
+    if "en" not in existing:
+        raise ValidationError(
+            {"translations": "A Shop style option must retain its English name."}
+        )
+
+    for item in translations:
+        values = dict(item)
+        translation = existing.get(values["locale"])
+        if translation is None:
+            translation = StyleOptionTranslation(
+                style_option=option,
+                locale=values["locale"],
+                name=values["name"],
+                description=values.get("description", ""),
+                created_by=actor,
+            )
+        else:
+            translation.name = values["name"]
+            if "description" in values:
+                translation.description = values["description"]
+        translation.updated_by = actor
+        translation.save()
+
+    option.updated_by = actor
+    option.save(update_fields=("updated_by", "updated_at"))
+    return option
 
 
 @transaction.atomic

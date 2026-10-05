@@ -1,14 +1,21 @@
 from django.core.exceptions import ValidationError
 from rest_framework import status
 from rest_framework.test import APITestCase
+from io import BytesIO
+from types import SimpleNamespace
+from unittest.mock import patch
+
+from pypdf import PdfReader
 
 from apps.accounts.models import User
 from apps.catalog.measurement_models import (
     Material,
     MeasurementDefinition,
     MeasurementProfile,
+    MeasurementSet,
     MeasurementValue,
 )
+from apps.catalog.measurement_pdf import build_measurement_worksheet_pdf
 from apps.clients.models import Client, RelatedPerson
 from apps.tenants.models import (
     MembershipWorkFunction,
@@ -84,10 +91,11 @@ class MeasurementMaterialApiTests(APITestCase):
         )
 
     def related_profiles_url(self, *, shop=None, client=None, related=None):
+        related_id = getattr(related or self.related, "pk", related or self.related.pk)
         return (
             f"/api/v1/shops/{(shop or self.shop_a).pk}/clients/"
             f"{(client or self.client_a).pk}/related-persons/"
-            f"{(related or self.related).pk}/measurement-profiles/"
+            f"{related_id}/measurement-profiles/"
         )
 
     def definitions_url(self, shop=None):
@@ -110,10 +118,26 @@ class MeasurementMaterialApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
         return response.data
 
-    def create_set(self, profile, *, user=None, unit="CM", value="95.2500"):
+    def create_set(
+        self,
+        profile,
+        *,
+        user=None,
+        unit="CM",
+        value="95.2500",
+        shop=None,
+        client=None,
+    ):
         self.client.force_authenticate(user or self.admin)
+        base_url = (
+            self.related_profiles_url(
+                shop=shop, client=client, related=profile.get("related_person")
+            )
+            if profile.get("related_person")
+            else self.client_profiles_url(shop=shop, client=client)
+        )
         response = self.client.post(
-            f"{self.client_profiles_url()}{profile['id']}/sets/",
+            f"{base_url}{profile['id']}/sets/",
             {
                 "values": [
                     {
@@ -127,6 +151,14 @@ class MeasurementMaterialApiTests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
         return response.data
+
+    def worksheet_url(self, profile, *, shop=None, client=None, related=False):
+        if related:
+            return (
+                f"{self.related_profiles_url(shop=shop, client=client)}"
+                f"{profile['id']}/worksheet.pdf"
+            )
+        return f"{self.client_profiles_url(shop=shop, client=client)}{profile['id']}/worksheet.pdf"
 
     def test_exact_approved_system_templates_and_no_guessed_abaya_darraa_sets(self):
         expected = {
@@ -285,6 +317,171 @@ class MeasurementMaterialApiTests(APITestCase):
         self.assertEqual(result["from_unit"], "INCH")
         self.assertEqual(result["to_value"], "91.7600")
         self.assertEqual(result["to_unit"], "CM")
+
+    def test_measurement_worksheet_defaults_to_latest_and_accepts_selected_version(
+        self,
+    ):
+        profile = self.create_profile()
+        first = self.create_set(profile, value="95.2500", unit="CM")
+        second = self.create_set(profile, value="40.0000", unit="INCH")
+        endpoint = self.worksheet_url(profile)
+
+        with patch(
+            "apps.catalog.measurement_views.build_measurement_worksheet_pdf",
+            return_value=b"%PDF-1.4 test worksheet",
+        ) as render_pdf:
+            latest = self.client.get(endpoint)
+            self.assertEqual(latest.status_code, status.HTTP_200_OK)
+            self.assertEqual(latest["Content-Type"], "application/pdf")
+            self.assertEqual(latest["Cache-Control"], "private, no-store")
+            self.assertEqual(latest["X-Content-Type-Options"], "nosniff")
+            self.assertEqual(render_pdf.call_args.kwargs["measurement_set"].version, 2)
+
+            selected = self.client.get(endpoint, {"measurement_set_id": first["id"]})
+            self.assertEqual(selected.status_code, status.HTTP_200_OK)
+            self.assertEqual(render_pdf.call_args.kwargs["measurement_set"].version, 1)
+            self.assertEqual(selected.content, b"%PDF-1.4 test worksheet")
+
+        self.assertNotEqual(first["id"], second["id"])
+        self.assertEqual(
+            MeasurementProfile.objects.get(pk=profile["id"]).sets.count(), 2
+        )
+
+    def test_measurement_worksheet_returns_real_pdf_with_demo_only_bill_placeholder(
+        self,
+    ):
+        profile = self.create_profile()
+        self.create_set(profile, unit="INCH", value="36.1250")
+        response = self.client.get(self.worksheet_url(profile))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertTrue(response.content.startswith(b"%PDF-"))
+        self.assertIn("measurement-worksheet-v1.pdf", response["Content-Disposition"])
+        reader = PdfReader(BytesIO(response.content))
+        self.assertGreaterEqual(len(reader.pages), 1)
+        extracted = "\n".join(page.extract_text() or "" for page in reader.pages)
+        self.assertIn("Measurement / Design Worksheet", extracted)
+        self.assertIn("INCH", extracted)
+        self.assertIn("36.1250", extracted)
+        self.assertIn("Bill / Estimate", extracted)
+        self.assertIn("No invoice", extracted)
+
+    def test_measurement_worksheet_paginates_long_measurement_tables_on_a4(self):
+        class WorksheetValue:
+            def __init__(self, number):
+                self.label_snapshot = f"Measurement {number:03d}"
+                self.value = "123.4567"
+                self.unit = "CM"
+
+            def __str__(self):
+                return self.label_snapshot
+
+        client = SimpleNamespace(name="Amina Client")
+        profile = SimpleNamespace(
+            client=client,
+            client_id="client-id",
+            related_person=None,
+            family=SimpleNamespace(name="Shirt"),
+            variant=SimpleNamespace(name="Standard"),
+        )
+        measurement_set = SimpleNamespace(
+            version=1,
+            values=SimpleNamespace(all=lambda: [WorksheetValue(i) for i in range(120)]),
+        )
+
+        pdf = build_measurement_worksheet_pdf(
+            shop=SimpleNamespace(name="Test Shop"),
+            profile=profile,
+            measurement_set=measurement_set,
+        )
+        reader = PdfReader(BytesIO(pdf))
+        self.assertGreater(len(reader.pages), 1)
+        self.assertAlmostEqual(float(reader.pages[0].mediabox.width), 595.28, delta=1)
+        self.assertAlmostEqual(float(reader.pages[0].mediabox.height), 841.89, delta=1)
+        extracted = "\n".join(page.extract_text() or "" for page in reader.pages)
+        self.assertIn("Measurement 000", extracted)
+        self.assertIn("Measurement 119", extracted)
+
+    def test_measurement_worksheet_embeds_supported_localized_name_glyphs(self):
+        samples = (
+            "مرحبا عميل",  # Arabic / Urdu script
+            "বাংলা নাম",  # Bangla
+            "മലയാളം പേര്",  # Malayalam
+        )
+        for name in samples:
+            with self.subTest(name=ascii(name)):
+                profile = SimpleNamespace(
+                    client=SimpleNamespace(name=name),
+                    client_id="client-id",
+                    related_person=None,
+                    family=SimpleNamespace(name="Shirt"),
+                    variant=SimpleNamespace(name="Standard"),
+                )
+                measurement_set = SimpleNamespace(
+                    version=1,
+                    values=SimpleNamespace(all=lambda: []),
+                )
+                pdf = build_measurement_worksheet_pdf(
+                    shop=SimpleNamespace(name="Test Shop"),
+                    profile=profile,
+                    measurement_set=measurement_set,
+                )
+                extracted = "\n".join(
+                    page.extract_text() or "" for page in PdfReader(BytesIO(pdf)).pages
+                )
+                self.assertNotIn("\u25a0", extracted)
+                self.assertTrue(any(ord(character) > 127 for character in extracted))
+
+    def test_measurement_worksheet_scopes_person_shop_and_design_non_disclosing(self):
+        profile_a = self.create_profile()
+        set_a = self.create_set(profile_a)
+        self.client.force_authenticate(self.other_admin)
+        denied_shop = self.client.get(self.worksheet_url(profile_a))
+        self.assertEqual(denied_shop.status_code, status.HTTP_404_NOT_FOUND)
+
+        profile_b_response = self.client.post(
+            self.client_profiles_url(shop=self.shop_b, client=self.client_b),
+            {"family_id": str(self.family.pk), "variant_id": str(self.variant.pk)},
+            format="json",
+        )
+        self.assertEqual(profile_b_response.status_code, status.HTTP_201_CREATED)
+        set_b = self.create_set(
+            profile_b_response.data,
+            user=self.other_admin,
+            shop=self.shop_b,
+            client=self.client_b,
+        )
+
+        self.client.force_authenticate(self.admin)
+        foreign_version = self.client.get(
+            self.worksheet_url(profile_a), {"measurement_set_id": set_b["id"]}
+        )
+        self.assertEqual(foreign_version.status_code, status.HTTP_404_NOT_FOUND)
+
+        unavailable_design = self.client.get(
+            self.worksheet_url(profile_a),
+            {"design_id": "00000000-0000-0000-0000-000000000001"},
+        )
+        self.assertEqual(unavailable_design.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(
+            str(MeasurementSet.objects.get(pk=set_a["id"]).profile_id), profile_a["id"]
+        )
+
+    def test_related_person_measurement_worksheet_keeps_primary_client_identity(self):
+        profile = self.create_profile(person="related")
+        self.create_set(profile)
+        response = self.client.get(self.worksheet_url(profile, related=True))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.content.startswith(b"%PDF-"))
+        extracted = "\n".join(
+            page.extract_text() or ""
+            for page in PdfReader(BytesIO(response.content)).pages
+        )
+        self.assertIn("Primary Client", extracted)
+        self.assertIn("Shop A Client", extracted)
+        self.assertIn("Shop A Related Person", extracted)
 
     def test_same_unit_comparison_returns_decimal_difference(self):
         profile = self.create_profile()

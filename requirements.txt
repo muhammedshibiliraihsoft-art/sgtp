@@ -12,3 +12,9 @@ gunicorn==23.0.0
 whitenoise==6.8.2
 Pillow==11.0.0
 phonenumbers==9.0.40
+django-storages[s3]==1.14.6
+boto3==1.43.108
+reportlab==4.5.1
+uharfbuzz==0.56.2
+python-bidi==0.6.11
+arabic-reshaper==3.0.1

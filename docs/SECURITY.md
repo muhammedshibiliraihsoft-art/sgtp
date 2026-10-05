@@ -23,6 +23,7 @@
 - Free staging has no DB backups, limited retention, an ephemeral web filesystem, and process-local throttling cache; do not treat it as durable, production-grade, or globally rate-limit coordinated. The staging reset command requires both `DJANGO_ENV=staging`, exact DB name `sgtp_staging`, and an explicit flag.
 - Audit events may contain actor UUID, Shop, action, object identity, safe before/after fields, timestamp and request correlation only; exclude passwords, tokens, secrets and sensitive prompts. Logs must be secret-safe.
 - Private reference files and generated documents remain Shop-scoped. Test wrong-Shop access, expiring links, upload validation and cross-Shop download denial.
+- Private catalog uploads now use short-lived, actor/Shop/target-bound authorization records. Signed upload URLs/tokens are returned with `Cache-Control: no-store`; completion checks target ownership, expiry, expected MIME/size and image decoding before invoking existing optimization/storage services. Private objects have no public URL and downloads remain behind the existing Shop-authorized image routes. The worksheet PDF is scoped to the exact Shop, person/profile and selected Measurement version, with optional Design resolved through existing visibility rules; it is `private, no-store` and does not create billing data.
 - Retention, anonymization, account deletion and public host/domain policies must be settled before Production; unresolved items are listed in `docs/DECISIONS.md` as `BUSINESS DECISION REQUIRED`.
 
 ## Current starter state

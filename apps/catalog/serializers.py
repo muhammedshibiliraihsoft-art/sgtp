@@ -332,6 +332,35 @@ class ShopStyleOptionInputSerializer(serializers.Serializer):
         return value
 
 
+class StyleOptionUpdateSerializer(serializers.Serializer):
+    """Allow Shop-owned translation edits without changing immutable identity."""
+
+    translations = TranslationInputSerializer(many=True, required=False)
+    is_active = serializers.BooleanField(required=False)
+
+    def validate(self, attrs):
+        if set(self.initial_data) != set(attrs):
+            raise serializers.ValidationError(
+                "Unknown or read-only fields were provided."
+            )
+        if set(attrs) == {"translations"}:
+            if not attrs["translations"]:
+                raise serializers.ValidationError(
+                    {"translations": "Provide at least one translation to update."}
+                )
+            locales = [item["locale"] for item in attrs["translations"]]
+            if len(locales) != len(set(locales)):
+                raise serializers.ValidationError(
+                    {"translations": "Each locale may appear only once."}
+                )
+            return attrs
+        if set(attrs) == {"is_active"}:
+            return attrs
+        raise serializers.ValidationError(
+            "Provide either translations or is_active; other fields are immutable."
+        )
+
+
 class DesignVersionSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
     translations = serializers.SerializerMethodField()

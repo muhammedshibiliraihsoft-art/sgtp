@@ -7,6 +7,7 @@ from django.db import models
 from django.db.models import Q
 
 from backend.core.models import BaseModel
+from backend.core.models import TimeStampedUUIDModel
 
 
 LOCALES = ("en", "ar-KW", "bn", "ur")
@@ -27,9 +28,9 @@ class ShopScopedCatalogModel(BaseModel):
         abstract = True
 
 
-def family_image_upload_path(_instance, filename):
+def family_image_upload_path(instance, filename):
     suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else "webp"
-    return f"catalog/families/{uuid.uuid4().hex}.{suffix}"
+    return f"catalog/global/families/{instance.pk}/{uuid.uuid4().hex}.{suffix}"
 
 
 class GarmentFamily(BaseModel):
@@ -212,9 +213,19 @@ class StyleOptionTranslation(BaseModel):
         ]
 
 
-def reference_upload_path(_instance, filename):
+def reference_upload_path(instance, filename):
     suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
-    return f"catalog/references/{uuid.uuid4().hex}.{suffix}"
+    if hasattr(instance, "style_option_id"):
+        option = instance.style_option
+        scope = f"shops/{option.tenant_id}" if option.tenant_id else "catalog/global"
+        parent = f"style-options/{option.pk}"
+    elif hasattr(instance, "version_id"):
+        design = instance.version.design
+        scope = f"shops/{design.tenant_id}" if design.tenant_id else "catalog/global"
+        parent = f"design-versions/{instance.version_id}"
+    else:
+        scope, parent = "catalog/global", "references"
+    return f"{scope}/{parent}/references/{uuid.uuid4().hex}.{suffix}"
 
 
 class StyleOptionImage(BaseModel):
@@ -222,7 +233,9 @@ class StyleOptionImage(BaseModel):
         StyleOption, on_delete=models.PROTECT, related_name="reference_images"
     )
     image = models.FileField(
-        upload_to=reference_upload_path, storage=storages["private_media"]
+        upload_to=reference_upload_path,
+        storage=storages["private_media"],
+        max_length=512,
     )
     mime_type = models.CharField(max_length=32)
     byte_size = models.PositiveIntegerField()
@@ -531,7 +544,9 @@ class DesignReference(BaseModel):
         DesignVersion, on_delete=models.PROTECT, related_name="references"
     )
     image = models.FileField(
-        upload_to=reference_upload_path, storage=storages["private_media"]
+        upload_to=reference_upload_path,
+        storage=storages["private_media"],
+        max_length=512,
     )
     mime_type = models.CharField(max_length=32)
     byte_size = models.PositiveIntegerField()
@@ -554,6 +569,37 @@ class DesignReference(BaseModel):
                 "Published DesignVersion references cannot be deleted."
             )
         return super().delete(*args, **kwargs)
+
+
+class PrivateMediaUpload(TimeStampedUUIDModel):
+    """One-time Shop-bound ticket for validating a direct private object upload."""
+
+    class Kind(models.TextChoices):
+        FAMILY = "family", "Global garment-family image"
+        STYLE_OPTION = "style_option", "Style option reference"
+        DESIGN_VERSION = "design_version", "Design version reference"
+
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="private_media_uploads",
+    )
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="private_media_uploads",
+    )
+    kind = models.CharField(max_length=24, choices=Kind.choices)
+    target_id = models.UUIDField()
+    object_key = models.CharField(max_length=512, unique=True)
+    content_type = models.CharField(max_length=32)
+    byte_size = models.PositiveIntegerField()
+    expires_at = models.DateTimeField(db_index=True)
+
+    class Meta:
+        ordering = ("-created_at",)
 
 
 # Keep the existing Catalog app as the runtime owner while keeping its

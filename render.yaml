@@ -45,6 +45,16 @@ services:
         value: django.core.mail.backends.dummy.EmailBackend
       - key: DEFAULT_FROM_EMAIL
         value: noreply@staging.birky.com
+      - key: R2_BUCKET_NAME
+        value: birkos-staging-private
+      - key: R2_ENDPOINT
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_REGION
+        value: auto
 
 databases:
   - name: birky-staging-db

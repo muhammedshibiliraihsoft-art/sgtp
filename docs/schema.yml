@@ -992,6 +992,58 @@ paths:
               schema:
                 $ref: '#/components/schemas/Family'
           description: ''
+  /api/v1/catalog/media/uploads/:
+    post:
+      operationId: catalog_global_private_media_upload
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrivateMediaUploadInputRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PrivateMediaUploadInputRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PrivateMediaUploadInputRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: object
+                  required:
+                  - upload_url
+                  - upload_token
+                  - headers
+                  - expires_in
+                  properties:
+                    upload_url:
+                      type: string
+                      format: uri
+                    upload_token:
+                      type: string
+                    headers:
+                      type: object
+                      additionalProperties:
+                        type: string
+                    expires_in:
+                      type: integer
+                - type: array
+                  items:
+                    type: object
+                    description: Created private image metadata.
+                - type: object
+                  description: Created global family image metadata.
+                  additionalProperties: true
+          description: Upload authorization or completed image metadata, based on
+            action.
   /api/v1/catalog/option-groups/:
     get:
       operationId: api_v1_catalog_option_groups_retrieve
@@ -1639,6 +1691,67 @@ paths:
               schema:
                 $ref: '#/components/schemas/TenantMember'
           description: ''
+  /api/v1/shops/{shop_id}/catalog/media/uploads/:
+    post:
+      operationId: shop_private_media_upload
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrivateMediaUploadInputRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PrivateMediaUploadInputRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PrivateMediaUploadInputRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: object
+                  required:
+                  - upload_url
+                  - upload_token
+                  - headers
+                  - expires_in
+                  properties:
+                    upload_url:
+                      type: string
+                      format: uri
+                    upload_token:
+                      type: string
+                    headers:
+                      type: object
+                      additionalProperties:
+                        type: string
+                    expires_in:
+                      type: integer
+                - type: array
+                  items:
+                    type: object
+                    description: Created private image metadata.
+                - type: object
+                  description: Created global family image metadata.
+                  additionalProperties: true
+          description: Upload authorization or completed image metadata, based on
+            action.
   /api/v1/shops/{shop_id}/catalog/style-options/:
     get:
       operationId: shop_style_options_list
@@ -1698,7 +1811,7 @@ paths:
           description: ''
   /api/v1/shops/{shop_id}/catalog/style-options/{option_id}/:
     patch:
-      operationId: api_v1_shops_catalog_style_options_partial_update
+      operationId: shop_style_option_update
       description: Resolve and attach Shop context after DRF authentication, before
         permissions.
       parameters:
@@ -1720,13 +1833,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedShopStyleOptionActiveUpdateRequest'
+              $ref: '#/components/schemas/PatchedStyleOptionUpdateRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedShopStyleOptionActiveUpdateRequest'
+              $ref: '#/components/schemas/PatchedStyleOptionUpdateRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedShopStyleOptionActiveUpdateRequest'
+              $ref: '#/components/schemas/PatchedStyleOptionUpdateRequest'
       security:
       - jwtAuth: []
       responses:
@@ -2420,6 +2533,55 @@ paths:
               schema:
                 $ref: '#/components/schemas/MeasurementSet'
           description: ''
+  /api/v1/shops/{shop_id}/clients/{client_id}/measurement-profiles/{profile_id}/worksheet.pdf:
+    get:
+      operationId: api_v1_shops_clients_measurement_profiles_worksheet.pdf_retrieve
+      description: Returns a private A4 Measurement / Design worksheet. It is a preview/export,
+        not an invoice. The selected Design is resolved for this request only; no
+        Design-to-Measurement relationship is persisted.
+      parameters:
+      - in: path
+        name: client_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: query
+        name: design_id
+        schema:
+          type: string
+          format: uuid
+        description: Optional authorized Shop/global Design selected for this export.
+      - in: query
+        name: measurement_set_id
+        schema:
+          type: string
+          format: uuid
+        description: Optional immutable version; defaults to the latest version.
+      - in: path
+        name: profile_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+          description: ''
   /api/v1/shops/{shop_id}/clients/{client_id}/related-persons/:
     get:
       operationId: api_v1_shops_clients_related_persons_list
@@ -3016,6 +3178,61 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MeasurementSet'
+          description: ''
+  ? /api/v1/shops/{shop_id}/clients/{client_id}/related-persons/{related_person_id}/measurement-profiles/{profile_id}/worksheet.pdf
+  : get:
+      operationId: api_v1_shops_clients_related_persons_measurement_profiles_worksheet.pdf_retrieve
+      description: Returns a private A4 Measurement / Design worksheet. It is a preview/export,
+        not an invoice. The selected Design is resolved for this request only; no
+        Design-to-Measurement relationship is persisted.
+      parameters:
+      - in: path
+        name: client_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: query
+        name: design_id
+        schema:
+          type: string
+          format: uuid
+        description: Optional authorized Shop/global Design selected for this export.
+      - in: query
+        name: measurement_set_id
+        schema:
+          type: string
+          format: uuid
+        description: Optional immutable version; defaults to the latest version.
+      - in: path
+        name: profile_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: related_person_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
           description: ''
   /api/v1/shops/{shop_id}/clients/{id}/:
     get:
@@ -4522,6 +4739,14 @@ paths:
           description: ''
 components:
   schemas:
+    ActionEnum:
+      enum:
+      - authorize
+      - complete
+      type: string
+      description: |-
+        * `authorize` - authorize
+        * `complete` - complete
     AdminCredentialResetResponse:
       type: object
       properties:
@@ -5389,6 +5614,16 @@ components:
       - next
       - previous
       - results
+    KindEnum:
+      enum:
+      - family
+      - style_option
+      - design_version
+      type: string
+      description: |-
+        * `family` - Global garment-family image
+        * `style_option` - Style option reference
+        * `design_version` - Design version reference
     Locale:
       enum:
       - en
@@ -6202,14 +6437,19 @@ components:
           type: string
           format: email
           maxLength: 254
-    PatchedShopStyleOptionActiveUpdateRequest:
+    PatchedStyleOptionActiveUpdateRequest:
       type: object
       properties:
         is_active:
           type: boolean
-    PatchedStyleOptionActiveUpdateRequest:
+    PatchedStyleOptionUpdateRequest:
       type: object
+      description: Allow Shop-owned translation edits without changing immutable identity.
       properties:
+        translations:
+          type: array
+          items:
+            $ref: '#/components/schemas/TranslationInputRequest'
         is_active:
           type: boolean
     PatchedTenantMemberRequest:
@@ -6261,6 +6501,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TranslationInputRequest'
+    PrivateMediaUploadInputRequest:
+      type: object
+      properties:
+        action:
+          $ref: '#/components/schemas/ActionEnum'
+        kind:
+          $ref: '#/components/schemas/KindEnum'
+        target_id:
+          type: string
+          format: uuid
+        content_type:
+          type: string
+          minLength: 1
+          maxLength: 32
+        byte_size:
+          type: integer
+          minimum: 1
+        upload_token:
+          type: string
+          minLength: 1
+          maxLength: 2048
+      required:
+      - action
     PublishResponse:
       type: object
       properties:

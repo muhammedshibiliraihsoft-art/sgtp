@@ -11,6 +11,7 @@ from apps.catalog.views import (
     GlobalDesignPublishView,
     GlobalDesignArchiveView,
     GlobalDesignReferenceImageView,
+    GlobalPrivateMediaUploadView,
     GlobalDesignReferenceView,
     GlobalDesignSelectionView,
     GlobalDesignTemplatesView,
@@ -31,6 +32,7 @@ from apps.catalog.views import (
     PublishDesignVersionView,
     ShopStyleImageView,
     ShopStyleImageUploadView,
+    ShopPrivateMediaUploadView,
     ShopStyleOptionsView,
     ShopStyleOptionDetailView,
     ShopVariantsView,
@@ -50,6 +52,7 @@ from apps.catalog.measurement_views import (
     MeasurementSetCopyView,
     MeasurementSetDetailView,
     MeasurementSetListCreateView,
+    MeasurementWorksheetPDFView,
     RelatedPersonMeasurementProfilesView,
 )
 from apps.catalog.inventory_views import (
@@ -64,6 +67,16 @@ from apps.catalog.inventory_views import (
 )
 
 urlpatterns = [
+    path(
+        "catalog/media/uploads/",
+        GlobalPrivateMediaUploadView.as_view(),
+        name="catalog-global-private-media-upload",
+    ),
+    path(
+        "shops/<uuid:shop_id>/catalog/media/uploads/",
+        ShopPrivateMediaUploadView.as_view(),
+        name="shop-private-media-upload",
+    ),
     path(
         "shops/<uuid:shop_id>/inventory/items/",
         InventoryItemListCreateView.as_view(),
@@ -143,6 +156,12 @@ urlpatterns = [
         name="client-measurement-set-detail",
     ),
     path(
+        "shops/<uuid:shop_id>/clients/<uuid:client_id>/measurement-profiles/<uuid:profile_id>/worksheet.pdf",
+        MeasurementWorksheetPDFView.as_view(),
+        {"person_model": Client},
+        name="client-measurement-worksheet-pdf",
+    ),
+    path(
         "shops/<uuid:shop_id>/clients/<uuid:client_id>/measurement-profiles/<uuid:profile_id>/sets/<uuid:set_id>/copy/",
         MeasurementSetCopyView.as_view(),
         {"person_model": Client},
@@ -176,6 +195,12 @@ urlpatterns = [
         MeasurementSetDetailView.as_view(),
         {"person_model": RelatedPerson},
         name="related-person-measurement-set-detail",
+    ),
+    path(
+        "shops/<uuid:shop_id>/clients/<uuid:client_id>/related-persons/<uuid:related_person_id>/measurement-profiles/<uuid:profile_id>/worksheet.pdf",
+        MeasurementWorksheetPDFView.as_view(),
+        {"person_model": RelatedPerson},
+        name="related-person-measurement-worksheet-pdf",
     ),
     path(
         "shops/<uuid:shop_id>/clients/<uuid:client_id>/related-persons/<uuid:related_person_id>/measurement-profiles/<uuid:profile_id>/sets/<uuid:set_id>/copy/",

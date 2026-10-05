@@ -12,3 +12,4 @@ isort==5.13.2
 pre-commit==4.0.1
 django-debug-toolbar==4.4.6
 ipython==8.30.0
+pypdf==6.19.0

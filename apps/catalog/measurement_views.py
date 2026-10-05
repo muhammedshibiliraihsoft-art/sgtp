@@ -2,6 +2,7 @@
 
 from django.db import transaction
 from django.db.models import Exists, OuterRef, Q
+from django.http import HttpResponse
 from rest_framework import serializers, status
 from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.pagination import PageNumberPagination
@@ -44,9 +45,12 @@ from apps.catalog.measurement_services import (
     require_measurement_access,
     update_material,
 )
+from apps.catalog.measurement_pdf import build_measurement_worksheet_pdf
+from apps.catalog.models import Design, DesignVersion
 from apps.clients.models import Client, RelatedPerson
 from apps.common.views import TenantScopedMixin
 from apps.tenants.context_views import ShopContextMixin
+from apps.tenants.policy import ShopRolePolicy
 
 
 class CatalogPagination(PageNumberPagination):
@@ -486,6 +490,123 @@ class MeasurementSetDetailView(
         return Response(
             MeasurementSetSerializer(record, context={"locale": _locale(request)}).data
         )
+
+
+class MeasurementWorksheetPDFView(
+    PersonProfileMixin, ShopContextMixin, TenantScopedMixin, APIView
+):
+    permission_classes = (IsAuthenticated, PasswordChangeGate, MeasurementAccess)
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "measurement_set_id",
+                OpenApiTypes.UUID,
+                OpenApiParameter.QUERY,
+                description="Optional immutable version; defaults to the latest version.",
+            ),
+            OpenApiParameter(
+                "design_id",
+                OpenApiTypes.UUID,
+                OpenApiParameter.QUERY,
+                description="Optional authorized Shop/global Design selected for this export.",
+            ),
+        ],
+        responses={("200", "application/pdf"): OpenApiTypes.BINARY},
+        description=(
+            "Returns a private A4 Measurement / Design worksheet. It is a preview/export, "
+            "not an invoice. The selected Design is resolved for this request only; no "
+            "Design-to-Measurement relationship is persisted."
+        ),
+    )
+    def get(self, request, shop_id, client_id, profile_id, **kwargs):
+        person = self.get_person()
+        shop = request.shop_context.shop
+        profile = (
+            MeasurementProfile.objects.filter(
+                pk=profile_id,
+                tenant=shop,
+                **self.owner_filter(person),
+            )
+            .select_related(
+                "family",
+                "variant",
+                "client",
+                "related_person__primary_client",
+            )
+            .first()
+        )
+        if profile is None:
+            raise NotFound()
+
+        versions = MeasurementSet.objects.filter(profile=profile).prefetch_related(
+            "values__label_translations"
+        )
+        requested_set_id = request.query_params.get("measurement_set_id")
+        if requested_set_id:
+            selected_set = versions.filter(pk=requested_set_id).first()
+        else:
+            selected_set = versions.order_by("-version", "id").first()
+        if selected_set is None:
+            raise NotFound()
+
+        design = design_version = None
+        requested_design_id = request.query_params.get("design_id")
+        if requested_design_id:
+            designs = Design.objects.filter(
+                pk=requested_design_id,
+                status=Design.Status.ACTIVE,
+            ).filter(Q(tenant=shop) | Q(tenant__isnull=True))
+            if not ShopRolePolicy.is_main_supplier_admin(request.user):
+                designs = designs.filter(
+                    Q(tenant=shop)
+                    | Q(
+                        tenant__isnull=True,
+                        versions__status=DesignVersion.Status.PUBLISHED,
+                    )
+                )
+                designs = designs.distinct()
+            design = designs.filter(
+                family_id=profile.family_id,
+                variant_id=profile.variant_id,
+            ).first()
+            if design is None:
+                raise NotFound()
+
+            visible_versions = design.versions.all()
+            if design.tenant_id is None and not ShopRolePolicy.is_main_supplier_admin(
+                request.user
+            ):
+                visible_versions = visible_versions.filter(
+                    status=DesignVersion.Status.PUBLISHED
+                )
+            design_version = visible_versions.order_by("-number", "id").first()
+            if design_version is not None:
+                design_version = (
+                    DesignVersion.objects.filter(pk=design_version.pk)
+                    .prefetch_related(
+                        "translations",
+                        "selections__translations",
+                        "selections__option_group",
+                    )
+                    .first()
+                )
+
+        pdf = build_measurement_worksheet_pdf(
+            shop=shop,
+            profile=profile,
+            measurement_set=selected_set,
+            locale=_locale(request),
+            design=design,
+            design_version=design_version,
+        )
+        response = HttpResponse(pdf, content_type="application/pdf")
+        response["Content-Disposition"] = (
+            f'attachment; filename="measurement-worksheet-v{selected_set.version}.pdf"'
+        )
+        response["Cache-Control"] = "private, no-store"
+        response["X-Content-Type-Options"] = "nosniff"
+        return response
 
 
 class MeasurementSetCopyView(

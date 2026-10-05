@@ -1,4 +1,5 @@
 from django.http import FileResponse
+from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
@@ -10,7 +11,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.db.models import Q
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema, inline_serializer
+from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
 
 from apps.catalog.models import (
     Design,
@@ -57,6 +58,7 @@ from apps.catalog.serializers import (
     SelectionSerializer,
     StyleImageSerializer,
     StyleOptionSerializer,
+    StyleOptionUpdateSerializer,
     VariantDetailSerializer,
     VariantUpdateSerializer,
     VariantSerializer,
@@ -83,8 +85,11 @@ from apps.catalog.services import (
     upload_style_images,
     update_family_translations,
     update_global_variant,
+    update_shop_style_option,
     update_shop_variant,
 )
+from apps.catalog.private_uploads import complete_upload, issue_upload
+from apps.catalog.models import PrivateMediaUpload
 from apps.accounts.permissions import PasswordChangeGate
 from apps.tenants.context_views import ShopContextMixin
 from apps.tenants.policy import ShopRolePolicy
@@ -116,6 +121,130 @@ def _lock_shop_write_context(request, shop_id):
 
 class CatalogPagination(PageNumberPagination):
     page_size = 20
+
+
+class PrivateMediaUploadInputSerializer(serializers.Serializer):
+    action = serializers.ChoiceField(choices=("authorize", "complete"))
+    kind = serializers.ChoiceField(
+        choices=PrivateMediaUpload.Kind.choices, required=False
+    )
+    target_id = serializers.UUIDField(required=False)
+    content_type = serializers.CharField(max_length=32, required=False)
+    byte_size = serializers.IntegerField(min_value=1, required=False)
+    upload_token = serializers.CharField(max_length=2048, required=False)
+
+    def validate(self, attrs):
+        required = (
+            ("kind", "target_id", "content_type", "byte_size")
+            if attrs["action"] == "authorize"
+            else ("upload_token",)
+        )
+        missing = [name for name in required if name not in attrs]
+        if missing:
+            raise serializers.ValidationError(
+                {name: "This field is required." for name in missing}
+            )
+        return attrs
+
+
+class _PrivateMediaUploadAction:
+    def perform_upload_action(self, request, *, shop=None):
+        data = PrivateMediaUploadInputSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        values = data.validated_data
+        if values["action"] == "authorize":
+            if not settings.R2_ENABLED:
+                return Response(
+                    {"detail": "Private direct upload is not configured."},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
+            result = issue_upload(
+                kind=values["kind"],
+                target_id=values["target_id"],
+                content_type=values["content_type"],
+                byte_size=values["byte_size"],
+                actor=request.user,
+                shop=shop,
+            )
+            response = Response(result, status=status.HTTP_201_CREATED)
+            response["Cache-Control"] = "no-store"
+            return response
+        result = complete_upload(
+            token=values["upload_token"], actor=request.user, shop=shop
+        )
+        response = Response(result, status=status.HTTP_201_CREATED)
+        response["Cache-Control"] = "no-store"
+        return response
+
+
+PRIVATE_MEDIA_UPLOAD_RESPONSE_SCHEMA = {
+    "oneOf": [
+        {
+            "type": "object",
+            "required": ["upload_url", "upload_token", "headers", "expires_in"],
+            "properties": {
+                "upload_url": {"type": "string", "format": "uri"},
+                "upload_token": {"type": "string"},
+                "headers": {
+                    "type": "object",
+                    "additionalProperties": {"type": "string"},
+                },
+                "expires_in": {"type": "integer"},
+            },
+        },
+        {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "description": "Created private image metadata.",
+            },
+        },
+        {
+            "type": "object",
+            "description": "Created global family image metadata.",
+            "additionalProperties": True,
+        },
+    ]
+}
+
+
+class GlobalPrivateMediaUploadView(_PrivateMediaUploadAction, APIView):
+    permission_classes = (IsAuthenticated, PasswordChangeGate)
+
+    @extend_schema(
+        request=PrivateMediaUploadInputSerializer,
+        responses={
+            201: OpenApiResponse(
+                response=PRIVATE_MEDIA_UPLOAD_RESPONSE_SCHEMA,
+                description="Upload authorization or completed image metadata, based on action.",
+            )
+        },
+        operation_id="catalog_global_private_media_upload",
+    )
+    def post(self, request):
+        if not ShopRolePolicy.is_main_supplier_admin(request.user):
+            raise PermissionDenied()
+        return self.perform_upload_action(request)
+
+
+class ShopPrivateMediaUploadView(_PrivateMediaUploadAction, ShopContextMixin, APIView):
+    permission_classes = (IsAuthenticated,)
+
+    @extend_schema(
+        request=PrivateMediaUploadInputSerializer,
+        responses={
+            201: OpenApiResponse(
+                response=PRIVATE_MEDIA_UPLOAD_RESPONSE_SCHEMA,
+                description="Upload authorization or completed image metadata, based on action.",
+            )
+        },
+        operation_id="shop_private_media_upload",
+    )
+    def post(self, request, shop_id):
+        _lock_shop_write_context(request, shop_id)
+        if not _shop_write_allowed(request.shop_context):
+            raise PermissionDenied()
+        return self.perform_upload_action(request, shop=request.shop_context.shop)
 
 
 def _page_schema(name, item_serializer):
@@ -924,29 +1053,31 @@ class ShopStyleOptionDetailView(ShopContextMixin, APIView):
     permission_classes = (IsAuthenticated,)
 
     @extend_schema(
-        request=inline_serializer(
-            name="ShopStyleOptionActiveUpdate",
-            fields={"is_active": serializers.BooleanField()},
-        ),
+        request=StyleOptionUpdateSerializer,
         responses=StyleOptionSerializer,
+        operation_id="shop_style_option_update",
     )
     @transaction.atomic
     def patch(self, request, shop_id, option_id):
         _lock_shop_write_context(request, shop_id)
         if not _shop_write_allowed(request.shop_context):
             raise PermissionDenied()
-        if set(request.data) != {"is_active"} or not isinstance(
-            request.data["is_active"], bool
-        ):
-            raise serializers.ValidationError(
-                "Only the active/archive state may be changed."
-            )
         option = get_object_or_404(
             StyleOption.objects.filter(tenant=request.shop_context.shop), pk=option_id
         )
-        option.is_active = request.data["is_active"]
-        option.updated_by = request.user
-        option.save(update_fields=("is_active", "updated_by", "updated_at"))
+        data = StyleOptionUpdateSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        if "translations" in data.validated_data:
+            option = update_shop_style_option(
+                shop=request.shop_context.shop,
+                option_id=option_id,
+                translations=data.validated_data["translations"],
+                actor=request.user,
+            )
+        else:
+            option.is_active = data.validated_data["is_active"]
+            option.updated_by = request.user
+            option.save(update_fields=("is_active", "updated_by", "updated_at"))
         return Response(
             StyleOptionSerializer(option, context={"locale": _locale(request)}).data
         )
