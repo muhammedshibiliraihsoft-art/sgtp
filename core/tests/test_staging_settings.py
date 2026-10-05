@@ -23,6 +23,11 @@ BASE_ENV = {
     "DB_PASSWORD": "test-only-password",
     "DB_HOST": "localhost",
     "DB_PORT": "5432",
+    "R2_BUCKET_NAME": "birkos-staging-private",
+    "R2_ENDPOINT": "https://example-account.r2.cloudflarestorage.com",
+    "R2_ACCESS_KEY_ID": "test-r2-access-key",
+    "R2_SECRET_ACCESS_KEY": "test-r2-secret-key",
+    "R2_REGION": "auto",
 }
 SETTINGS_JSON = """
 import json
@@ -65,7 +70,9 @@ def run_settings(extra=None, remove=()):
 
 
 def test_staging_settings_are_secure_and_accept_only_approved_origins():
-    result = run_settings({"RENDER_EXTERNAL_HOSTNAME": "birky-staging-api.onrender.com"})
+    result = run_settings(
+        {"RENDER_EXTERNAL_HOSTNAME": "birky-staging-api.onrender.com"}
+    )
 
     assert result.returncode == 0, result.stderr
     settings = json.loads(result.stdout)
@@ -116,6 +123,21 @@ def test_staging_settings_require_csrf_origin_configuration():
 
     assert result.returncode != 0
     assert "DJANGO_CSRF_TRUSTED_ORIGINS" in result.stderr
+
+
+def test_staging_settings_require_private_r2_storage():
+    result = run_settings(
+        remove=(
+            "R2_BUCKET_NAME",
+            "R2_ENDPOINT",
+            "R2_ACCESS_KEY_ID",
+            "R2_SECRET_ACCESS_KEY",
+        )
+    )
+
+    assert result.returncode != 0
+    assert "Staging requires private R2 storage" in result.stderr
+    assert "test-r2-secret-key" not in result.stderr
 
 
 def test_settings_selector_accepts_staging_database_connection_url():

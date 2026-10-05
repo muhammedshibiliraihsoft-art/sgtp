@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-05 — STARTUP-PRIVATE-IMAGE-01 image failure diagnosis and staging R2 preparation
+
+- Render traceback confirmed `FileNotFoundError` for a private image under `/app/private-assets`; read-only R2 `HeadObject` for the logged key returned 404. Added fail-fast staging R2 requirement and an explicit opt-in gate for legacy frontend multipart fallback, with regression tests. No model, migration, auth, permission, or business-rule change. R2 settings were merged into the existing staging service without exposing their values; its environment-only deployment is live on the previously published SHA `a873884eb6a96470a368154a3ea2162bb73b42de`. The R2-aware code is still local and awaits publication. The user saved the bucket CORS policy; the browser preflight for `http://localhost:5173` + `PUT` + `content-type` returned 204. The verified original image is present locally and needs upload through the app after the R2-aware code is live.
+
+## 2026-10-05 — Local frontend performance audit (unpublished)
+
+- Audited request flows without an authenticated browser session. Prepared frontend-only reductions for redundant Global Catalog, Shop context, Measurement design, Inventory, and Back Office Shop search requests, with regression tests on the isolated frontend branch. No business/backend contract or permission change, local `main` merge, push, or deployment is claimed. Warm staging-proxy health timing remains nonzero; the exact final validation and remaining browser-verification limit are recorded in `docs/HANDOFF.md`.
+
 ## 2026-10-05 — Local backend/frontend integration checkpoint
 
 - Committed the previously validated private-media/measurement worksheet and Shop Style Option API backend work locally, then merged `frontend/parallel-foundation` into local `main` without conflicts. The frontend branch was pushed first; the integrated `main` has not yet been pushed, and no exact-SHA CI or staging migration/deployment is claimed.

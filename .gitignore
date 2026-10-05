@@ -17,6 +17,7 @@ htmlcov/
 # Ignore environment files
 .env
 .env.*
+cloudflare.env
 !.env.example
 !.env.staging.example
 

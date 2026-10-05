@@ -9,6 +9,11 @@ from .prod import *  # noqa: F403
 
 
 ENVIRONMENT = "staging"
+if not R2_ENABLED:  # noqa: F405
+    raise ImproperlyConfigured(
+        "Staging requires private R2 storage; filesystem media is not durable."
+    )
+
 STAGING_FRONTEND_ORIGIN = "https://staging.birky.com"
 STAGING_API_HOSTNAME = "api-staging.birky.com"
 

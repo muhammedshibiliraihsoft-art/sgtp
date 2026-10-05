@@ -910,6 +910,16 @@ class CatalogDesignApiTests(APITestCase):
         self.assertEqual(body.status_code, status.HTTP_200_OK)
         self.assertEqual(body["Content-Type"], "image/webp")
         self.assertIn("no-store", body["Cache-Control"])
+        listed = self.client.get(self.shop_url(self.shop_a, "catalog/style-options/"))
+        self.assertEqual(listed.status_code, status.HTTP_200_OK)
+        persisted = next(
+            row for row in listed.data["results"] if row["id"] == str(local_option.pk)
+        )
+        self.assertEqual(
+            [reference["id"] for reference in persisted["reference_images"]],
+            [str(image.pk)],
+        )
+        self.assertEqual(persisted["reference_images"][0]["content_url"], content_url)
         self.client.force_authenticate(self.other_admin)
         foreign_url = self.shop_url(
             self.shop_b,
