@@ -24,10 +24,12 @@ let csrfToken: string | null = null
 let refreshPromise: Promise<string> | null = null
 let unauthorizedHandler: (() => void) | null = null
 let authGeneration = 0
+const inFlightReads = new Map<string, Promise<unknown>>()
 
 export function setAccessToken(token: string | null) {
   authGeneration += 1
   accessToken = token
+  inFlightReads.clear()
 }
 
 export function setUnauthorizedHandler(handler: (() => void) | null) {
@@ -38,6 +40,7 @@ export function clearCredentials() {
   authGeneration += 1
   accessToken = null
   csrfToken = null
+  inFlightReads.clear()
 }
 
 function apiUrl(path: string) {
@@ -156,7 +159,21 @@ async function coreRequest(path: string, options: RequestOptions, body?: BodyIni
 type JsonRequestOptions = RequestOptions & { body?: unknown }
 
 export async function apiRequest<T>(path: string, options: JsonRequestOptions = {}): Promise<T> {
+  if (Object.keys(options).length === 0) {
+    const key = `${authGeneration}:${apiUrl(path)}`
+    const pending = inFlightReads.get(key)
+    if (pending) return pending as Promise<T>
+    const read = coreRequest(path, { headers: { Accept: 'application/json' } })
+      .then(response => readResponse<T>(response))
+    inFlightReads.set(key, read)
+    try {
+      return await read
+    } finally {
+      if (inFlightReads.get(key) === read) inFlightReads.delete(key)
+    }
+  }
   const { body, headers, ...rest } = options
+  if ((rest.method ?? 'GET').toUpperCase() !== 'GET') inFlightReads.clear()
   const requestHeaders = new Headers(headers)
   requestHeaders.set('Accept', 'application/json')
   let requestBody: BodyInit | undefined = undefined

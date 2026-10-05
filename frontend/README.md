@@ -57,6 +57,20 @@ Frontend branch → Validation (typecheck/lint/test/build) → Reviewed commit �
 - Values require an explicit CM or INCH choice and Decimal input. Save, profile creation, design save, and copy actions are guarded against duplicate in-flight requests. Existing versions remain read-only; correction means saving a new version.
 - No Work record, Cutting stage, stock reservation, or inventory deduction is created by the workflow.
 
+## Reusable style image references
+
+- Main Supplier Global Catalog → Style Options supports private reference-image uploads for existing global Style Options. New global options can select optional images at creation; after the option is created, the files are uploaded through the existing private media API to R2.
+- Shop Catalog → Style Options allows an optional private reference-image upload while creating a Shop-owned Style Option.
+- Selecting a Shop-owned option opens a responsive preview/editor: its English name can be updated through the existing Shop-context PATCH API, and additional private reference images can be uploaded with progress feedback. Global options remain read-only in the Shop editor; existing references are preserved. A failed post-create upload can be retried without creating the option again.
+- The Global Design Template editor also supports adding a reusable image to a selected Style Option. This is distinct from the existing Design Version `Reference images` upload, which remains attached only to that design version.
+- Measurements read `StyleOption.reference_images` from the backend; uploaded images therefore appear on the matching option card without listing R2 folders or exposing public object URLs. This display path introduces no additional permission behavior.
+
+## Local loading characteristics
+
+- Frontend routes are loaded on demand; the login illustration uses a responsive `<picture>` so only the matching viewport asset is requested. Catalog Style Options load their required option groups and options concurrently without fetching unrelated garment families.
+- Identical concurrent default GET requests share one in-flight request. There is no persistent response cache, and mutations and auth changes invalidate in-flight sharing.
+- Local Vite `/api` currently proxies to the Render staging backend. This preserves the existing Shop data and login workflow but makes local API latency dependent on the remote service/network; the local database is not an equivalent replacement without Shop data.
+
 ## Local handoff — Catalog style grouping (2026-10-03)
 
 - The Shop Catalog `Style Options` tab now renders backend Option Groups as expandable cards; options are listed inside their own group, with a group-specific add action. The current backend already provides the groups and Shop-scoped options, so no API or schema changes were needed.

@@ -1,4 +1,4 @@
-import { apiRequest } from '../../services/apiClient'
+import { apiRequest, binaryRequest } from '../../services/apiClient'
 import type {
   InventoryFabric,
   MeasurementComparison,
@@ -63,6 +63,13 @@ export const measurementApi = {
   compare(shopId: string, clientId: string, owner: MeasurementOwner, profileId: string, fromSetId: string, toSetId: string) {
     const query = new URLSearchParams({ from_set_id: fromSetId, to_set_id: toSetId })
     return apiRequest<MeasurementComparison>(`${profilePath(shopId, clientId, owner)}${encodeURIComponent(profileId)}/compare/?${query}`)
+  },
+  exportWorksheet(shopId: string, clientId: string, owner: MeasurementOwner, profileId: string, setId?: string, designId?: string) {
+    const query = new URLSearchParams()
+    if (setId) query.set('measurement_set_id', setId)
+    if (designId) query.set('design_id', designId)
+    const suffix = query.size ? `?${query}` : ''
+    return binaryRequest(`${profilePath(shopId, clientId, owner)}${encodeURIComponent(profileId)}/worksheet.pdf${suffix}`)
   },
   async fabrics(shopId: string) {
     const path = `/api/v1/shops/${encodeURIComponent(shopId)}/inventory/items/?category=FABRIC`

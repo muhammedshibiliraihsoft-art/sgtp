@@ -48,7 +48,7 @@ describe('Main Supplier Back Office', () => {
     vi.spyOn(shopsService, 'list').mockResolvedValue({ count: 1, next: null, previous: null, results: [shop] })
     await open('/backoffice/shops')
     expect(await screen.findByRole('heading', { name: 'Shops' })).toBeInTheDocument()
-    expect(screen.getAllByText('Demo Shop').length).toBeGreaterThan(0)
+    expect((await screen.findAllByText('Demo Shop')).length).toBeGreaterThan(0)
     expect(screen.queryByText('Modern Tailors')).not.toBeInTheDocument()
   })
 
@@ -58,7 +58,7 @@ describe('Main Supplier Back Office', () => {
     })
     vi.spyOn(shopsService, 'detail').mockResolvedValue(shop)
     await open('/backoffice/shops/new')
-    fireEvent.change(screen.getByLabelText(/Shop name/), { target: { value: 'Demo Shop' } })
+    fireEvent.change(await screen.findByLabelText(/Shop name/), { target: { value: 'Demo Shop' } })
     fireEvent.change(screen.getByLabelText(/Slug/), { target: { value: 'demo-shop' } })
     fireEvent.change(screen.getByLabelText(/Maximum users/), { target: { value: '5' } })
     fireEvent.change(screen.getByLabelText(/First name/), { target: { value: 'First' } })

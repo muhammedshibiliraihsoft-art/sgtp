@@ -656,6 +656,7 @@
 }
 
 /* Responsive Image Styling */
+.login-visual-placeholder picture { display: block; width: 100%; height: 100%; }
 .login-visual-placeholder img {
   width: 100%;
   height: 100%;
@@ -663,7 +664,7 @@
 }
 
 /* Default to phone image */
-.login-img-phone {
+.login-responsive-image {
   display: block;
   width: 85% !important; /* Slightly smaller to give breathing room */
   margin: 0 auto;
@@ -671,29 +672,26 @@
   max-height: 40vh;
   object-fit: contain !important;
 }
-.login-img-tablet-portrait { display: none; }
-.login-img-tablet-landscape { display: none; }
-.login-img-desktop { display: none; }
 
 /* Tablet Portrait Image */
 @media (min-width: 600px) and (max-width: 1024px) and (orientation: portrait) {
-  .login-img-phone { display: none; }
-  .login-img-tablet-portrait { display: block; }
+  .login-responsive-image { width: 100% !important; height: 100% !important; max-height: none; object-fit: cover !important; }
 }
 
 /* Tablet Landscape Image */
 @media (min-width: 768px) and (max-width: 1199px) and (orientation: landscape) {
-  .login-img-phone { display: none; }
-  .login-img-tablet-landscape {
-    display: block;
+  .login-responsive-image {
+    width: 100% !important;
+    height: 100% !important;
+    max-height: none;
+    object-fit: cover !important;
     object-position: center 25%; /* Shift down so top is not cut off */
   }
 }
 
 /* Desktop Image */
 @media (min-width: 1200px), (min-width: 1025px) and (orientation: landscape) and (hover: hover) {
-  .login-img-phone { display: none; }
-  .login-img-desktop { display: block; }
+  .login-responsive-image { width: 100% !important; height: 100% !important; max-height: none; object-fit: cover !important; }
 }
 
 /* Custom Dropdown */

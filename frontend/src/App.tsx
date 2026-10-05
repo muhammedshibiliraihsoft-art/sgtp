@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { lazy, Suspense, useEffect, useState, useRef } from 'react'
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -9,27 +9,33 @@ import {
   Wand2, Store, Sliders, Shirt, PackageOpen, LayoutGrid, X, Clock, ChevronRight,
   PanelLeftClose, PanelLeftOpen, Shield, Ruler
 } from 'lucide-react'
-import { UsersPage } from './features/users/UsersPage'
 import './App.css'
 import { BrandLogo } from './components/BrandLogo'
 import { AuthProvider } from './services/AuthContext'
 import { useAuth } from './services/useAuth'
-import { BackOfficeDashboard, CreateShopPage, ShopDetailPage, ShopListPage } from './backoffice/BackOfficePages'
-import { ClientsPage } from './features/clients/ClientsPage'
-import { ClientDetailPage } from './features/clients/ClientDetailPage'
 import desktopImg from './assets/images/login/desktop.png'
 import phoneImg from './assets/images/login/phone.png'
 import tabletPortraitImg from './assets/images/login/tablet-portrait.png'
 import tabletLandscapeImg from './assets/images/login/tablet-landscape.png'
 import sidebarLogo from './assets/brand/sidebar_logo.png'
-import { CatalogPage } from './features/catalog/CatalogPage'
-import { DesignsPage } from './features/designs/DesignsPage'
-import { DesignEditor } from './features/designs/DesignEditor'
-import { GlobalCatalogPage } from './backoffice/catalog/GlobalCatalogPage'
-import { GlobalDesignTemplatesPage } from './backoffice/designs/GlobalDesignTemplatesPage'
-import { GlobalTemplateEditor } from './backoffice/designs/GlobalTemplateEditor'
-import { MaterialsInventoryPage } from './features/materials/MaterialsInventoryPage'
-import { ClientMeasurementsPage } from './features/measurements/ClientMeasurementsPage'
+
+const UsersPage = lazy(() => import('./features/users/UsersPage').then(module => ({ default: module.UsersPage })))
+const ClientsPage = lazy(() => import('./features/clients/ClientsPage').then(module => ({ default: module.ClientsPage })))
+const ClientDetailPage = lazy(() => import('./features/clients/ClientDetailPage').then(module => ({ default: module.ClientDetailPage })))
+const CatalogPage = lazy(() => import('./features/catalog/CatalogPage').then(module => ({ default: module.CatalogPage })))
+const DesignsPage = lazy(() => import('./features/designs/DesignsPage').then(module => ({ default: module.DesignsPage })))
+const DesignEditor = lazy(() => import('./features/designs/DesignEditor').then(module => ({ default: module.DesignEditor })))
+const GlobalCatalogPage = lazy(() => import('./backoffice/catalog/GlobalCatalogPage').then(module => ({ default: module.GlobalCatalogPage })))
+const GlobalDesignTemplatesPage = lazy(() => import('./backoffice/designs/GlobalDesignTemplatesPage').then(module => ({ default: module.GlobalDesignTemplatesPage })))
+const GlobalTemplateEditor = lazy(() => import('./backoffice/designs/GlobalTemplateEditor').then(module => ({ default: module.GlobalTemplateEditor })))
+const MaterialsInventoryPage = lazy(() => import('./features/materials/MaterialsInventoryPage').then(module => ({ default: module.MaterialsInventoryPage })))
+const ClientMeasurementsPage = lazy(() => import('./features/measurements/ClientMeasurementsPage').then(module => ({ default: module.ClientMeasurementsPage })))
+const BackOfficeDashboard = lazy(() => import('./backoffice/BackOfficePages').then(module => ({ default: module.BackOfficeDashboard })))
+const ShopListPage = lazy(() => import('./backoffice/BackOfficePages').then(module => ({ default: module.ShopListPage })))
+const CreateShopPage = lazy(() => import('./backoffice/BackOfficePages').then(module => ({ default: module.CreateShopPage })))
+const ShopDetailPage = lazy(() => import('./backoffice/BackOfficePages').then(module => ({ default: module.ShopDetailPage })))
+
+function PageLoading() { return <div className="content-wrap" role="status">Loading page…</div> }
 
 type Theme = 'light' | 'dark' | 'system'
 const themeKey = 'sgtp-theme'
@@ -226,10 +232,12 @@ function LoginPage() {
         {/* Visual / Image Slot */}
         <div className="login-visual-slot" aria-hidden="true">
           <div className="login-visual-placeholder">
-            <img src={phoneImg} alt="" className="login-img-phone" />
-            <img src={tabletPortraitImg} alt="" className="login-img-tablet-portrait" />
-            <img src={tabletLandscapeImg} alt="" className="login-img-tablet-landscape" />
-            <img src={desktopImg} alt="" className="login-img-desktop" />
+            <picture>
+              <source media="(min-width: 1200px), (min-width: 1025px) and (orientation: landscape) and (hover: hover)" srcSet={desktopImg} />
+              <source media="(min-width: 768px) and (max-width: 1199px) and (orientation: landscape)" srcSet={tabletLandscapeImg} />
+              <source media="(min-width: 600px) and (max-width: 1024px) and (orientation: portrait)" srcSet={tabletPortraitImg} />
+              <img src={phoneImg} alt="" className="login-responsive-image" fetchPriority="high" />
+            </picture>
           </div>
         </div>
 
@@ -859,7 +867,7 @@ function Workspace() {
         isSidebarPinned={isSidebarPinned}
         setIsSidebarPinned={setIsSidebarPinned}
       />
-      <Routes>
+      <Suspense fallback={<PageLoading />}><Routes>
         <Route path="/backoffice" element={<BackOfficeDashboard />} />
         <Route path="/backoffice/shops" element={<ShopListPage />} />
         <Route path="/backoffice/shops/new" element={<CreateShopPage />} />
@@ -869,7 +877,7 @@ function Workspace() {
         <Route path="/backoffice/designs" element={<GlobalDesignTemplatesPage />} />
         <Route path="/backoffice/designs/:designId" element={<GlobalTemplateEditor />} />
         <Route path="*" element={<Navigate to="/backoffice" replace />} />
-      </Routes>
+      </Routes></Suspense>
     </main>
     <BackOfficeBottomNavigation />
   </div>
@@ -885,7 +893,7 @@ function Workspace() {
         isSidebarPinned={isSidebarPinned}
         setIsSidebarPinned={setIsSidebarPinned}
       />
-      <Routes>
+      <Suspense fallback={<PageLoading />}><Routes>
         <Route path="/work" element={<WorkPreviewPage />} />
         <Route path="/clients" element={<ClientsPage />} />
         <Route path="/clients/:clientId" element={<ClientDetailPage />} />
@@ -897,7 +905,7 @@ function Workspace() {
         <Route path="/designs" element={<DesignsPage />} />
         <Route path="/designs/:designId" element={<DesignEditor />} />
         <Route path="*" element={<div className="content-wrap"><h1 style={{fontSize:'24px'}}>{location.pathname === '/' ? 'Dashboard' : 'Preview'}</h1><p style={{color:'var(--color-text-muted)'}}>Navigate to Work to see the layout.</p><Link to="/work" style={{color:'var(--color-primary)'}}>Go to Work</Link></div>} />
-      </Routes>
+      </Routes></Suspense>
     </main>
     <BottomNavigation onMoreClick={() => setIsMoreOpen(true)} />
     <MoreSheet isOpen={isMoreOpen} onClose={() => setIsMoreOpen(false)} theme={theme} setTheme={setTheme} />

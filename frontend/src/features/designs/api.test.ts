@@ -34,12 +34,16 @@ describe('Design API contract', () => {
   })
 
   it('uploads reference files using the backend images field', async () => {
-    const fetchMock = stubJsonFetch([])
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ detail: 'Private direct upload is not configured.' }), { status: 503, headers: { 'Content-Type': 'application/json' } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 201, headers: { 'Content-Type': 'application/json' } }))
+    vi.stubGlobal('fetch', fetchMock)
     const file = new File(['image'], 'reference.png', { type: 'image/png' })
 
     await uploadShopDesignReferences('shop-1', 'version-1', [file])
 
-    const body = fetchMock.mock.calls[0][1]?.body as FormData
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/shops/shop-1/catalog/media/uploads/')
+    const body = fetchMock.mock.calls[1][1]?.body as FormData
     expect(body.getAll('images')).toEqual([file])
     expect(body.get('file')).toBeNull()
   })

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Archive, ChevronRight, Copy, Ruler, Save } from 'lucide-react'
+import { Archive, ChevronRight, Copy, Download, Ruler, Save } from 'lucide-react'
 import { apiRequest } from '../../services/apiClient'
 import { useCurrentShop } from '../../hooks/useCurrentShop'
 import { useAuth } from '../../services/useAuth'
@@ -122,6 +122,7 @@ export function ClientMeasurementsPage() {
   const [historyLoading, setHistoryLoading] = useState(false)
   const [savingProfile, setSavingProfile] = useState(false)
   const [savingMeasurements, setSavingMeasurements] = useState(false)
+  const [exportingWorksheet, setExportingWorksheet] = useState(false)
   const [copyingSetId, setCopyingSetId] = useState<string | null>(null)
   const [compareFrom, setCompareFrom] = useState('')
   const [compareTo, setCompareTo] = useState('')
@@ -148,6 +149,7 @@ export function ClientMeasurementsPage() {
   const optionRequests = useRef(new Set<string>())
   const profileSaveInFlight = useRef(false)
   const measurementSaveInFlight = useRef(false)
+  const worksheetExportInFlight = useRef(false)
   const copyInFlight = useRef(false)
   const designSaveInFlight = useRef(false)
   const matchingProfile = profiles.find(item => item.family === familyId && item.variant === (variantId || null)) ?? null
@@ -501,6 +503,36 @@ export function ClientMeasurementsPage() {
     }
   }
 
+  const exportMeasurementWorksheet = async () => {
+    if (!shopId || !activeClientId || !profileId || !selectedSet || worksheetExportInFlight.current) return
+    worksheetExportInFlight.current = true
+    setExportingWorksheet(true)
+    setError('')
+    try {
+      const pdf = await measurementApi.exportWorksheet(
+        shopId,
+        activeClientId,
+        owner,
+        profileId,
+        selectedSet.id,
+        selectedDesign?.id,
+      )
+      const objectUrl = URL.createObjectURL(pdf)
+      const link = document.createElement('a')
+      link.href = objectUrl
+      link.download = `measurement-worksheet-v${selectedSet.version}.pdf`
+      document.body.append(link)
+      link.click()
+      link.remove()
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : t('measurements.worksheetError'))
+    } finally {
+      worksheetExportInFlight.current = false
+      setExportingWorksheet(false)
+    }
+  }
+
   const copyMeasurementSet = async (set: MeasurementSet) => {
     if (
       !shopId
@@ -804,7 +836,7 @@ export function ClientMeasurementsPage() {
                   </section>
 
                   <section className="measurement-workflow-card info-card" aria-labelledby="measurement-history-heading">
-                    <div className="measurement-section-heading"><span className="measurement-step-number">06</span><div><h2 id="measurement-history-heading">{t('measurements.history')}</h2><p>{t('measurements.correctionRule', 'Old measurement records stay unchanged. Save a new version for corrections.')}</p></div></div>
+                    <div className="measurement-section-heading"><span className="measurement-step-number">06</span><div><h2 id="measurement-history-heading">{t('measurements.history')}</h2><p>{t('measurements.correctionRule', 'Old measurement records stay unchanged. Save a new version for corrections.')}</p></div>{selectedSet && canReadMeasurements && <button type="button" className="btn-secondary measurement-export-button" onClick={() => void exportMeasurementWorksheet()} disabled={exportingWorksheet}><Download size={16} />{exportingWorksheet ? t('measurements.exportingWorksheet') : t('measurements.exportWorksheet', { version: selectedSet.version })}</button>}</div>
                     {historyLoading ? <div className="measurement-empty" aria-busy="true">{t('measurements.loading')}</div> : sets.length === 0 ? <div className="measurement-empty">{t('measurements.noHistory')}</div> : <div className="measurement-history-list">{sets.map(set => <article className={`measurement-history-card${selectedSetId === set.id ? ' is-selected' : ''}`} key={set.id}>
                       <button type="button" className="measurement-history-select" onClick={() => setSelectedSetId(set.id)} aria-pressed={selectedSetId === set.id}><strong>{t('measurements.version', { version: set.version })}</strong><span>{new Date(set.created_at).toLocaleString(locale)}</span><small>{t('measurements.measurementsCount', { count: set.values.length })}{set.copied_from ? ` · ${t('measurements.copyProvenance', { version: sets.find(item => item.id === set.copied_from)?.version ?? '—' })}` : ''}</small></button>
                       <div className="measurement-history-values">{set.values.map(value => <div key={value.id}><span>{value.label}</span><strong>{value.value} {value.unit}</strong></div>)}</div>

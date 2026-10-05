@@ -37,6 +37,23 @@ describe('shared API client authentication', () => {
     expect(sessionStorage.getItem('access-token')).toBeNull()
   })
 
+  it('shares only concurrent default GETs and refetches after a write', async () => {
+    let finishRead!: (response: Response) => void
+    const fetchMock = vi.fn()
+      .mockReturnValueOnce(new Promise<Response>(resolve => { finishRead = resolve }))
+      .mockResolvedValueOnce(json({ saved: true }))
+      .mockResolvedValueOnce(json({ value: 2 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const first = apiRequest<{ value: number }>('/api/v1/shared/')
+    const second = apiRequest<{ value: number }>('/api/v1/shared/')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    finishRead(json({ value: 1 }))
+    expect(await Promise.all([first, second])).toEqual([{ value: 1 }, { value: 1 }])
+    await apiRequest('/api/v1/shared/', { method: 'PATCH', body: { value: 2 } })
+    expect(await apiRequest('/api/v1/shared/')).toEqual({ value: 2 })
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
   it('shares concurrent refresh attempts and retries each request once', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(json({ detail: 'expired' }, 401))

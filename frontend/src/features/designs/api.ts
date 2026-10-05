@@ -1,4 +1,5 @@
 import { apiRequest, multipartRequest } from '../../services/apiClient'
+import { uploadPrivateMediaBatch } from '../../services/privateMediaUpload'
 import type { ApiPage } from '../catalog/types'
 import type { Design, DesignCreateRequest, DesignReference, DesignSelection, PublishResponse, SelectionCreateRequest, ShopDesignPage } from './types'
 
@@ -40,9 +41,11 @@ export function getShopDesignReferences(shopId: string, versionId: string): Prom
 }
 
 export function uploadShopDesignReferences(shopId: string, versionId: string, files: File[]): Promise<DesignReference[]> {
-  const formData = new FormData()
-  files.forEach(file => formData.append('images', file))
-  return multipartRequest<DesignReference[]>(`/api/v1/shops/${shopId}/design-versions/${versionId}/references/`, formData)
+  const legacyPath = `/api/v1/shops/${shopId}/design-versions/${versionId}/references/`
+  return uploadPrivateMediaBatch<DesignReference[]>({
+    path: `/api/v1/shops/${shopId}/catalog/media/uploads/`, kind: 'design_version', targetId: versionId, files,
+    fallback: () => { const formData = new FormData(); files.forEach(file => formData.append('images', file)); return multipartRequest<DesignReference[]>(legacyPath, formData) },
+  })
 }
 
 export async function getAllShopDesigns(shopId: string, filters: { family?: string; variant?: string } = {}, locale = 'en'): Promise<Design[]> {
