@@ -240,7 +240,10 @@ class ShopPrivateMediaUploadView(_PrivateMediaUploadAction, ShopContextMixin, AP
         },
         operation_id="shop_private_media_upload",
     )
+    @transaction.atomic
     def post(self, request, shop_id):
+        # _lock_shop_write_context() uses select_for_update() to serialize
+        # Shop-scoped writes, so this view must own the surrounding transaction.
         _lock_shop_write_context(request, shop_id)
         if not _shop_write_allowed(request.shop_context):
             raise PermissionDenied()

@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-05 — STARTUP-PRIVATE-IMAGE-01 Shop upload transaction fix
+
+- Render logs for the authenticated upload attempt showed `TransactionManagementError`: `ShopPrivateMediaUploadView` called `_lock_shop_write_context()` (`select_for_update`) without a transaction. Wrapped the write endpoint in `transaction.atomic` and added a `TransactionTestCase` regression proving the upload authorization runs inside a transaction. No storage credentials, schema, migration, or business-rule change. The source image has not yet completed an authenticated upload/visual verification.
+
 ## 2026-10-05 — STARTUP-PRIVATE-IMAGE-01 image failure diagnosis and staging R2 preparation
 
 - Render traceback confirmed `FileNotFoundError` for a private image under `/app/private-assets`; read-only R2 `HeadObject` for the logged key returned 404. Added fail-fast staging R2 requirement and an explicit opt-in gate for legacy frontend multipart fallback, with regression tests. No model, migration, auth, permission, or business-rule change. R2 settings were merged into the existing staging service without exposing their values; its environment-only deployment is live on the previously published SHA `a873884eb6a96470a368154a3ea2162bb73b42de`. The R2-aware code is still local and awaits publication. The user saved the bucket CORS policy; the browser preflight for `http://localhost:5173` + `PUT` + `content-type` returned 204. The verified original image is present locally and needs upload through the app after the R2-aware code is live.
