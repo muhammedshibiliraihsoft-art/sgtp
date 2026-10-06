@@ -3,7 +3,7 @@
 ## 2026-10-06 — STAGING-STYLE-IMAGE-MIGRATION-FIX-01
 
 - Corrected PostgreSQL migration ordering after the staging startup failed because migration `0015` attempted to create the primary-image unique index while its backfill still had pending trigger events. `0015` now ends after the deterministic primary-image backfill; additive migration `0016_styleoptionimage_one_primary` creates the partial unique constraint in the next transaction.
-- Added a PostgreSQL migration regression test that exercises pre-existing StyleOptionImage rows, both migrations, and deterministic primary selection. Validation: full PostgreSQL-backed suite 448 passed; focused migration test 1 passed; Django check, migration drift, OpenAPI validation, Black, and Flake8 passed. Publication and staging retry are pending at this checkpoint; production was not deployed.
+- Added a PostgreSQL migration regression test that exercises pre-existing StyleOptionImage rows, both migrations, and deterministic primary selection. Published implementation commit `5e17a4dc973efb2eee371dec8de01cefcdb56dc3` to `main` and `staging`; exact-SHA Project State Validation run `37445684348` passed. Render staging deploy `dep-db2c8jm7bikc73dr7800` is live, both migrations logged `OK`, and live/ready health checks returned 200. Full PostgreSQL suite 448 passed; focused migration test 1 passed; Django check, migration drift, OpenAPI validation, Black, and Flake8 passed. Production was not deployed.
 
 ## 2026-10-05 — STARTUP-PRIVATE-IMAGE-01 one-image-per-Style-Option
 
