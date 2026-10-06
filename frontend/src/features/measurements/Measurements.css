@@ -29,6 +29,38 @@
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
 }
+.measurement-workspace .measurement-unified-card { display: grid; gap: 4px; padding: 12px 24px; overflow: visible; }
+.measurement-unified-card .measurement-workflow-card.info-card,
+.measurement-unified-card .measurement-review.info-card {
+  padding: 20px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.measurement-unified-card .measurement-workflow-card:last-child,
+.measurement-unified-card .measurement-review.info-card { border-bottom: 0; }
+.measurement-unified-card .measurement-step-number { display: none; }
+.measurement-sticky-context {
+  position: sticky;
+  z-index: 3;
+  top: calc(var(--topbar-height, 64px) + 8px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+  box-shadow: var(--shadow-sm);
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+.measurement-sticky-context strong { overflow: hidden; color: var(--color-text); text-overflow: ellipsis; white-space: nowrap; }
+.measurement-sticky-context span { overflow: hidden; text-align: end; text-overflow: ellipsis; white-space: nowrap; }
 
 .measurement-context-card { display: grid; gap: 8px; max-width: 680px; }
 .measurement-context-card label,
@@ -43,13 +75,7 @@
   font-size: 13px;
   font-weight: 600;
 }
-.measurement-context-card select,
-.measurement-garment-selectors select,
-.measurement-profile-controls select,
 .measurement-design-persistence input,
-.measurement-design-persistence select,
-.measurement-compare-controls select,
-.measurement-wearer-select select,
 .measurement-client-picker input {
   width: 100%;
   min-height: 44px;
@@ -60,24 +86,18 @@
   color: var(--color-text);
   font: inherit;
 }
-.measurement-context-card select:hover:not(:disabled),
-.measurement-garment-selectors select:hover:not(:disabled),
-.measurement-profile-controls select:hover:not(:disabled),
-.measurement-design-persistence select:hover:not(:disabled),
-.measurement-compare-controls select:hover:not(:disabled),
-.measurement-wearer-select select:hover:not(:disabled) { border-color: var(--color-primary); }
-.measurement-context-card select:focus-visible,
-.measurement-garment-selectors select:focus-visible,
-.measurement-profile-controls select:focus-visible,
-.measurement-design-persistence select:focus-visible,
-.measurement-compare-controls select:focus-visible,
-.measurement-wearer-select select:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
-.measurement-context-card select:disabled,
-.measurement-garment-selectors select:disabled,
-.measurement-profile-controls select:disabled,
-.measurement-design-persistence select:disabled,
-.measurement-compare-controls select:disabled,
-.measurement-wearer-select select:disabled { cursor: not-allowed; opacity: .65; }
+.measurement-select { display: block; width: 100%; min-width: 0; }
+.measurement-select .custom-select-trigger {
+  min-height: 44px;
+  height: auto;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--color-canvas);
+  color: var(--color-text);
+  font: inherit;
+  text-align: start;
+}
+.measurement-select .custom-select-trigger:hover:not(:disabled) { border-color: var(--color-primary); }
 .measurement-context-card small,
 .measurement-design-persistence small,
 .measurement-workflow-card > small { color: var(--color-text-muted); }
@@ -166,7 +186,7 @@
 .measurement-option-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
 .measurement-option-card {
   display: grid;
-  grid-template-rows: 132px auto auto;
+  grid-template-rows: 132px auto;
   min-width: 0;
   padding: 8px;
   border: 1px solid var(--color-border);
@@ -174,16 +194,24 @@
   background: var(--color-surface);
   color: var(--color-text);
   text-align: start;
-  cursor: pointer;
 }
 .measurement-option-card:hover { border-color: var(--color-primary); }
 .measurement-option-card.is-selected { border-color: var(--color-primary); box-shadow: 0 0 0 2px var(--color-primary-soft); }
+.measurement-option-select { display: grid; align-content: start; gap: 2px; min-width: 0; padding: 0; border: 0; background: transparent; color: inherit; text-align: start; cursor: pointer; }
+.measurement-option-select:disabled { cursor: not-allowed; opacity: .65; }
+.measurement-option-select:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; border-radius: 6px; }
 .measurement-option-image,
 .measurement-image-fallback { width: 100%; height: 132px; border-radius: 8px; object-fit: cover; }
+.measurement-image-frame { width: 100%; height: 132px; min-width: 0; overflow: hidden; border-radius: 8px; }
+.measurement-image-frame > .measurement-option-image,
+.measurement-image-frame > .measurement-image-fallback { width: 100%; height: 100%; border-radius: inherit; }
 .measurement-reference-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 4px; height: 132px; overflow: hidden; border-radius: 8px; }
 .measurement-reference-gallery .measurement-option-image,
 .measurement-reference-gallery .measurement-image-fallback { height: 132px; min-width: 0; border-radius: 6px; }
 .measurement-image-fallback { display: grid; place-items: center; background: var(--color-surface-subtle); color: var(--color-text-muted); }
+.measurement-image-error { position: relative; }
+.measurement-image-error-text { max-width: 90%; font-size: 10px; font-weight: 500; line-height: 1.2; text-align: center; }
+.measurement-image-retry { position: absolute; inset-block-end: 5px; inset-inline-end: 5px; display: grid; width: 30px; height: 30px; place-items: center; border: 1px solid var(--color-border); border-radius: 50%; background: var(--color-surface); color: var(--color-text); cursor: pointer; }
 .measurement-image-skeleton { width: 100%; height: 100%; border-radius: inherit; background: linear-gradient(100deg, var(--color-surface-subtle) 25%, var(--color-border) 45%, var(--color-surface-subtle) 65%); background-size: 200% 100%; animation: measurement-image-pulse 1.2s ease-in-out infinite; }
 @keyframes measurement-image-pulse { to { background-position-x: -200%; } }
 .measurement-option-copy { display: grid; gap: 3px; padding: 9px 3px 4px; overflow-wrap: anywhere; }
@@ -219,6 +247,9 @@
 .measurement-field input::-webkit-outer-spin-button { margin: 0; appearance: none; }
 .measurement-field input:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 .measurement-field small { color: var(--color-text-muted); font-size: 12px; font-weight: 400; }
+.measurement-field .measurement-previous-hint { min-height: 1em; font-weight: 400; }
+.measurement-field-error { margin: 0; color: var(--color-danger); font-size: 13px; }
+.measurement-field input[aria-invalid="true"] { border-color: var(--color-danger); }
 .measurement-unit-note { margin: 0; color: var(--color-text-muted); font-size: 12px; }
 .measurement-empty { padding: 14px; border: 1px dashed var(--color-border); border-radius: 10px; color: var(--color-text-muted); }
 .measurement-inline-retry { margin-inline-start: 12px; border: 0; background: transparent; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; }
@@ -264,6 +295,7 @@
 .measurement-review-groups li { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: center; gap: 10px; }
 .measurement-review-groups .measurement-option-image,
 .measurement-review-groups .measurement-image-fallback { width: 52px; height: 52px; border-radius: 8px; }
+.measurement-review-groups .measurement-image-frame { width: 52px; height: 52px; flex: 0 0 52px; }
 .measurement-review-groups li > span { display: grid; gap: 4px; min-width: 0; }
 .measurement-review-groups li small { color: var(--color-text-muted); }
 
@@ -274,6 +306,9 @@
 
 @media (max-width: 760px) {
   .measurement-workspace .info-card { padding: 15px; }
+  .measurement-workspace .measurement-unified-card { gap: 0; padding: 8px 15px; }
+  .measurement-unified-card .measurement-workflow-card.info-card,
+  .measurement-unified-card .measurement-review.info-card { padding: 16px 0; }
   .measurement-garment-selectors,
   .measurement-field-grid,
   .measurement-style-groups,
@@ -287,6 +322,9 @@
   .measurement-compare-controls .btn-secondary { width: 100%; }
   .measurement-entry-header { align-items: stretch; flex-direction: column; }
   .measurement-entry-header .btn-primary { width: 100%; min-height: 46px; }
+  .measurement-entry-header .btn-primary { position: sticky; z-index: 4; bottom: calc(68px + env(safe-area-inset-bottom)); box-shadow: var(--shadow-card); }
+  .measurement-sticky-context { top: 56px; align-items: flex-start; flex-direction: column; gap: 3px; }
+  .measurement-sticky-context span { text-align: start; }
   .measurement-entry-tools { align-items: flex-start; flex-direction: column; }
   .measurement-page-heading { flex-direction: column; }
   .measurement-option-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

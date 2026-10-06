@@ -191,9 +191,9 @@ export function CatalogPage() {
     setStyleNotice(null)
     setError(null)
     try {
-      const addedImages = await uploadShopStyleOptionImages(shopId, selectedStyle.id, Array.from(files), (_index, percent) => setStyleUploadProgress(percent))
+      const addedImages = await uploadShopStyleOptionImages(shopId, selectedStyle.id, [files[0]], (_index, percent) => setStyleUploadProgress(percent))
       setStyleOptions(current => current.map(option => option.id === selectedStyle.id
-        ? { ...option, reference_images: [...option.reference_images, ...addedImages] }
+        ? { ...option, reference_images: addedImages }
         : option))
       setStyleNotice(t('catalog.styleImagesUploaded', 'Reference images uploaded successfully.'))
     } catch (uploadError) {
@@ -355,8 +355,8 @@ export function CatalogPage() {
               {!selectedStyle.is_global && <div className="catalog-style-edit-form">
                 <label>{t('catalog.nameEnglish', 'Name (English)')}<input value={editStyleName} onChange={event => setEditStyleName(event.target.value)} maxLength={120} disabled={role === 'VIEWER'} /></label>
                 <button className="primary-button" type="button" onClick={() => void saveStyleName()} disabled={isStyleSaving || !editStyleName.trim() || editStyleName.trim() === selectedStyle.name}>{isStyleSaving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}{t('catalog.saveStyle', 'Save name')}</button>
-                <label className="catalog-style-upload">{t('catalog.addReferenceImages', 'Add reference images')}<input type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={role === 'VIEWER' || styleUploadProgress !== null} onChange={event => { void uploadStyleReferences(event.target.files); event.currentTarget.value = '' }} /></label>
-                <small>{t('catalog.styleImageHint', 'Images are added to this Shop style option; existing references are kept.')}</small>
+                <label className="catalog-style-upload">{t('catalog.replaceReferenceImage', 'Add or replace image')}<input type="file" accept="image/jpeg,image/png,image/webp" disabled={role === 'VIEWER' || styleUploadProgress !== null} onChange={event => { void uploadStyleReferences(event.target.files); event.currentTarget.value = '' }} /></label>
+                <small>{t('catalog.styleImageHint', 'Each style option has one current image. Uploading a new image replaces the current preview; existing design history is preserved.')}</small>
                 {styleUploadProgress !== null && <div role="status" className="catalog-style-progress"><span>{t('catalog.uploading', 'Uploading…')} {styleUploadProgress}%</span><progress max="100" value={styleUploadProgress} /></div>}
                 {role === 'VIEWER' && <small>{t('catalog.styleReadOnly', 'Your role can view this option but cannot edit or upload.')}</small>}
               </div>}
@@ -379,7 +379,7 @@ export function CatalogPage() {
           <label>{t('catalog.nameEnglish', 'Name (English)')}<input required maxLength={120} value={name} onChange={event => setName(event.target.value)} /></label>
           <label>{t('catalog.code', 'Code')}<input required maxLength={64} pattern="[a-zA-Z0-9_-]+" value={code} onChange={event => setCode(event.target.value)} /><small>{t('catalog.codeHint', 'Use letters, numbers, hyphens, or underscores.')}</small></label>
           {createKind === 'variant' ? <label>{t('catalog.family', 'Garment family')}<select required value={selectedFamily} onChange={event => setSelectedFamily(event.target.value)}>{families.map(family => <option value={family.id} key={family.id}>{family.name}</option>)}</select></label> : <label>{t('catalog.optionGroup', 'Option group')}<select required value={selectedGroup} onChange={event => setSelectedGroup(event.target.value)}>{groups.map(group => <option value={group.id} key={group.id}>{group.name}</option>)}</select></label>}
-          {createKind === 'style' && <label>{t('catalog.referenceImagesOptional', 'Reference images (optional)')}<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={event => setNewStyleImages(Array.from(event.target.files ?? []))} /><small>{t('catalog.referenceImagesR2Hint', 'Images upload privately after the style option is created.')}</small>{newStyleImages.length > 0 && <small>{t('catalog.selectedImageCount', '{{count}} image(s) selected', { count: newStyleImages.length })}</small>}</label>}
+          {createKind === 'style' && <label>{t('catalog.referenceImageOptional', 'Reference image (optional)')}<input type="file" accept="image/jpeg,image/png,image/webp" onChange={event => setNewStyleImages(event.target.files?.[0] ? [event.target.files[0]] : [])} /><small>{t('catalog.referenceImagesR2Hint', 'One image uploads privately to R2 after the style option is created.')}</small>{newStyleImages.length > 0 && <small>{t('catalog.imageSelected', '1 image selected')}</small>}</label>}
           <div className="catalog-dialog-actions"><button type="button" className="secondary-button" onClick={() => setCreateKind(null)}>{t('catalog.cancel', 'Cancel')}</button><button type="submit" className="primary-button" disabled={isSaving || !(createKind === 'variant' ? families.length : groups.length)}>{isSaving ? <Loader2 size={16} className="animate-spin" /> : null} {t('catalog.create', 'Create')}</button></div>
         </form>
       </div>}

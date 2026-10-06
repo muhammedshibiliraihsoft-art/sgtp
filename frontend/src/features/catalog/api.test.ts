@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createGlobalFamily, createGlobalVariant, createShopStyleOption, createShopVariant, getAllShopVariants, getFamilies, getFamilyDetail, getGlobalVariant, getGlobalVariantsPage, getShopVariantsPage, removeGlobalFamilyImage, setGlobalFamilyStatus, setGlobalVariantDefault, setGlobalVariantStatus, setShopVariantStatus, updateFamilyOptionGroups, updateGlobalFamily, updateGlobalVariant, updateShopStyleOptionTranslations, updateShopVariant, uploadGlobalFamilyImage, uploadShopStyleOptionImages } from './api'
+import { createGlobalFamily, createGlobalVariant, createShopStyleOption, createShopVariant, getAllGlobalVariants, getAllShopVariants, getFamilies, getFamilyDetail, getGlobalVariant, getGlobalVariantsPage, getShopVariantsPage, removeGlobalFamilyImage, setGlobalFamilyStatus, setGlobalVariantDefault, setGlobalVariantStatus, setShopVariantStatus, updateFamilyOptionGroups, updateGlobalFamily, updateGlobalVariant, updateShopStyleOptionTranslations, updateShopVariant, uploadGlobalFamilyImage, uploadShopStyleOptionImages } from './api'
 
 function stubJsonFetch(responses: unknown[]) {
   const fetchMock = vi.fn()
@@ -21,7 +21,10 @@ function stubResponses(responses: Array<{ body: unknown; status: number }>) {
   return fetchMock
 }
 
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
+})
 
 describe('Catalog API contract', () => {
   it('sends the backend variant payload and shop route', async () => {
@@ -68,7 +71,15 @@ describe('Catalog API contract', () => {
     ])
   })
 
+  it('loads all variants for one Family and requests archived rows only when asked', async () => {
+    const fetchMock = stubJsonFetch([{ count: 1, next: null, previous: null, results: [{ id: 'variant-1' }] }])
+    const result = await getAllGlobalVariants('family-1', 'en', 'all')
+    expect(result).toEqual([{ id: 'variant-1' }])
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/catalog/variants/?family=family-1&locale=en&status=all')
+  })
+
   it('uploads style images under the backend images field', async () => {
+    vi.stubEnv('VITE_ENABLE_LEGACY_PRIVATE_MEDIA_FALLBACK', 'true')
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response('<!doctype html><title>Not Found</title>', { status: 404, headers: { 'Content-Type': 'text/html' } }))
       .mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 201, headers: { 'Content-Type': 'application/json' } }))
@@ -154,6 +165,7 @@ describe('Catalog API contract', () => {
   })
 
   it('uses the family lifecycle and private image routes with the image field', async () => {
+    vi.stubEnv('VITE_ENABLE_LEGACY_PRIVATE_MEDIA_FALLBACK', 'true')
     const fetchMock = stubResponses([
       { body: { id: 'family-1', translations: [], option_groups: [] }, status: 200 },
       { body: { id: 'family-1', status: 'ARCHIVED' }, status: 200 },

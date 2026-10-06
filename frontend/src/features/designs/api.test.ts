@@ -10,7 +10,10 @@ function stubJsonFetch(body: unknown) {
   return fetchMock
 }
 
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
+})
 
 describe('Design API contract', () => {
   it('creates a Shop design with the backend-required name and identifiers', async () => {
@@ -34,6 +37,7 @@ describe('Design API contract', () => {
   })
 
   it('uploads reference files using the backend images field', async () => {
+    vi.stubEnv('VITE_ENABLE_LEGACY_PRIVATE_MEDIA_FALLBACK', 'true')
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ detail: 'Private direct upload is not configured.' }), { status: 503, headers: { 'Content-Type': 'application/json' } }))
       .mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 201, headers: { 'Content-Type': 'application/json' } }))

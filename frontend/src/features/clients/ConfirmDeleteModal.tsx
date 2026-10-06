@@ -22,13 +22,13 @@ export function ConfirmDeleteModal({ isOpen, onClose, onConfirm, title, message 
   if (!isOpen) return null
 
   return (
-    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="delete-title">
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="delete-title" tabIndex={-1}>
       <div className="modal-content" style={{ maxWidth: 400 }}>
         <div className="modal-header" style={{ borderBottom: 'none', paddingBottom: 0 }}>
           <h2 id="delete-title" style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--color-danger)' }}>
             <AlertCircle size={20} /> {title}
           </h2>
-          <button className="modal-close" onClick={onClose} aria-label={t('clients.cancel')}>
+          <button data-dialog-close className="modal-close" onClick={onClose} aria-label={t('clients.cancel')}>
             <X size={20} />
           </button>
         </div>
@@ -40,7 +40,7 @@ export function ConfirmDeleteModal({ isOpen, onClose, onConfirm, title, message 
         </div>
         
         <div className="modal-footer" style={{ borderTop: 'none', paddingTop: 0 }}>
-          <button type="button" className="btn-secondary" onClick={onClose}>{t('clients.cancel')}</button>
+          <button data-dialog-close type="button" className="btn-secondary" onClick={onClose}>{t('clients.cancel')}</button>
           <button type="button" className="btn-primary" onClick={onConfirm} style={{ background: 'var(--color-danger)' }}>
             {t('clients.remove')}
           </button>

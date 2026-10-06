@@ -250,9 +250,9 @@ export function UsersPage() {
       )}
 
       {credentialsReveal && (
-        <div className="modal-overlay">
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="credentials-title" tabIndex={-1}>
           <div className="modal-content credentials-modal">
-            <h2>User Created Successfully</h2>
+            <h2 id="credentials-title">User Created Successfully</h2>
             <p className="warning-text">
               Please copy these generated credentials securely. 
               <strong> You will not be able to see this password again.</strong>
@@ -268,7 +268,7 @@ export function UsersPage() {
               </div>
             </div>
             <div className="modal-actions">
-              <button className="btn-primary" onClick={() => setCredentialsReveal(null)}>I have saved them</button>
+              <button data-dialog-close className="btn-primary" onClick={() => setCredentialsReveal(null)}>I have saved them</button>
             </div>
           </div>
         </div>

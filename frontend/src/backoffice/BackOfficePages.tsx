@@ -55,6 +55,7 @@ export function BackOfficeDashboard() {
 
 export function ShopListPage() {
   const { t } = useTranslation()
+  const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [active, setActive] = useState<'all' | 'true' | 'false'>('all')
@@ -64,6 +65,13 @@ export function ShopListPage() {
   const [hasNext, setHasNext] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      if (search !== searchInput.trim()) { setLoading(true); setSearch(searchInput.trim()) }
+    }, 250)
+    return () => window.clearTimeout(timer)
+  }, [searchInput, search])
 
   useEffect(() => {
     let current = true
@@ -84,7 +92,7 @@ export function ShopListPage() {
       subtitle={t('backoffice.shopCount', { count })}
       action={<Link className="primary-button bo-action" to="/backoffice/shops/new"><Plus size={17} />{t('backoffice.createShop')}</Link>} />
     <div className="bo-toolbar"><label htmlFor="bo-shop-search">{t('backoffice.searchShops')}</label>
-      <div className="bo-toolbar-controls"><input id="bo-shop-search" type="search" value={search} onChange={event => { setLoading(true); setSearch(event.target.value); setPage(1) }}
+      <div className="bo-toolbar-controls"><input id="bo-shop-search" type="search" value={searchInput} onChange={event => { setSearchInput(event.target.value); setPage(1) }}
         placeholder={t('backoffice.searchPlaceholder')} />
         <label className="bo-filter-field" htmlFor="bo-shop-status">{t('backoffice.filterStatus')}<select id="bo-shop-status" value={active} onChange={event => { setLoading(true); setActive(event.target.value as typeof active); setPage(1) }}><option value="all">{t('backoffice.allShops')}</option><option value="true">{t('backoffice.active')}</option><option value="false">{t('backoffice.inactive')}</option></select></label>
         <label className="bo-filter-field" htmlFor="bo-shop-order">{t('backoffice.sortBy')}<select id="bo-shop-order" value={ordering} onChange={event => { setLoading(true); setOrdering(event.target.value as typeof ordering); setPage(1) }}><option value="name">{t('backoffice.nameAscending')}</option><option value="-name">{t('backoffice.nameDescending')}</option><option value="-created_at">{t('backoffice.newest')}</option><option value="created_at">{t('backoffice.oldest')}</option></select></label>

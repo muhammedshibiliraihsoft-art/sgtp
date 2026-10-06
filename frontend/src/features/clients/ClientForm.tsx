@@ -49,11 +49,11 @@ export function ClientForm({ isOpen, onClose, onSave, initialValues, title, dupl
 
 
   return (
-    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabIndex={-1}>
       <div className="modal-content">
         <div className="modal-header">
           <h2 id="modal-title">{title}</h2>
-          <button className="modal-close" onClick={onClose} aria-label={t('clients.cancel')}>
+          <button data-dialog-close className="modal-close" onClick={onClose} aria-label={t('clients.cancel')}>
             <X size={20} />
           </button>
         </div>
@@ -97,7 +97,7 @@ export function ClientForm({ isOpen, onClose, onSave, initialValues, title, dupl
         </form>
         
         <div className="modal-footer">
-          <button type="button" className="btn-secondary" onClick={onClose}>{t('clients.cancel')}</button>
+          <button data-dialog-close type="button" className="btn-secondary" onClick={onClose}>{t('clients.cancel')}</button>
           <button type="button" className="btn-primary" onClick={handleSubmit} disabled={!name.trim()}>
             {t('clients.save')}
           </button>

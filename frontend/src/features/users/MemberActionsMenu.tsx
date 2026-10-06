@@ -11,10 +11,10 @@ export function MemberActionsMenu({ member, onAction, onClose }: Props) {
   return (
     <>
       <div className="modal-overlay" onClick={onClose} />
-      <div className="action-menu-container">
+      <div className="action-menu-container" role="dialog" aria-modal="true" aria-label={`Manage ${member.display_name}`} tabIndex={-1}>
         <div className="action-menu-header">
           <h3>Manage {member.display_name}</h3>
-          <button className="btn-icon" onClick={onClose}><X size={20} /></button>
+          <button data-dialog-close className="btn-icon" onClick={onClose} aria-label="Close actions"><X size={20} /></button>
         </div>
         
         <div className="action-menu-list">

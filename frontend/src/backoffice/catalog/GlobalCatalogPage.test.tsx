@@ -98,7 +98,7 @@ describe('Main Supplier Global Catalog Families', () => {
     fireEvent.change(screen.getByLabelText('Code'), { target: { value: 'band-collar' } })
     fireEvent.change(screen.getByLabelText('Option Groups'), { target: { value: 'group-1' } })
     const file = new File(['image'], 'band-collar.jpg', { type: 'image/jpeg' })
-    fireEvent.change(screen.getByLabelText(/Reference images/), { target: { files: [file] } })
+    fireEvent.change(screen.getByLabelText(/Reference image/), { target: { files: [file] } })
     fireEvent.click(screen.getByRole('button', { name: 'Create' }))
     await waitFor(() => expect(api.createGlobalStyleOption).toHaveBeenCalledWith({ option_group_id: 'group-1', code: 'band-collar', translations: [{ locale: 'en', name: 'Band Collar' }] }))
     await waitFor(() => expect(api.uploadGlobalStyleOptionImages).toHaveBeenCalledWith('style-1', [file]))

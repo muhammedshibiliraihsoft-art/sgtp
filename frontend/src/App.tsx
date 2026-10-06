@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState, useRef } from 'react'
+import { lazy, Suspense, useEffect, useState, useRef, useId } from 'react'
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -12,6 +12,8 @@ import {
 import './App.css'
 import { BrandLogo } from './components/BrandLogo'
 import { AuthProvider } from './services/AuthContext'
+import { CurrentShopProvider } from './hooks/useCurrentShop'
+import { DialogKeyboardManager } from './components/DialogKeyboardManager'
 import { useAuth } from './services/useAuth'
 import desktopImg from './assets/images/login/desktop.png'
 import phoneImg from './assets/images/login/phone.png'
@@ -89,7 +91,11 @@ function useTheme() {
 
 function CustomSelect({ value, options, onChange, icon, ariaLabel }: { value: string, options: {value: string, label: string}[], onChange: (val: string) => void, icon?: React.ReactNode, ariaLabel: string }) {
   const [isOpen, setIsOpen] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(0)
   const ref = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const optionRefs = useRef<Array<HTMLLIElement | null>>([])
+  const listboxId = useId()
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -101,17 +107,40 @@ function CustomSelect({ value, options, onChange, icon, ariaLabel }: { value: st
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
+  useEffect(() => {
+    if (isOpen) optionRefs.current[activeIndex]?.focus()
+  }, [isOpen, activeIndex])
+
   const selectedOption = options.find(o => o.value === value)
+  const openAt = (index: number) => {
+    if (!options.length) return
+    setActiveIndex(Math.max(0, Math.min(index, options.length - 1)))
+    setIsOpen(true)
+  }
+  const choose = (option: { value: string, label: string }) => {
+    onChange(option.value)
+    setIsOpen(false)
+    triggerRef.current?.focus()
+  }
 
   return (
     <div ref={ref} className="custom-select">
       <button
+        ref={triggerRef}
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => isOpen ? setIsOpen(false) : openAt(Math.max(0, options.findIndex(option => option.value === value)))}
         aria-label={ariaLabel}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
+        aria-controls={isOpen ? listboxId : undefined}
         className="select-trigger"
+        onKeyDown={event => {
+          if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault()
+            openAt(Math.max(0, options.findIndex(option => option.value === value)))
+          } else if (event.key === 'Home') { event.preventDefault(); openAt(0) }
+          else if (event.key === 'End') { event.preventDefault(); openAt(options.length - 1) }
+        }}
       >
         {icon}
         <span className="select-value">{selectedOption ? selectedOption.label : value}</span>
@@ -119,16 +148,26 @@ function CustomSelect({ value, options, onChange, icon, ariaLabel }: { value: st
       </button>
 
       {isOpen && (
-        <ul className="select-popover" role="listbox">
-          {options.map(option => (
+        <ul className="select-popover" id={listboxId} role="listbox" aria-label={ariaLabel}>
+          {options.map((option, index) => (
             <li
               key={option.value}
+              ref={element => { optionRefs.current[index] = element }}
               role="option"
               aria-selected={option.value === value}
+              tabIndex={activeIndex === index ? 0 : -1}
               className={`select-option ${option.value === value ? 'selected' : ''}`}
-              onClick={() => {
-                onChange(option.value)
-                setIsOpen(false)
+              onClick={() => choose(option)}
+              onKeyDown={event => {
+                let next: number | null = null
+                if (event.key === 'ArrowDown') next = (index + 1) % options.length
+                else if (event.key === 'ArrowUp') next = (index - 1 + options.length) % options.length
+                else if (event.key === 'Home') next = 0
+                else if (event.key === 'End') next = options.length - 1
+                else if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); choose(option) }
+                else if (event.key === 'Escape') { event.preventDefault(); setIsOpen(false); triggerRef.current?.focus() }
+                else if (event.key === 'Tab') setIsOpen(false)
+                if (next !== null) { event.preventDefault(); setActiveIndex(next) }
               }}
             >
               {option.label}
@@ -858,7 +897,7 @@ function Workspace() {
   if (isPasswordChange) return passwordChangeRequired ? <PasswordChangePage /> : user ? <Navigate to={user.is_main_supplier_admin ? '/backoffice' : '/'} replace /> : <Navigate to="/login" replace />
   if (!user || passwordChangeRequired) return <Navigate to={passwordChangeRequired ? '/password-change' : '/login'} replace />
 
-  if (user.is_main_supplier_admin) return <div className="app-shell">
+  if (user.is_main_supplier_admin) return <CurrentShopProvider><div className="app-shell">
     <BackOfficeSidebar isPinned={isSidebarPinned} setIsPinned={setIsSidebarPinned} />
     <main className="main-area">
       <TopHeader 
@@ -880,11 +919,11 @@ function Workspace() {
       </Routes></Suspense>
     </main>
     <BackOfficeBottomNavigation />
-  </div>
+  </div></CurrentShopProvider>
 
   if (location.pathname.startsWith('/backoffice')) return <Navigate to="/" replace />
 
-  return <div className="app-shell">
+  return <CurrentShopProvider><div className="app-shell">
     <DesktopSidebar isPinned={isSidebarPinned} setIsPinned={setIsSidebarPinned} />
     <main className="main-area">
       <TopHeader 
@@ -909,7 +948,7 @@ function Workspace() {
     </main>
     <BottomNavigation onMoreClick={() => setIsMoreOpen(true)} />
     <MoreSheet isOpen={isMoreOpen} onClose={() => setIsMoreOpen(false)} theme={theme} setTheme={setTheme} />
-  </div>
+  </div></CurrentShopProvider>
 }
 
 export default function App() {
@@ -919,5 +958,5 @@ export default function App() {
     document.documentElement.lang = language
     document.documentElement.dir = i18n.dir(language)
   }, [i18n, i18n.resolvedLanguage])
-  return <AuthProvider><Workspace /></AuthProvider>
+  return <AuthProvider><><DialogKeyboardManager /><Workspace /></></AuthProvider>
 }

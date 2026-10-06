@@ -19,6 +19,7 @@ import type {
   Variant,
   VariantDetail,
   VariantQuery,
+  VariantStatus,
 } from './types'
 
 async function getAllPages<T>(path: string): Promise<T[]> {
@@ -111,10 +112,19 @@ export function setGlobalVariantDefault(variantId: string): Promise<VariantDetai
   return apiRequest<VariantDetail>(`/api/v1/catalog/variants/${variantId}/set-default/`, { method: 'POST', body: {} })
 }
 
-export function getAllShopVariants(shopId: string, familyId?: string, locale = 'en'): Promise<Variant[]> {
+export function getAllShopVariants(shopId: string, familyId?: string, locale = 'en', status?: VariantStatus): Promise<Variant[]> {
   const url = new URL(`/api/v1/shops/${shopId}/catalog/variants/`, window.location.origin)
   if (familyId) url.searchParams.set('family', familyId)
   url.searchParams.set('locale', locale)
+  if (status && status !== 'ACTIVE') url.searchParams.set('status', status)
+  return getAllPages<Variant>(url.pathname + url.search)
+}
+
+export function getAllGlobalVariants(familyId?: string, locale = 'en', status?: VariantStatus): Promise<Variant[]> {
+  const url = new URL('/api/v1/catalog/variants/', window.location.origin)
+  if (familyId) url.searchParams.set('family', familyId)
+  url.searchParams.set('locale', locale)
+  if (status && status !== 'ACTIVE') url.searchParams.set('status', status)
   return getAllPages<Variant>(url.pathname + url.search)
 }
 
@@ -161,6 +171,7 @@ export async function toggleShopStyleOptionActive(shopId: string, optionId: stri
 }
 
 export async function uploadShopStyleOptionImages(shopId: string, optionId: string, files: File[], onProgress?: (fileIndex: number, percent: number) => void): Promise<StyleImage[]> {
+  if (files.length !== 1) throw new Error('Upload exactly one image per style option.')
   const legacyPath = `/api/v1/shops/${shopId}/catalog/style-options/${optionId}/reference-images/`
   return uploadPrivateMediaBatch<StyleImage[]>({
     path: `/api/v1/shops/${shopId}/catalog/media/uploads/`, kind: 'style_option', targetId: optionId, files, onProgress,
@@ -188,6 +199,7 @@ export async function toggleGlobalStyleOptionActive(optionId: string, is_active:
 }
 
 export async function uploadGlobalStyleOptionImages(optionId: string, files: File[]): Promise<StyleImage[]> {
+  if (files.length !== 1) throw new Error('Upload exactly one image per style option.')
   const legacyPath = `/api/v1/catalog/style-options/${optionId}/reference-images/`
   return uploadPrivateMediaBatch<StyleImage[]>({
     path: '/api/v1/catalog/media/uploads/', kind: 'style_option', targetId: optionId, files,

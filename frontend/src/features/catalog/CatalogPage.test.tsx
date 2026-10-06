@@ -79,7 +79,7 @@ describe('Shop Catalog garment families', () => {
     fireEvent.change(screen.getByLabelText('Name (English)'), { target: { value: 'Band Collar' } })
     fireEvent.change(screen.getByLabelText(/Code/), { target: { value: 'band-collar' } })
     const file = new File(['image'], 'band-collar.jpg', { type: 'image/jpeg' })
-    fireEvent.change(screen.getByLabelText(/Reference images/), { target: { files: [file] } })
+    fireEvent.change(screen.getByLabelText(/Reference image/), { target: { files: [file] } })
     fireEvent.click(screen.getByRole('button', { name: 'Create' }))
 
     await waitFor(() => expect(api.createShopStyleOption).toHaveBeenCalledWith('shop-1', {
@@ -111,7 +111,7 @@ describe('Shop Catalog garment families', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'New Style option' }))
     fireEvent.change(screen.getByLabelText('Name (English)'), { target: { value: 'Button Collar' } })
     fireEvent.change(screen.getByLabelText(/Code/), { target: { value: 'button-collar' } })
-    fireEvent.change(screen.getByLabelText(/Reference images/), {
+    fireEvent.change(screen.getByLabelText(/Reference image/), {
       target: { files: [new File(['image'], 'button-collar.jpg', { type: 'image/jpeg' })] },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Create' }))
@@ -138,7 +138,7 @@ describe('Shop Catalog garment families', () => {
     await waitFor(() => expect(api.updateShopStyleOptionTranslations).toHaveBeenCalledWith('shop-1', 'style-1', [{ locale: 'en', name: 'Classic Band Collar' }]))
     expect(await screen.findByRole('status')).toHaveTextContent('Style option name saved.')
 
-    fireEvent.change(screen.getByLabelText('Add reference images'), { target: { files: [new File(['image'], 'collar.png', { type: 'image/png' })] } })
+    fireEvent.change(screen.getByLabelText('Add or replace image'), { target: { files: [new File(['image'], 'collar.png', { type: 'image/png' })] } })
     await waitFor(() => expect(api.uploadShopStyleOptionImages).toHaveBeenCalledWith('shop-1', 'style-1', expect.any(Array), expect.any(Function)))
     expect(await screen.findByText('Reference images uploaded successfully.')).toBeInTheDocument()
   })
@@ -150,6 +150,6 @@ describe('Shop Catalog garment families', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Spread Collar.*spread.*Global/i }))
     expect(screen.getByText('Global style defaults are managed by the Main Supplier.')).toBeInTheDocument()
     expect(screen.queryByLabelText('Name (English)')).not.toBeInTheDocument()
-    expect(screen.queryByLabelText('Add reference images')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Add or replace image')).not.toBeInTheDocument()
   })
 })

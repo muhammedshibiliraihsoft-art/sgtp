@@ -48,7 +48,7 @@ describe('Global template reusable style references', () => {
   it('uploads a reusable Style Option image from the Design template page', async () => {
     render(<MemoryRouter initialEntries={['/templates/design-1']}><Routes><Route path="/templates/:designId" element={<GlobalTemplateEditor />} /></Routes></MemoryRouter>)
     const file = new File(['image'], 'band-collar.jpg', { type: 'image/jpeg' })
-    fireEvent.change(await screen.findByLabelText('Add reusable image for Band Collar'), { target: { files: [file] } })
+    fireEvent.change(await screen.findByLabelText('Add or replace reusable image for Band Collar'), { target: { files: [file] } })
     await waitFor(() => expect(api.uploadGlobalStyleOptionImages).toHaveBeenCalledWith('style-1', [file]))
     expect(api.getAllGlobalStyleOptions).toHaveBeenCalledTimes(2)
   })

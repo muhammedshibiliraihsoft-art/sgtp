@@ -76,8 +76,8 @@ describe('UsersPage', () => {
     fireEvent.click(roleSelectButton) // Open dropdown
     
     // Check that STAFF and VIEWER are available options
-    expect(screen.getAllByRole('button', { name: /Staff \(Operational access\)/i }).length).toBeGreaterThan(0)
-    expect(screen.getAllByRole('button', { name: /Viewer \(Read-only\)/i }).length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('option', { name: /Staff \(Operational access\)/i }).length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('option', { name: /Viewer \(Read-only\)/i }).length).toBeGreaterThan(0)
     
     // Check that ADMIN is NOT available
     expect(screen.queryByRole('button', { name: /Admin/i })).not.toBeInTheDocument()

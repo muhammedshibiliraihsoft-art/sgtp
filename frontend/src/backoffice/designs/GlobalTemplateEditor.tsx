@@ -115,7 +115,7 @@ export function GlobalTemplateEditor() {
   }
 
   async function handleStyleOptionImageUpload(styleOptionId: string, event: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(event.target.files ?? [])
+    const files = event.target.files?.[0] ? [event.target.files[0]] : []
     if (!files.length) return
     setUploadingStyleOptionId(styleOptionId)
     setError(null)
@@ -141,7 +141,7 @@ export function GlobalTemplateEditor() {
         <div className="design-editor-main">
           <section className="design-panel">
             <div className="design-panel-heading"><h2>Selections</h2>{isDraft && <button className="secondary-button" onClick={() => setSelectionOpen(true)}><Check size={15} /> Add selection</button>}</div>
-            {latest.selections.length === 0 ? <p className="design-muted">No style selections yet.</p> : <ul className="design-selection-list">{latest.selections.map(selection => <li key={selection.id}><span>{groupNames.get(selection.option_group) ?? selection.option_group}</span><strong>{selection.style_option_name}</strong>{isDraft && <label className="secondary-button design-upload">{uploadingStyleOptionId === selection.style_option ? <Loader2 className="animate-spin" size={15} /> : <ImagePlus size={15} />} Add reusable image<input aria-label={`Add reusable image for ${selection.style_option_name}`} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden disabled={uploadingStyleOptionId === selection.style_option} onChange={event => void handleStyleOptionImageUpload(selection.style_option, event)} /></label>}</li>)}</ul>}
+            {latest.selections.length === 0 ? <p className="design-muted">No style selections yet.</p> : <ul className="design-selection-list">{latest.selections.map(selection => <li key={selection.id}><span>{groupNames.get(selection.option_group) ?? selection.option_group}</span><strong>{selection.style_option_name}</strong>{isDraft && <label className="secondary-button design-upload">{uploadingStyleOptionId === selection.style_option ? <Loader2 className="animate-spin" size={15} /> : <ImagePlus size={15} />} Add or replace reusable image<input aria-label={`Add or replace reusable image for ${selection.style_option_name}`} type="file" accept="image/jpeg,image/png,image/webp" hidden disabled={uploadingStyleOptionId === selection.style_option} onChange={event => void handleStyleOptionImageUpload(selection.style_option, event)} /></label>}</li>)}</ul>}
           </section>
           <section className="design-panel">
             <div className="design-panel-heading"><h2>Reference images</h2>{isDraft && <label className="secondary-button design-upload">{isUploading ? <Loader2 className="animate-spin" size={16} /> : <Upload size={16} />} Upload<input type="file" accept="image/jpeg,image/png,image/webp" multiple hidden disabled={isUploading} onChange={event => void handleUpload(event)} /></label>}</div>

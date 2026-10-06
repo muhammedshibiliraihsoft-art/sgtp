@@ -55,7 +55,20 @@ function renderPage(path = `/clients/${client.id}/measurements`) {
     <Route path="/clients/:clientId/measurements" element={<ClientMeasurementsPage />} />
     <Route path="/backoffice/measurements" element={<ClientMeasurementsPage />} />
     <Route path="/measurements" element={<ClientMeasurementsPage />} />
-  </Routes></MemoryRouter>)
+</Routes></MemoryRouter>)
+}
+
+async function chooseDropdownOption(label: string, optionValue: string) {
+  const optionLabels: Record<string, string> = {
+    [family.id]: family.name,
+    [secondFamily.id]: secondFamily.name,
+    [variant.id]: 'Standard Shirt · Default',
+    'variant-2': 'Slim Shirt · Default',
+    [relatedPerson.id]: 'Related Person - Sara',
+    'shop-1': 'Test Shop',
+  }
+  fireEvent.click(await screen.findByLabelText(label))
+  fireEvent.click(await screen.findByRole('option', { name: optionLabels[optionValue] }))
 }
 
 describe('Client Measurement workflow', () => {
@@ -89,14 +102,32 @@ describe('Client Measurement workflow', () => {
 
   afterEach(cleanup)
 
+  it('filters family designs locally when variant changes without repeating design requests', async () => {
+    const otherVariant = { ...variant, id: 'variant-2', name: 'Slim Shirt', code: 'slim-shirt' }
+    mock.getAllShopVariants.mockResolvedValue([variant, otherVariant])
+    mock.getAllShopDesigns.mockResolvedValue([
+      { id: 'design-1', name: 'Standard design', variant: variant.id },
+      { id: 'design-2', name: 'Slim design', variant: otherVariant.id },
+    ])
+    renderPage()
+    await chooseDropdownOption('Garment family', family.id)
+    await waitFor(() => expect(mock.getAllShopDesigns).toHaveBeenCalledTimes(1))
+    await chooseDropdownOption('Variant', otherVariant.id)
+    fireEvent.click(screen.getByLabelText('Shop design / Global template'))
+    expect(await screen.findByRole('option', { name: /Slim design/ })).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: /Standard design/ })).not.toBeInTheDocument()
+    expect(mock.getAllShopDesigns).toHaveBeenCalledTimes(1)
+    expect(mock.getAllGlobalDesigns).toHaveBeenCalledTimes(1)
+  })
+
   it('loads real catalog data and saves a new version with an explicit per-field unit', async () => {
     renderPage()
     expect(await screen.findByRole('heading', { name: /Measurements · Amina/ })).toBeInTheDocument()
     expect(mock.clientDetail).toHaveBeenCalledWith('shop-1', client.id)
 
-    fireEvent.change(screen.getByLabelText('Garment family'), { target: { value: family.id } })
+    await chooseDropdownOption('Garment family', family.id)
     await waitFor(() => expect(mock.getOptionGroups).toHaveBeenCalledWith(family.id, 'en'))
-    fireEvent.change(screen.getByLabelText('Variant'), { target: { value: variant.id } })
+    await chooseDropdownOption('Variant', variant.id)
     fireEvent.click(await screen.findByRole('button', { name: /Sleeve/ }))
     fireEvent.click(await screen.findByRole('button', { name: /Full Sleeve/ }))
 
@@ -127,8 +158,8 @@ describe('Client Measurement workflow', () => {
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
 
     renderPage()
-    fireEvent.change(await screen.findByLabelText('Garment family'), { target: { value: family.id } })
-    fireEvent.change(screen.getByLabelText('Variant'), { target: { value: variant.id } })
+    await chooseDropdownOption('Garment family', family.id)
+    await chooseDropdownOption('Variant', variant.id)
     fireEvent.click(await screen.findByRole('button', { name: /Open existing profile/ }))
     const exportButton = await screen.findByRole('button', { name: 'Export Version 1 PDF' })
     fireEvent.click(exportButton)
@@ -151,8 +182,8 @@ describe('Client Measurement workflow', () => {
     mock.saveSet.mockImplementationOnce(() => new Promise(resolve => { finishSave = resolve }))
 
     renderPage()
-    fireEvent.change(await screen.findByLabelText('Garment family'), { target: { value: family.id } })
-    fireEvent.change(screen.getByLabelText('Variant'), { target: { value: variant.id } })
+    await chooseDropdownOption('Garment family', family.id)
+    await chooseDropdownOption('Variant', variant.id)
     fireEvent.click(await screen.findByRole('button', { name: /Open existing profile/ }))
     fireEvent.change(await screen.findByLabelText('Chest'), { target: { value: '100' } })
     fireEvent.click(screen.getByRole('button', { name: 'Chest unit: CM' }))
@@ -175,8 +206,8 @@ describe('Client Measurement workflow', () => {
     mock.getShopDesign.mockResolvedValue(saved)
 
     renderPage()
-    fireEvent.change(await screen.findByLabelText('Garment family'), { target: { value: family.id } })
-    fireEvent.change(screen.getByLabelText('Variant'), { target: { value: variant.id } })
+    await chooseDropdownOption('Garment family', family.id)
+    await chooseDropdownOption('Variant', variant.id)
     fireEvent.click(await screen.findByRole('button', { name: /Sleeve/ }))
     fireEvent.click(await screen.findByRole('button', { name: /Full Sleeve/ }))
     fireEvent.change(screen.getByLabelText('Design name'), { target: { value: 'Amina Shirt' } })
@@ -193,9 +224,9 @@ describe('Client Measurement workflow', () => {
     mock.createProfile.mockResolvedValue({ ...profile, id: 'related-profile', client: null, related_person: relatedPerson.id })
     renderPage()
 
-    fireEvent.change(await screen.findByLabelText('Person being measured'), { target: { value: relatedPerson.id } })
+    await chooseDropdownOption('Person being measured', relatedPerson.id)
     await waitFor(() => expect(mock.profiles).toHaveBeenCalledWith('shop-1', client.id, { kind: 'related_person', id: relatedPerson.id }))
-    fireEvent.change(screen.getByLabelText('Garment family'), { target: { value: family.id } })
+    await chooseDropdownOption('Garment family', family.id)
     fireEvent.click(await screen.findByRole('button', { name: 'Create profile' }))
 
     await waitFor(() => expect(mock.createProfile).toHaveBeenCalledWith('shop-1', client.id, { kind: 'related_person', id: relatedPerson.id }, family.id, null))
@@ -210,7 +241,7 @@ describe('Client Measurement workflow', () => {
 
   it('requires a user-selected unit before it saves a measurement version', async () => {
     renderPage()
-    fireEvent.change(await screen.findByLabelText('Garment family'), { target: { value: family.id } })
+    await chooseDropdownOption('Garment family', family.id)
     fireEvent.click(await screen.findByRole('button', { name: 'Create profile' }))
     fireEvent.change(await screen.findByLabelText('Chest'), { target: { value: '61.2500' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save new version' }))
@@ -221,19 +252,22 @@ describe('Client Measurement workflow', () => {
 
   it('clears unsaved values when the selected garment family changes', async () => {
     mock.getAllFamilies.mockResolvedValue([family, secondFamily])
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
     renderPage()
-    fireEvent.change(await screen.findByLabelText('Garment family'), { target: { value: family.id } })
+    await chooseDropdownOption('Garment family', family.id)
     fireEvent.click(await screen.findByRole('button', { name: 'Create profile' }))
     fireEvent.change(await screen.findByLabelText('Chest'), { target: { value: '61.2500' } })
     fireEvent.click(screen.getByRole('button', { name: 'Chest unit: INCH' }))
 
-    fireEvent.change(screen.getByLabelText('Garment family'), { target: { value: secondFamily.id } })
+    await chooseDropdownOption('Garment family', secondFamily.id)
     await waitFor(() => expect(mock.definitions).toHaveBeenCalledWith('shop-1', secondFamily.id, null, 'en'))
+    expect(confirm).toHaveBeenCalledWith('Discard unsaved measurement values?')
     fireEvent.click(await screen.findByRole('button', { name: 'Create profile' }))
 
     expect((await screen.findByLabelText('Chest') as HTMLInputElement).value).toBe('')
     expect(screen.getByRole('button', { name: 'Chest unit: CM' })).toHaveAttribute('aria-pressed', 'false')
     expect(screen.getByRole('button', { name: 'Chest unit: INCH' })).toHaveAttribute('aria-pressed', 'false')
+    confirm.mockRestore()
   })
 
   it('prevents a second copy request while the first one is pending', async () => {
@@ -242,8 +276,8 @@ describe('Client Measurement workflow', () => {
     let completeCopy: ((value: ReturnType<typeof makeSet>) => void) | undefined
     mock.copySet.mockImplementation(() => new Promise(resolve => { completeCopy = resolve }))
     renderPage()
-    fireEvent.change(await screen.findByLabelText('Garment family'), { target: { value: family.id } })
-    fireEvent.change(screen.getByLabelText('Variant'), { target: { value: variant.id } })
+    await chooseDropdownOption('Garment family', family.id)
+    await chooseDropdownOption('Variant', variant.id)
     fireEvent.click(await screen.findByRole('button', { name: /Open existing profile/ }))
 
     const copyButton = await screen.findByRole('button', { name: /Copy as a new immutable version/ })
@@ -262,8 +296,8 @@ describe('Client Measurement workflow', () => {
       makeSet('set-1', 1, '100', 'CM'),
     ])
     renderPage()
-    fireEvent.change(await screen.findByLabelText('Garment family'), { target: { value: family.id } })
-    fireEvent.change(screen.getByLabelText('Variant'), { target: { value: variant.id } })
+    await chooseDropdownOption('Garment family', family.id)
+    await chooseDropdownOption('Variant', variant.id)
     fireEvent.click(await screen.findByRole('button', { name: /Open existing profile/ }))
     fireEvent.click(await screen.findByRole('button', { name: 'Compare versions' }))
 
@@ -274,8 +308,8 @@ describe('Client Measurement workflow', () => {
     mock.profiles.mockResolvedValue([profile])
     mock.sets.mockResolvedValue([makeSet('set-2', 2, '42', 'INCH'), makeSet('set-1', 1, '100', 'CM')])
     renderPage()
-    fireEvent.change(await screen.findByLabelText('Garment family'), { target: { value: family.id } })
-    fireEvent.change(screen.getByLabelText('Variant'), { target: { value: variant.id } })
+    await chooseDropdownOption('Garment family', family.id)
+    await chooseDropdownOption('Variant', variant.id)
     fireEvent.click(await screen.findByRole('button', { name: /Open existing profile/ }))
 
     expect(await screen.findByRole('heading', { name: 'Measurement history' })).toBeInTheDocument()
@@ -293,7 +327,7 @@ describe('Client Measurement workflow', () => {
     const supplierView = renderPage('/backoffice/measurements')
     expect(await screen.findByLabelText('Choose a Shop')).toBeInTheDocument()
     expect(mock.definitions).not.toHaveBeenCalled()
-    fireEvent.change(screen.getByLabelText('Choose a Shop'), { target: { value: 'shop-1' } })
+    await chooseDropdownOption('Choose a Shop', 'shop-1')
     expect(await screen.findByPlaceholderText('Search clients by name or phone')).toBeInTheDocument()
     supplierView.unmount()
 

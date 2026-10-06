@@ -42,18 +42,16 @@ export function StyleConfiguration({
           {loadingGroupId === group.id ? <div className="measurement-empty" aria-busy="true">{t('measurements.loadingOptions')}</div>
             : groupErrorId === group.id ? <div className="measurement-error-inline" role="alert"><span>{t('measurements.optionLoadError', { name: group.name })}</span><button type="button" className="btn-secondary" onClick={() => onRetryGroup(group.id)}>{t('measurements.retry')}</button></div>
               : (optionsByGroup[group.id] ?? []).length === 0 ? <div className="measurement-empty">{t('measurements.noOptions')}</div>
-                : <div className="measurement-option-grid">{(optionsByGroup[group.id] ?? []).map(option => <button
-                  type="button"
+                : <div className="measurement-option-grid">{(optionsByGroup[group.id] ?? []).map(option => <article
                   className={`measurement-option-card${current.some(item => item.id === option.id) ? ' is-selected' : ''}`}
                   key={option.id}
-                  aria-pressed={current.some(item => item.id === option.id)}
-                  onClick={() => onSelectOption(group.id, option)}
-                  disabled={!canWrite}
                 >
                   <PrivateReferenceGallery images={option.reference_images} alt={t('measurements.referenceAlt', { name: option.name })} />
-                  <span className="measurement-option-copy"><strong>{option.name}</strong><small>{option.code}</small></span>
-                  <span className="measurement-option-source">{option.is_global ? t('measurements.global') : t('measurements.shop')}</span>
-                </button>)}</div>}
+                  <button type="button" className="measurement-option-select" aria-pressed={current.some(item => item.id === option.id)} onClick={() => onSelectOption(group.id, option)} disabled={!canWrite}>
+                    <span className="measurement-option-copy"><strong>{option.name}</strong><small>{option.code}</small></span>
+                    <span className="measurement-option-source">{option.is_global ? t('measurements.global') : t('measurements.shop')}</span>
+                  </button>
+                </article>)}</div>}
         </div>}
       </section>
     })}

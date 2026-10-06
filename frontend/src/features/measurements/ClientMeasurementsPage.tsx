@@ -5,6 +5,7 @@ import { Archive, ChevronRight, Copy, Download, Ruler, Save } from 'lucide-react
 import { apiRequest } from '../../services/apiClient'
 import { useCurrentShop } from '../../hooks/useCurrentShop'
 import { useAuth } from '../../services/useAuth'
+import { CustomSelect } from '../../components/CustomSelect'
 import { shopsService, type ShopSummary } from '../../services/shops'
 import { clientsApi } from '../clients/api'
 import type { Client, RelatedPerson } from '../clients/types'
@@ -101,8 +102,8 @@ export function ClientMeasurementsPage() {
   const [optionsByGroup, setOptionsByGroup] = useState<Record<string, StyleOption[]>>({})
   const [loadingGroupId, setLoadingGroupId] = useState<string | null>(null)
   const [groupErrorId, setGroupErrorId] = useState<string | null>(null)
-  const [shopDesigns, setShopDesigns] = useState<Design[]>([])
-  const [globalDesigns, setGlobalDesigns] = useState<Design[]>([])
+  const [familyShopDesigns, setFamilyShopDesigns] = useState<Design[]>([])
+  const [familyGlobalDesigns, setFamilyGlobalDesigns] = useState<Design[]>([])
   const [selectedDesign, setSelectedDesign] = useState<Design | null>(null)
   const [designName, setDesignName] = useState('')
   const [designSaving, setDesignSaving] = useState(false)
@@ -119,6 +120,7 @@ export function ClientMeasurementsPage() {
   const [sets, setSets] = useState<MeasurementSet[]>([])
   const [selectedSetId, setSelectedSetId] = useState('')
   const [draftValues, setDraftValues] = useState<Record<string, DraftValue>>({})
+  const [draftSeedVersion, setDraftSeedVersion] = useState(0)
   const [historyLoading, setHistoryLoading] = useState(false)
   const [savingProfile, setSavingProfile] = useState(false)
   const [savingMeasurements, setSavingMeasurements] = useState(false)
@@ -128,6 +130,7 @@ export function ClientMeasurementsPage() {
   const [compareTo, setCompareTo] = useState('')
   const [comparison, setComparison] = useState<MeasurementComparison | null>(null)
   const [comparing, setComparing] = useState(false)
+  const draftDirtyRef = useRef(false)
 
   const [showFabrics, setShowFabrics] = useState(false)
   const [fabrics, setFabrics] = useState<InventoryFabric[]>([])
@@ -139,11 +142,16 @@ export function ClientMeasurementsPage() {
   const [reloadKey, setReloadKey] = useState(0)
 
   const variantsForFamily = useMemo(() => variants.filter(item => item.family === familyId && item.is_active), [variants, familyId])
+  const shopDesigns = useMemo(() => familyShopDesigns.filter(item => !variantId || item.variant === variantId), [familyShopDesigns, variantId])
+  const globalDesigns = useMemo(() => familyGlobalDesigns.filter(item => !variantId || item.variant === variantId), [familyGlobalDesigns, variantId])
   const family = families.find(item => item.id === familyId) ?? null
   const variant = variants.find(item => item.id === variantId) ?? null
   const wearer = relatedPersons.find(item => item.id === wearerId) ?? null
   const owner = useMemo(() => makeOwner(wearerId), [wearerId])
   const selectedSet = sets.find(item => item.id === selectedSetId) ?? sets[0] ?? null
+  const previousValues = useMemo(() => Object.fromEntries(
+    (sets[0]?.values ?? []).map(value => [value.definition, { value: value.value, unit: value.unit }]),
+  ), [sets])
   const optionScope = `${shopId}:${familyId}`
   const optionScopeRef = useRef(optionScope)
   const optionRequests = useRef(new Set<string>())
@@ -153,6 +161,49 @@ export function ClientMeasurementsPage() {
   const copyInFlight = useRef(false)
   const designSaveInFlight = useRef(false)
   const matchingProfile = profiles.find(item => item.family === familyId && item.variant === (variantId || null)) ?? null
+
+  const onDraftDirtyChange = useCallback((dirty: boolean) => {
+    draftDirtyRef.current = dirty
+  }, [])
+
+  const replaceDraftValues = useCallback((next: Record<string, DraftValue>) => {
+    draftDirtyRef.current = false
+    setDraftValues(next)
+    setDraftSeedVersion(version => version + 1)
+  }, [])
+
+  const confirmDiscardDraft = useCallback(() => {
+    if (!draftDirtyRef.current) return true
+    const discard = window.confirm(t('measurements.discardDraftConfirm', 'Discard unsaved measurement values?'))
+    if (discard) draftDirtyRef.current = false
+    return discard
+  }, [t])
+
+  useEffect(() => {
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!draftDirtyRef.current) return
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', warnBeforeUnload)
+    return () => window.removeEventListener('beforeunload', warnBeforeUnload)
+  }, [])
+
+  useEffect(() => {
+    const confirmInternalNavigation = (event: MouseEvent) => {
+      if (!draftDirtyRef.current || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+      if (!(event.target instanceof Element)) return
+      const link = event.target.closest<HTMLAnchorElement>('a[href]')
+      if (!link || (link.target && link.target !== '_self')) return
+      if (link.href.startsWith('javascript:')) return
+      if (!confirmDiscardDraft()) {
+        event.preventDefault()
+        event.stopImmediatePropagation()
+      }
+    }
+    document.addEventListener('click', confirmInternalNavigation, true)
+    return () => document.removeEventListener('click', confirmInternalNavigation, true)
+  }, [confirmDiscardDraft])
 
   useEffect(() => {
     optionScopeRef.current = optionScope
@@ -319,8 +370,8 @@ export function ClientMeasurementsPage() {
 
   useEffect(() => {
     if (!shopId || !familyId || !canReadMeasurements) {
-      setShopDesigns([])
-      setGlobalDesigns([])
+      setFamilyShopDesigns([])
+      setFamilyGlobalDesigns([])
       return
     }
     let active = true
@@ -329,13 +380,13 @@ export function ClientMeasurementsPage() {
       getAllGlobalDesigns(familyId, locale),
     ]).then(([localDesignRows, globalDesignRows]) => {
       if (!active) return
-      setShopDesigns(localDesignRows.filter(item => !variantId || item.variant === variantId))
-      setGlobalDesigns(globalDesignRows.filter(item => !variantId || item.variant === variantId))
+      setFamilyShopDesigns(localDesignRows)
+      setFamilyGlobalDesigns(globalDesignRows)
     }).catch(cause => {
       if (active) setError(cause instanceof Error ? cause.message : t('measurements.loadError'))
     })
     return () => { active = false }
-  }, [shopId, familyId, variantId, canReadMeasurements, locale, reloadKey, t])
+  }, [shopId, familyId, canReadMeasurements, locale, reloadKey, t])
 
   useEffect(() => {
     if (!shopId || !canReadMeasurements || !activeClientId || !profileId) {
@@ -381,13 +432,14 @@ export function ClientMeasurementsPage() {
   }, [shopId, familyId, locale, optionsByGroup])
 
   const handleFamilyChange = (nextFamilyId: string) => {
+    if (!confirmDiscardDraft()) return
     setFamilyId(nextFamilyId)
     setVariantId('')
     setProfileId('')
     setSets([])
     setSelectedSetId('')
     setDefinitions([])
-    setDraftValues({})
+    replaceDraftValues({})
     setGroups([])
     setOptionsByGroup({})
     setActiveGroupId(null)
@@ -402,11 +454,12 @@ export function ClientMeasurementsPage() {
   }
 
   const handleVariantChange = (nextVariantId: string) => {
+    if (!confirmDiscardDraft()) return
     setVariantId(nextVariantId)
     setProfileId('')
     setSets([])
     setSelectedSetId('')
-    setDraftValues({})
+    replaceDraftValues({})
     setSelectedDesign(null)
     setSelectedStyles({})
     setDesignName('')
@@ -415,6 +468,7 @@ export function ClientMeasurementsPage() {
   }
 
   const selectClient = (nextClient: Client) => {
+    if (!confirmDiscardDraft()) return
     setActiveClientId(nextClient.id)
     setClient(nextClient)
     setWearerId('client')
@@ -422,7 +476,7 @@ export function ClientMeasurementsPage() {
     setProfileId('')
     setSets([])
     setSelectedSetId('')
-    setDraftValues({})
+    replaceDraftValues({})
     setDefinitions([])
     setGroups([])
     setOptionsByGroup({})
@@ -465,21 +519,21 @@ export function ClientMeasurementsPage() {
     }
   }
 
-  const saveMeasurements = async () => {
+  const saveMeasurements = useCallback(async (values: Record<string, DraftValue>): Promise<boolean> => {
     if (
       !shopId
       || !activeClientId
       || !profileId
       || !canWriteMeasurements
       || measurementSaveInFlight.current
-    ) return
-    const entered = definitions.filter(definition => draftValues[definition.id]?.value.trim())
+    ) return false
+    const entered = definitions.filter(definition => values[definition.id]?.value.trim())
     if (!entered.length || entered.some(definition => (
-      !/^-?\d+(?:\.\d{1,4})?$/.test(draftValues[definition.id].value.trim())
-      || !draftValues[definition.id].unit
+      !/^-?\d+(?:\.\d{1,4})?$/.test(values[definition.id].value.trim())
+      || !values[definition.id].unit
     ))) {
       setError(t('measurements.enterValue'))
-      return
+      return false
     }
     measurementSaveInFlight.current = true
     setSavingMeasurements(true)
@@ -488,20 +542,22 @@ export function ClientMeasurementsPage() {
     try {
       const created = await measurementApi.saveSet(shopId, activeClientId, owner, profileId, entered.map(definition => ({
         definition_id: definition.id,
-        value: draftValues[definition.id].value.trim(),
-        unit: draftValues[definition.id].unit as 'CM' | 'INCH',
+        value: values[definition.id].value.trim(),
+        unit: values[definition.id].unit as 'CM' | 'INCH',
       })))
       setSets(current => [created, ...current.filter(item => item.id !== created.id)])
       setSelectedSetId(created.id)
-      setDraftValues({})
+      replaceDraftValues({})
       setNotice(t('measurements.versionSaved'))
+      return true
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t('measurements.saveError'))
+      return false
     } finally {
       measurementSaveInFlight.current = false
       setSavingMeasurements(false)
     }
-  }
+  }, [shopId, activeClientId, profileId, canWriteMeasurements, definitions, owner, replaceDraftValues, t])
 
   const exportMeasurementWorksheet = async () => {
     if (!shopId || !activeClientId || !profileId || !selectedSet || worksheetExportInFlight.current) return
@@ -541,6 +597,8 @@ export function ClientMeasurementsPage() {
       || !canWriteMeasurements
       || copyInFlight.current
     ) return
+    if (!confirmDiscardDraft()) return
+    replaceDraftValues({})
     copyInFlight.current = true
     setCopyingSetId(set.id)
     setError('')
@@ -549,7 +607,7 @@ export function ClientMeasurementsPage() {
       const copied = await measurementApi.copySet(shopId, activeClientId, owner, profileId, set.id)
       setSets(current => [copied, ...current.filter(item => item.id !== copied.id)])
       setSelectedSetId(copied.id)
-      setDraftValues(Object.fromEntries(copied.values.map(value => [value.definition, { value: value.value, unit: value.unit }])))
+      replaceDraftValues(Object.fromEntries(copied.values.map(value => [value.definition, { value: value.value, unit: value.unit }])))
       setNotice(t('measurements.copySaved'))
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t('measurements.copyError'))
@@ -560,7 +618,8 @@ export function ClientMeasurementsPage() {
   }
 
   const setDraftFromMeasurementSet = (set: MeasurementSet) => {
-    setDraftValues(Object.fromEntries(set.values.map(value => [value.definition, { value: value.value, unit: value.unit }])))
+    if (!confirmDiscardDraft()) return
+    replaceDraftValues(Object.fromEntries(set.values.map(value => [value.definition, { value: value.value, unit: value.unit }])))
     setNotice(t('measurements.useAsStartingPoint'))
   }
 
@@ -689,6 +748,7 @@ export function ClientMeasurementsPage() {
   }
 
   const selectSupplierShop = (nextShopId: string) => {
+    if (!confirmDiscardDraft()) return
     setSupplierShopId(nextShopId)
     setActiveClientId('')
     setClient(null)
@@ -700,6 +760,8 @@ export function ClientMeasurementsPage() {
     setProfileId('')
     setProfiles([])
     setSets([])
+    setSelectedSetId('')
+    replaceDraftValues({})
     setGroups([])
     setSelectedStyles({})
     setSelectedDesign(null)
@@ -726,10 +788,10 @@ export function ClientMeasurementsPage() {
 
     {isMainSupplier && <section className="measurement-context-card info-card">
       <label htmlFor="measurement-shop-select">{t('measurements.chooseShop')}</label>
-      <select id="measurement-shop-select" value={supplierShopId} onChange={event => selectSupplierShop(event.target.value)}>
-        <option value="">{t('measurements.chooseShop')}</option>
-        {supplierShops.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
-      </select>
+      <CustomSelect id="measurement-shop-select" className="measurement-select" ariaLabel={t('measurements.chooseShop')} value={supplierShopId} onChange={selectSupplierShop} options={[
+        { value: '', label: t('measurements.chooseShop') },
+        ...supplierShops.map(item => ({ value: item.id, label: item.name })),
+      ]} />
       <small>{t('measurements.chooseShopHint')}</small>
     </section>}
 
@@ -740,7 +802,7 @@ export function ClientMeasurementsPage() {
     {isContextLoading ? <div className="measurement-empty" aria-busy="true">{t('measurements.loading')}</div>
       : !shopId ? <div className="measurement-empty" role="status">{t('measurements.noShop')}</div>
         : !canReadMeasurements ? <div className="measurement-empty" role="alert">{t('measurements.accessDenied')}</div>
-          : <>
+          : <div className="measurement-unified-card">
             <section className="measurement-workflow-card info-card" aria-labelledby="measurement-client-heading">
               <div className="measurement-section-heading"><span className="measurement-step-number">01</span><div><h2 id="measurement-client-heading">{t('measurements.chooseClient')}</h2><p>{client ? `${client.name}${wearer ? ` · ${wearer.name}` : ''}` : t('measurements.searchClients')}</p></div></div>
               {clientChooserOpen || !client ? <div className="measurement-client-picker">
@@ -751,17 +813,18 @@ export function ClientMeasurementsPage() {
               </div> : <div className="measurement-client-selected"><div><strong>{client?.name}</strong><small>{wearer ? `${t('measurements.primaryClient')}: ${client?.name} · ${wearer.name}` : client?.phone || client?.email || ''}</small></div><button type="button" className="btn-secondary" onClick={() => { setClientChooserOpen(true); setClientSearch(''); setActiveClientId(''); setClient(null); setProfileId(''); setSets([]) }}>{t('measurements.chooseClient')}</button></div>}
               {client && !clientChooserOpen && <label className="measurement-wearer-select">
                 {t('measurements.wearer')}
-                <select value={wearerId} onChange={event => {
-                  setWearerId(event.target.value)
+                <CustomSelect className="measurement-select" ariaLabel={t('measurements.wearer')} value={wearerId} onChange={nextWearerId => {
+                  if (!confirmDiscardDraft()) return
+                  setWearerId(nextWearerId)
                   setProfileId('')
                   setProfiles([])
                   setSets([])
                   setSelectedSetId('')
-                  setDraftValues({})
-                }}>
-                  <option value="client">{t('measurements.primaryClient')} - {client.name}</option>
-                  {relatedPersons.map(person => <option key={person.id} value={person.id}>{t('measurements.relatedPerson')} - {person.name}</option>)}
-                </select>
+                  replaceDraftValues({})
+                }} options={[
+                  { value: 'client', label: `${t('measurements.primaryClient')} - ${client.name}` },
+                  ...relatedPersons.map(person => ({ value: person.id, label: `${t('measurements.relatedPerson')} - ${person.name}` })),
+                ]} />
               </label>}
             </section>
 
@@ -770,8 +833,8 @@ export function ClientMeasurementsPage() {
                 <section className="measurement-workflow-card info-card" aria-labelledby="measurement-garment-heading">
                   <div className="measurement-section-heading"><span className="measurement-step-number">02</span><div><h2 id="measurement-garment-heading">{t('measurements.garment')}</h2><p>{family ? `${family.name}${variant ? ` · ${variant.name}` : ''}` : t('measurements.chooseFamily')}</p></div></div>
                   <div className="measurement-garment-selectors">
-                    <label>{t('measurements.family')}<select value={familyId} onChange={event => handleFamilyChange(event.target.value)} disabled={catalogLoading}><option value="">{t('measurements.chooseFamily')}</option>{families.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-                    <label>{t('measurements.variant')}<select value={variantId} onChange={event => handleVariantChange(event.target.value)} disabled={!familyId || catalogLoading}><option value="">{t('measurements.noVariant')}</option>{variantsForFamily.map(item => <option key={item.id} value={item.id}>{item.name}{item.is_default ? ` · ${t('measurements.defaultVariant')}` : ''}</option>)}</select></label>
+                    <label>{t('measurements.family')}<CustomSelect className="measurement-select" ariaLabel={t('measurements.family')} value={familyId} onChange={handleFamilyChange} disabled={catalogLoading} options={[{ value: '', label: t('measurements.chooseFamily') }, ...families.map(item => ({ value: item.id, label: item.name }))]} /></label>
+                    <label>{t('measurements.variant')}<CustomSelect className="measurement-select" ariaLabel={t('measurements.variant')} value={variantId} onChange={handleVariantChange} disabled={!familyId || catalogLoading} options={[{ value: '', label: t('measurements.noVariant') }, ...variantsForFamily.map(item => ({ value: item.id, label: `${item.name}${item.is_default ? ` · ${t('measurements.defaultVariant')}` : ''}` }))]} /></label>
                   </div>
                   {catalogLoading && <small aria-busy="true">{t('measurements.loading')}</small>}
                   {!catalogLoading && familyId && variantsForFamily.length === 0 && <div className="measurement-empty">{t('catalog.noVariants')}</div>}
@@ -793,7 +856,7 @@ export function ClientMeasurementsPage() {
                   />}
                   {groups.length > 0 && <div className="measurement-design-persistence">
                     <label>{t('measurements.designName')}<input maxLength={160} value={designName} onChange={event => { setDesignName(event.target.value); setSelectedDesign(null); setDesignSaveIncomplete(false) }} placeholder={`${client.name} · ${family?.name ?? t('measurements.garment')}`} /></label>
-                    <div className="measurement-design-picker-row"><label>{t('measurements.sourceShop')} / {t('measurements.sourceGlobal')}<select value={selectedDesign?.id ?? ''} onChange={event => chooseExistingDesign(event.target.value)}><option value="">—</option>{globalDesigns.length > 0 && <optgroup label={t('measurements.sourceGlobal')}>{globalDesigns.map(item => <option key={item.id} value={item.id}>{item.name} · {variants.find(row => row.id === item.variant)?.name ?? ''}</option>)}</optgroup>}{shopDesigns.length > 0 && <optgroup label={t('measurements.sourceShop')}>{shopDesigns.map(item => <option key={item.id} value={item.id}>{item.name} · {variants.find(row => row.id === item.variant)?.name ?? ''}</option>)}</optgroup>}</select></label><button type="button" className="btn-primary" onClick={() => void saveShopDesign()} disabled={!canSaveDesign || designSaving || Boolean(selectedDesign)}><Save size={16} />{designSaving ? t('measurements.saving') : t('measurements.saveDesign')}</button></div>
+                    <div className="measurement-design-picker-row"><label>{t('measurements.sourceShop')} / {t('measurements.sourceGlobal')}<CustomSelect className="measurement-select" ariaLabel={`${t('measurements.sourceShop')} / ${t('measurements.sourceGlobal')}`} value={selectedDesign?.id ?? ''} onChange={chooseExistingDesign} options={[{ value: '', label: '—' }, ...globalDesigns.map(item => ({ value: item.id, label: `${item.name} · ${variants.find(row => row.id === item.variant)?.name ?? ''}`, group: t('measurements.sourceGlobal') })), ...shopDesigns.map(item => ({ value: item.id, label: `${item.name} · ${variants.find(row => row.id === item.variant)?.name ?? ''}`, group: t('measurements.sourceShop') }))]} /></label><button type="button" className="btn-primary" onClick={() => void saveShopDesign()} disabled={!canSaveDesign || designSaving || Boolean(selectedDesign)}><Save size={16} />{designSaving ? t('measurements.saving') : t('measurements.saveDesign')}</button></div>
                     <small>{t('measurements.designSessionOnly')}</small>
                   </div>}
                 </section>}
@@ -801,8 +864,8 @@ export function ClientMeasurementsPage() {
                 <section className="measurement-workflow-card info-card" aria-labelledby="measurement-profile-heading">
                   <div className="measurement-section-heading"><span className="measurement-step-number">04</span><div><h2 id="measurement-profile-heading">{t('measurements.profile')}</h2><p>{family ? `${client.name} · ${wearer?.name ?? client.name} · ${family.name}${variant ? ` · ${variant.name}` : ''}` : t('measurements.createProfile')}</p></div></div>
                   <div className="measurement-profile-controls">
-                    <label>{t('measurements.profile')}<select aria-label={t('measurements.profile')} value={profileId} onChange={event => {
-                      const id = event.target.value
+                    <label>{t('measurements.profile')}<CustomSelect className="measurement-select" ariaLabel={t('measurements.profile')} value={profileId} onChange={id => {
+                      if (!confirmDiscardDraft()) return
                       setProfileId(id)
                       const found = profiles.find(item => item.id === id)
                       if (found) {
@@ -810,12 +873,12 @@ export function ClientMeasurementsPage() {
                         setVariantId(found.variant ?? '')
                         setSets([])
                         setSelectedSetId('')
-                        setDraftValues({})
+                        replaceDraftValues({})
                         setSelectedStyles({})
                         setSelectedDesign(null)
                         setComparison(null)
                       }
-                    }} disabled={!familyId}><option value="">{t('measurements.noProfile')}</option>{profiles.map(item => <option key={item.id} value={item.id}>{families.find(row => row.id === item.family)?.name ?? t('measurements.unknownGarment')}{item.variant ? ` · ${variants.find(row => row.id === item.variant)?.name ?? t('measurements.unknownGarment')}` : ''}</option>)}</select></label>
+                    }} disabled={!familyId} options={[{ value: '', label: t('measurements.noProfile') }, ...profiles.map(item => ({ value: item.id, label: `${families.find(row => row.id === item.family)?.name ?? t('measurements.unknownGarment')}${item.variant ? ` · ${variants.find(row => row.id === item.variant)?.name ?? t('measurements.unknownGarment')}` : ''}` }))]} /></label>
                     {canWriteMeasurements && familyId && <button type="button" className="btn-secondary" onClick={() => void createProfile()} disabled={savingProfile || profilesLoading || profilesLoadFailed || Boolean(matchingProfile && profileId === matchingProfile.id)}>{savingProfile ? t('measurements.saving') : matchingProfile ? t('measurements.existingProfile') : t('measurements.createProfile')}</button>}
                   </div>
                   {familyId && !matchingProfile && !profileId && <small>{t('measurements.createProfileHint')}</small>}
@@ -826,9 +889,11 @@ export function ClientMeasurementsPage() {
                     <div className="measurement-section-heading"><span className="measurement-step-number">05</span><div><h2 id="measurement-entry-heading">{t('measurements.measurements')}</h2><p>{t('measurements.unitNote')}</p></div></div>
                     {historyLoading || definitionsLoading ? <div className="measurement-empty" aria-busy="true">{t('measurements.loading')}</div> : definitionsLoadFailed ? <div className="measurement-error-inline" role="alert"><span>{t('measurements.definitionsLoadError')}</span><button type="button" className="btn-secondary" onClick={handleRetryPage}>{t('measurements.retry')}</button></div> : <MeasurementEntryForm
                       definitions={definitions}
-                      values={draftValues}
-                      onChange={(definitionId, value) => setDraftValues(current => ({ ...current, [definitionId]: value }))}
-                      onSave={() => void saveMeasurements()}
+                      key={draftSeedVersion}
+                      seedValues={draftValues}
+                      previousValues={previousValues}
+                      onDirtyChange={onDraftDirtyChange}
+                      onSave={saveMeasurements}
                       saving={savingMeasurements}
                       canWrite={canWriteMeasurements}
                       locale={locale}
@@ -842,7 +907,7 @@ export function ClientMeasurementsPage() {
                       <div className="measurement-history-values">{set.values.map(value => <div key={value.id}><span>{value.label}</span><strong>{value.value} {value.unit}</strong></div>)}</div>
                       {canWriteMeasurements && <div className="measurement-history-actions"><button type="button" className="btn-secondary" onClick={() => setDraftFromMeasurementSet(set)} disabled={Boolean(copyingSetId)}><Copy size={15} />{t('measurements.useAsStartingPoint')}</button><button type="button" className="btn-secondary" onClick={() => void copyMeasurementSet(set)} disabled={Boolean(copyingSetId)}><Archive size={15} />{copyingSetId === set.id ? t('measurements.saving') : t('measurements.copyVersion')}</button></div>}
                     </article>)}</div>}
-                    {sets.length > 1 && <div className="measurement-compare-controls"><label>{t('measurements.previousVersion')}<select value={compareFrom} onChange={event => setCompareFrom(event.target.value)}>{sets.map(set => <option key={set.id} value={set.id}>{t('measurements.version', { version: set.version })}</option>)}</select></label><label>{t('measurements.currentVersion')}<select value={compareTo} onChange={event => setCompareTo(event.target.value)}>{sets.map(set => <option key={set.id} value={set.id}>{t('measurements.version', { version: set.version })}</option>)}</select></label><button type="button" className="btn-secondary" onClick={() => void compareMeasurementSets()} disabled={comparing}>{comparing ? t('measurements.loading') : t('measurements.compare')}</button></div>}
+                    {sets.length > 1 && <div className="measurement-compare-controls"><label>{t('measurements.previousVersion')}<CustomSelect className="measurement-select" ariaLabel={t('measurements.previousVersion')} value={compareFrom} onChange={setCompareFrom} options={sets.map(set => ({ value: set.id, label: t('measurements.version', { version: set.version }) }))} /></label><label>{t('measurements.currentVersion')}<CustomSelect className="measurement-select" ariaLabel={t('measurements.currentVersion')} value={compareTo} onChange={setCompareTo} options={sets.map(set => ({ value: set.id, label: t('measurements.version', { version: set.version }) }))} /></label><button type="button" className="btn-secondary" onClick={() => void compareMeasurementSets()} disabled={comparing}>{comparing ? t('measurements.loading') : t('measurements.compare')}</button></div>}
                     {comparison && <div className="measurement-comparison" role="region" aria-label={t('measurements.compare')}><div className="measurement-comparison-heading"><strong>{t('measurements.previousVersion')} → {t('measurements.currentVersion')}</strong><button type="button" className="btn-secondary" onClick={() => setComparison(null)}>{t('catalog.close')}</button></div><div className="measurement-comparison-table"><div className="measurement-comparison-row is-header"><span>{t('measurements.measurements')}</span><span>{t('measurements.previousVersion')}</span><span>{t('measurements.currentVersion')}</span><span>{t('measurements.difference')}</span></div>{comparison.results.map(row => <div className="measurement-comparison-row" key={row.definition_id}><span>{row.label}</span><span>{row.from_value ?? '—'} {row.from_unit ?? ''}</span><span>{row.to_value ?? '—'} {row.to_unit ?? ''}</span><span>{row.unit_mismatch ? t('measurements.unitMismatch') : row.difference ?? '—'}</span></div>)}</div></div>}
                   </section>
                 </>}
@@ -869,6 +934,6 @@ export function ClientMeasurementsPage() {
                 />}
               </>}
             </>}
-          </>}
+          </div>}
   </div>
 }

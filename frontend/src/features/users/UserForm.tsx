@@ -53,9 +53,9 @@ export function UserForm({ shopId, onClose, onSuccess }: UserFormProps) {
   }
 
   return (
-    <div className="modal-overlay">
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="add-member-title" tabIndex={-1}>
       <div className="modal-content">
-        <h2>Add Team Member</h2>
+        <h2 id="add-member-title">Add Team Member</h2>
         {error && <div className="form-error">{error}</div>}
         
         <form onSubmit={handleSubmit} className="user-form">
@@ -117,7 +117,7 @@ export function UserForm({ shopId, onClose, onSuccess }: UserFormProps) {
                 {FUNCTIONS.map(f => {
                   const isSelected = selectedFunctions.includes(f.code)
                   return (
-                    <div 
+                    <button type="button" aria-pressed={isSelected}
                       key={f.code} 
                       className={`wf-card ${isSelected ? 'selected' : ''}`}
                       onClick={() => {
@@ -127,7 +127,7 @@ export function UserForm({ shopId, onClose, onSuccess }: UserFormProps) {
                     >
                       {f.icon}
                       <span>{f.label}</span>
-                    </div>
+                    </button>
                   )
                 })}
               </div>
@@ -135,7 +135,7 @@ export function UserForm({ shopId, onClose, onSuccess }: UserFormProps) {
           )}
 
           <div className="modal-actions">
-            <button type="button" className="btn-secondary" onClick={onClose} disabled={isSubmitting}>Cancel</button>
+            <button data-dialog-close type="button" className="btn-secondary" onClick={onClose} disabled={isSubmitting}>Cancel</button>
             <button type="submit" className="btn-primary" disabled={isSubmitting}>
               {isSubmitting ? 'Creating...' : 'Create User'}
             </button>
