@@ -902,14 +902,21 @@ class CatalogDesignApiTests(APITestCase):
         self.assertLessEqual(len(image.image.name), 512)
         self.assertLessEqual(image.byte_size, 2 * 1024 * 1024)
         self.assertEqual(image.mime_type, "image/webp")
-        self.assertFalse(
-            Path(image.image.path).is_relative_to(Path(settings.MEDIA_ROOT))
-        )
+        if settings.R2_ENABLED:
+            with self.assertRaises(NotImplementedError):
+                image.image.path
+        else:
+            self.assertFalse(
+                Path(image.image.path).is_relative_to(Path(settings.MEDIA_ROOT))
+            )
         content_url = response.data[0]["content_url"]
         body = self.client.get(content_url)
         self.assertEqual(body.status_code, status.HTTP_200_OK)
         self.assertEqual(body["Content-Type"], "image/webp")
         self.assertIn("no-store", body["Cache-Control"])
+        with patch.object(image.image.storage, "open", side_effect=FileNotFoundError):
+            missing_object = self.client.get(content_url)
+        self.assertEqual(missing_object.status_code, status.HTTP_404_NOT_FOUND)
         listed = self.client.get(self.shop_url(self.shop_a, "catalog/style-options/"))
         self.assertEqual(listed.status_code, status.HTTP_200_OK)
         persisted = next(
@@ -920,6 +927,39 @@ class CatalogDesignApiTests(APITestCase):
             [str(image.pk)],
         )
         self.assertEqual(persisted["reference_images"][0]["content_url"], content_url)
+        old_image_name = image.image.name
+        replacement = self.client.post(
+            self.shop_url(
+                self.shop_a,
+                f"catalog/style-options/{local_option.pk}/reference-images/",
+            ),
+            {"images": [self.png_upload("replacement.png")]},
+            format="multipart",
+        )
+        self.assertEqual(replacement.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(
+            StyleOptionImage.objects.filter(style_option=local_option).count(), 2
+        )
+        image.refresh_from_db()
+        self.assertFalse(image.is_primary)
+        current_image = StyleOptionImage.objects.get(
+            style_option=local_option, is_primary=True
+        )
+        self.assertEqual(str(current_image.pk), replacement.data[0]["id"])
+        self.assertTrue(image.image.storage.exists(old_image_name))
+        self.assertEqual(self.client.get(content_url).status_code, status.HTTP_200_OK)
+        persisted_again = self.client.get(
+            self.shop_url(self.shop_a, "catalog/style-options/")
+        )
+        current_option = next(
+            row
+            for row in persisted_again.data["results"]
+            if row["id"] == str(local_option.pk)
+        )
+        self.assertEqual(
+            [row["id"] for row in current_option["reference_images"]],
+            [str(current_image.pk)],
+        )
         self.client.force_authenticate(self.other_admin)
         foreign_url = self.shop_url(
             self.shop_b,
@@ -929,7 +969,7 @@ class CatalogDesignApiTests(APITestCase):
             self.client.get(foreign_url).status_code, status.HTTP_404_NOT_FOUND
         )
 
-    def test_upload_rejects_four_files_and_unsupported_content(self):
+    def test_upload_rejects_multiple_files_and_unsupported_content(self):
         self.client.force_authenticate(self.admin)
         local_option = self.make_option(
             tenant=self.shop_a, code="invalid-upload-check", label="Upload Check"
@@ -940,7 +980,7 @@ class CatalogDesignApiTests(APITestCase):
         )
         too_many = self.client.post(
             endpoint,
-            {"images": [self.png_upload(f"{i}.png") for i in range(4)]},
+            {"images": [self.png_upload(f"{i}.png") for i in range(2)]},
             format="multipart",
         )
         self.assertEqual(too_many.status_code, status.HTTP_400_BAD_REQUEST)

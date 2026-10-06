@@ -243,9 +243,17 @@ class StyleOptionImage(BaseModel):
     height = models.PositiveIntegerField()
     sort_order = models.PositiveSmallIntegerField(default=0)
     alt_text = models.CharField(max_length=240, blank=True)
+    is_primary = models.BooleanField(default=False)
 
     class Meta:
         ordering = ("sort_order", "created_at", "id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("style_option",),
+                condition=models.Q(is_primary=True),
+                name="catalog_style_option_one_primary_image",
+            )
+        ]
 
     def save(self, *args, **kwargs):
         if not self._state.adding:

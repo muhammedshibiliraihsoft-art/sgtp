@@ -470,7 +470,7 @@ def _clone_version_content(source_version, target_version, actor, *, clone_optio
                             created_by=actor,
                             updated_by=actor,
                         )
-                    for image in option.reference_images.all():
+                    for image in option.reference_images.filter(is_primary=True):
                         with image.image.storage.open(image.image.name, "rb") as handle:
                             payload = handle.read()
                         copied_image = StyleOptionImage(
@@ -482,6 +482,7 @@ def _clone_version_content(source_version, target_version, actor, *, clone_optio
                             byte_size=image.byte_size,
                             width=image.width,
                             height=image.height,
+                            is_primary=True,
                             sort_order=image.sort_order,
                             alt_text=image.alt_text,
                             created_by=actor,
@@ -658,7 +659,7 @@ def copy_design_version(
                         updated_by=actor,
                     )
                 image_map = {}
-                for image in original.reference_images.all():
+                for image in original.reference_images.filter(is_primary=True):
                     with image.image.storage.open(image.image.name, "rb") as handle:
                         payload = handle.read()
                     cloned_image = StyleOptionImage(
@@ -670,6 +671,7 @@ def copy_design_version(
                         byte_size=image.byte_size,
                         width=image.width,
                         height=image.height,
+                        is_primary=True,
                         sort_order=image.sort_order,
                         alt_text=image.alt_text,
                         created_by=actor,
@@ -790,7 +792,7 @@ def add_selection(*, shop_id, actor, version_id, option):
                     created_by=actor,
                     updated_by=actor,
                 )
-                for image in option.reference_images.all()
+                for image in option.reference_images.filter(is_primary=True)
             ]
         )
     return selection
@@ -933,13 +935,19 @@ def archive_global_design(*, actor, design_id):
 
 
 def upload_style_images(*, style_option, uploads, actor, shop=None):
-    if not uploads or len(uploads) > MAX_BATCH_FILES:
-        raise ValidationError({"images": "Upload between 1 and 3 images per request."})
-    processed = [optimize_reference(upload) for upload in uploads]
+    if len(uploads) != 1:
+        raise ValidationError({"images": "Upload exactly one image per style option."})
+    processed = [optimize_reference(uploads[0])]
     records = []
     stored_names = []
     try:
         with transaction.atomic():
+            style_option = StyleOption.objects.select_for_update().get(
+                pk=style_option.pk
+            )
+            style_option.reference_images.filter(is_primary=True).update(
+                is_primary=False
+            )
             for content, size, width, height in processed:
                 record = StyleOptionImage(
                     style_option=style_option,
@@ -948,6 +956,7 @@ def upload_style_images(*, style_option, uploads, actor, shop=None):
                     byte_size=size,
                     width=width,
                     height=height,
+                    is_primary=True,
                     created_by=actor,
                     updated_by=actor,
                 )

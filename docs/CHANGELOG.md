@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-05 — STARTUP-PRIVATE-IMAGE-01 one-image-per-Style-Option
+
+- A Style Option (for example, a specific Collar or Cuff) now has exactly one current reusable image. Shop and Main Supplier upload forms accept a single file; uploading another image atomically makes it current. API serialization and new Design snapshots expose/capture only that current image.
+- Existing image rows and private objects are retained; prior DesignSelectionImage source links are not rewritten or deleted. Migration `catalog.0015_styleoptionimage_primary` marks one deterministic current image per option and enforces at most one current image at the database level. DesignVersion reference galleries remain multi-image.
+- Local validation: backend focused tests 3 passed; frontend tests 99 passed; typecheck and production build passed. No remote publication or deployment verified in this change.
+
 ## 2026-10-05 — STARTUP-PRIVATE-IMAGE-01 Shop upload transaction fix
 
 - Render logs for the authenticated upload attempt showed `TransactionManagementError`: `ShopPrivateMediaUploadView` called `_lock_shop_write_context()` (`select_for_update`) without a transaction. Wrapped the write endpoint in `transaction.atomic` and added a `TransactionTestCase` regression proving the upload authorization runs inside a transaction. No storage credentials, schema, migration, or business-rule change. The source image has not yet completed an authenticated upload/visual verification.

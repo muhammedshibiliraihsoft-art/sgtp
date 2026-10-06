@@ -293,7 +293,7 @@ class StyleImageSerializer(serializers.ModelSerializer):
 
 class StyleOptionSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
-    reference_images = StyleImageSerializer(many=True, read_only=True)
+    reference_images = serializers.SerializerMethodField()
     is_global = serializers.SerializerMethodField()
 
     class Meta:
@@ -312,6 +312,14 @@ class StyleOptionSerializer(serializers.ModelSerializer):
     @extend_schema_field(OpenApiTypes.STR)
     def get_name(self, obj):
         return translated_name(obj, self.context.get("locale", "en"))
+
+    @extend_schema_field(StyleImageSerializer(many=True))
+    def get_reference_images(self, obj):
+        images = list(obj.reference_images.all())
+        current = next((image for image in images if image.is_primary), None)
+        return StyleImageSerializer(
+            [current] if current else [], many=True, context=self.context
+        ).data
 
     @extend_schema_field(OpenApiTypes.BOOL)
     def get_is_global(self, obj):

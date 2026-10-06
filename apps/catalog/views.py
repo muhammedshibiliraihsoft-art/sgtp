@@ -1,4 +1,4 @@
-from django.http import FileResponse
+from django.http import FileResponse, Http404
 from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404
@@ -9,7 +9,7 @@ from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
 
@@ -751,7 +751,11 @@ class GlobalStyleOptionsView(APIView):
         return _page_response(
             request,
             queryset.select_related("option_group").prefetch_related(
-                "translations", "reference_images"
+                "translations",
+                Prefetch(
+                    "reference_images",
+                    queryset=StyleOptionImage.objects.filter(is_primary=True),
+                ),
             ),
             StyleOptionSerializer,
             context={"locale": _locale(request)},
@@ -998,7 +1002,13 @@ class ShopStyleOptionsView(ShopContextMixin, APIView):
                 Q(tenant__isnull=True) | Q(tenant=shop), is_active=True
             )
             .select_related("option_group")
-            .prefetch_related("translations", "reference_images")
+            .prefetch_related(
+                "translations",
+                Prefetch(
+                    "reference_images",
+                    queryset=StyleOptionImage.objects.filter(is_primary=True),
+                ),
+            )
         )
         group_id = request.query_params.get("option_group")
         if group_id:
@@ -1176,7 +1186,13 @@ def _upload_style_response(request, option):
 
 
 def _private_file_response(field_file, mime_type):
-    response = FileResponse(field_file.open("rb"), content_type=mime_type)
+    try:
+        file_handle = field_file.open("rb")
+    except FileNotFoundError:
+        # Metadata can outlive a private object if it is removed out of band.
+        # Return a normal not-found response rather than leaking a storage 500.
+        raise Http404("Reference image not found.") from None
+    response = FileResponse(file_handle, content_type=mime_type)
     response["Cache-Control"] = "private, no-store"
     response["X-Content-Type-Options"] = "nosniff"
     response["Content-Disposition"] = 'inline; filename="reference.webp"'
