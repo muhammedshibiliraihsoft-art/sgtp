@@ -37,12 +37,4 @@ class Migration(migrations.Migration):
             field=models.BooleanField(default=False),
         ),
         migrations.RunPython(mark_existing_primary, migrations.RunPython.noop),
-        migrations.AddConstraint(
-            model_name="styleoptionimage",
-            constraint=models.UniqueConstraint(
-                condition=models.Q(("is_primary", True)),
-                fields=("style_option",),
-                name="catalog_style_option_one_primary_image",
-            ),
-        ),
     ]

@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-06 — STAGING-STYLE-IMAGE-MIGRATION-FIX-01
+
+- Corrected PostgreSQL migration ordering after the staging startup failed because migration `0015` attempted to create the primary-image unique index while its backfill still had pending trigger events. `0015` now ends after the deterministic primary-image backfill; additive migration `0016_styleoptionimage_one_primary` creates the partial unique constraint in the next transaction.
+- Added a PostgreSQL migration regression test that exercises pre-existing StyleOptionImage rows, both migrations, and deterministic primary selection. Validation: full PostgreSQL-backed suite 448 passed; focused migration test 1 passed; Django check, migration drift, OpenAPI validation, Black, and Flake8 passed. Publication and staging retry are pending at this checkpoint; production was not deployed.
+
 ## 2026-10-05 — STARTUP-PRIVATE-IMAGE-01 one-image-per-Style-Option
 
 - A Style Option (for example, a specific Collar or Cuff) now has exactly one current reusable image. Shop and Main Supplier upload forms accept a single file; uploading another image atomically makes it current. API serialization and new Design snapshots expose/capture only that current image.
