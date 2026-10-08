@@ -105,6 +105,8 @@ class AuthLifecycleTest(TestCase):
         new_access = response.data.get('access')
         self.assertIsNotNone(new_access)
         self.assertNotEqual(old_access, new_access)
+        self.assertEqual(response.data['user']['id'], str(self.user.pk))
+        self.assertEqual(response.data['user']['must_change_password'], self.user.must_change_password)
         
         # Verify new refresh cookie is issued
         new_refresh_cookie = response.cookies.get('refresh')

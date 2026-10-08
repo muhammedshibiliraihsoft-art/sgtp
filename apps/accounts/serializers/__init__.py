@@ -318,7 +318,6 @@ class VersionedTokenRefreshSerializer(TokenRefreshSerializer):
             user_id = refresh.get(api_settings.USER_ID_CLAIM)
             user = (
                 User.objects.filter(pk=user_id)
-                .only("auth_version", "is_active")
                 .first()
             )
             token_version = refresh.get("auth_version", 1)
@@ -328,7 +327,9 @@ class VersionedTokenRefreshSerializer(TokenRefreshSerializer):
             raise InvalidToken("Token is invalid or revoked.") from exc
         if not user or not user.is_active or token_version != user.auth_version:
             raise InvalidToken("Token is invalid or revoked.")
-        return super().validate(attrs)
+        data = super().validate(attrs)
+        data["user"] = UserSerializer(user).data
+        return data
 
 
 class PasswordChangeSerializer(serializers.Serializer):

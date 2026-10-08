@@ -307,7 +307,8 @@ class CustomTokenRefreshView(TokenRefreshView):
         ),
         responses={
             200: inline_serializer(
-                name="RefreshResponse", fields={"access": serializers.CharField()}
+                name="RefreshResponse",
+                fields={"access": serializers.CharField(), "user": UserSerializer()},
             )
         },
     )
