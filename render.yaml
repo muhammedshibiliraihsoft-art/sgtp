@@ -4,6 +4,7 @@ services:
     runtime: docker
     plan: free
     region: frankfurt
+    branch: staging
     dockerfilePath: ./Dockerfile
     dockerContext: .
     autoDeployTrigger: "commit"
