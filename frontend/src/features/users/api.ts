@@ -20,8 +20,14 @@ export const usersApi = {
   createUser(shopId: string, request: CreateShopUserRequest) {
     return apiRequest<CreateShopUserResult>(`${shopPath(shopId)}/users/`, { method: 'POST', body: request })
   },
-  setRole(id: string, role: 'STAFF' | 'VIEWER') {
-    return apiRequest<MembershipDTO>(`${membershipsPath}${encodeURIComponent(id)}/`, { method: 'PATCH', body: { role } })
+  resetPin(userId: string) {
+    return apiRequest<{ login_id: string | null; temporary_password: string }>(`/api/v1/auth/users/${encodeURIComponent(userId)}/reset-credentials/`, { method: 'POST', body: {} })
+  },
+  setRole(id: string, role: 'STAFF' | 'VIEWER', loginId?: string) {
+    return apiRequest<MembershipDTO & { temporary_password?: string }>(`${membershipsPath}${encodeURIComponent(id)}/`, {
+      method: 'PATCH',
+      body: { role, ...(loginId ? { new_login_id: loginId } : {}) },
+    })
   },
   deactivate(id: string) {
     return apiRequest(`${membershipsPath}${encodeURIComponent(id)}/deactivate/`, { method: 'POST', body: {} })

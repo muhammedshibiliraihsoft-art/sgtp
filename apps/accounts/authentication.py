@@ -7,6 +7,10 @@ class VersionedJWTAuthentication(JWTAuthentication):
 
     def get_user(self, validated_token):
         user = super().get_user(validated_token)
+        if not user.login_enabled:
+            raise AuthenticationFailed(
+                "This account is not permitted to sign in.", code="login_disabled"
+            )
         token_version = validated_token.get("auth_version", 1)
         if token_version != user.auth_version:
             raise AuthenticationFailed(

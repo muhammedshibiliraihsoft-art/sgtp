@@ -1,14 +1,7 @@
-from base64 import urlsafe_b64decode
-from binascii import Error as Base64DecodeError
-
 from django.conf import settings
 from django.contrib.auth import logout
-from django.contrib.auth.tokens import PasswordResetTokenGenerator
-from django.core.mail import send_mail
 from django.middleware.csrf import get_token
 from django.utils.decorators import method_decorator
-from django.utils.encoding import force_str
-from django.utils.http import urlsafe_base64_encode
 from django.views.decorators.csrf import csrf_protect
 from drf_spectacular.utils import (
     OpenApiParameter,
@@ -23,7 +16,7 @@ from rest_framework.decorators import (
     permission_classes,
     throttle_classes,
 )
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError, Throttled
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
@@ -33,15 +26,19 @@ from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from apps.tenants.permissions import IsMainSupplierAdmin
-from ..models import User
-from ..identity import normalize_email
+from ..models import User, ShopAdminPinResetRequest
+from ..abuse import consume, source
+from ..phone_numbers import InvalidUserPhone, normalize_user_phone
+from ..services.shop_admin_pin_reset import (
+    find_eligible_admin,
+    resolve_request,
+    submit_request,
+)
 from ..permissions import PasswordChangeGate
 from ..security import set_password_and_revoke_sessions
 from ..serializers import (
     EmailOrPhoneTokenObtainPairSerializer,
     PasswordChangeSerializer,
-    PasswordResetConfirmSerializer,
-    PasswordResetRequestSerializer,
     VersionedTokenRefreshSerializer,
     UserAdminSerializer,
     UserCreateSerializer,
@@ -52,6 +49,9 @@ from ..serializers import (
 
 class AuthRateThrottle(ScopedRateThrottle):
     scope = "auth"
+
+    def get_ident(self, request):
+        return source(request)
 
 
 def set_refresh_cookie(response, refresh_token):
@@ -74,8 +74,8 @@ LoginRequestSerializer = inline_serializer(
     name="EmailOrIdentifierLoginRequest",
     fields={
         "email": serializers.EmailField(required=False),
-        "identifier": serializers.CharField(required=False),
-        "password": serializers.CharField(write_only=True, required=True),
+        "identifier": serializers.CharField(required=False, max_length=254),
+        "password": serializers.CharField(write_only=True, required=True, max_length=256),
     },
 )
 
@@ -147,7 +147,8 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         data = UserAdminSerializer(user).data
-        data["initial_password"] = serializer.initial_password
+        if serializer.initial_password:
+            data["initial_password"] = serializer.initial_password
         response = Response(data, status=status.HTTP_201_CREATED)
         response["Cache-Control"] = "no-store"
         response["Pragma"] = "no-cache"
@@ -166,11 +167,12 @@ class UserViewSet(viewsets.ModelViewSet):
                 name="AdminCredentialResetResponse",
                 fields={
                     "user_code": serializers.CharField(),
+                    "login_id": serializers.CharField(allow_null=True),
                     "temporary_password": serializers.CharField(),
                 },
             )
         },
-        description="Main Supplier only. Returns one temporary credential with no-store headers.",
+        description="Main Supplier authority remains unchanged. A Shop ADMIN may reset only an active STAFF account in the same Shop. Returns a one-time temporary PIN.",
     )
     @action(
         detail=True,
@@ -181,11 +183,15 @@ class UserViewSet(viewsets.ModelViewSet):
     )
     def reset_credentials(self, request, pk=None):
         user = self.get_object()
+        if not consume("credential-reset-source", source(request), limit=10, minutes=60) or not consume(
+            "credential-reset-target", str(user.pk), limit=3, minutes=60
+        ):
+            raise Throttled(detail="Credential reset temporarily unavailable.")
         from ..services.user_lifecycle import reset_user_credentials
 
         temporary_password = reset_user_credentials(request.user, user)
         response = Response(
-            {"user_code": user.user_code, "temporary_password": temporary_password},
+            {"user_code": user.user_code, "login_id": user.login_id, "temporary_password": temporary_password},
             status=status.HTTP_200_OK,
         )
         response["Cache-Control"] = "no-store"
@@ -226,18 +232,29 @@ class UserViewSet(viewsets.ModelViewSet):
             data=request.data, context={"request": request}
         )
         serializer.is_valid(raise_exception=True)
+
+        def validate_current_password(locked_user):
+            if not locked_user.check_password(
+                serializer.validated_data["current_password"]
+            ):
+                raise ValidationError(
+                    {"current_password": "Current password is incorrect."}
+                )
+
         set_password_and_revoke_sessions(
             request.user,
             serializer.validated_data["new_password"],
             must_change=False,
+            validate_locked_user=validate_current_password,
         )
         response = Response(
-            {"detail": "Password changed. Sign in again."}, status=status.HTTP_200_OK
+            {"detail": "PIN changed. Sign in again."}, status=status.HTTP_200_OK
         )
         clear_refresh_cookie(response)
         return response
 
 
+@method_decorator(csrf_protect, name="dispatch")
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = EmailOrPhoneTokenObtainPairSerializer
     throttle_classes = [AuthRateThrottle]
@@ -247,7 +264,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         request=LoginRequestSerializer,
         description=(
             "Authenticate using the legacy email/password fields or identifier/password, "
-            "where identifier accepts User ID, email, or E.164 phone. The response "
+            "where identifier accepts Login ID and approved legacy aliases. The shared password field accepts existing legacy passwords or newer six-digit PINs; the system is not PIN-only for existing accounts. Viewer accounts cannot authenticate. The response "
             "contains an access JWT and user profile; the refresh JWT is set only in "
             "the HttpOnly cookie."
         ),
@@ -332,88 +349,6 @@ class CustomTokenRefreshView(TokenRefreshView):
 
 
 @extend_schema(
-    request=PasswordResetRequestSerializer,
-    responses={
-        200: inline_serializer(
-            name="PasswordResetRequestResponse",
-            fields={"detail": serializers.CharField()},
-        )
-    },
-)
-@api_view(["POST"])
-@throttle_classes([AuthRateThrottle])
-@permission_classes([AllowAny])
-def password_reset_request(request):
-    serializer = PasswordResetRequestSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
-    email = normalize_email(serializer.validated_data.get("email"))
-    user = User.objects.filter(email=email, is_active=True).first() if email else None
-    if user and getattr(settings, "PASSWORD_RESET_URL", ""):
-        uid = urlsafe_base64_encode(str(user.pk).encode())
-        token = PasswordResetTokenGenerator().make_token(user)
-        reset_url = f"{settings.PASSWORD_RESET_URL}?uid={uid}&token={token}"
-        send_mail(
-            subject="Reset your SGTP password",
-            message=f"Use this link to reset your password: {reset_url}",
-            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", None),
-            recipient_list=[user.email],
-            fail_silently=True,
-        )
-    response = Response(
-        {
-            "detail": "If the account is eligible, password reset instructions will be sent."
-        },
-        status=status.HTTP_200_OK,
-    )
-    response["Cache-Control"] = "no-store"
-    response["Pragma"] = "no-cache"
-    return response
-
-
-@extend_schema(
-    request=PasswordResetConfirmSerializer,
-    responses={
-        200: inline_serializer(
-            name="PasswordResetConfirmResponse",
-            fields={"detail": serializers.CharField()},
-        )
-    },
-)
-@api_view(["POST"])
-@throttle_classes([AuthRateThrottle])
-@permission_classes([AllowAny])
-def password_reset_confirm(request):
-    uid = request.data.get("uid", "")
-    token = request.data.get("token", "")
-    try:
-        user_id = force_str(urlsafe_b64decode(uid.encode()))
-        user = User.objects.get(pk=user_id, is_active=True, email__isnull=False)
-    except (
-        ValueError,
-        TypeError,
-        UnicodeDecodeError,
-        Base64DecodeError,
-        User.DoesNotExist,
-    ):
-        user = None
-    if not user or not PasswordResetTokenGenerator().check_token(user, token):
-        raise ValidationError({"detail": "Reset token is invalid or expired."})
-    serializer = PasswordResetConfirmSerializer(
-        data=request.data, context={"reset_user": user}
-    )
-    serializer.is_valid(raise_exception=True)
-    set_password_and_revoke_sessions(
-        user, serializer.validated_data["new_password"], must_change=False
-    )
-    response = Response(
-        {"detail": "Password reset. Sign in with your new password."},
-        status=status.HTTP_200_OK,
-    )
-    response["Cache-Control"] = "no-store"
-    return response
-
-
-@extend_schema(
     request=None,
     parameters=[
         OpenApiParameter(
@@ -464,3 +399,96 @@ def logout_view(request):
 
 logout_view.throttle_scope = "auth"
 logout_view.allow_must_change_password = True
+
+
+_PIN_RESET_GENERIC = "If this Shop Admin account is eligible, a reset request has been sent to Back Office."
+
+
+@extend_schema(
+    request=inline_serializer(name="ShopAdminPinResetRequestInput", fields={"phone": serializers.CharField()}),
+    responses={200: inline_serializer(name="ShopAdminPinResetRequestResult", fields={"detail": serializers.CharField()})},
+    description="Public request only; phone does not verify identity or change a PIN. Response does not disclose account eligibility.",
+)
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def shop_admin_pin_reset_request(request):
+    origin = source(request)
+    allowed = consume("admin-reset-source", origin, limit=10, minutes=60)
+    raw_phone = request.data.get("phone")
+    try:
+        phone = (
+            normalize_user_phone(raw_phone)
+            if isinstance(raw_phone, str) and len(raw_phone) <= 32
+            else None
+        )
+    except (InvalidUserPhone, TypeError, ValueError):
+        phone = None
+    admin = find_eligible_admin(phone) if allowed and phone else None
+    if admin:
+        allowed = consume(
+            "admin-reset-target", str(admin.pk), limit=3, minutes=60
+        ) and allowed
+    if allowed and admin:
+        submit_request(admin, phone)
+    response = Response({"detail": _PIN_RESET_GENERIC})
+    response["Cache-Control"] = "no-store"
+    response["Pragma"] = "no-cache"
+    return response
+
+
+@extend_schema(
+    responses={200: inline_serializer(name="PendingShopAdminPinReset", many=True, fields={
+        "id": serializers.UUIDField(), "shop": serializers.CharField(), "shop_id": serializers.UUIDField(),
+        "name": serializers.CharField(), "login_id": serializers.CharField(allow_null=True),
+        "phone": serializers.CharField(), "requested_at": serializers.DateTimeField(),
+        "status": serializers.CharField(),
+    })},
+    description="Main Supplier only. Lists pending Shop ADMIN PIN reset requests.",
+)
+@api_view(["GET"])
+@permission_classes([IsMainSupplierAdmin, PasswordChangeGate])
+def shop_admin_pin_reset_list(request):
+    rows = ShopAdminPinResetRequest.objects.filter(
+        status=ShopAdminPinResetRequest.Status.PENDING
+    ).select_related("user", "shop").order_by("requested_at")[:100]
+    response = Response([{
+        "id": str(row.pk), "shop": row.shop.name, "shop_id": str(row.shop_id),
+        "name": row.user.full_name, "login_id": row.user.login_id,
+        "phone": row.phone, "requested_at": row.requested_at,
+        "status": row.status,
+    } for row in rows])
+    response["Cache-Control"] = "no-store"
+    return response
+
+
+@extend_schema(
+    request=None,
+    responses={200: inline_serializer(name="ApprovedShopAdminPinReset", fields={
+        "id": serializers.UUIDField(), "status": serializers.CharField(),
+        "login_id": serializers.CharField(allow_null=True), "temporary_password": serializers.CharField(),
+    })},
+    description="Main Supplier approval returns a one-time temporary PIN; never retrievable later.",
+)
+@api_view(["POST"])
+@permission_classes([IsMainSupplierAdmin, PasswordChangeGate])
+def shop_admin_pin_reset_approve(request, request_id):
+    reset, pin = resolve_request(request.user, request_id, approve=True)
+    response = Response({"id": str(reset.pk), "status": reset.status,
+                         "login_id": reset.user.login_id, "temporary_password": pin})
+    response["Cache-Control"] = "no-store"
+    response["Pragma"] = "no-cache"
+    return response
+
+
+@extend_schema(
+    request=None,
+    responses={200: inline_serializer(name="RejectedShopAdminPinReset", fields={
+        "id": serializers.UUIDField(), "status": serializers.CharField(),
+    })},
+    description="Main Supplier rejects a pending request without changing credentials.",
+)
+@api_view(["POST"])
+@permission_classes([IsMainSupplierAdmin, PasswordChangeGate])
+def shop_admin_pin_reset_reject(request, request_id):
+    reset, _ = resolve_request(request.user, request_id, approve=False)
+    return Response({"id": str(reset.pk), "status": reset.status})

@@ -18,11 +18,13 @@ interface UserFormProps {
   shopId: string
   onClose: () => void
   onSuccess: (result: CreateShopUserResult) => void
+  onSecondaryError?: (message: string) => void
 }
 
-export function UserForm({ shopId, onClose, onSuccess }: UserFormProps) {
+export function UserForm({ shopId, onClose, onSuccess, onSecondaryError }: UserFormProps) {
   const [formData, setFormData] = useState<CreateShopUserRequest>({
     first_name: '',
+    login_id: '',
     last_name: '',
     email: '',
     phone: '',
@@ -39,13 +41,18 @@ export function UserForm({ shopId, onClose, onSuccess }: UserFormProps) {
     
     try {
       const result = await usersApi.createUser(shopId, formData)
-      if (formData.role === 'STAFF' && selectedFunctions.length > 0) {
-        const memberships = await usersApi.findCreatedMembership(shopId, result.user_code || '')
-        const createdMembership = memberships.results.find(member => member.user_code === result.user_code)
-        if (!createdMembership) throw new Error('User was created, but the Shop membership could not be loaded to assign work functions.')
-        await usersApi.setFunctions(shopId, createdMembership.id, selectedFunctions)
-      }
+      // The one-time PIN must be displayed even if optional follow-up setup fails.
       onSuccess(result)
+      if (formData.role === 'STAFF' && selectedFunctions.length > 0) {
+        try {
+          const memberships = await usersApi.findCreatedMembership(shopId, result.user_code || '')
+          const createdMembership = memberships.results.find(member => member.user_code === result.user_code)
+          if (!createdMembership) throw new Error('Membership could not be loaded.')
+          await usersApi.setFunctions(shopId, createdMembership.id, selectedFunctions)
+        } catch (cause) {
+          onSecondaryError?.(`Account was created and its PIN is shown. Work Functions were not assigned: ${cause instanceof Error ? cause.message : 'Unknown error'}. Retry from member actions; do not create the account again.`)
+        }
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to create user')
       setIsSubmitting(false)
@@ -77,6 +84,11 @@ export function UserForm({ shopId, onClose, onSuccess }: UserFormProps) {
             </div>
           </div>
 
+          {formData.role === 'STAFF' ? <div className="form-group">
+            <label htmlFor="new-user-login-id">User ID *</label>
+            <input id="new-user-login-id" required pattern="[a-zA-Z][a-zA-Z0-9_]{2,31}" value={formData.login_id || ''} onChange={e => setFormData({...formData, login_id: e.target.value})} />
+          </div> : <p className="form-hint">Viewers are read-only records and cannot sign in. No User ID or PIN will be issued.</p>}
+
           <div className="form-row">
             <div className="form-group">
               <label>Email</label>
@@ -100,7 +112,7 @@ export function UserForm({ shopId, onClose, onSuccess }: UserFormProps) {
             <label>Role *</label>
             <CustomSelect 
               value={formData.role}
-              onChange={val => setFormData({...formData, role: val as 'STAFF' | 'VIEWER'})}
+              onChange={val => setFormData({...formData, role: val as 'STAFF' | 'VIEWER', login_id: val === 'STAFF' ? formData.login_id : undefined})}
               options={[
                 { value: 'STAFF', label: 'Staff (Operational access)' },
                 { value: 'VIEWER', label: 'Viewer (Read-only)' }

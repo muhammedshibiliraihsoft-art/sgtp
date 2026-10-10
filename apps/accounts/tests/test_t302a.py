@@ -1,10 +1,6 @@
-from urllib.parse import urlparse, parse_qs
-
-from django.core import mail
 from django.core.cache import cache
 from django.db import IntegrityError, transaction
-from django.test import TestCase, override_settings
-from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.test import TestCase
 from unittest.mock import patch
 from rest_framework.test import APIClient
 
@@ -71,20 +67,6 @@ class T302AAccountTests(TestCase):
             resolve_locale("invalid", authorized_shop_locale="invalid"), "en"
         )
 
-    def test_password_reset_token_expires(self):
-        user = create_test_user(
-            email="expired@example.test",
-            password="ExistingPass-934!",
-            first_name="Test",
-        )
-        generator = PasswordResetTokenGenerator()
-        with (
-            override_settings(PASSWORD_RESET_TIMEOUT=0),
-            patch.object(generator, "_num_seconds", side_effect=[100000, 100001]),
-        ):
-            token = generator.make_token(user)
-            self.assertFalse(generator.check_token(user, token))
-
     def test_admin_controls_phone_lifecycle_and_profile_preferences(self):
         user = create_test_user(
             email="lifecycle-phone@example.test",
@@ -132,7 +114,7 @@ class T302AAccountTests(TestCase):
         )
         response = self.client.post(
             "/api/v1/auth/users/",
-            {"email": "new@example.test", "first_name": "New"}
+            {"email": "new@example.test", "first_name": "New", "login_id": "new_user"}
             | {"shop": str(shop.pk), "role": "STAFF"},
         )
         self.assertEqual(response.status_code, 201, response.data)
@@ -158,8 +140,8 @@ class T302AAccountTests(TestCase):
             "/api/v1/auth/users/password/change/",
             {
                 "current_password": initial_password,
-                "new_password": "NewSecure-936!Pass",
-                "new_password_confirm": "NewSecure-936!Pass",
+                "new_password": "048731",
+                "new_password_confirm": "048731",
             },
             format="json",
         )
@@ -169,77 +151,13 @@ class T302AAccountTests(TestCase):
         self.assertFalse(user.check_password(initial_password))
         self.assertTrue(changed.cookies["refresh"].value == "")
 
-    @override_settings(
-        EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
-        PASSWORD_RESET_URL="https://frontend.example.test/reset",
-    )
-    def test_email_reset_is_generic_single_use_and_revokes_sessions(self):
-        user = create_test_user(
-            email="reset@example.test",
-            password="ExistingPass-934!",
-            first_name="Test",
-        )
-        logged_in = self.client.post(
-            "/api/v1/auth/login/",
-            {"email": user.email, "password": "ExistingPass-934!"},
-            format="json",
-        )
-        refresh_value = logged_in.cookies["refresh"].value
-        csrf_value = logged_in.cookies["csrftoken"].value
-        request_existing = self.client.post(
-            "/api/v1/auth/password/reset/", {"email": user.email}
-        )
-        request_unknown = self.client.post(
-            "/api/v1/auth/password/reset/", {"email": "absent@example.test"}
-        )
-        self.assertEqual(request_existing.status_code, request_unknown.status_code)
-        self.assertEqual(request_existing.data, request_unknown.data)
-        self.assertEqual(len(mail.outbox), 1)
-        query = parse_qs(
-            urlparse(
-                mail.outbox[0].body.split("Use this link to reset your password: ")[1]
-            ).query
-        )
-
-        confirm = self.client.post(
+    def test_email_password_reset_endpoints_are_not_available(self):
+        for path in (
+            "/api/v1/auth/password/reset/",
             "/api/v1/auth/password/reset/confirm/",
-            {
-                "uid": query["uid"][0],
-                "token": query["token"][0],
-                "new_password": "ResetSecure-937!Pass",
-                "new_password_confirm": "ResetSecure-937!Pass",
-            },
-            format="json",
-        )
-        self.assertEqual(confirm.status_code, 200, confirm.data)
-        user.refresh_from_db()
-        self.assertFalse(user.check_password("ExistingPass-934!"))
-        self.assertTrue(user.check_password("ResetSecure-937!Pass"))
-        self.client.force_authenticate(user=None)
-        stale_access = self.client.get(
-            "/api/v1/auth/users/me/",
-            HTTP_AUTHORIZATION=f"Bearer {logged_in.data['access']}",
-        )
-        self.assertEqual(stale_access.status_code, 401)
-        replay = self.client.post(
-            "/api/v1/auth/password/reset/confirm/",
-            {
-                "uid": query["uid"][0],
-                "token": query["token"][0],
-                "new_password": "AnotherSecure-938!Pass",
-                "new_password_confirm": "AnotherSecure-938!Pass",
-            },
-            format="json",
-        )
-        self.assertEqual(replay.status_code, 400)
-        self.client.cookies["refresh"] = refresh_value
-        self.client.cookies["csrftoken"] = csrf_value
-        refresh = self.client.post(
-            "/api/v1/auth/token/refresh/",
-            HTTP_X_CSRFTOKEN=csrf_value,
-            format="json",
-        )
-        self.assertEqual(refresh.status_code, 401)
+        ):
+            response = self.client.post(path, {}, format="json")
+            self.assertEqual(response.status_code, 404)
 
 
 class T302AShopSettingsTests(TestCase):

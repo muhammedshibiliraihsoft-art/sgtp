@@ -21,7 +21,8 @@ export class ApiError extends Error {
 
 let accessToken: string | null = null
 let csrfToken: string | null = null
-let refreshPromise: Promise<string> | null = null
+type RefreshResponse<TUser = unknown> = { access: string; user: TUser }
+let refreshPromise: Promise<RefreshResponse> | null = null
 let unauthorizedHandler: (() => void) | null = null
 let authGeneration = 0
 const inFlightReads = new Map<string, Promise<unknown>>()
@@ -95,7 +96,7 @@ export async function bootstrapCsrf(): Promise<string> {
   return csrfToken
 }
 
-async function refreshAccessToken(): Promise<string> {
+async function refreshAccessToken(): Promise<RefreshResponse> {
   if (!refreshPromise) {
     refreshPromise = (async () => {
       const csrf = await bootstrapCsrf()
@@ -108,9 +109,23 @@ async function refreshAccessToken(): Promise<string> {
       } catch {
         throw new ApiError('Unable to reach the service. Check your connection and try again.', 0, 'network_unavailable')
       }
-      const data = await readResponse<{ access: string }>(response)
+      const data = await readResponse<RefreshResponse>(response)
+      if (
+        !data
+        || typeof data.access !== 'string'
+        || !data.access
+        || !data.user
+        || typeof data.user !== 'object'
+        || Array.isArray(data.user)
+      ) {
+        throw new ApiError(
+          'The session refresh response was incomplete.',
+          502,
+          'invalid_refresh_response',
+        )
+      }
       accessToken = data.access
-      return data.access
+      return data
     })().catch((error: unknown) => {
       clearCredentials()
       unauthorizedHandler?.()
@@ -204,6 +219,6 @@ export async function binaryRequest(path: string, options: RequestOptions = {}):
   return response.blob()
 }
 
-export async function refreshSession(): Promise<string> {
-  return refreshAccessToken()
+export async function refreshSession<TUser = unknown>(): Promise<RefreshResponse<TUser>> {
+  return await refreshAccessToken() as RefreshResponse<TUser>
 }

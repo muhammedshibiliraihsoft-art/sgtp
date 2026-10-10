@@ -1,9 +1,9 @@
-import { Briefcase, UserCheck, UserCog, UserX, X } from 'lucide-react'
+import { Briefcase, UserCheck, UserCog, UserX, X, KeyRound } from 'lucide-react'
 import type { MembershipDTO } from './types'
 
 interface Props {
   member: MembershipDTO
-  onAction: (action: 'WORK_FUNCTIONS' | 'PROMOTE_STAFF' | 'DEMOTE_VIEWER' | 'DEACTIVATE' | 'REACTIVATE' | 'REMOVE') => void
+  onAction: (action: 'WORK_FUNCTIONS' | 'RESET_PIN' | 'PROMOTE_STAFF' | 'DEMOTE_VIEWER' | 'DEACTIVATE' | 'REACTIVATE' | 'REMOVE') => void
   onClose: () => void
 }
 
@@ -18,6 +18,7 @@ export function MemberActionsMenu({ member, onAction, onClose }: Props) {
         </div>
         
         <div className="action-menu-list">
+          {member.is_active && member.user_id && member.role === 'STAFF' && <button className="action-menu-item" onClick={() => onAction('RESET_PIN')}><KeyRound size={18} /><span>Reset PIN</span></button>}
           <button className="action-menu-item" onClick={() => onAction('WORK_FUNCTIONS')}>
             <Briefcase size={18} />
             <span>Work Functions</span>

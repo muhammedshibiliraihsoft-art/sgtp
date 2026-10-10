@@ -138,10 +138,22 @@ class TenantAdminManagementSerializer(TenantMemberProfileSerializer):
 
 
 class FirstShopAdminSerializer(serializers.Serializer):
+    login_id = serializers.CharField(required=True, max_length=32)
     first_name = serializers.CharField(required=True, allow_blank=False, max_length=30)
     last_name = serializers.CharField(required=False, allow_blank=True, max_length=30)
     email = serializers.EmailField(required=True)
     phone = serializers.CharField(required=True, allow_blank=False)
+
+    def validate_login_id(self, value):
+        from apps.accounts.identity import normalize_login_id
+        from apps.accounts.models import User
+        try:
+            normalized = normalize_login_id(value)
+        except ValueError as exc:
+            raise serializers.ValidationError(str(exc)) from exc
+        if User.objects.filter(login_id__iexact=normalized).exists():
+            raise serializers.ValidationError("This User ID is unavailable.")
+        return normalized
 
     def validate_phone(self, value):
         """Reject invalid phone numbers as request validation, not server errors."""

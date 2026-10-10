@@ -108,6 +108,7 @@ class TenantAPITest(TestCase):
             "slug": "test-tenant",
             "first_admin": {
                 "first_name": "First",
+                "login_id": "first_admin",
                 "email": "first-admin@example.test",
                 "phone": "+96550000019",
             },

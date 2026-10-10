@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { onRequest } from './[[path]]'
 
 const apiOrigin = 'https://birky-staging-api.onrender.com'
+const productionApiOrigin = 'https://production-api.synthetic.invalid'
 const frontendOrigin = 'https://example.pages.dev'
 
 afterEach(() => vi.unstubAllGlobals())
@@ -28,7 +29,7 @@ describe('Cloudflare Pages API proxy', () => {
       body: '{}',
     })
 
-    const response = await onRequest({ request, env: { STAGING_API_ORIGIN: apiOrigin, FRONTEND_ORIGIN: frontendOrigin } })
+    const response = await onRequest({ request, env: { API_ORIGIN: apiOrigin, FRONTEND_ORIGIN: frontendOrigin } })
     const forwarded = fetchMock.mock.calls[0][0] as Request
 
     expect(response.status).toBe(200)
@@ -44,6 +45,32 @@ describe('Cloudflare Pages API proxy', () => {
     ])
   })
 
+  it('routes production only to its runtime API binding, never to the staging API', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{}', { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const request = new Request(`${frontendOrigin}/api/v1/health/`, { headers: { Origin: frontendOrigin } })
+
+    const response = await onRequest({
+      request,
+      env: { API_ORIGIN: productionApiOrigin, FRONTEND_ORIGIN: frontendOrigin },
+    })
+
+    expect(response.status).toBe(200)
+    expect((fetchMock.mock.calls[0][0] as Request).url).toBe(`${productionApiOrigin}/api/v1/health/`)
+    expect((fetchMock.mock.calls[0][0] as Request).url).not.toContain('birky-staging-api')
+  })
+
+  it('fails closed when the API binding is absent instead of falling back to staging', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    const request = new Request(`${frontendOrigin}/api/v1/auth/csrf/`)
+
+    const response = await onRequest({ request, env: { FRONTEND_ORIGIN: frontendOrigin } })
+
+    expect(response.status).toBe(503)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it('rejects untrusted origins and refuses an invalid configured upstream', async () => {
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
@@ -52,11 +79,11 @@ describe('Cloudflare Pages API proxy', () => {
     })
     const badOrigin = await onRequest({
       request: badOriginRequest,
-      env: { STAGING_API_ORIGIN: apiOrigin, FRONTEND_ORIGIN: frontendOrigin },
+      env: { API_ORIGIN: apiOrigin, FRONTEND_ORIGIN: frontendOrigin },
     })
     const badUpstream = await onRequest({
       request: new Request(`${frontendOrigin}/api/v1/auth/csrf/`),
-      env: { STAGING_API_ORIGIN: 'http://insecure.example', FRONTEND_ORIGIN: frontendOrigin },
+      env: { API_ORIGIN: 'http://insecure.example', FRONTEND_ORIGIN: frontendOrigin },
     })
 
     expect(badOrigin.status).toBe(403)

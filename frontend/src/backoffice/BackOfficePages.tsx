@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { ArrowLeft, ArrowRight, Check, Copy, Plus, Store } from 'lucide-react'
 import { shopsService, shopFieldErrors } from '../services/shops'
 import type { CreatedShop, CreateShopInput, ShopDetail, ShopSummary } from '../services/shops'
+import { usersApi } from '../features/users/api'
 import './backoffice.css'
 
 function ErrorNotice({ message }: { message: string }) {
@@ -50,6 +51,7 @@ export function BackOfficeDashboard() {
       <div><h2>{t('backoffice.manageShops')}</h2><p>{t('backoffice.manageIntro')}</p></div>
       <Link className="bo-secondary-button" to="/backoffice/shops">{t('backoffice.viewShops')} <ArrowRight size={16} /></Link>
     </div>
+    <Link className="bo-secondary-button" to="/backoffice/pin-reset-requests">Shop Admin PIN Reset Requests <ArrowRight size={16} /></Link>
   </div>
 }
 
@@ -130,7 +132,7 @@ function Field({ label, name, value, onChange, error, required, type = 'text', h
 
 const blankCreate: CreateShopInput = {
   name: '', slug: '', max_users: 5,
-  first_admin: { first_name: '', last_name: '', email: '', phone: '' },
+  first_admin: { first_name: '', last_name: '', login_id: '', email: '', phone: '' },
   contact_email: '', contact_phone: '', default_locale: null, default_timezone: null, default_currency: null,
   address_line1: '', address_line2: '', city: '', state: '', postal_code: '', country: '',
 }
@@ -186,14 +188,14 @@ export function CreateShopPage() {
   if (created) return <div className="content-wrap bo-content"><section className="bo-card bo-success" aria-live="polite">
     <div className="bo-success-icon"><Check size={25} /></div><span className="bo-eyebrow">{t('backoffice.eyebrow')}</span>
     <h1>{t('backoffice.createdTitle')}</h1><p>{t('backoffice.createdMessage', { name: created.name })}</p>
-    <div className="bo-credential"><span>{t('backoffice.userId')}</span><strong>{created.first_admin_user_code}</strong>
-      <button type="button" className="bo-secondary-button" onClick={() => void copy(created.first_admin_user_code, t('backoffice.userId'))}><Copy size={15} />{t('backoffice.copy')}</button></div>
-    <div className="bo-credential"><span>{t('backoffice.temporaryPassword')}</span><strong>{showPassword ? created.initial_password : '••••••••••••'}</strong>
+    <div className="bo-credential"><span>{t('backoffice.userId')}</span><strong>{created.first_admin_login_id}</strong>
+      <button type="button" className="bo-secondary-button" onClick={() => void copy(created.first_admin_login_id || '', t('backoffice.userId'))}><Copy size={15} />{t('backoffice.copy')}</button></div>
+    <div className="bo-credential"><span>Temporary PIN</span><strong>{showPassword ? created.initial_password : '••••••'}</strong>
       <div className="bo-inline-actions"><button type="button" className="bo-secondary-button" onClick={() => setShowPassword(!showPassword)}>{showPassword ? t('backoffice.hide') : t('backoffice.show')}</button>
         <button type="button" className="bo-secondary-button" onClick={() => void copy(created.initial_password, t('backoffice.temporaryPassword'))}><Copy size={15} />{t('backoffice.copy')}</button></div></div>
     <p className="bo-sensitive-note">{t('backoffice.saveCredentialsNow')}</p>
     {copied && <p className="bo-muted" role="status">{copied === t('backoffice.copyFailed') ? copied : t('backoffice.copied', { item: copied })}</p>}
-    <div className="bo-actions"><button type="button" className="bo-secondary-button" onClick={() => void copy(`${created.first_admin_user_code}\n${created.initial_password}`, t('backoffice.both'))}><Copy size={15} />{t('backoffice.copyBoth')}</button>
+    <div className="bo-actions"><button type="button" className="bo-secondary-button" onClick={() => void copy(`${created.first_admin_login_id}\n${created.initial_password}`, t('backoffice.both'))}><Copy size={15} />{t('backoffice.copyBoth')}</button>
       <button type="button" className="primary-button" onClick={() => { const id = created.id; setCreated(null); navigate(`/backoffice/shops/${id}`, { replace: true }) }}>{t('backoffice.doneOpenShop')} <ArrowRight size={16} /></button></div>
   </section></div>
 
@@ -209,6 +211,7 @@ export function CreateShopPage() {
       <section className="bo-card"><div className="bo-section-heading"><span>02</span><div><h2>{t('backoffice.firstAdmin')}</h2><p>{t('backoffice.firstAdminHint')}</p></div></div>
         <div className="bo-form-grid"><Field label={t('backoffice.firstName')} name="first_admin.first_name" value={form.first_admin.first_name} onChange={value => changeAdmin('first_name', value)} error={fieldErrors['first_admin.first_name']} required />
           <Field label={t('backoffice.lastName')} name="first_admin.last_name" value={form.first_admin.last_name || ''} onChange={value => changeAdmin('last_name', value)} error={fieldErrors['first_admin.last_name']} />
+          <Field label={t('backoffice.userId')} name="first_admin.login_id" value={form.first_admin.login_id} onChange={value => changeAdmin('login_id', value)} error={fieldErrors['first_admin.login_id']} required />
           <Field label={t('backoffice.email')} name="first_admin.email" type="email" value={form.first_admin.email} onChange={value => changeAdmin('email', value)} error={fieldErrors['first_admin.email']} required />
           <label className="bo-field" htmlFor="bo-first_admin.phone"><span>{t('backoffice.phone')} *</span>
             <div className="bo-phone-input-group">
@@ -248,6 +251,10 @@ export function ShopDetailPage() {
   const [draft, setDraft] = useState<EditDraft | null>(null)
   const [editing, setEditing] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [adminUserIds, setAdminUserIds] = useState<string[]>([])
+  const [adminUserIdsLoaded, setAdminUserIdsLoaded] = useState(false)
+  const [adminUserIdsLoading, setAdminUserIdsLoading] = useState(false)
+  const [adminUserIdsError, setAdminUserIdsError] = useState(false)
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
@@ -260,6 +267,30 @@ export function ShopDetailPage() {
   }, [shopId, t])
 
   const change = (key: keyof EditDraft, value: string | number | null) => setDraft(previous => previous ? { ...previous, [key]: value } : previous)
+
+  const loadAdminUserIds = async () => {
+    if (!shopId || adminUserIdsLoaded || adminUserIdsLoading) return
+    setAdminUserIdsLoading(true)
+    setAdminUserIdsError(false)
+    try {
+      const memberships = await usersApi.memberships(shopId, { role: 'ADMIN', active: 'ALL' })
+      setAdminUserIds(memberships.results.map(member => member.login_id || '').filter(Boolean))
+      setAdminUserIdsLoaded(true)
+    } catch {
+      setAdminUserIdsError(true)
+    } finally {
+      setAdminUserIdsLoading(false)
+    }
+  }
+
+  const toggleEditing = () => {
+    if (editing) {
+      setEditing(false)
+      return
+    }
+    setEditing(true)
+    void loadAdminUserIds()
+  }
 
   const save = async (event: FormEvent) => {
     event.preventDefault()
@@ -288,9 +319,11 @@ export function ShopDetailPage() {
     {!shop || !draft ? !error && <p role="status" className="bo-muted">{t('backoffice.loading')}</p> : <>
       <PageHeading eyebrow={t('backoffice.eyebrow')} title={shop.name} subtitle={shop.slug}
         action={<Status active={shop.is_active} />} />
-      <div className="bo-detail-actions"><button type="button" className="bo-secondary-button" onClick={() => setEditing(!editing)}>{editing ? t('backoffice.cancel') : t('backoffice.editShop')}</button>
+      <div className="bo-detail-actions"><button type="button" className="bo-secondary-button" onClick={toggleEditing}>{editing ? t('backoffice.cancel') : t('backoffice.editShop')}</button>
         <button type="button" className="bo-secondary-button" disabled={busy} onClick={() => void changeActive()}>{shop.is_active ? t('backoffice.deactivate') : t('backoffice.activate')}</button></div>
       {editing ? <form className="bo-form" onSubmit={event => void save(event)}><section className="bo-card"><h2>{t('backoffice.shopDetails')}</h2><div className="bo-form-grid">
+        <label className="bo-field"><span>{t('backoffice.shopAdminUserIds')}</span><input readOnly aria-busy={adminUserIdsLoading} value={adminUserIdsLoading ? t('backoffice.loadingUserIds') : adminUserIdsError ? t('backoffice.userIdsLoadFailed') : adminUserIds.join(', ') || '—'} />
+          {adminUserIdsError && <button type="button" className="bo-secondary-button" onClick={() => void loadAdminUserIds()}>{t('backoffice.retry')}</button>}</label>
         <Field label={t('backoffice.shopName')} name="name" value={draft.name} onChange={value => change('name', value)} error={fieldErrors.name} required />
         <Field label={t('backoffice.slug')} name="slug" value={draft.slug} onChange={value => change('slug', value)} error={fieldErrors.slug} required />
         <Field label={t('backoffice.maxUsers')} name="max_users" type="number" min={1} value={draft.max_users} onChange={value => change('max_users', Number(value))} error={fieldErrors.max_users} required />

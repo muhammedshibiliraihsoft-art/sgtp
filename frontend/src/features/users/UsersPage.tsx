@@ -29,7 +29,12 @@ export function UsersPage() {
   const pageSize = 20
 
   const [isFormOpen, setIsFormOpen] = useState(false)
-  const [credentialsReveal, setCredentialsReveal] = useState<{ user_code: string, initial_password: string } | null>(null)
+  const [credentialsReveal, setCredentialsReveal] = useState<{ login_id: string, initial_password: string, secondary_error?: string } | null>(null)
+  const [createNotice, setCreateNotice] = useState('')
+  const [resetMember, setResetMember] = useState<MembershipDTO | null>(null)
+  const [resetBusy, setResetBusy] = useState(false)
+  const [resetError, setResetError] = useState('')
+  const [resetResult, setResetResult] = useState<{ login_id: string | null; temporary_password: string } | null>(null)
   
   const [manageWorkFunctions, setManageWorkFunctions] = useState<MembershipDTO | null>(null)
   const [activeMemberMenu, setActiveMemberMenu] = useState<MembershipDTO | null>(null)
@@ -60,7 +65,7 @@ export function UsersPage() {
   const paginatedMemberships = memberships
   const totalPages = Math.ceil(count / pageSize)
 
-  const handleActionConfirm = async () => {
+  const handleActionConfirm = async (loginId?: string) => {
     if (!actionMember) return
     const { member, action } = actionMember
     
@@ -72,7 +77,10 @@ export function UsersPage() {
       } else if (action === 'REMOVE') {
         await usersApi.remove(member.id)
       } else if (action === 'PROMOTE_STAFF') {
-        await usersApi.setRole(member.id, 'STAFF')
+        const result = await usersApi.setRole(member.id, 'STAFF', loginId)
+        if (result.temporary_password && result.login_id) {
+          setCredentialsReveal({ login_id: result.login_id, initial_password: result.temporary_password })
+        }
       } else if (action === 'DEMOTE_VIEWER') {
         await usersApi.setRole(member.id, 'VIEWER')
       }
@@ -81,6 +89,20 @@ export function UsersPage() {
       setError(cause instanceof Error ? cause.message : 'Unable to update membership.')
     } finally {
       setActionMember(null)
+    }
+  }
+
+  const confirmResetPin = async () => {
+    if (!resetMember?.user_id || resetBusy) return
+    setResetBusy(true)
+    setResetError('')
+    try {
+      setResetResult(await usersApi.resetPin(resetMember.user_id))
+      setResetMember(null)
+    } catch (cause) {
+      setResetError(cause instanceof Error ? cause.message : 'Unable to reset PIN.')
+    } finally {
+      setResetBusy(false)
     }
   }
 
@@ -166,7 +188,7 @@ export function UsersPage() {
                 {paginatedMemberships.map(m => (
                   <tr key={m.id} className={!m.is_active ? 'inactive-row' : ''}>
                     <td className="col-user"><strong>{m.display_name}</strong></td>
-                    <td className="col-userid"><span className="code-badge">{m.user_code}</span></td>
+                    <td className="col-userid"><span className="code-badge">{m.login_id || '—'}</span></td>
                     <td className="col-email">{m.user_email || '—'}</td>
                     <td className="col-role">
                       <span className={`role-badge role-${m.role.toLowerCase()}`}>{m.role}</span>
@@ -204,7 +226,7 @@ export function UsersPage() {
                   <span className={`role-badge role-${m.role.toLowerCase()}`}>{m.role}</span>
                 </div>
                 <div className="uc-body">
-                  <div><span className="code-badge">{m.user_code}</span></div>
+                  <div><span className="code-badge">{m.login_id || '—'}</span></div>
                   {m.user_email && <div className="text-muted">{m.user_email}</div>}
                   <div className={`status-text ${m.is_active ? 'active' : 'inactive'}`}>
                     {m.is_active ? 'Active' : 'Inactive'}
@@ -241,13 +263,20 @@ export function UsersPage() {
         <UserForm
           shopId={shopId}
           onClose={() => setIsFormOpen(false)} 
+          onSecondaryError={message => setCredentialsReveal(current => current ? { ...current, secondary_error: message } : current)}
           onSuccess={(creds) => {
             setIsFormOpen(false)
-            setCredentialsReveal({ user_code: creds.user_code!, initial_password: creds.initial_password! })
+            setCreateNotice('')
+            if (creds.login_id && creds.initial_password) {
+              setCredentialsReveal({ login_id: creds.login_id, initial_password: creds.initial_password })
+            } else {
+              setCreateNotice('Viewer record created. It has no sign-in credentials.')
+            }
             void loadData()
           }} 
         />
       )}
+      {createNotice && <p role="status" className="form-hint">{createNotice}</p>}
 
       {credentialsReveal && (
         <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="credentials-title" tabIndex={-1}>
@@ -255,18 +284,19 @@ export function UsersPage() {
             <h2 id="credentials-title">User Created Successfully</h2>
             <p className="warning-text">
               Please copy these generated credentials securely. 
-              <strong> You will not be able to see this password again.</strong>
+              <strong> You will not be able to see this PIN again.</strong>
             </p>
             <div className="credentials-box">
               <div className="cred-row">
                 <label>User ID</label>
-                <code>{credentialsReveal.user_code}</code>
+                <code>{credentialsReveal.login_id}</code>
               </div>
               <div className="cred-row">
-                <label>Initial Password</label>
+                <label>Temporary PIN</label>
                 <code className="password">{credentialsReveal.initial_password}</code>
               </div>
             </div>
+            {credentialsReveal.secondary_error && <div className="form-error" role="alert">{credentialsReveal.secondary_error}</div>}
             <div className="modal-actions">
               <button data-dialog-close className="btn-primary" onClick={() => setCredentialsReveal(null)}>I have saved them</button>
             </div>
@@ -282,6 +312,8 @@ export function UsersPage() {
             setActiveMemberMenu(null)
             if (action === 'WORK_FUNCTIONS') {
               setManageWorkFunctions(activeMemberMenu)
+            } else if (action === 'RESET_PIN') {
+              setResetMember(activeMemberMenu)
             } else {
               setActionMember({ member: activeMemberMenu, action })
             }
@@ -296,6 +328,29 @@ export function UsersPage() {
           onClose={() => setManageWorkFunctions(null)} 
         />
       )}
+
+      {resetMember && <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="reset-pin-title"><div className="modal-content">
+        <h2 id="reset-pin-title">Reset PIN for {resetMember.display_name}?</h2>
+        <p>This revokes existing sessions and issues a one-time temporary PIN.</p>
+        {resetError && <div className="form-error" role="alert">{resetError}</div>}
+        <div className="modal-actions">
+          <button type="button" className="btn-secondary" disabled={resetBusy} onClick={() => setResetMember(null)}>Cancel</button>
+          <button type="button" className="btn-primary" disabled={resetBusy} onClick={() => void confirmResetPin()}>{resetBusy ? 'Resetting...' : 'Reset PIN'}</button>
+        </div>
+      </div></div>}
+      {resetResult && <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="reset-pin-result-title"><div className="modal-content credentials-modal">
+        <h2 id="reset-pin-result-title">Temporary PIN</h2>
+        <p>User must set a new PIN on next login. Save this PIN now; it cannot be retrieved later.</p>
+        {resetError && <div className="form-error" role="alert">{resetError}</div>}
+        <div className="credentials-box">
+          <div className="cred-row"><label>User ID</label><code>{resetResult.login_id || 'Use legacy login'}</code></div>
+          <div className="cred-row"><label>Temporary PIN</label><code>{resetResult.temporary_password}</code></div>
+        </div>
+        <div className="modal-actions">
+          <button type="button" className="btn-secondary" onClick={() => void navigator.clipboard.writeText(`${resetResult.login_id || ''}\n${resetResult.temporary_password}`).catch(() => setResetError('Copy failed.'))}>Copy credentials</button>
+          <button type="button" className="btn-primary" onClick={() => setResetResult(null)}>I have saved the PIN</button>
+        </div>
+      </div></div>}
 
       {actionMember && (
         <ConfirmActionModal 

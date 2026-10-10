@@ -7,7 +7,7 @@ from django.db.models.functions import Lower, Trim
 from django.db.models.lookups import Exact
 from django.utils import timezone
 from backend.core.models import TimeStampedUUIDModel
-from ..identity import generate_user_code
+from ..identity import generate_user_code, normalize_login_id
 from .user_manager import UserManager
 
 
@@ -24,6 +24,11 @@ class User(TimeStampedUUIDModel, AbstractBaseUser, PermissionsMixin):
         DARK = 'dark', 'Dark'
 
     user_code = models.CharField(max_length=18, unique=True, editable=False)
+    login_id = models.CharField(max_length=32, null=True, blank=True, db_index=True)
+    login_enabled = models.BooleanField(
+        default=True,
+        help_text="Whether this account is permitted to authenticate to the application.",
+    )
     owning_shop = models.ForeignKey(
         "tenants.Tenant",
         null=True,
@@ -52,10 +57,18 @@ class User(TimeStampedUUIDModel, AbstractBaseUser, PermissionsMixin):
     objects = UserManager()
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ["first_name", "phone"]
+    REQUIRED_FIELDS = ["first_name", "phone", "login_id"]
 
     class Meta:
         constraints = [
+            models.UniqueConstraint(
+                Lower("login_id"), condition=models.Q(login_id__isnull=False),
+                name="unique_user_login_id_casefold",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(login_id__isnull=True) | models.Q(login_id__regex=r"^[A-Za-z][A-Za-z0-9_]{2,31}$"),
+                name="user_login_id_format_valid",
+            ),
             models.UniqueConstraint(
                 fields=['phone'],
                 condition=models.Q(phone__isnull=False),
@@ -105,6 +118,11 @@ class User(TimeStampedUUIDModel, AbstractBaseUser, PermissionsMixin):
 
         super().clean()
         self.first_name = (self.first_name or "").strip()
+        if self.login_id is not None:
+            try:
+                self.login_id = normalize_login_id(self.login_id)
+            except ValueError as exc:
+                raise ValidationError({"login_id": str(exc)}) from exc
         self.last_name = (self.last_name or "").strip()
         if not self.first_name:
             raise ValidationError({"first_name": "First name is required."})
@@ -138,7 +156,7 @@ class User(TimeStampedUUIDModel, AbstractBaseUser, PermissionsMixin):
 
         if self.pk and not adding:
             previous = type(self).objects.filter(pk=self.pk).values_list(
-                "user_code", "owning_shop_id"
+                "user_code", "owning_shop_id", "login_id"
             ).first()
             previous_code = previous[0] if previous else None
             previous_shop_id = previous[1] if previous else None
@@ -146,6 +164,8 @@ class User(TimeStampedUUIDModel, AbstractBaseUser, PermissionsMixin):
                 raise ValidationError({"user_code": "User ID is immutable."})
             if previous_shop_id and self.owning_shop_id != previous_shop_id:
                 raise ValidationError({"owning_shop": "User Shop ownership is immutable."})
+            if previous and previous[2] and self.login_id != previous[2]:
+                raise ValidationError({"login_id": "Login ID cannot be changed after assignment."})
         self.email = (self.email or "").strip().lower() or None
         from ..phone_numbers import InvalidUserPhone, normalize_user_phone
 

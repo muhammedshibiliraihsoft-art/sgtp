@@ -1,13 +1,17 @@
+import { useState } from 'react'
 import type { MembershipDTO } from './types'
 
 interface Props {
   member: MembershipDTO
   action: 'DEACTIVATE' | 'REACTIVATE' | 'REMOVE' | 'PROMOTE_STAFF' | 'DEMOTE_VIEWER'
-  onConfirm: () => void
+  onConfirm: (loginId?: string) => void
   onCancel: () => void
 }
 
 export function ConfirmActionModal({ member, action, onConfirm, onCancel }: Props) {
+  const [loginId, setLoginId] = useState('')
+  const needsLoginId = action === 'PROMOTE_STAFF' && !member.login_id
+  const loginIdIsValid = /^[a-zA-Z][a-zA-Z0-9_]{2,31}$/.test(loginId)
   let title = ''
   let message = ''
   let confirmText = ''
@@ -33,7 +37,7 @@ export function ConfirmActionModal({ member, action, onConfirm, onCancel }: Prop
       break
     case 'PROMOTE_STAFF':
       title = 'Promote to Staff'
-      message = `Are you sure you want to change ${member.display_name}'s role to STAFF? They will gain operational access.`
+      message = `Change ${member.display_name}'s role to STAFF? A temporary PIN will be generated and existing sessions revoked.`
       confirmText = 'Confirm Role Change'
       break
     case 'DEMOTE_VIEWER':
@@ -48,9 +52,13 @@ export function ConfirmActionModal({ member, action, onConfirm, onCancel }: Prop
       <div className="modal-content">
         <h2 id="member-action-title">{title}</h2>
         <p>{message}</p>
+        {action === 'PROMOTE_STAFF' && !member.login_id && <div className="form-group">
+          <label htmlFor="promote-staff-login-id">User ID *</label>
+          <input id="promote-staff-login-id" required pattern="[a-zA-Z][a-zA-Z0-9_]{2,31}" value={loginId} onChange={event => setLoginId(event.target.value)} />
+        </div>}
         <div className="modal-actions">
           <button data-dialog-close className="btn-secondary" onClick={onCancel}>Cancel</button>
-          <button className={btnClass} onClick={onConfirm}>{confirmText}</button>
+          <button className={btnClass} disabled={needsLoginId && !loginIdIsValid} onClick={() => onConfirm(loginId || undefined)}>{confirmText}</button>
         </div>
       </div>
     </div>

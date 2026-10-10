@@ -1,5 +1,5 @@
 type ProxyEnvironment = {
-  STAGING_API_ORIGIN?: string
+  API_ORIGIN?: string
   FRONTEND_ORIGIN?: string
 }
 
@@ -52,7 +52,7 @@ function setCookieHeaders(headers: Headers, cookies: string[]) {
 export async function onRequest({ request, env }: PagesRequestContext): Promise<Response> {
   const incomingUrl = new URL(request.url)
   if (!incomingUrl.pathname.startsWith('/api/')) return jsonError(404, 'Not found.')
-  if (!configuredApiOrigin(env.STAGING_API_ORIGIN)) return jsonError(503, 'The staging API proxy is not configured.')
+  if (!configuredApiOrigin(env.API_ORIGIN)) return jsonError(503, 'The API proxy is not configured.')
   if (!allowedFrontendOrigin(env.FRONTEND_ORIGIN, incomingUrl.origin)) return jsonError(503, 'The frontend origin is not configured.')
 
   const method = request.method.toUpperCase()
@@ -64,14 +64,14 @@ export async function onRequest({ request, env }: PagesRequestContext): Promise<
   if (origin && origin !== env.FRONTEND_ORIGIN) return jsonError(403, 'Request origin is not allowed.')
   if (!origin && !['GET', 'HEAD', 'OPTIONS'].includes(method)) return jsonError(403, 'Request origin is required.')
 
-  const upstreamUrl = new URL(`${incomingUrl.pathname}${incomingUrl.search}`, env.STAGING_API_ORIGIN)
+  const upstreamUrl = new URL(`${incomingUrl.pathname}${incomingUrl.search}`, env.API_ORIGIN)
   const headers = new Headers(request.headers)
   for (const header of ['host', 'connection', 'content-length', 'transfer-encoding', 'x-forwarded-host', 'x-forwarded-proto']) {
     headers.delete(header)
   }
   // Validate browser Origin at the edge, then provide the approved API origin for
   // Django's CSRF Origin check. Cookies and X-CSRFToken remain unchanged.
-  if (origin) headers.set('Origin', env.STAGING_API_ORIGIN)
+  if (origin) headers.set('Origin', env.API_ORIGIN)
 
   let upstream: Response
   try {
@@ -85,7 +85,7 @@ export async function onRequest({ request, env }: PagesRequestContext): Promise<
     } as RequestInit & { duplex?: 'half' })
     upstream = await fetch(upstreamRequest)
   } catch {
-    return jsonError(502, 'The staging API could not be reached.')
+    return jsonError(502, 'The API could not be reached.')
   }
 
   const responseHeaders = new Headers(upstream.headers)

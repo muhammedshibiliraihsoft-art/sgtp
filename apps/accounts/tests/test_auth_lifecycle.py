@@ -26,16 +26,30 @@ class AuthLifecycleTest(TestCase):
 
     def get_valid_login_cookies(self):
         """Helper to get a valid login state with cookies and CSRF."""
+        bootstrap = self.client.get('/api/v1/auth/csrf/')
+        self.assertEqual(bootstrap.status_code, status.HTTP_200_OK)
         response = self.client.post('/api/v1/auth/login/', {
             'email': 'lifecycle@example.com',
             'password': 'testpass123'
-        }, format='json')
+        }, HTTP_X_CSRFTOKEN=bootstrap.data['csrf_token'], format='json')
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         refresh_cookie = response.cookies.get('refresh')
         csrf_cookie = response.cookies.get('csrftoken')
         
         return refresh_cookie, csrf_cookie, response.data.get('access')
+
+    def test_login_requires_csrf_bootstrap_token(self):
+        denied = self.client.post('/api/v1/auth/login/', {
+            'email': 'lifecycle@example.com', 'password': 'testpass123'
+        }, format='json')
+        self.assertEqual(denied.status_code, status.HTTP_403_FORBIDDEN)
+
+        bootstrap = self.client.get('/api/v1/auth/csrf/')
+        allowed = self.client.post('/api/v1/auth/login/', {
+            'email': 'lifecycle@example.com', 'password': 'testpass123'
+        }, HTTP_X_CSRFTOKEN=bootstrap.data['csrf_token'], format='json')
+        self.assertEqual(allowed.status_code, status.HTTP_200_OK, allowed.data)
 
     def test_csrf_bootstrap_returns_token_and_sets_host_scoped_cookie(self):
         response = self.client.get('/api/v1/auth/csrf/')

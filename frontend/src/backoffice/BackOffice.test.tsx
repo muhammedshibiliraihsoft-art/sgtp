@@ -7,6 +7,7 @@ import { authService } from '../services/auth'
 import { ApiError } from '../services/apiClient'
 import { shopsService } from '../services/shops'
 import type { ShopDetail } from '../services/shops'
+import { usersApi } from '../features/users/api'
 
 const mainUser = {
   id: 'main-1', user_code: 'U-MAIN', email: 'main@example.test', first_name: 'Main', last_name: 'Supplier',
@@ -52,9 +53,31 @@ describe('Main Supplier Back Office', () => {
     expect(screen.queryByText('Modern Tailors')).not.toBeInTheDocument()
   })
 
+  it('shows the exact Shop Admin entered User ID(s), not generated internal codes', async () => {
+    vi.spyOn(shopsService, 'detail').mockResolvedValue(shop)
+    const memberships = vi.spyOn(usersApi, 'memberships').mockResolvedValue({
+      count: 1,
+      next: null,
+      previous: null,
+      results: [{
+        id: 'membership-1', tenant: shop.id, tenant_name: shop.name, user_code: 'U-ADMIN-123',
+        user_id: 'user-1', login_id: 'ShopAdmin', display_name: 'Shop Admin', user_email: null,
+        role: 'ADMIN', is_active: true, created_at: '', updated_at: '',
+      }],
+    })
+    await open('/backoffice/shops/shop-1')
+    expect(memberships).not.toHaveBeenCalled()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit Shop' }))
+
+    expect(await screen.findByDisplayValue('ShopAdmin')).toHaveAttribute('readonly')
+    expect(screen.queryByDisplayValue('U-ADMIN-123')).not.toBeInTheDocument()
+    expect(memberships).toHaveBeenCalledWith('shop-1', { role: 'ADMIN', active: 'ALL' })
+  })
+
   it('creates a Shop with required backend fields and keeps one-time credentials in component memory', async () => {
     const create = vi.spyOn(shopsService, 'create').mockResolvedValue({
-      ...shop, first_admin_user_code: 'U-FIRSTADMIN', initial_password: 'temporary-secret',
+      ...shop, first_admin_user_code: 'U-FIRSTADMIN', first_admin_login_id: 'FirstAdmin', initial_password: '482731',
     })
     vi.spyOn(shopsService, 'detail').mockResolvedValue(shop)
     await open('/backoffice/shops/new')
@@ -62,23 +85,24 @@ describe('Main Supplier Back Office', () => {
     fireEvent.change(screen.getByLabelText(/Slug/), { target: { value: 'demo-shop' } })
     fireEvent.change(screen.getByLabelText(/Maximum users/), { target: { value: '5' } })
     fireEvent.change(screen.getByLabelText(/First name/), { target: { value: 'First' } })
+    fireEvent.change(screen.getByLabelText(/First Admin User ID/), { target: { value: 'FirstAdmin' } })
     fireEvent.change(screen.getByLabelText(/^Email/), { target: { value: 'first@example.test' } })
     fireEvent.change(screen.getAllByLabelText(/^Phone/)[1], { target: { value: '+919000000000' } })
     fireEvent.click(screen.getByRole('button', { name: 'Create Shop' }))
     await waitFor(() => expect(create).toHaveBeenCalledWith(expect.objectContaining({
       name: 'Demo Shop', slug: 'demo-shop', max_users: 5,
-      first_admin: expect.objectContaining({ first_name: 'First', email: 'first@example.test', phone: '+919000000000' }),
+      first_admin: expect.objectContaining({ first_name: 'First', login_id: 'FirstAdmin', email: 'first@example.test', phone: '+919000000000' }),
     })))
-    expect(await screen.findByText('U-FIRSTADMIN')).toBeInTheDocument()
-    expect(screen.queryByText('temporary-secret')).not.toBeInTheDocument()
+    expect(await screen.findByText('FirstAdmin')).toBeInTheDocument()
+    expect(screen.queryByText('482731')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Show' }))
-    expect(screen.getByText('temporary-secret')).toBeInTheDocument()
+    expect(screen.getByText('482731')).toBeInTheDocument()
     const storedValues = (storage: Storage) => Array.from({ length: storage.length }, (_, index) => storage.getItem(storage.key(index) || ''))
-    expect(storedValues(localStorage).join(' ')).not.toContain('temporary-secret')
-    expect(storedValues(sessionStorage).join(' ')).not.toContain('temporary-secret')
+    expect(storedValues(localStorage).join(' ')).not.toContain('482731')
+    expect(storedValues(sessionStorage).join(' ')).not.toContain('482731')
     fireEvent.click(screen.getByRole('button', { name: /Done · Open Shop/ }))
     await waitFor(() => expect(window.location.pathname).toBe('/backoffice/shops/shop-1'))
-    expect(screen.queryByText('temporary-secret')).not.toBeInTheDocument()
+    expect(screen.queryByText('482731')).not.toBeInTheDocument()
   })
 
   it('shows nested backend validation errors by field', async () => {
@@ -89,6 +113,7 @@ describe('Main Supplier Back Office', () => {
     fireEvent.change(screen.getByLabelText(/Shop name/), { target: { value: 'Demo Shop' } })
     fireEvent.change(screen.getByLabelText(/Slug/), { target: { value: 'demo-shop' } })
     fireEvent.change(screen.getByLabelText(/First name/), { target: { value: 'First' } })
+    fireEvent.change(screen.getByLabelText(/First Admin User ID/), { target: { value: 'firstadmin' } })
     fireEvent.change(screen.getByLabelText(/^Email/), { target: { value: 'first@example.test' } })
     fireEvent.change(screen.getAllByLabelText(/^Phone/)[1], { target: { value: '+919000000000' } })
     fireEvent.click(screen.getByRole('button', { name: 'Create Shop' }))

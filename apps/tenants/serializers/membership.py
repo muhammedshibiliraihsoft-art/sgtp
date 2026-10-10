@@ -10,9 +10,14 @@ class TenantMemberSerializer(serializers.ModelSerializer):
         queryset=User.objects.all(), write_only=True, required=True
     )
     user_code = serializers.CharField(source="user.user_code", read_only=True)
+    login_id = serializers.CharField(source="user.login_id", read_only=True)
+    user_id = serializers.UUIDField(source="user.id", read_only=True)
     display_name = serializers.SerializerMethodField()
     user_email = serializers.ReadOnlyField(source="user.email")
     tenant_name = serializers.ReadOnlyField(source="tenant.name")
+    new_login_id = serializers.CharField(
+        write_only=True, required=False, allow_blank=True, max_length=32
+    )
 
     class Meta:
         model = TenantMember
@@ -22,6 +27,9 @@ class TenantMemberSerializer(serializers.ModelSerializer):
             "tenant_name",
             "user",
             "user_code",
+            "login_id",
+            "new_login_id",
+            "user_id",
             "display_name",
             "user_email",
             "role",

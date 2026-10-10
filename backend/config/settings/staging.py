@@ -74,8 +74,7 @@ SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_HTTPONLY = False
 
-# Shared staging must never write recovery links or tokens to provider logs.
+# Shared staging does not expose email-based self-service credential recovery.
 EMAIL_BACKEND = "django.core.mail.backends.dummy.EmailBackend"
 if get_env_var("DJANGO_EMAIL_BACKEND", EMAIL_BACKEND) != EMAIL_BACKEND:  # noqa: F405
-    raise ImproperlyConfigured("Staging password-reset email delivery is disabled.")
-PASSWORD_RESET_URL = "https://staging.birky.com/reset-password"
+    raise ImproperlyConfigured("Staging email delivery is disabled.")

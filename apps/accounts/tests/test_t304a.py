@@ -51,7 +51,7 @@ class T304AIdentityTests(TestCase):
         )
         response = self.client.post(
             "/api/v1/auth/users/",
-            {"first_name": "Noor", "shop": str(shop.pk), "role": "STAFF"},
+            {"first_name": "Noor", "login_id": "noor", "shop": str(shop.pk), "role": "STAFF"},
             format="json",
         )
         self.assertEqual(response.status_code, 201, response.data)
@@ -120,39 +120,23 @@ class T304AIdentityTests(TestCase):
             self.assertEqual(response.data["user"]["id"], str(user.pk))
             self.assertEqual(response.data["user"]["user_code"], user.user_code)
 
-    def test_no_email_reset_request_is_generic_and_sends_nothing(self):
+    def test_email_reset_request_endpoint_is_removed(self):
         response = self.client.post("/api/v1/auth/password/reset/", {}, format="json")
-        self.assertEqual(response.status_code, 200, response.data)
-        self.assertEqual(response["Cache-Control"], "no-store")
-        self.assertEqual(response["Pragma"], "no-cache")
+        self.assertEqual(response.status_code, 404)
 
-    def test_main_supplier_can_reset_credentials_once_and_sessions_are_revoked(self):
+    def test_main_supplier_cannot_bypass_shop_admin_staff_reset_path(self):
         user = create_test_user(first_name="Noor", password="Old-Strong-936!")
-        login = self.client.post(
-            "/api/v1/auth/login/",
-            {"identifier": user.user_code, "password": "Old-Strong-936!"},
-            format="json",
-        )
-        self.assertEqual(login.status_code, 200, login.data)
+        previous_hash = user.password
         old_version = user.auth_version
         self.client.force_authenticate(user=self.admin)
         response = self.client.post(
             f"/api/v1/auth/users/{user.pk}/reset-credentials/", {}, format="json"
         )
-        self.assertEqual(response.status_code, 200, response.data)
-        self.assertEqual(response["Cache-Control"], "no-store")
-        self.assertEqual(response["Pragma"], "no-cache")
-        self.assertEqual(response.data["user_code"], user.user_code)
+        self.assertEqual(response.status_code, 404, response.data)
         user.refresh_from_db()
-        self.assertTrue(user.must_change_password)
-        self.assertEqual(user.auth_version, old_version + 1)
-        self.assertTrue(user.check_password(response.data["temporary_password"]))
-        self.client.force_authenticate(user=None)
-        gated = self.client.get(
-            "/api/v1/auth/users/me/",
-            HTTP_AUTHORIZATION=f"Bearer {login.data['access']}",
-        )
-        self.assertEqual(gated.status_code, 401)
+        self.assertEqual(user.password, previous_hash)
+        self.assertEqual(user.auth_version, old_version)
+        self.assertFalse(user.must_change_password)
 
     def test_shop_admin_cannot_reset_global_credentials(self):
         supplier, _ = Supplier.objects.get_or_create(singleton_lock=True)
@@ -220,6 +204,7 @@ class T304AIdentityTests(TestCase):
                 email="cli@example.test",
                 first_name="CLI",
                 phone="+96550000004",
+                login_id="cli_admin",
                 verbosity=0,
             )
         user = User.objects.get(email="cli@example.test")

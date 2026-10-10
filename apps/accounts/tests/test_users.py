@@ -60,6 +60,7 @@ class UserAPITest(TestCase):
         response = self.client.post('/api/v1/auth/users/', {
             'email': self.user_data['email'],
             'first_name': self.user_data['first_name'],
+            'login_id': 'test_user',
             'last_name': self.user_data['last_name'],
             'shop': str(shop.pk),
             'role': 'STAFF',

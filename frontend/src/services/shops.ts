@@ -32,6 +32,7 @@ export type CreateShopInput = {
   slug: string
   max_users: number
   first_admin: {
+    login_id: string
     first_name: string
     last_name?: string
     email: string
@@ -52,6 +53,7 @@ export type CreateShopInput = {
 
 export type CreatedShop = ShopDetail & {
   first_admin_user_code: string
+  first_admin_login_id?: string
   initial_password: string
 }
 

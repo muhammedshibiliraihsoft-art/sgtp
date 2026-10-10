@@ -14,8 +14,8 @@ describe('Shop membership API', () => {
   it('creates a Shop user only through the Shop URL context', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ id:'user-1' }), { status:201 }))
     vi.stubGlobal('fetch', fetchMock)
-    await usersApi.createUser('shop-1', { first_name:'Sam', role:'STAFF' })
+    await usersApi.createUser('shop-1', { first_name:'Sam', login_id:'sam', role:'STAFF' })
     expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/shops/shop-1/users/')
-    expect(JSON.parse(fetchMock.mock.calls[0][1].body as string)).toEqual({ first_name:'Sam', role:'STAFF' })
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body as string)).toEqual({ first_name:'Sam', login_id:'sam', role:'STAFF' })
   })
 })

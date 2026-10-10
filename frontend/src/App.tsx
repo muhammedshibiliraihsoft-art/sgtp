@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useState, useRef, useId } from 'react'
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
-  ArrowRight, Bell, ChevronDown, CircleHelp,
+  ArrowRight, Bell, ChevronDown, CircleHelp, Eye, EyeOff,
   ClipboardList, Globe2, LayoutDashboard,
   Moon, MoreHorizontal, Plus, Search, Settings2, LogOut, ChevronUp, Sun,
   UsersRound, Scissors, CreditCard, BarChart3, Users,
@@ -15,10 +15,12 @@ import { AuthProvider } from './services/AuthContext'
 import { CurrentShopProvider } from './hooks/useCurrentShop'
 import { DialogKeyboardManager } from './components/DialogKeyboardManager'
 import { useAuth } from './services/useAuth'
-import desktopImg from './assets/images/login/desktop.png'
-import phoneImg from './assets/images/login/phone.png'
-import tabletPortraitImg from './assets/images/login/tablet-portrait.png'
-import tabletLandscapeImg from './assets/images/login/tablet-landscape.png'
+import { ApiError } from './services/apiClient'
+import { PinResetPage } from './PinResetPage'
+import desktopImg from './assets/images/login/desktop.webp'
+import phoneImg from './assets/images/login/phone.webp'
+import tabletPortraitImg from './assets/images/login/tablet-portrait.webp'
+import tabletLandscapeImg from './assets/images/login/tablet-landscape.webp'
 import sidebarLogo from './assets/brand/sidebar_logo.png'
 
 const UsersPage = lazy(() => import('./features/users/UsersPage').then(module => ({ default: module.UsersPage })))
@@ -36,6 +38,7 @@ const BackOfficeDashboard = lazy(() => import('./backoffice/BackOfficePages').th
 const ShopListPage = lazy(() => import('./backoffice/BackOfficePages').then(module => ({ default: module.ShopListPage })))
 const CreateShopPage = lazy(() => import('./backoffice/BackOfficePages').then(module => ({ default: module.CreateShopPage })))
 const ShopDetailPage = lazy(() => import('./backoffice/BackOfficePages').then(module => ({ default: module.ShopDetailPage })))
+const PinResetRequestsPage = lazy(() => import('./backoffice/PinResetRequestsPage').then(module => ({ default: module.PinResetRequestsPage })))
 
 function PageLoading() { return <div className="content-wrap" role="status">Loading page…</div> }
 
@@ -234,27 +237,33 @@ function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const submitInFlight = useRef(false)
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
+    if (submitInFlight.current) return
     setError('')
 
     if (!identifier.trim()) {
-      setError('Please enter your User ID, email, or phone number.')
+      setError(t('auth.identifierRequired'))
       return
     }
     if (!password) {
-      setError('Please enter your password.')
+      setError(t('auth.credentialRequired'))
       return
     }
 
+    submitInFlight.current = true
     setIsLoading(true)
     try {
       const mustChangePassword = await signIn(identifier.trim(), password)
       navigate(mustChangePassword ? '/password-change' : '/', { replace: true })
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Unable to sign in right now. Please try again.')
+      if (err instanceof ApiError && err.status === 429) setError(t('auth.loginRateLimited'))
+      else if (err instanceof ApiError && (err.status === 0 || err.status >= 500)) setError(t('auth.networkError'))
+      else setError(t('auth.loginFailed'))
     } finally {
+      submitInFlight.current = false
       setIsLoading(false)
     }
   }
@@ -289,10 +298,8 @@ function LoginPage() {
             </div>
 
             <div className="login-header">
-              <h1>{t('welcomeBack') === 'welcomeBack' ? 'Welcome back 👋' : t('welcomeBack')}</h1>
-              <p className="login-subtitle">
-                {t('login.subtitle') === 'login.subtitle' ? 'Please enter your email, phone number or username to continue.' : t('login.subtitle')}
-              </p>
+              <h1>{t('welcomeBack')} 👋</h1>
+              <p className="login-subtitle">{t('auth.loginSubtitle')}</p>
             </div>
 
             <form className="login-form" onSubmit={handleSubmit}>
@@ -303,41 +310,41 @@ function LoginPage() {
               )}
 
               <div className="form-group">
+                <label className="field-label" htmlFor="identifier">{t('auth.identifier')}</label>
                 <div className="input-with-icon">
                   <UsersRound className="input-icon" size={18} aria-hidden="true" />
                   <input
                     id="identifier"
                     type="text"
                     autoComplete="username"
-                    placeholder="Email / Phone / Username"
+                    placeholder={t('auth.identifierPlaceholder')}
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
                     disabled={isLoading}
-                    aria-label="User ID, Email, or Phone"
                   />
                 </div>
               </div>
 
               <div className="form-group">
+                <label className="field-label" htmlFor="password">{t('auth.credential')}</label>
                 <div className="input-with-icon">
                   <Settings2 className="input-icon" size={18} aria-hidden="true" />
                   <input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="current-password"
-                    placeholder="Password"
+                    placeholder={t('auth.credentialPlaceholder')}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={isLoading}
-                    aria-label="Password"
                   />
                   <button
                     type="button"
                     className="password-toggle"
                     onClick={() => setShowPassword(!showPassword)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-label={showPassword ? t('auth.hideCredential') : t('auth.showCredential')}
                   >
-                    <CircleHelp size={18} />
+                    {showPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
                   </button>
                 </div>
               </div>
@@ -348,14 +355,14 @@ function LoginPage() {
                   type="button"
                   className="forgot-password-link"
                   style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-                  onClick={() => alert('FOLLOW-UP AUTH SCREEN REQUIRED — PASSWORD RESET')}
+                  onClick={() => navigate('/forgot-password')}
                 >
-                  Forgot password?
+                  {t('auth.recoverAccess')}
                 </button>
               </div>
 
               <button className="primary-button submit-button" type="submit" disabled={isLoading}>
-                {isLoading ? 'Logging in...' : 'Log in'} <ArrowRight size={18} />
+                {isLoading ? t('auth.signingIn') : t('auth.signIn')} <ArrowRight size={18} />
               </button>
             </form>
           </div>
@@ -371,6 +378,7 @@ function LoginPage() {
 }
 
 function PasswordChangePage() {
+  const { t } = useTranslation()
   const { changePassword } = useAuth()
   const navigate = useNavigate()
   const [currentPassword, setCurrentPassword] = useState('')
@@ -378,32 +386,50 @@ function PasswordChangePage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const submitInFlight = useRef(false)
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault()
     setError('')
+    if (submitInFlight.current) return
+    if (!/^[0-9]{6}$/.test(newPassword)) {
+      setError(t('authValidation.newPinInvalid'))
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setError(t('authValidation.pinMismatch'))
+      return
+    }
+    submitInFlight.current = true
     setIsLoading(true)
     try {
       await changePassword(currentPassword, newPassword, confirmPassword)
-      navigate('/login', { replace: true, state: { notice: 'Password changed. Sign in with your new password.' } })
+      navigate('/login', { replace: true, state: { notice: t('auth.pinChangedNotice') } })
     } catch (cause: unknown) {
-      setError(cause instanceof Error ? cause.message : 'Unable to change your password. Please try again.')
+      const backendErrors = cause instanceof ApiError ? JSON.stringify(cause.payload ?? {}).toLowerCase() : ''
+      if (cause instanceof ApiError && (cause.status === 0 || cause.status >= 500)) setError(t('auth.networkError'))
+      else if (/current_password|current password/.test(backendErrors)) setError(t('authValidation.currentCredentialInvalid'))
+      else if (/new_password_confirm|confirm.*(match|same)|mismatch/.test(backendErrors)) setError(t('authValidation.pinMismatch'))
+      else if (/new_password|pin/.test(backendErrors)) setError(t('authValidation.newPinInvalid'))
+      else setError(t('auth.changeFailed'))
     } finally {
+      submitInFlight.current = false
       setIsLoading(false)
     }
   }
 
   return <main className="login-page"><section className="login-form-area"><div className="login-form-container">
-    <div className="login-header"><h1>Change your password</h1><p className="login-subtitle">Set a new password before continuing.</p></div>
+    <div className="login-header"><h1>{t('auth.changePinTitle')}</h1><p className="login-subtitle">{t('auth.changePinIntro')}</p></div>
     <form className="login-form" onSubmit={submit}>
       {error && <div className="login-error-message" role="alert">{error}</div>}
-      <label className="field-label" htmlFor="current-password">Current password</label>
+      <label className="field-label" htmlFor="current-password">{t('auth.currentCredential')}</label>
       <input id="current-password" type="password" autoComplete="current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} required disabled={isLoading} />
-      <label className="field-label" htmlFor="new-password">New password</label>
-      <input id="new-password" type="password" autoComplete="new-password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} required disabled={isLoading} />
-      <label className="field-label" htmlFor="confirm-password">Confirm new password</label>
-      <input id="confirm-password" type="password" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required disabled={isLoading} />
-      <button className="primary-button submit-button" type="submit" disabled={isLoading}>{isLoading ? 'Saving...' : 'Change password'}</button>
+      <label className="field-label" htmlFor="new-password">{t('auth.newPin')}</label>
+      <input id="new-password" type="password" inputMode="numeric" autoComplete="new-password" minLength={6} maxLength={6} pattern="[0-9]{6}" aria-describedby="new-pin-hint" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} required disabled={isLoading} />
+      <span className="auth-field-hint" id="new-pin-hint">{t('auth.sixDigitPinHint')}</span>
+      <label className="field-label" htmlFor="confirm-password">{t('auth.confirmPin')}</label>
+      <input id="confirm-password" type="password" inputMode="numeric" autoComplete="new-password" minLength={6} maxLength={6} pattern="[0-9]{6}" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required disabled={isLoading} />
+      <button className="primary-button submit-button" type="submit" disabled={isLoading}>{isLoading ? t('auth.saving') : t('auth.changePinButton')}</button>
     </form>
   </div></section></main>
 }
@@ -889,11 +915,13 @@ function Workspace() {
   const [isSidebarPinned, setIsSidebarPinned] = useState(false)
   const isLogin = location.pathname === '/login'
   const isPasswordChange = location.pathname === '/password-change'
+  const isPinReset = location.pathname === '/forgot-password'
 
   useEffect(() => { setIsMoreOpen(false) }, [location.pathname])
 
   if (!ready) return <main className="login-page" aria-busy="true"><p>Loading your session…</p></main>
   if (isLogin) return user && !passwordChangeRequired ? <Navigate to={user.is_main_supplier_admin ? '/backoffice' : '/'} replace /> : <LoginPage />
+  if (isPinReset) return <PinResetPage />
   if (isPasswordChange) return passwordChangeRequired ? <PasswordChangePage /> : user ? <Navigate to={user.is_main_supplier_admin ? '/backoffice' : '/'} replace /> : <Navigate to="/login" replace />
   if (!user || passwordChangeRequired) return <Navigate to={passwordChangeRequired ? '/password-change' : '/login'} replace />
 
@@ -911,6 +939,7 @@ function Workspace() {
         <Route path="/backoffice/shops" element={<ShopListPage />} />
         <Route path="/backoffice/shops/new" element={<CreateShopPage />} />
         <Route path="/backoffice/shops/:shopId" element={<ShopDetailPage />} />
+        <Route path="/backoffice/pin-reset-requests" element={<PinResetRequestsPage />} />
         <Route path="/backoffice/measurements" element={<ClientMeasurementsPage />} />
         <Route path="/backoffice/catalog" element={<GlobalCatalogPage />} />
         <Route path="/backoffice/designs" element={<GlobalDesignTemplatesPage />} />

@@ -16,6 +16,24 @@ def get_env_var(var_name, default=None):
     raise ImproperlyConfigured(f"Set the {var_name} environment variable")
 
 
+# Authentication rate limiting uses the socket peer unless deployment
+# configuration explicitly selects a single client-IP header that its trusted
+# proxy overwrites. Never trust a caller-controlled X-Forwarded-For chain.
+_AUTH_CLIENT_IP_HEADERS = {
+    "REMOTE_ADDR",
+    "HTTP_X_REAL_IP",
+    "HTTP_CF_CONNECTING_IP",
+}
+AUTH_TRUSTED_CLIENT_IP_HEADER = (
+    get_env_var("AUTH_TRUSTED_CLIENT_IP_HEADER", "REMOTE_ADDR").strip().upper()
+)
+if AUTH_TRUSTED_CLIENT_IP_HEADER not in _AUTH_CLIENT_IP_HEADERS:
+    raise ImproperlyConfigured(
+        "AUTH_TRUSTED_CLIENT_IP_HEADER must be REMOTE_ADDR, "
+        "HTTP_X_REAL_IP, or HTTP_CF_CONNECTING_IP."
+    )
+
+
 # Secret key is provided by the environment
 SECRET_KEY = get_env_var("DJANGO_SECRET_KEY")
 
@@ -248,7 +266,6 @@ SIMPLE_JWT = {
     "USER_ID_CLAIM": "user_id",
 }
 
-PASSWORD_RESET_URL = get_env_var("PASSWORD_RESET_URL", "")
 EMAIL_BACKEND = get_env_var(
     "DJANGO_EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend"
 )

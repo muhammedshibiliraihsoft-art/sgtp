@@ -45,7 +45,6 @@ print(json.dumps({
     "session_samesite": settings.SESSION_COOKIE_SAMESITE,
     "csrf_samesite": settings.CSRF_COOKIE_SAMESITE,
     "email_backend": settings.EMAIL_BACKEND,
-    "reset_url": settings.PASSWORD_RESET_URL,
     "environment": settings.ENVIRONMENT,
     "database": settings.DATABASES["default"],
 }))
@@ -92,7 +91,6 @@ def test_staging_settings_are_secure_and_accept_only_approved_origins():
     assert settings["session_samesite"] == "Lax"
     assert settings["csrf_samesite"] == "Lax"
     assert settings["email_backend"] == "django.core.mail.backends.dummy.EmailBackend"
-    assert settings["reset_url"] == "https://staging.birky.com/reset-password"
 
 
 @pytest.mark.parametrize(
