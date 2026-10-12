@@ -76,6 +76,9 @@
 .bo-detail-grid dt { color: var(--color-text-muted); font-size: 11px; }
 .bo-detail-grid dd { margin: 5px 0 0; font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
 .bo-content > .bo-card { padding: 24px; }
+.bo-client-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 14px; }
+.bo-client-card { padding: 18px; }
+.bo-client-card h2 { overflow-wrap: anywhere; }
 .bo-sidebar-account { display: flex; align-items: center; gap: 10px; padding: 10px 6px; border-top: 1px solid var(--color-border); }
 .bo-sidebar-account > div { display: flex; flex-direction: column; min-width: 0; }
 .bo-sidebar-account strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }

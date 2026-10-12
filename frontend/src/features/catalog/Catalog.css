@@ -134,6 +134,22 @@
 .global-family-status-filter button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
 .global-family-form select, .global-family-form textarea { min-height: 40px; padding: 8px 10px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-surface); color: var(--color-text); font: inherit; }
 .catalog-tag-muted { background: var(--color-surface-subtle); color: var(--color-text-muted); }
+.catalog-heading-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
+.catalog-family-group-configs { display: grid; gap: 10px; margin: 12px 0; }
+.catalog-family-group-config { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-surface-subtle); }
+.catalog-family-group-config > label, .catalog-family-group-options label { display: flex; align-items: center; gap: 9px; }
+.catalog-family-group-config > label span { display: grid; gap: 3px; }
+.catalog-family-group-config small { color: var(--color-text-muted); font-size: 12px; }
+.catalog-family-group-options { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding-inline-start: 27px; }
+.catalog-family-group-options label:first-child { display: grid; grid-template-columns: auto minmax(120px, 1fr); gap: 7px; }
+.catalog-family-group-options select { min-height: 36px; padding: 6px 28px 6px 9px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-surface); color: var(--color-text); font: inherit; }
+.catalog-family-group-config input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--color-primary); }
+.catalog-add-family-group { display: inline-flex; width: fit-content; min-height: 42px; align-items: center; gap: 8px; margin: 2px 0 4px; padding: 0 14px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-surface); color: var(--color-text); cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; }
+.catalog-add-family-group:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.catalog-save-family-groups { width: fit-content; min-height: 44px; margin-top: 2px; cursor: pointer; }
+.catalog-save-family-groups:disabled, .catalog-add-family-group:disabled { cursor: wait; opacity: .65; }
+.catalog-save-family-groups:focus-visible, .catalog-add-family-group:focus-visible { outline: 3px solid color-mix(in srgb, var(--color-primary) 35%, transparent); outline-offset: 2px; }
+.catalog-dialog-hint { margin: -6px 0 0; color: var(--color-text-muted); font-size: 13px; line-height: 1.5; }
 .global-family-drawer { gap: 18px; }
 .global-family-image-tools { display: flex; align-items: center; gap: 12px; padding: 14px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-surface-subtle); }
 .global-family-preview { display: grid; width: 66px; height: 66px; flex: none; place-items: center; overflow: hidden; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-surface); color: var(--color-primary); }
@@ -206,7 +222,7 @@
 .global-catalog-page .catalog-family-card > svg:last-child { color: var(--color-text-muted); }
 .catalog-info-note { display: flex; align-items: flex-start; gap: 10px; margin-top: 18px; padding: 13px 15px; border: 1px solid var(--color-border); border-radius: 9px; background: var(--color-surface-subtle); color: var(--color-text-muted); font-size: 13px; line-height: 1.5; }
 .catalog-info-note svg { flex: none; margin-top: 1px; color: var(--color-primary); }
-.catalog-dialog-backdrop { position: fixed; z-index: 1000; inset: 0; display: grid; place-items: center; padding: 18px; background: rgb(0 0 0 / 48%); }
+.catalog-dialog-backdrop { position: fixed; z-index: 1200; inset: 0; display: grid; place-items: center; padding: 18px; background: rgb(0 0 0 / 48%); }
 .catalog-dialog { display: flex; width: min(100%, 470px); max-height: min(88dvh, 760px); flex-direction: column; gap: 16px; overflow-y: auto; padding: 22px; border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-surface); color: var(--color-text); box-shadow: var(--shadow-card); }
 .catalog-dialog-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .catalog-dialog-heading h2 { margin: 0; font-size: 19px; }

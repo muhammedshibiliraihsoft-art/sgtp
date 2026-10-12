@@ -1,5 +1,168 @@
 # Changelog
 
+## 2026-10-12 — LOCAL-TO-STAGING-SYNC-01 (candidate in progress)
+
+- Prepared a separate staging release candidate from the current local application code while preserving the original dirty checkouts. Repaired three stale backend test cases that blocked the full suite.
+- Verified 546 backend tests and 189 frontend tests; frontend build/lint and model migration drift passed. Rehearsed the staging-branch baseline and additive catalog migrations 0017–0023 on an isolated PostgreSQL cluster.
+- Aligned the staging environment example with the guarded bootstrap's `LOGIN_ID` and `PIN` variable names. No secrets were added to source. The live staging DB and Cloudflare Pages origin remain to be verified before deploy.
+
+## 2026-10-12 — MEASUREMENT-PROFILE-SAVE-AND-RECOVERY-01 (local, unpublished)
+
+- Fixed the mismatch between the filtered Measurement definitions response and save-time mapping validation for Shop-materialized garments. Saves now recognize inherited global family/variant mappings without copying catalog data.
+- On a duplicate profile-create response, the client reloads the person's profiles and opens the matching existing profile; failed stale-family requests also refresh active families and clear an unavailable selection. The backend's unique-profile guard remains authoritative, while a different garment can still create a separate profile.
+- Validation: backend Measurement/Materials API 34/34 PASS; frontend Measurement page 15/15 PASS, typecheck and production build PASS; changed Python Flake8 and scoped diff checks PASS. Tests used only disposable `test_testdb`; current application DB `devdb` was not queried or changed. No schema/data migration, commit, push, or deployment.
+
+## 2026-10-12 — GARMENT-FAMILY-DEFAULT-MEASUREMENTS-01 (local, unpublished)
+
+- Completed the family-level measurement baseline for all four seeded garment families. Existing Men's Shirt and Kuwaiti Dishdasha defaults are preserved; additive migration `catalog.0023` adds Abaya and Darraa / Long Dress field definitions, with Hem Width additionally available for Darraa.
+- Defaults are mapped at family level and therefore appear for every variant. The Shop `Add measurement` UI now submits a family-level mapping (`variant_id: null`) so added fields are available for every variant of that garment family.
+- Validation: Measurement/Materials API 34/34 before the final mapping-scope change; focused fresh-DB tests 2/2 and frontend Measurement/API 28/28 after it; approved defaults/concurrency 8/8. Django check, migration drift, migration Flake8/compile, and scoped diff checks PASS. Migration `0023` was applied and verified on local `devdb`; staging/production were not changed. No commit, push, or deploy.
+
+## 2026-10-11 — GARMENT-DEFAULT-MEASUREMENT-STRUCTURE-RESTORE-01 (local, unpublished)
+
+- Restored generic approved Measurement structure for Shop-materialized Families by resolving mappings from the Shop Family and its linked global `template_source`; linked Shop Variants also resolve source-Variant-specific mappings. No per-garment frontend hardcoding, mapping cloning, schema migration, or historical-value rewrite.
+- Family-filtered API results now use the applicable mapping order, preserving garment-specific structure even when one reusable definition has different order values across families. Supplemental Shop measurement mappings inherit the supplemental definition's configured order.
+- Regression coverage proves Men's Shirt defaults, another source family, local and source-variant behavior, deduplication, ordering, supplemental fields, Shop isolation, and existing immutable measurement history. Backend API 33/33 and approved-default/concurrency 8/8 pass; frontend Measurement page/form tests 25/25 pass; Django check, Flake8, and scoped diff check pass. Migration drift: no changes; history check unavailable because configured test base DB `testdb` is absent.
+- Tests ran only against disposable local `test_testdb` (created and removed); configured `devdb` was not written. No staging/production, commit, push, or deployment.
+
+## 2026-10-11 — STYLE-OPTION-SNAPSHOT-LEAK-FIX-01 (local, unpublished)
+
+- Fixed duplicate Design chooser options: reusable Shop Catalog list queries now exclude per-Design snapshot StyleOptions (`source_style_option` set), while existing Designs retain those copies and their images. The same availability rule applies to Design create/add/replace and Shop style-option edit endpoints.
+- Confirmed in read-only `devdb`: screenshot Shop had 4 reusable Sleeve choices and 12 active snapshots. Regression plus existing independent-copy tests 2/2 PASS; Django check PASS; migration drift reports no changes; project-state validator PASS with existing warnings. Full Catalog API module: 47/50 PASS; unrelated outstanding results are a global Design publish role expectation mismatch (403 vs expected 200) and two Arabic translation tests blocked by WIN1252 encoding in the ephemeral test DB. Tests ran in disposable `test_devdb`; no migration or application-data edit. No commit, push, or deploy.
+
+## 2026-10-11 — DESIGN-EDITOR-ACTION-BUTTON-STYLING-01 (local, unpublished)
+
+- Fixed the Design editor's unstyled `Edit name`, `Add selection`, and reference-image `Upload` actions by defining the missing page-scoped secondary-button presentation. Icons and labels align horizontally; controls have visible button surfaces, consistent sizing, and interaction/focus states. No behavior or backend/data changes.
+- Validation: frontend Design tests 13/13 PASS; typecheck/build PASS; `git diff --check` PASS (only pre-existing line-ending notices). No commit, push, or deployment.
+
+## 2026-10-11 — SHOP-DESIGN-CATALOG-SOURCE-AND-EDIT-01 (local, unpublished)
+
+- Root cause: Shop Design editor fetched global-only Option Groups, so Shop-owned Family mappings appeared absent even though Catalog/Measurements had the configured garment parts. The Design editor now reads the same Shop-scoped Family → Option Group configuration and active Style Options used by Measurements; no duplicate option catalog is introduced.
+- Added Draft-only Design-name editing and per-selection replacement, backed by existing Draft name PATCH plus a new Shop/version/selection-scoped PATCH endpoint. Selection edits retain version immutability and tenant boundaries, and refresh the style snapshot/translation/image links transactionally.
+- The exact local design shown in the user screenshot exists in `devdb` and its Family currently has 8 configured option-group mappings. Validation: Design frontend tests 13/13 PASS, typecheck/build PASS; three focused backend Design API tests PASS; Django check PASS; OpenAPI reports 0 errors with 29 existing warnings; both schema snapshots parse and match; project-state validator PASS (540 tests discovered). Temp schema-file writing was denied by Windows, so snapshots were updated explicitly. No migration/data change or write to `devdb`, no commit/push/deploy.
+
+## 2026-10-11 — BACKOFFICE-GLOBAL-DESIGN-CREATION-IO-ROOT-CAUSE-01 (local, unpublished)
+
+- Reused the existing Main-Supplier-protected global family and family-filtered global variant reads, then connected the Back Office Create action to the existing Global Design create endpoint and draft editor lifecycle. Removed the stale “API missing” warning.
+- Explicitly loaded the existing Designs stylesheet on Back Office Global Design list/editor routes so direct route loads render with the intended page styling.
+- No backend, API contract, permission, catalog ownership, lifecycle, tenant data, or schema change. Validation: frontend focused tests 4/4 PASS; typecheck/build PASS; backend focused tests 55/55 PASS; Django check PASS; migration drift clean; OpenAPI 0 errors / 29 existing warnings. No commit, push, staging, or production action.
+
+## 2026-10-11 — BACKOFFICE-MINIMAL-CLIENT-SCOPE-CORRECTION-01 (local, unpublished)
+
+- Removed the operational Measurements surface from Back Office while keeping Shop Measurement routes and selected-Shop measurement-definition configuration intact. Added a read-only selected-Shop Client contact directory with neutral fallbacks for missing contact values.
+- Backend authorization now prevents Main Supplier access to operational Client/Related Person measurement profiles/history while preserving measurement-definition configuration. Existing Shop scoping remains authoritative; no schema, migration, data rewrite, or Catalog behavior changed.
+- Validation: focused frontend tests 28/28 PASS, typecheck/build PASS; focused backend Client + Measurement/Materials tests 42/42 PASS; Django check PASS; migration drift NOT REQUIRED; project-state validator PASS (test discovery unavailable); `git diff --check` PASS with existing CRLF notices. No commit, push, staging, or production action.
+
+## 2026-10-11 — GLOBAL-CATALOG-ATOMIC-SAVE-02 (local, unpublished)
+
+- Global Catalog family Save now sends translations and ordered group IDs together in one PATCH. The backend locks the global family and applies both through one transaction; the standalone group endpoint remains compatible and shares the same mapping replacement service.
+- Added successful combined-save coverage, a controlled second-write failure proving transaction rollback, and a legacy split-request reproduction proving the previous partial-save risk. Updated frontend/API contract tests and API documentation. No migration, bulk rewrite, Shop data change, or Design-history rewrite.
+- Validation: backend Catalog API + concurrency + approved-default suite 51/51 PASS; atomic/isolation-focused backend tests 7/7 PASS; focused frontend Global Catalog/API/Shop Catalog/Variants tests 42/42 PASS; frontend typecheck/build PASS; Django system check PASS; OpenAPI 0 errors with 29 warnings (13 unique, existing); generated schema copies byte-identical; migration model drift reports no changes, while history consistency could not be checked because configured local base DB `testdb` is absent; project-state validator PASS (532 discovered tests); `git diff --check` PASS (line-ending notices only). No commit, push, Render/staging/production access, or deployment.
+
+## 2026-10-10 — CATALOG-SHOP-GLOBAL-FAMILY-READONLY-UX-ALIGN-01 (local, unpublished)
+
+- Aligned Shop Catalog controls with the existing ownership contract: global family/group configuration remains visible but read-only, while matching Shop-owned families remain editable. Added focused UI coverage for loading/error states and retained behavior; backend/API/Design behavior unchanged.
+- Validation: CatalogPage + VariantsPanel tests 21/21, typecheck/build, and three focused local PostgreSQL backend regressions PASS. No commit, push, or deployment.
+
+## 2026-10-10 — CATALOG-SHOP-FAMILY-GROUP-ISOLATION-FIX-01 (local, unpublished)
+
+- Restricted Shop Catalog family-option-group PUT to Shop-owned families; global family defaults remain readable in Shop context but writable only through Global Catalog. Added a row lock for the Shop-owned family during replacement and documented the 403 contract in OpenAPI/API docs.
+- Added multi-Shop tests for global data preservation, Shop B/new-Shop default visibility, Shop A-owned mapping isolation, and Design required/SINGLE/MULTI enforcement. Validation: Catalog API + approved defaults 42/42 PASS; focused Shop/global authorization tests 3/3 PASS; Django check, migration drift, OpenAPI (0 errors), `git diff --check`, and project-state validator (529 discovered tests) PASS. OpenAPI reports existing unrelated warnings. No migration, staging/production DB access, commit, push, or deployment.
+
+## 2026-10-10 — SHOP-ADMIN-USER-ID-AND-PIN-01 (local, unpublished)
+
+- Treat the exact entered `login_id` as the user-facing User ID, preserve letter casing, and retain case-insensitive login/uniqueness. Keep generated `user_code` only as internal identity/legacy alias; Edit Shop and Team do not present it as the user's chosen ID.
+- New account onboarding continues to issue a one-time six-digit PIN. Confirmed password changes require exactly six digits and invalidate the old credential/session. Added migration `accounts.0008_login_id_preserve_case` and backend/frontend regression coverage.
+- Validation: backend focused 32/32 PASS; full frontend 170/170 PASS (one Catalog pagination assertion failed once, then passed isolated and in full rerun); typecheck/build, Django check, migration drift, diff check, and project-state validator (525 discovered) PASS. Full backend suite: 420 tests, 417 passed, 3 errors. Two captured errors concern a missing admin static manifest entry (`core/api_browser.css`) and a legacy migration test using a schema without `accounts_user.login_id`; the third error detail was truncated and remains unidentified. Black check reports eight backend files would be reformatted; because they contain broader existing changes, no full-file reformat was applied. No commit, push, staging change, or deployment.
+
+## Historical checkpoint — BACKOFFICE-SHOP-ADMIN-USER-ID (superseded)
+
+- The initial version displayed generated `user_code`; the confirmed follow-up now displays the entered User ID stored in `login_id`.
+- Validation: focused Back Office tests 6/6, frontend typecheck/build, project-state validator, and diff check pass. No commit, push, or deployment.
+
+## 2026-10-10 — CLOUDFLARE-FRONTEND-ENV-READINESS-09B (local, unpublished)
+
+- Made the Pages API proxy environment-neutral with fail-closed runtime `API_ORIGIN` and exact `FRONTEND_ORIGIN`; added tests for synthetic production routing, no staging fallback, and invalid/missing configuration.
+- Documented the same-build/per-environment-runtime model, staging API binding, intentionally unset production target, frontend Pages root/build/output/SPA fallback, and secret boundary. No Cloudflare/Render mutation, deployment, commit, or push.
+- Validation: Pages proxy tests 4/4, typecheck and two synthetic environment builds pass with identical bundle hashes, no runtime origins/R2 credential markers in output, diff check and repository validator pass (dirty tree/test discovery warnings). Cloudflare configuration is not externally verified.
+
+## 2026-10-09 — STAGING-AUTH-INTEGRATION-AND-HARDENING-02 (local partial, unpublished)
+
+- Replaced unconditional client-supplied `CF-Connecting-IP` trust with an environment-selected, allowlisted trusted proxy header and a safe `REMOTE_ADDR` default. Render and future native VPS templates select their respective proxy-overwritten single-IP headers; added spoof/fallback tests.
+- Local Django check and pure IP-source tests (6/6) pass; `arabic-reshaper==3.0.1` was already declared and imports from `.venv`. Database-backed auth tests are blocked by unavailable local PostgreSQL. Per user direction local DB testing stopped; Render's read-only SQL connector could not reach staging because its source IP is not allowlisted and TLS is required. No allowlist change, staging DB test, staging deploy, commit or push occurred. Render staging is confirmed to auto-deploy commits from `main`, so publication remains withheld pending an approved separate test DB and safe exact-file closure.
+
+## 2026-10-09 — AUTH-DOCS-OPENAPI-RECONCILIATION-01 (local, unpublished)
+
+- Supersedes the earlier email self-service recovery and Shop Admin → VIEWER reset claims without deleting their historical implementation records. Current policy: shared legacy-password + PIN compatibility; active same-Shop STAFF-only reset by Shop Admin; Shop Admin recovery by phone request and Back Office approval; VIEWER has no login.
+- Corrected current authentication guidance and the reset endpoint's OpenAPI source description; regenerated both schema copies. Documentation/schema reconciliation only; no runtime authorization or credential behavior changed.
+
+## 2026-10-09 — FRONTEND-MAIN-RECONCILIATION-01 (local, unpublished)
+
+- Added a separate email password-reset request/confirmation flow on main, backed by existing endpoints, while retaining the Shop Admin PIN-reset route. Successful reset clears the current AuthProvider session; generic request success and retryable field-preserving errors are maintained.
+- Removed the redundant CSRF bootstrap after successful login. Decoupled Users capacity stats from search/filter/page requests and refresh stats only for Shop/permission or membership-count changes.
+- Frontend tests 166/166 across 33 files on final rerun, typecheck/build, project-state validator, and diff check passed. Lint exits 0 with React effect warnings. One unrelated Catalog pagination assertion was intermittent once, then passed isolated and in the final rerun. No backend/schema changes, commit, push, or deployment.
+
+## 2026-10-08 — AUTH-LOGIN-PIN-RESET-IMPLEMENTATION-01 (local, unpublished)
+
+- Added nullable global Login ID and case-insensitive DB uniqueness, six-digit PIN generation/change, shared DB-backed attempt limits, Shop ADMIN phone reset requests with Main Supplier review, Team reset action, Back Office review, and a separate public reset page. Preserved legacy login aliases and the Login page visual structure.
+- Added migration `accounts.0006`, focused tests, and regenerated both OpenAPI copies. Django check, migration drift, pure PIN tests, frontend 154/154, typecheck/build, and schema validation passed. PostgreSQL-backed tests and staging verification remain pending; no commit/push/deploy/migration on shared systems.
+
+## 2026-10-08 — EXISTING-AUTH-REQUEST-FLOWS-01 (local, unpublished)
+
+- Added frontend password recovery request/confirmation using existing backend endpoints; maintained generic responses and current auth/session protections.
+- Removed the redundant post-login CSRF bootstrap; debounced Users/Clients search and protected results from stale responses; separated Users stats from search/filter/page changes; deferred Design list fetching until picker interaction.
+- Frontend tests 135/135 across 29 files, typecheck and build passed. Lint exits 0 with `set-state-in-effect` warnings. No backend/API/schema changes, authenticated email-flow verification, commit, merge, push, or deployment.
+
+## 2026-10-08 — CURRENT-STATE-MIGRATION-INTEGRITY-01 (local, unpublished)
+
+- Hardened `catalog.0018` reverse validation to compare every DesignSelection row, preventing duplicate option-group rows from being collapsed and incorrectly treated as an unchanged seed.
+- Added a regression test proving rollback refuses to remove a seed Design with an extra selection in an existing group. No schema operation or new migration was added.
+- Fresh disposable UTF-8 PostgreSQL migration replay and full backend suite passed (471/471); frontend full suite 142/142 on final rerun, typecheck/build and Django/migration-drift checks passed. No commit, push, staging/production migration, or cloud write.
+
+## 2026-10-07 — OPT-02 safe baseline remediation (local, unpublished)
+
+- Fixed cached production-settings test isolation while preserving the fail-closed R2 requirement and assertions.
+- Restricted unpublished catalog `0018` seed rollback to deterministic seed IDs with guards against changed Designs; added two data-safety regression tests.
+- Verified live staging auto-deploy follows `main` pushes. Local backend 470/470 and frontend 142/142 pass; no commit, push, deployment or production setup.
+
+## 2026-10-07 — OPT-01 baseline (local, audit-only)
+
+- Recorded current repository/test/build preflight evidence, one backend test-isolation failure, deployment-trigger uncertainty, and measured-versus-unmeasured performance boundaries in `docs/OPT_01_BASELINE.md`.
+- Indexed the user's locked production engineering standard for future risk-based task gates and placed DigitalOcean production as the final separately authorized task. No application behavior, commit, push or deployment change.
+
+## 2026-10-07 — FRONTEND-GARMENT-SYSTEM-INTEGRATION-01 (local, unpublished)
+
+- Connected Shop-owned garment families and option groups to the existing Catalog UI, including family group configuration for ordering, single/multiple selection, and required groups.
+- Added Family-level Design support without requiring a Variant, while retaining existing Variant-specific Design flows.
+- Integrated Shop-specific family/group rules into Measurements; added inline custom measurement-definition creation and optional association of saved measurement sets with the selected published Design version.
+- Added frontend API/UI regression coverage for Shop catalog contracts, family/group configuration, family-level Designs, custom measurement definitions, and Design-version linkage.
+- Validation: frontend suite 142/142 across 30 files; typecheck, production build, repository-state validator, and diff checks passed. Lint exits 0 with React `set-state-in-effect` warnings, including several in ClientMeasurementsPage. Authenticated browser verification was not performed. No commit, push, or deployment.
+
+## 2026-10-07 — MEASUREMENT-HISTORY-DESIGN-DEFAULTS-01 (local, unpublished)
+
+- Added audited measurement-version deactivation through the existing set detail route, with explicit confirmation in both measurement-history UIs. Values, snapshots, copy provenance, and version high-water marks are retained; concurrent deletes are serialized and the final active version is protected.
+- Made Design creation atomic and retry-safe: style selections are submitted with the draft in one transaction and a client idempotency key prevents duplicate designs after an uncertain network response. Empty style catalogs can still save a named Shop design; a failed style-catalog request cannot be mistaken for an empty catalog.
+- Added deterministic, style-only defaults for the existing Kuwaiti Dishdasha, Abaya, and Darraa / Long Dress families. No customer measurements, finished-garment dimensions, ease values, or regional numeric ranges are seeded.
+- Documented the ISO 8559 and active ASTM D13.55 evidence boundary in `docs/MEASUREMENT_DESIGN_RESEARCH.md`; body measurements remain distinct from style and finished-garment/ease decisions.
+- Added backend API/concurrency/preset coverage and frontend delete/atomic-save/failure/retry coverage. No commit, push, deployment, staging database write, or demo/customer measurement seed was performed.
+- Validation: backend 456/456 on clean local UTF-8 PostgreSQL with external storage disabled; focused backend 70/70 plus catalog concurrency 6/6; frontend 133/133 across 29 files with typecheck/build passing and lint exiting 0 with existing effect warnings; repository validator PASS with 456 discovered and validator tests 31/31; Django, deploy, migration drift, OpenAPI, Black, Flake8, schema parity, and diff checks passed.
+
+## 2026-10-06 — CLIENT-WORKSPACE-HISTORY-01 (local, unpublished)
+
+- Reworked Client detail into a responsive workspace with compact contact summary, accessible action hierarchy, isolated loading/errors for Client and Related Persons, and a measurement profile/version history panel.
+- Connected history to existing APIs only: lazy profile expansion and paginated versions, exact immutable set detail, confirmed immutable copy, compare, and per-version worksheet PDF. Kept measurement values read-only in this view and left backend contracts/schema, application shell, Design, and Orders unchanged.
+- Follow-up from the local screenshot: imported the base Client stylesheet in the detail route (it had only been pulled in by the separate ClientsPage route), and replaced the premature “Unavailable garment” collapsed-card fallback with “Measurement profile” while names resolve lazily.
+- Hid the root viewport scrollbar visually at the user's request while retaining native scrolling for older versions.
+- Matched Related Persons to the Measurements workspace card structure and refined its count, Add action, and empty/loading states without changing form or API behavior.
+- The Client detail Measurements action now opens the existing measurement-entry workflow in-place, retaining client/shop/person context and avoiding duplicate client-context requests; direct measurement routes remain supported.
+- Replaced the legacy flat Measurements workflow presentation with distinct, consistently bordered step/review cards matching the Clients workspace, with visible step badges on desktop and mobile; behavior is unchanged.
+- Combined workflow steps 01 Client and 02 Garment into one bordered panel: side-by-side with a central divider on laptop/large tablet widths, stacked with one shared border on smaller screens.
+- Kept Add Related Person on the Client overview only; the measurement view retains existing people for wearer selection without offering management there.
+- Moved Measurement profile into the preceding Style card and hid the Related Persons side panel in Measurement view; client overview and backend remain unchanged.
+- Body Measurement entry now defaults new fields to `INCH`. The main unit switcher applies the selected unit to every field; each field remains independently editable afterward. Numeric values are never converted, and the backend payload still carries an explicit unit per saved value.
+- The separately requested backend-persisted demo Fabric records were not created: the local database contains no Shop, so no valid Shop-context API target exists. No mock data, direct ORM insert, opening-stock movement, or frontend-only fallback was added.
+- Validation: frontend tests 125 passed (29 files), typecheck/build passed; lint exited 0 with React effect warnings. Focused inventory API regression suite passed 16 tests on a disposable PostgreSQL database. Authenticated browser verification, commit, push, deployment, and Fabric data creation were not performed.
+
 ## 2026-10-06 — STAGING-STYLE-IMAGE-MIGRATION-FIX-01
 
 - Corrected PostgreSQL migration ordering after the staging startup failed because migration `0015` attempted to create the primary-image unique index while its backfill still had pending trigger events. `0015` now ends after the deterministic primary-image backfill; additive migration `0016_styleoptionimage_one_primary` creates the partial unique constraint in the next transaction.
@@ -346,3 +509,8 @@
 
 - Published implementation commit `1e6e79a60a7337a43e6bb73c47aacf0c947c6570` to `main` with message `feat: add shop inventory and stock ledger foundation`.
 - GitHub Actions Project State Validation run `37045373602` completed successfully for that exact SHA. Local `main`, `origin/main`, and GitHub `main` matched after push; no deployment or shared/staging/production migration occurred.
+
+## 2026-10-07 — GARMENT-SYSTEM-BACKEND-01 (local implementation)
+
+- Added tenant-owned garment families and option groups, scoped APIs, explicit family/group selection policy, nullable Design variant, and optional published DesignVersion association on immutable measurement snapshots. Existing global catalog rows and legacy option-group ID input are retained.
+- Validation: migration 0019 applied in the disposable PostgreSQL test DB; focused 65 catalog/measurement tests PASS; full `apps/` suite PASS (390 tests); Django check PASS; migration drift check PASS; OpenAPI generation zero errors/29 warnings (13 unique), both schema artifacts identical; Black/Flake8/diff check PASS; Project State Validator PASS (459 tests discovered). No commit, push, deployment, or frontend edits.

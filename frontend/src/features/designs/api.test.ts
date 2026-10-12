@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { addShopDesignSelection, createShopDesign, getAllShopDesigns, getShopDesigns, uploadShopDesignReferences } from './api'
+import { addShopDesignSelection, createShopDesign, getAllShopDesigns, getShopDesigns, updateShopDesignDraft, updateShopDesignSelection, uploadShopDesignReferences } from './api'
 
 function stubJsonFetch(body: unknown) {
   const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(body), {
@@ -26,6 +26,16 @@ describe('Design API contract', () => {
     expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual(payload)
   })
 
+  it('creates a family-level Shop design without requiring a Variant', async () => {
+    const fetchMock = stubJsonFetch({ id: 'design-family-level' })
+    const payload = { family_id: 'family-1', variant_id: null, name: 'Classic Shirt' }
+
+    await createShopDesign('shop-1', payload)
+
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/shops/shop-1/designs/')
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual(payload)
+  })
+
   it('adds a style selection to the draft version route', async () => {
     const fetchMock = stubJsonFetch({ id: 'selection-1' })
     const payload = { style_option_id: 'style-1' }
@@ -34,6 +44,27 @@ describe('Design API contract', () => {
 
     expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/shops/shop-1/design-versions/version-1/selections/')
     expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual(payload)
+  })
+
+  it('updates a Draft selection through its Shop-scoped detail endpoint', async () => {
+    const fetchMock = stubJsonFetch({ id: 'selection-1' })
+    const payload = { style_option_id: 'style-2' }
+
+    await updateShopDesignSelection('shop-1', 'version-1', 'selection-1', payload)
+
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/shops/shop-1/design-versions/version-1/selections/selection-1/')
+    expect(fetchMock.mock.calls[0][1]?.method).toBe('PATCH')
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual(payload)
+  })
+
+  it('updates the current Draft name through the existing Design detail endpoint', async () => {
+    const fetchMock = stubJsonFetch({ id: 'design-1' })
+
+    await updateShopDesignDraft('shop-1', 'design-1', 'Updated Shirt')
+
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/shops/shop-1/designs/design-1/')
+    expect(fetchMock.mock.calls[0][1]?.method).toBe('PATCH')
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({ name: 'Updated Shirt' })
   })
 
   it('uploads reference files using the backend images field', async () => {
@@ -67,6 +98,6 @@ describe('Design API contract', () => {
     }))
     vi.stubGlobal('fetch', fetchMock)
     await getAllShopDesigns('shop-1', { family: 'family-1', variant: 'variant-1' })
-    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/shops/shop-1/designs/?page=1&locale=en&family=family-1&variant=variant-1')
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/shops/shop-1/designs/?page=1&locale=en&family=family-1&variant=variant-1&status=ACTIVE')
   })
 })

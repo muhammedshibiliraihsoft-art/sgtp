@@ -7,7 +7,7 @@ from django.core.management import BaseCommand, CommandError
 from django.db import transaction
 
 from apps.accounts.models import User
-from apps.accounts.security import set_password_and_revoke_sessions
+from apps.accounts.security import generate_initial_password, set_password_and_revoke_sessions
 from apps.tenants.models import (
     MembershipWorkFunction,
     ShopRole,
@@ -27,6 +27,7 @@ MAIN_EMAIL = "sgtp-smoke-main@staging.invalid"
 SHOP_FIXTURES = (
     {
         "key": "SHOP_A",
+        "login_id": "sgtp_smoke_shop_a",
         "email": "sgtp-smoke-shop-a-admin@staging.invalid",
         "phone": "+12025550101",
         "first_name": "Synthetic Shop A Admin",
@@ -36,6 +37,7 @@ SHOP_FIXTURES = (
     },
     {
         "key": "SHOP_B",
+        "login_id": "sgtp_smoke_shop_b",
         "email": "sgtp-smoke-shop-b-admin@staging.invalid",
         "phone": "+12025550102",
         "first_name": "Synthetic Shop B Admin",
@@ -130,6 +132,7 @@ class Command(BaseCommand):
             or not main_user.is_superuser
             or main_user.owning_shop_id is not None
             or main_user.first_name != "Synthetic Main Supplier Admin"
+            or main_user.login_id != "sgtp_smoke_main"
             or main_user.phone != "+12025550100"
             or not main_user.check_password(passwords["main"])
         ):
@@ -158,6 +161,7 @@ class Command(BaseCommand):
                 or user.is_superuser
                 or user.owning_shop_id != shop.pk
                 or user.first_name != fixture["first_name"]
+                or user.login_id != fixture["login_id"]
                 or user.phone != fixture["phone"]
                 or user.must_change_password
                 or not user.check_password(passwords[fixture["key"].lower()])
@@ -200,9 +204,15 @@ class Command(BaseCommand):
 
                 main_user = User.objects.create_superuser(
                     email=MAIN_EMAIL,
-                    password=passwords["main"],
+                    password=generate_initial_password(None),
                     first_name="Synthetic Main Supplier Admin",
+                    login_id="sgtp_smoke_main",
                     phone="+12025550100",
+                )
+                set_password_and_revoke_sessions(
+                    main_user,
+                    passwords["main"],
+                    must_change=False,
                 )
 
                 shops = {}
@@ -217,6 +227,7 @@ class Command(BaseCommand):
                             "contact_phone": fixture["phone"],
                         },
                         first_admin_data={
+                            "login_id": fixture["login_id"],
                             "email": fixture["email"],
                             "phone": fixture["phone"],
                             "first_name": fixture["first_name"],

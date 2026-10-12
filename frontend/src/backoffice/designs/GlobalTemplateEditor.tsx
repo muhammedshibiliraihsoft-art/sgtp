@@ -8,6 +8,7 @@ import { getAllGlobalStyleOptions, getOptionGroups, uploadGlobalStyleOptionImage
 import type { OptionGroup, StyleOption } from '../../features/catalog/types'
 import type { Design, DesignReference } from '../../features/designs/types'
 import { addGlobalDesignSelection, getGlobalDesign, getGlobalDesignReferences, publishGlobalDesignVersion, uploadGlobalDesignReferences } from './api'
+import '../../features/designs/Designs.css'
 
 function PrivateImage({ url }: { url: string }) {
   const { objectUrl, isLoading, error } = usePrivateImage(url)

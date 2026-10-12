@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from datetime import timedelta
-from urllib.parse import unquote, urlsplit
+from urllib.parse import parse_qsl, unquote, urlsplit
 from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -105,8 +105,11 @@ def database_config_from_url(database_url):
         parsed = urlsplit(database_url)
         name = parsed.path.lstrip("/")
         port = parsed.port or 5432
-    except ValueError as exc:
-        raise ImproperlyConfigured("DATABASE_URL is invalid.") from exc
+        query_options = parse_qsl(
+            parsed.query, keep_blank_values=True, strict_parsing=True
+        )
+    except ValueError:
+        raise ImproperlyConfigured("DATABASE_URL is invalid.") from None
 
     if (
         parsed.scheme not in {"postgres", "postgresql"}
@@ -114,12 +117,23 @@ def database_config_from_url(database_url):
         or not parsed.username
         or not parsed.password
         or not name
-        or parsed.query
         or parsed.fragment
     ):
         raise ImproperlyConfigured("DATABASE_URL must be a complete PostgreSQL URL.")
 
-    return {
+    options = {}
+    for key, value in query_options:
+        if key not in {"sslmode", "sslrootcert"} or key in options or not value:
+            raise ImproperlyConfigured("DATABASE_URL has unsupported options.")
+        options[key] = value
+    if "sslmode" in options and options["sslmode"] not in {
+        "require",
+        "verify-ca",
+        "verify-full",
+    }:
+        raise ImproperlyConfigured("DATABASE_URL has an unsafe sslmode.")
+
+    config = {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": unquote(name),
         "USER": unquote(parsed.username),
@@ -127,6 +141,9 @@ def database_config_from_url(database_url):
         "HOST": parsed.hostname,
         "PORT": str(port),
     }
+    if options:
+        config["OPTIONS"] = options
+    return config
 
 
 # Keep the existing split-variable contract. DATABASE_URL is supported for

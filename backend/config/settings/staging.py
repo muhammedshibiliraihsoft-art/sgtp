@@ -14,7 +14,9 @@ if not R2_ENABLED:  # noqa: F405
         "Staging requires private R2 storage; filesystem media is not durable."
     )
 
-STAGING_FRONTEND_ORIGIN = "https://staging.birky.com"
+STAGING_FRONTEND_ORIGINS = frozenset(
+    {"https://staging.birky.com", "https://birky-staging.pages.dev"}
+)
 STAGING_API_HOSTNAME = "api-staging.birky.com"
 
 if get_env_var("DJANGO_DEBUG", "False").strip().lower() != "false":  # noqa: F405
@@ -54,9 +56,9 @@ ALLOWED_HOSTS = list(
 def _require_exact_origins(variable_name):
     raw_value = get_env_var(variable_name)  # noqa: F405
     origins = [origin.strip() for origin in raw_value.split(",") if origin.strip()]
-    if origins != [STAGING_FRONTEND_ORIGIN]:
+    if len(origins) != 1 or origins[0] not in STAGING_FRONTEND_ORIGINS:
         raise ImproperlyConfigured(
-            f"{variable_name} must contain only {STAGING_FRONTEND_ORIGIN}."
+            f"{variable_name} must contain exactly one approved staging frontend origin."
         )
     return origins
 

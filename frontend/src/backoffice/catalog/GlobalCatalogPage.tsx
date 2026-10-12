@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { AlertCircle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ImagePlus, Loader2, ListTree, Plus, Search, Shirt, Trash2, X } from 'lucide-react'
 import { ApiError } from '../../services/apiClient'
 import { usePrivateImage } from '../../hooks/usePrivateImage'
-import { createGlobalFamily, createGlobalStyleOption, getAllFamilies, getAllGlobalStyleOptions, getFamilyDetail, getFamilies, getOptionGroups, removeGlobalFamilyImage, setGlobalFamilyStatus, updateFamilyOptionGroups, updateGlobalFamily, uploadGlobalFamilyImage, uploadGlobalStyleOptionImages } from '../../features/catalog/api'
+import { createGlobalFamily, createGlobalStyleOption, getAllFamilies, getAllGlobalStyleOptions, getFamilyDetail, getFamilies, getOptionGroups, removeGlobalFamilyImage, setGlobalFamilyStatus, updateGlobalFamily, uploadGlobalFamilyImage, uploadGlobalStyleOptionImages } from '../../features/catalog/api'
 import type { CatalogFamily, CatalogFamilyDetail, CatalogFamilyPage, OptionGroup, ShopStyleOptionInputRequest, StyleOption, TranslationInput } from '../../features/catalog/types'
 import { VariantsPanel } from '../../features/catalog/VariantsPanel'
 
@@ -163,9 +163,12 @@ export function GlobalCatalogPage() {
     setError(null)
     try {
       if (selectedFamily) {
-        await updateGlobalFamily(selectedFamily.id, translationPayload())
-        await updateFamilyOptionGroups(selectedFamily.id, selectedGroupIds)
-        await openFamily(selectedFamily.id)
+        const updated = await updateGlobalFamily(selectedFamily.id, {
+          translations: translationPayload(),
+          option_group_ids: selectedGroupIds,
+        })
+        setSelectedFamily(updated)
+        setSelectedGroupIds(updated.option_groups.map(group => group.id))
         setNotice(t('globalCatalog.saved', 'Family changes saved.'))
       } else {
         await createGlobalFamily({ code: code.trim(), translations: translationPayload() })

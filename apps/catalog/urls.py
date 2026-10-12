@@ -4,10 +4,12 @@ from apps.clients.models import Client, RelatedPerson
 from apps.catalog.views import (
     DesignDetailView,
     DesignListCreateView,
+    ShopDefaultDesignRestoreView,
     GlobalDesignTemplateDetailView,
     DesignReferenceImageView,
     DesignReferenceView,
     DesignSelectionView,
+    DesignSelectionDetailView,
     GlobalDesignPublishView,
     GlobalDesignArchiveView,
     GlobalDesignReferenceImageView,
@@ -35,6 +37,12 @@ from apps.catalog.views import (
     ShopPrivateMediaUploadView,
     ShopStyleOptionsView,
     ShopStyleOptionDetailView,
+    ShopGarmentFamilyListCreateView,
+    ShopDefaultFamilyMaterializeView,
+    ShopOptionGroupListCreateView,
+    ShopFamilyOptionGroupsView,
+    ShopFamilyOptionGroupCreateView,
+    ShopDefaultFamilyLifecycleView,
     ShopVariantsView,
     ShopVariantDetailView,
     ShopVariantLifecycleView,
@@ -349,6 +357,36 @@ urlpatterns = [
         name="shop-catalog-variants",
     ),
     path(
+        "shops/<uuid:shop_id>/catalog/garment-families/",
+        ShopGarmentFamilyListCreateView.as_view(),
+        name="shop-garment-family-list",
+    ),
+    path(
+        "shops/<uuid:shop_id>/catalog/garment-families/<uuid:family_id>/materialize-default/",
+        ShopDefaultFamilyMaterializeView.as_view(),
+        name="shop-default-family-materialize",
+    ),
+    path(
+        "shops/<uuid:shop_id>/catalog/option-groups/",
+        ShopOptionGroupListCreateView.as_view(),
+        name="shop-option-group-list",
+    ),
+    path(
+        "shops/<uuid:shop_id>/catalog/garment-families/<uuid:family_id>/option-groups/create/",
+        ShopFamilyOptionGroupCreateView.as_view(),
+        name="shop-family-option-group-create",
+    ),
+    path(
+        "shops/<uuid:shop_id>/catalog/garment-families/<uuid:family_id>/option-groups/",
+        ShopFamilyOptionGroupsView.as_view(),
+        name="shop-family-option-group-config",
+    ),
+    path(
+        "shops/<uuid:shop_id>/catalog/garment-families/<uuid:family_id>/<str:action>/",
+        ShopDefaultFamilyLifecycleView.as_view(),
+        name="shop-default-family-lifecycle",
+    ),
+    path(
         "shops/<uuid:shop_id>/catalog/variants/<uuid:variant_id>/",
         ShopVariantDetailView.as_view(),
         name="shop-catalog-variant-detail",
@@ -396,9 +434,19 @@ urlpatterns = [
         name="shop-design-detail",
     ),
     path(
+        "shops/<uuid:shop_id>/designs/<uuid:design_id>/restore-default/",
+        ShopDefaultDesignRestoreView.as_view(),
+        name="shop-default-design-restore",
+    ),
+    path(
         "shops/<uuid:shop_id>/design-versions/<uuid:version_id>/selections/",
         DesignSelectionView.as_view(),
         name="shop-design-selections",
+    ),
+    path(
+        "shops/<uuid:shop_id>/design-versions/<uuid:version_id>/selections/<uuid:selection_id>/",
+        DesignSelectionDetailView.as_view(),
+        name="shop-design-selection-detail",
     ),
     path(
         "shops/<uuid:shop_id>/design-versions/<uuid:version_id>/publish/",

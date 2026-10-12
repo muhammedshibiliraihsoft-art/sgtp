@@ -8,6 +8,7 @@ import { ApiError } from '../services/apiClient'
 import { shopsService } from '../services/shops'
 import type { ShopDetail } from '../services/shops'
 import { usersApi } from '../features/users/api'
+import { clientsApi } from '../features/clients/api'
 
 const mainUser = {
   id: 'main-1', user_code: 'U-MAIN', email: 'main@example.test', first_name: 'Main', last_name: 'Supplier',
@@ -53,6 +54,44 @@ describe('Main Supplier Back Office', () => {
     expect(screen.queryByText('Modern Tailors')).not.toBeInTheDocument()
   })
 
+  it('removes the Back Office Measurement surface while preserving Catalog and exposes only basic selected-Shop Client contacts', async () => {
+    vi.spyOn(shopsService, 'detail').mockResolvedValue(shop)
+    vi.spyOn(clientsApi, 'list').mockResolvedValue({
+      count: 6, next: null, previous: null,
+      results: [
+        { id: 'client-1', name: 'Asha', phone: '+96550000001', phone_normalized: '+96550000001', email: 'asha@example.test', created_at: '', updated_at: '' },
+        { id: 'client-2', name: 'No Phone', phone: '', phone_normalized: '', email: 'no-phone@example.test', created_at: '', updated_at: '' },
+        { id: 'client-3', name: 'No Email', phone: '+96550000003', phone_normalized: '+96550000003', email: '', created_at: '', updated_at: '' },
+        { id: 'client-4', name: '', phone: '+96550000004', phone_normalized: '+96550000004', email: '', created_at: '', updated_at: '' },
+        { id: 'client-5', name: '', phone: '', phone_normalized: '', email: 'guest@example.test', created_at: '', updated_at: '' },
+        { id: 'client-6', name: '', phone: '', phone_normalized: '', email: '', created_at: '', updated_at: '' },
+      ],
+    })
+    await open('/backoffice/shops/shop-1/clients')
+    expect(await screen.findByRole('heading', { name: 'Clients' })).toBeInTheDocument()
+    const cards = await screen.findAllByRole('article')
+    expect(cards).toHaveLength(6)
+    expect(cards[0]).toHaveTextContent('Asha')
+    expect(cards[0]).toHaveTextContent('+96550000001')
+    expect(cards[0]).toHaveTextContent('asha@example.test')
+    expect(cards[1]).toHaveTextContent('No Phone')
+    expect(cards[1]).toHaveTextContent('no-phone@example.test')
+    expect(cards[1]).toHaveTextContent('—')
+    expect(cards[2]).toHaveTextContent('No Email')
+    expect(cards[2]).toHaveTextContent('+96550000003')
+    expect(cards[2]).toHaveTextContent('—')
+    expect(cards[3]).toHaveTextContent('Guest')
+    expect(cards[3]).toHaveTextContent('+96550000004')
+    expect(cards[4]).toHaveTextContent('Guest')
+    expect(cards[4]).toHaveTextContent('guest@example.test')
+    expect(cards[5]).toHaveTextContent('Guest')
+    expect(cards[5]).toHaveTextContent('—')
+    expect(clientsApi.list).toHaveBeenCalledWith('shop-1', '', 1)
+    expect(screen.queryByText(/measurement history|garment selected|variant selection|design selection|style selection/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Measurements/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Global Catalog/ })).toHaveAttribute('href', '/backoffice/catalog')
+  })
+
   it('shows the exact Shop Admin entered User ID(s), not generated internal codes', async () => {
     vi.spyOn(shopsService, 'detail').mockResolvedValue(shop)
     const memberships = vi.spyOn(usersApi, 'memberships').mockResolvedValue({
@@ -75,14 +114,29 @@ describe('Main Supplier Back Office', () => {
     expect(memberships).toHaveBeenCalledWith('shop-1', { role: 'ADMIN', active: 'ALL' })
   })
 
+  it('keeps the existing generated slug read-only while editing a Shop', async () => {
+    const detail = vi.spyOn(shopsService, 'detail').mockResolvedValue(shop)
+    const update = vi.spyOn(shopsService, 'update').mockResolvedValue(shop)
+    await open('/backoffice/shops/shop-1')
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit Shop' }))
+    const slug = await screen.findByLabelText(/Slug/)
+    expect(slug).toHaveValue('demo-shop')
+    expect(slug).toHaveAttribute('readonly')
+    fireEvent.change(screen.getByLabelText(/^Shop name/), { target: { value: 'Renamed Shop' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+    await waitFor(() => expect(update).toHaveBeenCalledWith('shop-1', expect.not.objectContaining({ slug: expect.anything() })))
+    expect(detail).toHaveBeenCalled()
+  })
+
   it('creates a Shop with required backend fields and keeps one-time credentials in component memory', async () => {
     const create = vi.spyOn(shopsService, 'create').mockResolvedValue({
       ...shop, first_admin_user_code: 'U-FIRSTADMIN', first_admin_login_id: 'FirstAdmin', initial_password: '482731',
     })
     vi.spyOn(shopsService, 'detail').mockResolvedValue(shop)
     await open('/backoffice/shops/new')
-    fireEvent.change(await screen.findByLabelText(/Shop name/), { target: { value: 'Demo Shop' } })
-    fireEvent.change(screen.getByLabelText(/Slug/), { target: { value: 'demo-shop' } })
+    fireEvent.change(await screen.findByLabelText(/^Shop name/), { target: { value: 'Demo Shop' } })
+    expect(screen.getByLabelText(/Slug/)).toHaveValue('demo-shop')
+    expect(screen.getByLabelText(/Slug/)).toHaveAttribute('readonly')
     fireEvent.change(screen.getByLabelText(/Maximum users/), { target: { value: '5' } })
     fireEvent.change(screen.getByLabelText(/First name/), { target: { value: 'First' } })
     fireEvent.change(screen.getByLabelText(/First Admin User ID/), { target: { value: 'FirstAdmin' } })
@@ -110,8 +164,8 @@ describe('Main Supplier Back Office', () => {
       errors: { first_admin: { email: ['This email is already assigned.'] } },
     }))
     await open('/backoffice/shops/new')
-    fireEvent.change(screen.getByLabelText(/Shop name/), { target: { value: 'Demo Shop' } })
-    fireEvent.change(screen.getByLabelText(/Slug/), { target: { value: 'demo-shop' } })
+    fireEvent.change(screen.getByLabelText(/^Shop name/), { target: { value: 'Demo Shop' } })
+    expect(screen.getByLabelText(/Slug/)).toHaveValue('demo-shop')
     fireEvent.change(screen.getByLabelText(/First name/), { target: { value: 'First' } })
     fireEvent.change(screen.getByLabelText(/First Admin User ID/), { target: { value: 'firstadmin' } })
     fireEvent.change(screen.getByLabelText(/^Email/), { target: { value: 'first@example.test' } })

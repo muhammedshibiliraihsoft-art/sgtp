@@ -47,9 +47,10 @@ export interface Design {
   id: string
   tenant: string | null
   family: string
-  variant: string
+  variant: string | null
   name: string
   status: 'ACTIVE' | 'ARCHIVED'
+  is_default_seeded: boolean
   latest_version: DesignVersion | null
   created_at: string
   updated_at: string
@@ -64,9 +65,11 @@ export interface ShopDesignPage {
 
 export interface DesignCreateRequest {
   family_id: string
-  variant_id: string
+  variant_id?: string | null
   name: string
   translations?: Array<{ locale: 'en' | 'ar-KW' | 'bn' | 'ur'; name: string; description?: string }>
+  selection_ids?: string[]
+  idempotency_key?: string
 }
 
 export interface PublishResponse {

@@ -1,41 +1,71 @@
-import { useState, useEffect, useCallback } from 'react'
+import { Suspense, lazy, useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ChevronLeft, Edit2, Trash2, Plus, Users, Ruler } from 'lucide-react'
+import { ChevronLeft, Edit2, Trash2, Plus, Users, Ruler, MoreHorizontal } from 'lucide-react'
 import type { Client, RelatedPerson } from './types'
 import { ClientForm, type FormValues } from './ClientForm'
 import { ConfirmDeleteModal } from './ConfirmDeleteModal'
 import { clientsApi, type ContactWriteResult } from './api'
 import { useCurrentShop } from '../../hooks/useCurrentShop'
+import { useAuth } from '../../services/useAuth'
+import { ClientMeasurementHistory } from './ClientMeasurementHistory'
+import './clients.css'
+import './client-workspace.css'
+
+const EmbeddedClientMeasurements = lazy(() => import('../measurements/ClientMeasurementsPage').then(module => ({ default: module.ClientMeasurementsPage })))
 
 export function ClientDetailPage() {
   const { clientId } = useParams<{ clientId: string }>()
   const navigate = useNavigate()
-  const { t } = useTranslation()
-  const { shopId, role, isLoading: isShopLoading } = useCurrentShop()
+  const { t, i18n } = useTranslation()
+  const { user } = useAuth()
+  const { shopId, role, workFunctions, isLoading: isShopLoading } = useCurrentShop()
 
   const [client, setClient] = useState<Client | undefined>()
   const [relatedPersons, setRelatedPersons] = useState<RelatedPerson[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+  const [relatedLoading, setRelatedLoading] = useState(true)
+  const [relatedError, setRelatedError] = useState('')
   const [duplicateMatches, setDuplicateMatches] = useState<{id:string;name:string}[]>([])
   const canWrite = role === 'ADMIN' || role === 'STAFF'
   const canDelete = role === 'ADMIN'
+  const canReadMeasurements = Boolean(shopId && (user?.is_main_supplier_admin === true || role === 'ADMIN' || (role === 'STAFF' && workFunctions.includes('MEASUREMENT'))))
+  const clientRequest = useRef(0)
+  const relatedRequest = useRef(0)
 
   const loadData = useCallback(async () => {
+    const requestId = ++clientRequest.current
     if (!shopId || !clientId) { setIsLoading(isShopLoading); return }
     setIsLoading(true); setError('')
     try {
-      const [loadedClient, related] = await Promise.all([clientsApi.detail(shopId, clientId), clientsApi.related(shopId, clientId)])
-      setClient(loadedClient); setRelatedPersons(related.results)
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Unable to load client.') }
-    finally { setIsLoading(false) }
+      const loadedClient = await clientsApi.detail(shopId, clientId)
+      if (requestId === clientRequest.current) setClient(loadedClient)
+    }
+    catch (cause) { if (requestId === clientRequest.current) setError(cause instanceof Error ? cause.message : 'Unable to load client.') }
+    finally { if (requestId === clientRequest.current) setIsLoading(false) }
   }, [shopId, clientId, isShopLoading])
 
   useEffect(() => { void loadData() }, [loadData])
 
+  const loadRelated = useCallback(async () => {
+    const requestId = ++relatedRequest.current
+    if (!shopId || !clientId) { setRelatedLoading(isShopLoading); return }
+    setRelatedLoading(true); setRelatedError('')
+    try {
+      const related = await clientsApi.related(shopId, clientId)
+      if (requestId === relatedRequest.current) setRelatedPersons(related.results)
+    }
+    catch (cause) { if (requestId === relatedRequest.current) setRelatedError(cause instanceof Error ? cause.message : 'Unable to load related persons.') }
+    finally { if (requestId === relatedRequest.current) setRelatedLoading(false) }
+  }, [shopId, clientId, isShopLoading])
+
+  useEffect(() => { void loadRelated() }, [loadRelated])
+
   const [isEditClientOpen, setIsEditClientOpen] = useState(false)
   const [isDeleteClientOpen, setIsDeleteClientOpen] = useState(false)
+  const [showMeasurementWorkspace, setShowMeasurementWorkspace] = useState(false)
+  const [hasOpenedMeasurementWorkspace, setHasOpenedMeasurementWorkspace] = useState(false)
   
   const [isAddRelatedOpen, setIsAddRelatedOpen] = useState(false)
   const [editRelatedId, setEditRelatedId] = useState<string | null>(null)
@@ -91,7 +121,7 @@ export function ClientDetailPage() {
   const editRelatedPerson = relatedPersons.find(rp => rp.id === editRelatedId)
 
   return (
-    <div className="client-detail-page">
+    <div className="client-detail-page client-workspace-page">
       {error && <div className="login-error-message" role="alert">{error}</div>}
       {duplicateMatches.length > 0 && <div className="duplicate-warning" role="status"><strong>{t('clients.possibleDuplicate')}</strong>{duplicateMatches.map(match => <div key={match.id}>{match.name}</div>)}</div>}
       <Link to="/clients" className="back-link">
@@ -100,17 +130,25 @@ export function ClientDetailPage() {
 
       <div className="detail-header">
         <h1 style={{ fontSize: 28, fontWeight: 600, margin: 0 }}>{client.name}</h1>
+      </div>
+
+      <div className="client-workspace-topbar">
+        <span className="client-workspace-muted">{t('clients.workspaceSubtitle')}</span>
         <div className="detail-actions">
-          <Link to={`/clients/${client.id}/measurements`} className="btn-secondary"><Ruler size={16} /> Measurements</Link>
+          {canReadMeasurements && (showMeasurementWorkspace
+            ? <button className="btn-secondary" onClick={() => setShowMeasurementWorkspace(false)}><ChevronLeft size={17} /> {t('clients.title')}</button>
+            : <button className="btn-primary" onClick={() => { setHasOpenedMeasurementWorkspace(true); setShowMeasurementWorkspace(true) }}><Ruler size={17} /> {t('measurements.title')}</button>)}
           {canWrite && <button className="btn-secondary" onClick={() => setIsEditClientOpen(true)}>
             <Edit2 size={16} /> <span className="hide-mobile">{t('clients.edit')}</span>
           </button>}
-          {canDelete && <button className="btn-secondary" style={{ color: 'var(--color-danger)' }} onClick={() => setIsDeleteClientOpen(true)}>
-            <Trash2 size={16} /> <span className="hide-mobile">{t('clients.remove')}</span>
-          </button>}
+          {canDelete && <details className="client-workspace-more-actions">
+            <summary aria-label={t('clients.moreActions')}><MoreHorizontal size={19} /><span className="hide-mobile">{t('clients.moreActions')}</span></summary>
+            <div className="client-workspace-more-menu"><button type="button" onClick={() => setIsDeleteClientOpen(true)}><Trash2 size={15} /> {t('clients.remove')}</button></div>
+          </details>}
         </div>
       </div>
 
+      <div className="client-workspace-summary">
       <div className="info-card">
         <div className="info-grid">
           <div className="info-item">
@@ -123,52 +161,75 @@ export function ClientDetailPage() {
           </div>
           <div className="info-item">
             <span className="info-label">{t('clients.created')}</span>
-            <span className="info-value">{new Date(client.created_at).toLocaleDateString()}</span>
+            <span className="info-value">{new Intl.DateTimeFormat(i18n.resolvedLanguage || 'en', { dateStyle: 'medium' }).format(new Date(client.created_at))}</span>
           </div>
           <div className="info-item">
             <span className="info-label">{t('clients.lastUpdated')}</span>
-            <span className="info-value">{new Date(client.updated_at).toLocaleDateString()}</span>
+            <span className="info-value">{new Intl.DateTimeFormat(i18n.resolvedLanguage || 'en', { dateStyle: 'medium' }).format(new Date(client.updated_at))}</span>
           </div>
         </div>
       </div>
-
-      <div className="clients-header" style={{ marginTop: 40, marginBottom: 16 }}>
-        <h2 style={{ fontSize: 20, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Users size={20} /> {t('clients.relatedPersons')}
-        </h2>
-        {canWrite && <button className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => setIsAddRelatedOpen(true)}>
-          <Plus size={16} /> {t('clients.addRelatedPerson')}
-        </button>}
       </div>
 
-      {relatedPersons.length === 0 ? (
-        <div className="empty-state" style={{ padding: '32px 16px' }}>
-          <p>{t('clients.noRelated')}</p>
-        </div>
-      ) : (
-        <div className="clients-cards-list">
-          {relatedPersons.map(rp => (
-            <div key={rp.id} className="client-card">
-              <div className="client-card-info">
-                <span className="client-card-name">{rp.name}</span>
-                {(rp.phone || rp.email) && (
-                  <span className="client-card-detail">
-                    {rp.phone} {rp.phone && rp.email ? '·' : ''} {rp.email}
-                  </span>
-                )}
-              </div>
-              {canWrite && <div className="detail-actions">
-                <button className="action-btn-icon" onClick={() => setEditRelatedId(rp.id)} aria-label={t('clients.edit')}>
-                  <Edit2 size={16} />
-                </button>
-                {canDelete && <button className="action-btn-icon" onClick={() => setDeleteRelatedId(rp.id)} aria-label={t('clients.remove')}>
-                  <Trash2 size={16} />
-                </button>}
-              </div>}
+      <div className={`client-workspace-layout${showMeasurementWorkspace ? ' is-measurement-view' : ''}`}>
+      <div className="client-workspace-main">
+        {canReadMeasurements ? <>
+          {!showMeasurementWorkspace && <ClientMeasurementHistory shopId={shopId!} clientId={client.id} locale={i18n.resolvedLanguage || 'en'} />}
+          {hasOpenedMeasurementWorkspace && <div className="client-workspace-embedded-measurements" hidden={!showMeasurementWorkspace}>
+            <Suspense fallback={<section className="client-workspace-panel" aria-busy="true">{t('measurements.loading')}</section>}>
+              <EmbeddedClientMeasurements embedded initialClient={client} initialRelatedPersons={relatedPersons} initialShopId={shopId!} />
+            </Suspense>
+          </div>}
+        </> : (
+          <section className="client-workspace-panel"><p className="client-workspace-eyebrow">{t('clients.measurementEyebrow')}</p><h2>{t('measurements.title')}</h2><p className="client-workspace-muted">{t('measurements.accessDenied')}</p></section>
+        )}
+      </div>
+
+      {!showMeasurementWorkspace && <aside className="client-workspace-aside">
+        <section className="client-workspace-panel client-related-panel" aria-labelledby="client-related-heading">
+          <div className="client-workspace-panel-heading">
+            <div>
+              <p className="client-workspace-eyebrow">{t('clients.measurementEyebrow')}</p>
+              <h2 id="client-related-heading"><Users size={19} aria-hidden="true" /> {t('clients.relatedPersons')}</h2>
             </div>
-          ))}
-        </div>
-      )}
+            <div className="client-related-header-actions">
+              {!relatedLoading && <span className="client-workspace-count" aria-label={`${relatedPersons.length} ${t('clients.relatedPersons')}`}>{relatedPersons.length}</span>}
+              {canWrite && !showMeasurementWorkspace && <button className="btn-primary client-related-add" onClick={() => setIsAddRelatedOpen(true)}>
+                <Plus size={16} /> {t('clients.addRelatedPerson')}
+              </button>}
+            </div>
+          </div>
+
+          {relatedError && <div className="client-workspace-inline-error client-workspace-related-error" role="alert"><span>{relatedError}</span><button type="button" className="client-workspace-text-button" onClick={() => void loadRelated()}>{t('measurements.retry')}</button></div>}
+          {relatedLoading ? <p className="client-workspace-muted" aria-busy="true">{t('clients.loadingRelated')}</p> : relatedPersons.length === 0 ? (
+            <div className="client-related-empty"><Users size={22} aria-hidden="true" /><p>{t('clients.noRelated')}</p></div>
+          ) : (
+            <div className="clients-cards-list client-related-list">
+              {relatedPersons.map(rp => (
+                <div key={rp.id} className="client-card">
+                  <div className="client-card-info">
+                    <span className="client-card-name">{rp.name}</span>
+                    {(rp.phone || rp.email) && (
+                      <span className="client-card-detail">
+                        {rp.phone} {rp.phone && rp.email ? '·' : ''} {rp.email}
+                      </span>
+                    )}
+                  </div>
+                  {canWrite && <div className="detail-actions">
+                    <button className="action-btn-icon" onClick={() => setEditRelatedId(rp.id)} aria-label={t('clients.edit')}>
+                      <Edit2 size={16} />
+                    </button>
+                    {canDelete && <button className="action-btn-icon" onClick={() => setDeleteRelatedId(rp.id)} aria-label={t('clients.remove')}>
+                      <Trash2 size={16} />
+                    </button>}
+                  </div>}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </aside>}
+      </div>
 
       <ClientForm 
         isOpen={isEditClientOpen}
@@ -204,12 +265,6 @@ export function ClientDetailPage() {
         message={t('clients.confirmRemoveRelated')}
       />
 
-      <style>{`
-        .hide-mobile { display: none; }
-        @media (min-width: 600px) {
-          .hide-mobile { display: inline; }
-        }
-      `}</style>
     </div>
   )
 }

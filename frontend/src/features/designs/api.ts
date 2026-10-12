@@ -3,12 +3,13 @@ import { uploadPrivateMediaBatch } from '../../services/privateMediaUpload'
 import type { ApiPage } from '../catalog/types'
 import type { Design, DesignCreateRequest, DesignReference, DesignSelection, PublishResponse, SelectionCreateRequest, ShopDesignPage } from './types'
 
-function pageUrl(path: string, page: number, familyId?: string, variantId?: string, locale = 'en') {
+function pageUrl(path: string, page: number, familyId?: string, variantId?: string, locale = 'en', status?: 'ACTIVE' | 'ARCHIVED' | 'all') {
   const url = new URL(path, window.location.origin)
   url.searchParams.set('page', String(page))
   url.searchParams.set('locale', locale)
   if (familyId) url.searchParams.set('family', familyId)
   if (variantId) url.searchParams.set('variant', variantId)
+  if (status) url.searchParams.set('status', status)
   return url.pathname + url.search
 }
 
@@ -24,12 +25,20 @@ export function getShopDesign(shopId: string, designId: string): Promise<Design>
   return apiRequest<Design>(`/api/v1/shops/${shopId}/designs/${designId}/`)
 }
 
+export function updateShopDesignDraft(shopId: string, designId: string, name: string): Promise<Design> {
+  return apiRequest<Design>(`/api/v1/shops/${shopId}/designs/${designId}/`, { method: 'PATCH', body: { name } })
+}
+
 export function archiveShopDesign(shopId: string, designId: string): Promise<Design> {
   return apiRequest<Design>(`/api/v1/shops/${shopId}/designs/${designId}/`, { method: 'DELETE' })
 }
 
 export function addShopDesignSelection(shopId: string, versionId: string, data: SelectionCreateRequest): Promise<DesignSelection> {
   return apiRequest<DesignSelection>(`/api/v1/shops/${shopId}/design-versions/${versionId}/selections/`, { method: 'POST', body: data })
+}
+
+export function updateShopDesignSelection(shopId: string, versionId: string, selectionId: string, data: SelectionCreateRequest): Promise<DesignSelection> {
+  return apiRequest<DesignSelection>(`/api/v1/shops/${shopId}/design-versions/${versionId}/selections/${selectionId}/`, { method: 'PATCH', body: data })
 }
 
 export function publishShopDesignVersion(shopId: string, versionId: string): Promise<PublishResponse> {
@@ -48,13 +57,17 @@ export function uploadShopDesignReferences(shopId: string, versionId: string, fi
   })
 }
 
-export async function getAllShopDesigns(shopId: string, filters: { family?: string; variant?: string } = {}, locale = 'en'): Promise<Design[]> {
+export async function getAllShopDesigns(shopId: string, filters: { family?: string; variant?: string } = {}, locale = 'en', status: 'ACTIVE' | 'ARCHIVED' | 'all' = 'ACTIVE'): Promise<Design[]> {
   let page = 1
   const designs: Design[] = []
   while (true) {
-    const response = await apiRequest<ApiPage<Design>>(pageUrl(`/api/v1/shops/${shopId}/designs/`, page, filters.family, filters.variant, locale))
+    const response = await apiRequest<ApiPage<Design>>(pageUrl(`/api/v1/shops/${shopId}/designs/`, page, filters.family, filters.variant, locale, status))
     designs.push(...response.results)
     if (!response.next) return designs
     page += 1
   }
+}
+
+export function restoreShopDefaultDesign(shopId: string, designId: string): Promise<Design> {
+  return apiRequest<Design>(`/api/v1/shops/${shopId}/designs/${designId}/restore-default/`, { method: 'POST', body: {} })
 }

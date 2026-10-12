@@ -24,6 +24,26 @@
   font-size: 14px;
 }
 
+.users-capacity-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 12px;
+  color: var(--color-danger);
+  font-size: 13px;
+}
+
+.users-capacity-error button {
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .users-controls {
   display: flex;
   gap: 16px;

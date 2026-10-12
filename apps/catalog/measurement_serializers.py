@@ -65,6 +65,7 @@ class MeasurementDefinitionTranslationReadSerializer(serializers.Serializer):
 
 class MeasurementDefinitionReadSerializer(serializers.ModelSerializer):
     is_global = serializers.SerializerMethodField()
+    sort_order = serializers.SerializerMethodField()
     translations = MeasurementDefinitionTranslationReadSerializer(
         many=True, read_only=True
     )
@@ -86,6 +87,10 @@ class MeasurementDefinitionReadSerializer(serializers.ModelSerializer):
     @extend_schema_field(serializers.BooleanField())
     def get_is_global(self, obj):
         return obj.tenant_id is None
+
+    @extend_schema_field(serializers.IntegerField())
+    def get_sort_order(self, obj):
+        return getattr(obj, "_effective_sort_order", obj.sort_order)
 
     @extend_schema_field(serializers.ListField(child=serializers.DictField()))
     def get_mappings(self, obj):
@@ -121,6 +126,7 @@ class MeasurementValueInputSerializer(serializers.Serializer):
 
 class MeasurementSetCreateSerializer(serializers.Serializer):
     values = MeasurementValueInputSerializer(many=True, allow_empty=False)
+    design_version_id = serializers.UUIDField(required=False, allow_null=True)
 
     def validate_values(self, value):
         ids = [item["definition_id"] for item in value]
@@ -166,7 +172,16 @@ class MeasurementSetSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MeasurementSet
-        fields = ("id", "profile", "version", "copied_from", "created_at", "values")
+        fields = (
+            "id",
+            "profile",
+            "version",
+            "copied_from",
+            "design_version",
+            "is_active",
+            "created_at",
+            "values",
+        )
 
 
 class MaterialCreateSerializer(serializers.ModelSerializer):

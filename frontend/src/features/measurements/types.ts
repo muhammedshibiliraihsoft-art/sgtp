@@ -26,6 +26,14 @@ export interface MeasurementDefinition {
   mappings: Array<{ family_id: string; variant_id: string | null; sort_order: number }>
 }
 
+export interface MeasurementDefinitionCreateInput {
+  code: string
+  group_code?: string
+  sort_order?: number
+  translations: Array<{ locale: 'en' | 'ar-KW' | 'bn' | 'ur'; name: string; description?: string }>
+  mappings: Array<{ family_id: string; variant_id?: string | null }>
+}
+
 export interface MeasurementValue {
   id: string
   definition: string
@@ -42,6 +50,8 @@ export interface MeasurementSet {
   profile: string
   version: number
   copied_from: string | null
+  design_version?: string | null
+  is_active: boolean
   created_at: string
   values: MeasurementValue[]
 }

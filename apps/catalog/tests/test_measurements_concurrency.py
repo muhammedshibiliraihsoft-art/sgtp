@@ -17,6 +17,7 @@ from apps.catalog.measurement_services import (
     create_measurement_definition,
     create_measurement_profile,
     create_measurement_set,
+    deactivate_measurement_set,
 )
 from apps.catalog.models import GarmentFamily, GarmentVariant
 from apps.clients.models import Client
@@ -144,6 +145,35 @@ class MeasurementConcurrencyTests(TransactionTestCase):
             [1, 2, 3],
         )
         self.assertEqual(profile.sets.filter(copied_from=original).count(), 2)
+
+    def test_concurrent_deletes_cannot_remove_both_active_versions(self):
+        profile = self.profile_operation(self.actor)
+        first = create_measurement_set(
+            shop_id=self.shop.pk,
+            actor=self.actor,
+            profile_id=profile.pk,
+            values=[{"definition_id": self.chest.pk, "value": "38", "unit": "CM"}],
+        )
+        second = create_measurement_set(
+            shop_id=self.shop.pk,
+            actor=self.actor,
+            profile_id=profile.pk,
+            values=[{"definition_id": self.chest.pk, "value": "39", "unit": "CM"}],
+        )
+
+        ids = iter((first.pk, second.pk))
+
+        def remove(actor):
+            return deactivate_measurement_set(
+                shop_id=self.shop.pk,
+                actor=actor,
+                profile_id=profile.pk,
+                set_id=next(ids),
+            )
+
+        results = self.concurrently(remove)
+        self.assertEqual(sum(result != "rejected" for result in results), 1)
+        self.assertEqual(profile.sets.filter(is_active=True).count(), 1)
 
     def test_concurrent_custom_definition_code_creation_keeps_one_code(self):
         def create(actor):

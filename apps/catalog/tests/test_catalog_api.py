@@ -154,7 +154,14 @@ class CatalogDesignApiTests(APITestCase):
         )
         self.assertEqual(
             cuff_codes,
-            {"normal-cuff", "open-cuff", "round-cuff", "square-cuff", "custom"},
+            {
+                "normal-cuff",
+                "open-cuff",
+                "round-cuff",
+                "square-cuff",
+                "button-cuff",
+                "custom",
+            },
         )
         self.assertNotIn("french-cuff", cuff_codes)
 
@@ -200,6 +207,258 @@ class CatalogDesignApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(GarmentFamily.objects.filter(code="mens-coat").exists())
 
+    def test_shop_can_create_owned_garment_system_and_family_level_design(self):
+        self.client.force_authenticate(self.admin)
+        root = self.shop_url(self.shop_a, "catalog/")
+        family_response = self.client.post(
+            f"{root}garment-families/",
+            {
+                "code": "custom-coat",
+                "translations": [{"locale": "en", "name": "Custom Coat"}],
+            },
+            format="json",
+        )
+        self.assertEqual(family_response.status_code, status.HTTP_201_CREATED)
+        family = GarmentFamily.objects.get(pk=family_response.data["id"])
+        self.assertEqual(family.tenant_id, self.shop_a.pk)
+
+        group_response = self.client.post(
+            f"{root}option-groups/",
+            {
+                "code": "custom-fastening",
+                "translations": [{"locale": "en", "name": "Fastening"}],
+            },
+            format="json",
+        )
+        self.assertEqual(group_response.status_code, status.HTTP_201_CREATED)
+        group = OptionGroup.objects.get(pk=group_response.data["id"])
+        self.assertEqual(group.tenant_id, self.shop_a.pk)
+
+        config_response = self.client.put(
+            f"{root}garment-families/{family.pk}/option-groups/",
+            {
+                "option_groups": [
+                    {
+                        "option_group_id": str(group.pk),
+                        "selection_mode": "SINGLE",
+                        "is_required": True,
+                    }
+                ]
+            },
+            format="json",
+        )
+        self.assertEqual(config_response.status_code, status.HTTP_200_OK)
+        mapping = FamilyOptionGroup.objects.get(family=family, option_group=group)
+        self.assertEqual(mapping.selection_mode, FamilyOptionGroup.SelectionMode.SINGLE)
+        self.assertTrue(mapping.is_required)
+
+        option_response = self.client.post(
+            f"{root}style-options/",
+            {
+                "option_group_id": str(group.pk),
+                "code": "hidden-buttons",
+                "translations": [{"locale": "en", "name": "Hidden Buttons"}],
+            },
+            format="json",
+        )
+        self.assertEqual(option_response.status_code, status.HTTP_201_CREATED)
+        design_response = self.client.post(
+            self.shop_url(self.shop_a, "designs/"),
+            {"family_id": str(family.pk), "name": "Everyday Coat"},
+            format="json",
+        )
+        self.assertEqual(design_response.status_code, status.HTTP_201_CREATED)
+        self.assertIsNone(design_response.data["variant"])
+        version_id = design_response.data["latest_version"]["id"]
+        publish_url = self.shop_url(
+            self.shop_a, f"design-versions/{version_id}/publish/"
+        )
+        missing_required = self.client.post(publish_url, {}, format="json")
+        self.assertEqual(missing_required.status_code, status.HTTP_400_BAD_REQUEST)
+
+        selected = self.client.post(
+            self.shop_url(self.shop_a, f"design-versions/{version_id}/selections/"),
+            {"style_option_id": option_response.data["id"]},
+            format="json",
+        )
+        self.assertEqual(selected.status_code, status.HTTP_201_CREATED, selected.data)
+        published = self.client.post(publish_url, {}, format="json")
+        self.assertEqual(published.status_code, status.HTTP_200_OK, published.data)
+
+    def test_shop_local_group_can_be_created_and_attached_to_one_owned_family_atomically(self):
+        self.client.force_authenticate(self.admin)
+        family_response = self.client.post(
+            self.shop_url(self.shop_a, "catalog/garment-families/"),
+            {
+                "code": "local-dress-system",
+                "translations": [{"locale": "en", "name": "Local Dress System"}],
+            },
+            format="json",
+        )
+        self.assertEqual(family_response.status_code, status.HTTP_201_CREATED)
+        family_id = family_response.data["id"]
+        path = self.shop_url(
+            self.shop_a,
+            f"catalog/garment-families/{family_id}/option-groups/create/",
+        )
+        response = self.client.post(
+            path,
+            {
+                "code": "dress-fastening-detail",
+                "translations": [{"locale": "en", "name": "Fastening detail"}],
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        group = OptionGroup.objects.get(pk=response.data["option_group"]["id"])
+        self.assertEqual(group.tenant_id, self.shop_a.pk)
+        self.assertEqual(group.families.count(), 1)
+        self.assertEqual(str(group.families.get().pk), family_id)
+        mapping = FamilyOptionGroup.objects.get(family_id=family_id, option_group=group)
+        self.assertEqual(mapping.selection_mode, FamilyOptionGroup.SelectionMode.MULTI)
+        self.assertFalse(mapping.is_required)
+        self.assertFalse(
+            FamilyOptionGroup.objects.filter(
+                family__tenant=self.shop_b, option_group=group
+            ).exists()
+        )
+
+    def test_shop_local_group_create_rejects_global_or_another_shops_family(self):
+        self.client.force_authenticate(self.admin)
+        payload = {
+            "code": "shop-only-detail",
+            "translations": [{"locale": "en", "name": "Shop-only detail"}],
+        }
+        global_response = self.client.post(
+            self.shop_url(
+                self.shop_a,
+                f"catalog/garment-families/{self.family.pk}/option-groups/create/",
+            ),
+            payload,
+            format="json",
+        )
+        self.assertEqual(global_response.status_code, status.HTTP_404_NOT_FOUND)
+        other_family = GarmentFamily.objects.create(
+            tenant=self.shop_b, code="another-shop-family"
+        )
+        foreign_response = self.client.post(
+            self.shop_url(
+                self.shop_a,
+                f"catalog/garment-families/{other_family.pk}/option-groups/create/",
+            ),
+            payload,
+            format="json",
+        )
+        self.assertEqual(foreign_response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertFalse(OptionGroup.objects.filter(code="shop-only-detail").exists())
+
+    def test_new_shop_default_catalog_is_materialized_and_designs_are_shop_owned(self):
+        from apps.catalog.services import initialize_shop_default_catalog
+
+        initialize_shop_default_catalog(shop=self.shop_a, actor=self.admin)
+        initialize_shop_default_catalog(shop=self.shop_b, actor=self.other_admin)
+        local = GarmentFamily.objects.get(tenant=self.shop_a, template_source=self.family)
+        other = GarmentFamily.objects.get(tenant=self.shop_b, template_source=self.family)
+        self.assertNotEqual(local.pk, self.family.pk)
+        self.assertNotEqual(local.pk, other.pk)
+        self.assertEqual(
+            list(FamilyOptionGroup.objects.filter(family=local).values_list(
+                "option_group_id", "sort_order", "selection_mode", "is_required"
+            )),
+            list(FamilyOptionGroup.objects.filter(family=self.family).values_list(
+                "option_group_id", "sort_order", "selection_mode", "is_required"
+            )),
+        )
+        design = Design.objects.filter(
+            tenant=self.shop_a, family=local, is_default_seeded=True
+        ).first()
+        self.assertIsNotNone(design)
+        self.assertIsNone(design.source_design.tenant_id)
+        self.assertGreater(design.versions.count(), 0)
+
+    def test_staff_can_edit_archive_and_restore_only_shop_default_family(self):
+        from apps.catalog.services import initialize_shop_default_catalog
+
+        initialize_shop_default_catalog(shop=self.shop_a, actor=self.admin)
+        initialize_shop_default_catalog(shop=self.shop_b, actor=self.other_admin)
+        local = GarmentFamily.objects.get(tenant=self.shop_a, template_source=self.family)
+        other = GarmentFamily.objects.get(tenant=self.shop_b, template_source=self.family)
+        source_mapping = FamilyOptionGroup.objects.get(
+            family=self.family, option_group=self.group
+        )
+        self.client.force_authenticate(self.staff)
+        path = self.shop_url(self.shop_a, f"catalog/garment-families/{local.pk}/option-groups/")
+        response = self.client.put(path, {"option_groups": []}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(FamilyOptionGroup.objects.filter(family=self.family, option_group=self.group).exists())
+        self.assertTrue(FamilyOptionGroup.objects.filter(family=other, option_group=self.group).exists())
+
+        FamilyOptionGroup.objects.filter(pk=source_mapping.pk).update(is_required=True)
+        archived = self.client.post(self.shop_url(self.shop_a, f"catalog/garment-families/{local.pk}/archive/"), {}, format="json")
+        self.assertEqual(archived.status_code, status.HTTP_200_OK)
+        restored = self.client.post(self.shop_url(self.shop_a, f"catalog/garment-families/{local.pk}/restore/"), {}, format="json")
+        self.assertEqual(restored.status_code, status.HTTP_200_OK)
+        self.assertTrue(FamilyOptionGroup.objects.get(family=local, option_group=self.group).is_required)
+        self.assertFalse(FamilyOptionGroup.objects.get(family=other, option_group=self.group).is_required)
+
+    def test_restoring_seeded_design_uses_latest_global_published_version(self):
+        from apps.catalog.services import initialize_shop_default_catalog, publish_global_version
+
+        initialize_shop_default_catalog(shop=self.shop_a, actor=self.admin)
+        design = Design.objects.filter(tenant=self.shop_a, is_default_seeded=True).first()
+        self.assertIsNotNone(design)
+        source = design.source_design
+        from apps.catalog.services import _clone_version_content
+
+        source_published = source.versions.filter(
+            status=DesignVersion.Status.PUBLISHED
+        ).order_by("-number").first()
+        source_draft = DesignVersion.objects.create(
+            design=source,
+            number=source_published.number + 1,
+            created_by=self.main,
+            updated_by=self.main,
+        )
+        _clone_version_content(source_published, source_draft, self.main, clone_options=False)
+        translation = source_draft.translations.get(locale="en")
+        latest_name = f"{translation.name} restored latest"
+        translation.name = latest_name
+        translation.save(update_fields=("name", "updated_at"))
+        publish_global_version(actor=self.main, design_id=source.pk, version_id=source_draft.pk)
+
+        self.client.force_authenticate(self.admin)
+        archived = self.client.delete(self.shop_url(self.shop_a, f"designs/{design.pk}/"))
+        self.assertEqual(archived.status_code, status.HTTP_200_OK)
+        restored = self.client.post(self.shop_url(self.shop_a, f"designs/{design.pk}/restore-default/"), {}, format="json")
+        self.assertEqual(restored.status_code, status.HTTP_200_OK)
+        design.refresh_from_db()
+        latest = design.versions.order_by("-number").first()
+        self.assertEqual(design.status, Design.Status.ACTIVE)
+        self.assertEqual(latest.number, 2)
+        self.assertEqual(latest.translations.get(locale="en").name, latest_name)
+
+    def test_shop_garment_system_endpoints_do_not_expose_another_shop_records(self):
+        family = GarmentFamily.objects.create(
+            tenant=self.shop_b, code="other-shop-garment"
+        )
+        self.client.force_authenticate(self.admin)
+        response = self.client.get(
+            self.shop_url(self.shop_a, "catalog/garment-families/")
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        visible_ids = {item["id"] for item in response.data["results"]}
+        self.assertNotIn(str(family.pk), visible_ids)
+
+        detail = self.client.put(
+            self.shop_url(
+                self.shop_a,
+                f"catalog/garment-families/{family.pk}/option-groups/",
+            ),
+            {"option_groups": []},
+            format="json",
+        )
+        self.assertEqual(detail.status_code, status.HTTP_404_NOT_FOUND)
+
     def test_family_search_is_case_insensitive_and_runs_before_pagination(self):
         GarmentFamilyTranslation.objects.create(
             family=self.family, locale="ur", name="School Shirt"
@@ -235,6 +494,17 @@ class CatalogDesignApiTests(APITestCase):
         self.assertEqual(self.client.get(detail_url).status_code, status.HTTP_200_OK)
         self.assertEqual(
             self.client.patch(detail_url, {"translations": []}).status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+        self.assertEqual(
+            self.client.patch(
+                detail_url,
+                {
+                    "translations": [{"locale": "en", "name": "Denied"}],
+                    "option_group_ids": [str(self.group.pk)],
+                },
+                format="json",
+            ).status_code,
             status.HTTP_403_FORBIDDEN,
         )
         self.assertEqual(
@@ -313,6 +583,112 @@ class CatalogDesignApiTests(APITestCase):
         self.assertEqual(reactivated.data["status"], GarmentFamily.Status.ACTIVE)
         self.assertTrue(GarmentFamily.objects.filter(pk=self.family.pk).exists())
 
+    def test_global_family_metadata_and_groups_save_in_one_request(self):
+        self.client.force_authenticate(self.main)
+        group = OptionGroup.objects.create(tenant=None, code="atomic-save-collar")
+        detail_url = f"/api/v1/catalog/families/{self.family.pk}/"
+
+        response = self.client.patch(
+            detail_url,
+            {
+                "translations": [
+                    {"locale": "en", "name": "Atomic Shirt", "description": "Saved together"}
+                ],
+                "option_group_ids": [str(group.pk)],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            self.family.translations.get(locale="en").name, "Atomic Shirt"
+        )
+        self.assertEqual(
+            list(
+                FamilyOptionGroup.objects.filter(family=self.family).values_list(
+                    "option_group_id", flat=True
+                )
+            ),
+            [group.pk],
+        )
+        self.assertEqual(
+            [item["id"] for item in response.data["option_groups"]], [str(group.pk)]
+        )
+
+    def test_failed_atomic_global_family_save_rolls_back_metadata_and_groups(self):
+        self.client.force_authenticate(self.main)
+        old_name = self.family.translations.get(locale="en").name
+        old_group_ids = list(
+            FamilyOptionGroup.objects.filter(family=self.family)
+            .order_by("option_group_id")
+            .values_list("option_group_id", flat=True)
+        )
+        group = OptionGroup.objects.create(tenant=None, code="atomic-failure-collar")
+
+        with patch(
+            "apps.catalog.services.replace_global_family_option_groups",
+            side_effect=DRFValidationError({"option_groups": "Controlled failure."}),
+        ):
+            response = self.client.patch(
+                f"/api/v1/catalog/families/{self.family.pk}/",
+                {
+                    "translations": [
+                        {"locale": "en", "name": "Must Roll Back"}
+                    ],
+                    "option_group_ids": [str(group.pk)],
+                },
+                format="json",
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.family.translations.get(locale="en").name, old_name)
+        self.assertEqual(
+            list(
+                FamilyOptionGroup.objects.filter(family=self.family)
+                .order_by("option_group_id")
+                .values_list("option_group_id", flat=True)
+            ),
+            old_group_ids,
+        )
+
+    def test_legacy_split_global_save_reproduces_partial_state_on_second_request_failure(self):
+        self.client.force_authenticate(self.main)
+        old_group_ids = set(
+            FamilyOptionGroup.objects.filter(family=self.family).values_list(
+                "option_group_id", flat=True
+            )
+        )
+        group = OptionGroup.objects.create(tenant=None, code="split-failure-collar")
+        detail_url = f"/api/v1/catalog/families/{self.family.pk}/"
+        metadata_response = self.client.patch(
+            detail_url,
+            {"translations": [{"locale": "en", "name": "First Request Saved"}]},
+            format="json",
+        )
+        self.assertEqual(metadata_response.status_code, status.HTTP_200_OK)
+
+        with patch(
+            "apps.catalog.views.replace_global_family_option_groups",
+            side_effect=DRFValidationError({"option_groups": "Controlled failure."}),
+        ):
+            groups_response = self.client.put(
+                f"{detail_url}option-groups/",
+                {"option_group_ids": [str(group.pk)]},
+                format="json",
+            )
+
+        self.assertEqual(groups_response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            self.family.translations.get(locale="en").name, "First Request Saved"
+        )
+        self.assertEqual(
+            set(
+                FamilyOptionGroup.objects.filter(family=self.family).values_list(
+                    "option_group_id", flat=True
+                )
+            ),
+            old_group_ids,
+        )
     def test_archived_family_cannot_be_used_for_new_shop_or_global_records(self):
         self.client.force_authenticate(self.admin)
         existing = self.create_design(name="Historical archived-family design")
@@ -543,7 +919,9 @@ class CatalogDesignApiTests(APITestCase):
 
     def test_global_catalog_falls_back_to_english_and_shop_cannot_change_defaults(self):
         self.client.force_authenticate(self.staff)
-        response = self.client.get("/api/v1/catalog/style-options/?locale=ur")
+        response = self.client.get(
+            f"/api/v1/catalog/style-options/?locale=ur&option_group={self.group.pk}"
+        )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(set(response.data), {"count", "next", "previous", "results"})
         normal = next(
@@ -572,6 +950,306 @@ class CatalogDesignApiTests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual([item["code"] for item in response.data], ["cuff"])
+
+    def test_shop_catalog_cannot_mutate_global_family_configuration(self):
+        def path(shop):
+            return self.shop_url(
+                shop, f"catalog/garment-families/{self.family.pk}/option-groups/"
+            )
+        global_mappings = list(
+            FamilyOptionGroup.objects.filter(family=self.family)
+            .order_by("option_group_id")
+            .values_list(
+                "option_group_id", "sort_order", "selection_mode", "is_required"
+            )
+        )
+
+        self.client.force_authenticate(self.admin)
+        shop_a_before = self.client.get(path(self.shop_a))
+        self.assertEqual(shop_a_before.status_code, status.HTTP_200_OK)
+        self.assertTrue(shop_a_before.data)
+        denied = self.client.put(path(self.shop_a), {"option_groups": []}, format="json")
+        self.assertEqual(denied.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(
+            list(
+                FamilyOptionGroup.objects.filter(family=self.family)
+                .order_by("option_group_id")
+                .values_list(
+                    "option_group_id", "sort_order", "selection_mode", "is_required"
+                )
+            ),
+            global_mappings,
+        )
+
+        self.client.force_authenticate(self.other_admin)
+        shop_b_after = self.client.get(path(self.shop_b))
+        self.assertEqual(shop_b_after.status_code, status.HTTP_200_OK)
+        self.assertEqual(shop_b_after.data, shop_a_before.data)
+
+        new_shop = self.make_shop("Catalog Shop C", "catalog-shop-c")
+        new_shop_admin, _ = self.make_member(
+            "catalog-admin-c@example.test", new_shop, ShopRole.ADMIN
+        )
+        self.client.force_authenticate(new_shop_admin)
+        new_shop_defaults = self.client.get(path(new_shop))
+        self.assertEqual(new_shop_defaults.status_code, status.HTTP_200_OK)
+        self.assertEqual(new_shop_defaults.data, shop_a_before.data)
+
+    def test_shop_admin_and_staff_edit_an_isolated_copy_of_a_global_default(self):
+        source_config = list(
+            FamilyOptionGroup.objects.filter(family=self.family)
+            .order_by("option_group_id")
+            .values_list(
+                "option_group_id", "sort_order", "selection_mode", "is_required"
+            )
+        )
+        materialize_url = self.shop_url(
+            self.shop_a,
+            f"catalog/garment-families/{self.family.pk}/materialize-default/",
+        )
+
+        self.client.force_authenticate(self.admin)
+        materialized = self.client.post(materialize_url, {}, format="json")
+        self.assertEqual(materialized.status_code, status.HTTP_200_OK, materialized.data)
+        local_family = GarmentFamily.objects.get(pk=materialized.data["id"])
+        self.assertEqual(local_family.tenant_id, self.shop_a.pk)
+        self.assertEqual(local_family.template_source_id, self.family.pk)
+        self.assertEqual(
+            list(
+                FamilyOptionGroup.objects.filter(family=local_family)
+                .order_by("option_group_id")
+                .values_list(
+                    "option_group_id", "sort_order", "selection_mode", "is_required"
+                )
+            ),
+            source_config,
+        )
+
+        local_config_url = self.shop_url(
+            self.shop_a, f"catalog/garment-families/{local_family.pk}/option-groups/"
+        )
+        self.client.force_authenticate(self.staff)
+        edited = self.client.put(
+            local_config_url,
+            {
+                "option_groups": [
+                    {
+                        "option_group_id": str(self.group.pk),
+                        "selection_mode": "SINGLE",
+                        "is_required": True,
+                        "sort_order": 0,
+                    }
+                ]
+            },
+            format="json",
+        )
+        self.assertEqual(edited.status_code, status.HTTP_200_OK, edited.data)
+        self.assertTrue(
+            FamilyOptionGroup.objects.get(
+                family=local_family, option_group=self.group
+            ).is_required
+        )
+
+        self.assertEqual(
+            list(
+                FamilyOptionGroup.objects.filter(family=self.family)
+                .order_by("option_group_id")
+                .values_list(
+                    "option_group_id", "sort_order", "selection_mode", "is_required"
+                )
+            ),
+            source_config,
+        )
+        self.client.force_authenticate(self.other_admin)
+        shop_b_config = self.client.get(
+            self.shop_url(
+                self.shop_b,
+                f"catalog/garment-families/{self.family.pk}/option-groups/",
+            )
+        )
+        self.assertEqual(shop_b_config.status_code, status.HTTP_200_OK)
+        shop_b_mappings = sorted(
+            (
+                row["option_group"]["id"],
+                row["sort_order"],
+                row["selection_mode"],
+                row["is_required"],
+            )
+            for row in shop_b_config.data
+        )
+        self.assertEqual(
+            shop_b_mappings,
+            sorted(
+                (str(group_id), order, mode, required)
+                for group_id, order, mode, required in source_config
+            ),
+        )
+
+        # Materialization is idempotent and never creates duplicate copies.
+        self.client.force_authenticate(self.admin)
+        repeated = self.client.post(materialize_url, {}, format="json")
+        self.assertEqual(repeated.status_code, status.HTTP_200_OK)
+        self.assertEqual(repeated.data["id"], str(local_family.pk))
+        self.assertEqual(
+            GarmentFamily.objects.filter(
+                tenant=self.shop_a, template_source=self.family
+            ).count(),
+            1,
+        )
+
+    def test_shop_owned_family_config_isolated_and_used_by_design_validation(self):
+        family = GarmentFamily.objects.create(
+            tenant=self.shop_a, code="shop-a-custom-shirt"
+        )
+        multi_group = OptionGroup.objects.create(
+            tenant=None, code="shop-isolation-multi"
+        )
+        config_path = self.shop_url(
+            self.shop_a, f"catalog/garment-families/{family.pk}/option-groups/"
+        )
+        global_mappings = list(
+            FamilyOptionGroup.objects.filter(family=self.family)
+            .order_by("option_group_id")
+            .values_list(
+                "option_group_id", "sort_order", "selection_mode", "is_required"
+            )
+        )
+
+        self.client.force_authenticate(self.admin)
+        saved = self.client.put(
+            config_path,
+            {
+                "option_groups": [
+                    {
+                        "option_group_id": str(self.group.pk),
+                        "selection_mode": "SINGLE",
+                        "is_required": True,
+                        "sort_order": 0,
+                    },
+                    {
+                        "option_group_id": str(multi_group.pk),
+                        "selection_mode": "MULTI",
+                        "is_required": False,
+                        "sort_order": 1,
+                    },
+                ]
+            },
+            format="json",
+        )
+        self.assertEqual(saved.status_code, status.HTTP_200_OK, saved.data)
+        saved_by_code = {row["option_group"]["code"]: row for row in saved.data}
+        self.assertEqual(len(saved_by_code), 2)
+        self.assertEqual(saved_by_code[self.group.code]["selection_mode"], "SINGLE")
+        self.assertTrue(saved_by_code[self.group.code]["is_required"])
+        self.assertEqual(saved_by_code[multi_group.code]["selection_mode"], "MULTI")
+        self.assertFalse(saved_by_code[multi_group.code]["is_required"])
+
+        design = self.client.post(
+            self.shop_url(self.shop_a, "designs/"),
+            {"family_id": str(family.pk), "name": "Shop A Custom Shirt"},
+            format="json",
+        )
+        self.assertEqual(design.status_code, status.HTTP_201_CREATED, design.data)
+        version_id = design.data["latest_version"]["id"]
+        publish_url = self.shop_url(
+            self.shop_a, f"design-versions/{version_id}/publish/"
+        )
+        missing_required = self.client.post(publish_url, {}, format="json")
+        self.assertEqual(missing_required.status_code, status.HTTP_400_BAD_REQUEST)
+
+        selected = self.client.post(
+            self.shop_url(self.shop_a, f"design-versions/{version_id}/selections/"),
+            {"style_option_id": str(self.global_option.pk)},
+            format="json",
+        )
+        self.assertEqual(selected.status_code, status.HTTP_201_CREATED, selected.data)
+        second_option = self.make_option(
+            tenant=None, code="shop-isolation-second-cuff", label="Second Cuff"
+        )
+        single_violation = self.client.post(
+            self.shop_url(self.shop_a, f"design-versions/{version_id}/selections/"),
+            {"style_option_id": str(second_option.pk)},
+            format="json",
+        )
+        self.assertEqual(
+            single_violation.status_code, status.HTTP_400_BAD_REQUEST
+        )
+        multi_options = []
+        for code, label in (
+            ("shop-isolation-multi-a", "Multi Option A"),
+            ("shop-isolation-multi-b", "Multi Option B"),
+        ):
+            option = StyleOption.objects.create(
+                tenant=None, option_group=multi_group, code=code
+            )
+            StyleOptionTranslation.objects.create(
+                style_option=option, locale="en", name=label
+            )
+            multi_options.append(option)
+        for option in multi_options:
+            accepted = self.client.post(
+                self.shop_url(
+                    self.shop_a, f"design-versions/{version_id}/selections/"
+                ),
+                {"style_option_id": str(option.pk)},
+                format="json",
+            )
+            self.assertEqual(accepted.status_code, status.HTTP_201_CREATED)
+        published = self.client.post(publish_url, {}, format="json")
+        self.assertEqual(published.status_code, status.HTTP_200_OK, published.data)
+
+        self.assertEqual(
+            list(
+                FamilyOptionGroup.objects.filter(family=self.family)
+                .order_by("option_group_id")
+                .values_list(
+                    "option_group_id", "sort_order", "selection_mode", "is_required"
+                )
+            ),
+            global_mappings,
+        )
+        self.client.force_authenticate(self.other_admin)
+        foreign_family = self.client.get(
+            self.shop_url(
+                self.shop_b, f"catalog/garment-families/{family.pk}/option-groups/"
+            )
+        )
+        self.assertEqual(foreign_family.status_code, status.HTTP_404_NOT_FOUND)
+        shop_b_defaults = self.client.get(
+            self.shop_url(
+                self.shop_b,
+                f"catalog/garment-families/{self.family.pk}/option-groups/",
+            )
+        )
+        self.assertEqual(shop_b_defaults.status_code, status.HTTP_200_OK)
+        self.client.force_authenticate(self.admin)
+        shop_a_defaults = self.client.get(
+            self.shop_url(
+                self.shop_a,
+                f"catalog/garment-families/{self.family.pk}/option-groups/",
+            )
+        )
+        self.assertEqual(shop_a_defaults.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            [
+                (
+                    row["option_group"]["id"],
+                    row["sort_order"],
+                    row["selection_mode"],
+                    row["is_required"],
+                )
+                for row in shop_b_defaults.data
+            ],
+            [
+                (
+                    row["option_group"]["id"],
+                    row["sort_order"],
+                    row["selection_mode"],
+                    row["is_required"],
+                )
+                for row in shop_a_defaults.data
+            ],
+        )
 
     def test_shop_custom_variants_are_shop_owned_and_viewer_cannot_create(self):
         payload = {
@@ -637,13 +1315,16 @@ class CatalogDesignApiTests(APITestCase):
         created = self.client.post(url, payload, format="json")
         self.assertEqual(created.status_code, status.HTTP_201_CREATED)
         self.assertEqual(str(created.data["tenant"]), str(self.shop_a.pk))
-        rows_a = self.client.get(url).data
+        rows_a = self.client.get(f"{url}?option_group={self.group.pk}").data
         self.assertTrue(
             any(row["id"] == created.data["id"] for row in rows_a["results"])
         )
         self.client.force_authenticate(self.main)
         rows_b = self.client.get(
-            self.shop_url(self.shop_b, "catalog/style-options/")
+            self.shop_url(
+                self.shop_b,
+                f"catalog/style-options/?option_group={self.group.pk}",
+            )
         ).data
         self.assertFalse(
             any(row["id"] == created.data["id"] for row in rows_b["results"])
@@ -654,6 +1335,65 @@ class CatalogDesignApiTests(APITestCase):
                 for row in rows_b["results"]
             )
         )
+
+    def test_design_snapshot_style_copies_are_not_selectable_catalog_options(self):
+        snapshot_copy = StyleOption.objects.create(
+            tenant=self.shop_a,
+            option_group=self.group,
+            code="normal-cuff-copy-design-snapshot",
+            source_style_option=self.global_option,
+        )
+        StyleOptionTranslation.objects.create(
+            style_option=snapshot_copy, locale="en", name="Normal Cuff"
+        )
+        self.client.force_authenticate(self.admin)
+
+        catalog_url = self.shop_url(
+            self.shop_a, f"catalog/style-options/?option_group={self.group.pk}"
+        )
+        listed = self.client.get(catalog_url)
+        listed_ids = {row["id"] for row in listed.data["results"]}
+        self.assertIn(str(self.global_option.pk), listed_ids)
+        self.assertNotIn(str(snapshot_copy.pk), listed_ids)
+
+        before = Design.objects.filter(tenant=self.shop_a).count()
+        invalid_design = self.client.post(
+            self.shop_url(self.shop_a, "designs/"),
+            {
+                "family_id": str(self.family.pk),
+                "variant_id": str(self.variant.pk),
+                "name": "Cannot Select Snapshot Copy",
+                "selection_ids": [str(snapshot_copy.pk)],
+            },
+            format="json",
+        )
+        self.assertEqual(invalid_design.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(Design.objects.filter(tenant=self.shop_a).count(), before)
+
+        created = self.create_design()
+        version_id = created.data["latest_version"]["id"]
+        invalid_add = self.client.post(
+            self.shop_url(self.shop_a, f"design-versions/{version_id}/selections/"),
+            {"style_option_id": str(snapshot_copy.pk)},
+            format="json",
+        )
+        self.assertEqual(invalid_add.status_code, status.HTTP_404_NOT_FOUND)
+
+        valid_add = self.client.post(
+            self.shop_url(self.shop_a, f"design-versions/{version_id}/selections/"),
+            {"style_option_id": str(self.global_option.pk)},
+            format="json",
+        )
+        self.assertEqual(valid_add.status_code, status.HTTP_201_CREATED)
+        invalid_replace = self.client.patch(
+            self.shop_url(
+                self.shop_a,
+                f"design-versions/{version_id}/selections/{valid_add.data['id']}/",
+            ),
+            {"style_option_id": str(snapshot_copy.pk)},
+            format="json",
+        )
+        self.assertEqual(invalid_replace.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_shop_style_option_translation_edit_is_scoped_and_preserves_identity(self):
         option = self.make_option(
@@ -767,6 +1507,84 @@ class CatalogDesignApiTests(APITestCase):
         self.assertEqual(version.status, DesignVersion.Status.DRAFT)
         self.assertEqual(version.translations.get(locale="en").name, "Blue Shirt")
 
+    def test_design_create_saves_selections_atomically_and_retry_is_idempotent(self):
+        self.client.force_authenticate(self.admin)
+        payload = {
+            "family_id": str(self.family.pk),
+            "variant_id": str(self.variant.pk),
+            "name": "Retry-safe Shirt",
+            "selection_ids": [str(self.global_option.pk)],
+            "idempotency_key": "12345678-1234-5678-1234-567812345678",
+        }
+        first = self.client.post(
+            self.shop_url(self.shop_a, "designs/"), payload, format="json"
+        )
+        retry = self.client.post(
+            self.shop_url(self.shop_a, "designs/"), payload, format="json"
+        )
+
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED, first.data)
+        self.assertEqual(retry.status_code, status.HTTP_201_CREATED, retry.data)
+        self.assertEqual(first.data["id"], retry.data["id"])
+        self.assertEqual(len(first.data["latest_version"]["selections"]), 1)
+        self.assertEqual(
+            Design.objects.filter(
+                tenant=self.shop_a,
+                client_request_id=payload["idempotency_key"],
+            ).count(),
+            1,
+        )
+
+    def test_design_create_rolls_back_when_a_selection_is_not_mapped_to_family(self):
+        fabric_group = OptionGroup.objects.get(code="fabric")
+        invalid_option = StyleOption.objects.create(
+            tenant=self.shop_a, option_group=fabric_group, code="unmapped-fabric"
+        )
+        StyleOptionTranslation.objects.create(
+            style_option=invalid_option, locale="en", name="Unmapped Fabric"
+        )
+        self.client.force_authenticate(self.admin)
+        before = Design.objects.filter(tenant=self.shop_a).count()
+        response = self.client.post(
+            self.shop_url(self.shop_a, "designs/"),
+            {
+                "family_id": str(self.family.pk),
+                "variant_id": str(self.variant.pk),
+                "name": "Must Roll Back",
+                "selection_ids": [str(invalid_option.pk)],
+                "idempotency_key": "22345678-1234-5678-1234-567812345678",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Design.objects.filter(tenant=self.shop_a).count(), before)
+
+    def test_design_create_supports_shop_variant_with_no_style_groups(self):
+        family = GarmentFamily.objects.create(code="shop-empty-style-family")
+        GarmentFamilyTranslation.objects.create(
+            family=family, locale="en", name="Shop Empty Style Family"
+        )
+        variant = GarmentVariant.objects.create(
+            family=family,
+            tenant=self.shop_a,
+            code="shop-first-variant",
+            is_default=False,
+        )
+        self.client.force_authenticate(self.admin)
+        response = self.client.post(
+            self.shop_url(self.shop_a, "designs/"),
+            {
+                "family_id": str(family.pk),
+                "variant_id": str(variant.pk),
+                "name": "No Groups Design",
+                "selection_ids": [],
+                "idempotency_key": "32345678-1234-5678-1234-567812345678",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        self.assertEqual(response.data["latest_version"]["selections"], [])
+
     def test_design_foreign_shop_is_non_disclosing(self):
         self.client.force_authenticate(self.admin)
         created = self.create_design()
@@ -825,6 +1643,93 @@ class CatalogDesignApiTests(APITestCase):
             design.data["latest_version"]["selections"][0]["style_option_name"],
             selected_name,
         )
+
+    def test_draft_selection_can_be_replaced_from_the_same_catalog_group(self):
+        self.client.force_authenticate(self.admin)
+        created = self.create_design()
+        version_id = created.data["latest_version"]["id"]
+        selected = self.client.post(
+            self.shop_url(self.shop_a, f"design-versions/{version_id}/selections/"),
+            {"style_option_id": str(self.global_option.pk)},
+            format="json",
+        )
+        self.assertEqual(selected.status_code, status.HTTP_201_CREATED)
+
+        replacement = self.make_option(
+            tenant=None, code="edited-cuff-choice", label="Edited Cuff"
+        )
+        response = self.client.patch(
+            self.shop_url(
+                self.shop_a,
+                f"design-versions/{version_id}/selections/{selected.data['id']}/",
+            ),
+            {"style_option_id": str(replacement.pk)},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(str(response.data["style_option"]), str(replacement.pk))
+        self.assertEqual(response.data["selected_code"], "edited-cuff-choice")
+        self.assertEqual(response.data["style_option_name"], "Edited Cuff")
+        selection = DesignSelection.objects.get(pk=selected.data["id"])
+        self.assertEqual(selection.translations.get(locale="en").name, "Edited Cuff")
+
+        unrelated_group = OptionGroup.objects.create(
+            tenant=None, code="unmapped-design-part"
+        )
+        unrelated_option = StyleOption.objects.create(
+            tenant=None, option_group=unrelated_group, code="unmapped-choice"
+        )
+        wrong_group = self.client.patch(
+            self.shop_url(
+                self.shop_a,
+                f"design-versions/{version_id}/selections/{selected.data['id']}/",
+            ),
+            {"style_option_id": str(unrelated_option.pk)},
+            format="json",
+        )
+        self.assertEqual(wrong_group.status_code, status.HTTP_400_BAD_REQUEST)
+
+        self.client.force_authenticate(self.staff)
+        replacement_again = self.make_option(
+            tenant=None, code="staff-edited-cuff", label="Staff Edited Cuff"
+        )
+        staff_response = self.client.patch(
+            self.shop_url(
+                self.shop_a,
+                f"design-versions/{version_id}/selections/{selected.data['id']}/",
+            ),
+            {"style_option_id": str(replacement_again.pk)},
+            format="json",
+        )
+        self.assertEqual(staff_response.status_code, status.HTTP_200_OK)
+
+        self.client.force_authenticate(self.admin)
+        published = self.client.post(
+            self.shop_url(self.shop_a, f"design-versions/{version_id}/publish/"),
+            {},
+            format="json",
+        )
+        self.assertEqual(published.status_code, status.HTTP_200_OK)
+        immutable = self.client.patch(
+            self.shop_url(
+                self.shop_a,
+                f"design-versions/{version_id}/selections/{selected.data['id']}/",
+            ),
+            {"style_option_id": str(self.global_option.pk)},
+            format="json",
+        )
+        self.assertEqual(immutable.status_code, status.HTTP_400_BAD_REQUEST)
+
+        self.client.force_authenticate(self.other_admin)
+        foreign_response = self.client.patch(
+            self.shop_url(
+                self.shop_b,
+                f"design-versions/{version_id}/selections/{selected.data['id']}/",
+            ),
+            {"style_option_id": str(self.global_option.pk)},
+            format="json",
+        )
+        self.assertEqual(foreign_response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_published_version_children_are_immutable_and_new_draft_is_a_snapshot(self):
         self.client.force_authenticate(self.admin)
@@ -917,7 +1822,12 @@ class CatalogDesignApiTests(APITestCase):
         with patch.object(image.image.storage, "open", side_effect=FileNotFoundError):
             missing_object = self.client.get(content_url)
         self.assertEqual(missing_object.status_code, status.HTTP_404_NOT_FOUND)
-        listed = self.client.get(self.shop_url(self.shop_a, "catalog/style-options/"))
+        listed = self.client.get(
+            self.shop_url(
+                self.shop_a,
+                f"catalog/style-options/?option_group={self.group.pk}",
+            )
+        )
         self.assertEqual(listed.status_code, status.HTTP_200_OK)
         persisted = next(
             row for row in listed.data["results"] if row["id"] == str(local_option.pk)
@@ -949,7 +1859,10 @@ class CatalogDesignApiTests(APITestCase):
         self.assertTrue(image.image.storage.exists(old_image_name))
         self.assertEqual(self.client.get(content_url).status_code, status.HTTP_200_OK)
         persisted_again = self.client.get(
-            self.shop_url(self.shop_a, "catalog/style-options/")
+            self.shop_url(
+                self.shop_a,
+                f"catalog/style-options/?option_group={self.group.pk}",
+            )
         )
         current_option = next(
             row

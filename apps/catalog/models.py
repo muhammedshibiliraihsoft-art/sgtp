@@ -38,7 +38,21 @@ class GarmentFamily(BaseModel):
         ACTIVE = "ACTIVE", "Active"
         ARCHIVED = "ARCHIVED", "Archived"
 
-    code = models.SlugField(max_length=48, unique=True)
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="garment_families",
+    )
+    template_source = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="tenant_template_copies",
+    )
+    code = models.SlugField(max_length=48)
     status = models.CharField(
         max_length=16, choices=Status.choices, default=Status.ACTIVE
     )
@@ -54,6 +68,23 @@ class GarmentFamily(BaseModel):
 
     class Meta:
         ordering = ("code",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=("code",),
+                condition=Q(tenant__isnull=True, deleted__isnull=True),
+                name="catalog_global_family_code_uniq",
+            ),
+            models.UniqueConstraint(
+                fields=("tenant", "code"),
+                condition=Q(tenant__isnull=False, deleted__isnull=True),
+                name="catalog_shop_family_code_uniq",
+            ),
+            models.UniqueConstraint(
+                fields=("tenant", "template_source"),
+                condition=Q(tenant__isnull=False, template_source__isnull=False, deleted__isnull=True),
+                name="catalog_shop_family_template_source_uniq",
+            ),
+        ]
 
     def __str__(self):
         return self.code
@@ -82,6 +113,13 @@ class GarmentVariant(ShopScopedCatalogModel):
     code = models.SlugField(max_length=64)
     is_default = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
+    template_source = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="tenant_template_copies",
+    )
 
     class Meta:
         ordering = ("family__code", "code")
@@ -101,7 +139,23 @@ class GarmentVariant(ShopScopedCatalogModel):
                 condition=Q(tenant__isnull=True, is_default=True, deleted__isnull=True),
                 name="catalog_one_global_default_variant",
             ),
+            models.UniqueConstraint(
+                fields=("tenant", "template_source"),
+                condition=Q(
+                    tenant__isnull=False,
+                    template_source__isnull=False,
+                    deleted__isnull=True,
+                ),
+                name="catalog_shop_variant_template_source_uniq",
+            ),
         ]
+
+    def clean(self):
+        super().clean()
+        if self.family_id and self.family.tenant_id not in (None, self.tenant_id):
+            raise ValidationError(
+                {"family": "Family must be global or owned by this Shop."}
+            )
 
 
 class GarmentVariantTranslation(BaseModel):
@@ -121,19 +175,46 @@ class GarmentVariantTranslation(BaseModel):
 
 
 class OptionGroup(BaseModel):
-    code = models.SlugField(max_length=48, unique=True)
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="option_groups",
+    )
+    code = models.SlugField(max_length=48)
     families = models.ManyToManyField(
         GarmentFamily, through="FamilyOptionGroup", related_name="option_groups"
     )
 
     class Meta:
         ordering = ("code",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=("code",),
+                condition=Q(tenant__isnull=True, deleted__isnull=True),
+                name="catalog_global_group_code_uniq",
+            ),
+            models.UniqueConstraint(
+                fields=("tenant", "code"),
+                condition=Q(tenant__isnull=False, deleted__isnull=True),
+                name="catalog_shop_group_code_uniq",
+            ),
+        ]
 
 
 class FamilyOptionGroup(BaseModel):
+    class SelectionMode(models.TextChoices):
+        SINGLE = "SINGLE", "Single selection"
+        MULTI = "MULTI", "Multiple selections"
+
     family = models.ForeignKey(GarmentFamily, on_delete=models.CASCADE)
     option_group = models.ForeignKey(OptionGroup, on_delete=models.CASCADE)
     sort_order = models.PositiveSmallIntegerField(default=0)
+    selection_mode = models.CharField(
+        max_length=8, choices=SelectionMode.choices, default=SelectionMode.MULTI
+    )
+    is_required = models.BooleanField(default=False)
 
     class Meta:
         ordering = ("sort_order", "option_group__code")
@@ -144,6 +225,24 @@ class FamilyOptionGroup(BaseModel):
                 name="catalog_family_option_group_uniq",
             )
         ]
+
+    def clean(self):
+        super().clean()
+        if self.family_id and self.option_group_id:
+            family_tenant = self.family.tenant_id
+            group_tenant = self.option_group.tenant_id
+            if family_tenant is None and group_tenant is not None:
+                raise ValidationError(
+                    {"option_group": "Global families can only use global groups."}
+                )
+            if group_tenant not in (None, family_tenant):
+                raise ValidationError(
+                    {"option_group": "Group must be global or owned by this Shop."}
+                )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
 
 class OptionGroupTranslation(BaseModel):
@@ -194,6 +293,13 @@ class StyleOption(ShopScopedCatalogModel):
 
     def clean(self):
         super().clean()
+        if self.option_group_id and self.option_group.tenant_id not in (
+            None,
+            self.tenant_id,
+        ):
+            raise ValidationError(
+                {"option_group": "Group must be global or owned by this Shop."}
+            )
 
 
 class StyleOptionTranslation(BaseModel):
@@ -306,7 +412,11 @@ class Design(ShopScopedCatalogModel):
         GarmentFamily, on_delete=models.PROTECT, related_name="designs"
     )
     variant = models.ForeignKey(
-        GarmentVariant, on_delete=models.PROTECT, related_name="designs"
+        GarmentVariant,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="designs",
     )
     status = models.CharField(
         max_length=16, choices=Status.choices, default=Status.ACTIVE
@@ -318,10 +428,19 @@ class Design(ShopScopedCatalogModel):
         on_delete=models.SET_NULL,
         related_name="derived_designs",
     )
+    is_default_seeded = models.BooleanField(default=False)
+    client_request_id = models.UUIDField(null=True, blank=True, editable=False)
 
     class Meta:
         ordering = ("-created_at", "id")
         indexes = [models.Index(fields=("tenant", "status", "family"))]
+        constraints = [
+            models.UniqueConstraint(
+                fields=("tenant", "client_request_id"),
+                condition=Q(tenant__isnull=False, client_request_id__isnull=False),
+                name="catalog_design_shop_request_uniq",
+            )
+        ]
 
     def clean(self):
         super().clean()
@@ -336,6 +455,10 @@ class Design(ShopScopedCatalogModel):
         if self.variant_id and self.variant.tenant_id not in (None, self.tenant_id):
             raise ValidationError(
                 {"variant": "Variant must be global or Shop-owned here."}
+            )
+        if self.family_id and self.family.tenant_id not in (None, self.tenant_id):
+            raise ValidationError(
+                {"family": "Family must be global or owned by this Shop."}
             )
 
 
@@ -465,6 +588,19 @@ class DesignSelection(BaseModel):
         if design and self.style_option.tenant_id not in (None, design.tenant_id):
             raise ValidationError(
                 {"style_option": "Option is not available in this Shop."}
+            )
+        if design and self.option_group.tenant_id not in (None, design.tenant_id):
+            raise ValidationError(
+                {"option_group": "Group is not available in this Shop."}
+            )
+        if (
+            design
+            and not FamilyOptionGroup.objects.filter(
+                family=design.family, option_group_id=self.option_group_id
+            ).exists()
+        ):
+            raise ValidationError(
+                {"option_group": "Group is not configured for this garment family."}
             )
 
     def save(self, *args, **kwargs):

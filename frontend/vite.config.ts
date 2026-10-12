@@ -9,10 +9,12 @@ function validateProxyTarget(value: string | undefined) {
   try {
     url = new URL(value)
   } catch {
-    throw new Error('AUTH_API_PROXY_TARGET must be a complete HTTPS API origin.')
+    throw new Error('AUTH_API_PROXY_TARGET must be an HTTPS API origin or a local HTTP origin.')
   }
-  if (url.protocol !== 'https:' || url.origin !== value || url.pathname !== '/' || url.search || url.hash || url.username || url.password) {
-    throw new Error('AUTH_API_PROXY_TARGET must be a complete HTTPS API origin.')
+  const isLoopbackHttp = url.protocol === 'http:'
+    && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname === '::1' ? '[::1]' : url.hostname)
+  if ((url.protocol !== 'https:' && !isLoopbackHttp) || url.origin !== value || url.pathname !== '/' || url.search || url.hash || url.username || url.password) {
+    throw new Error('AUTH_API_PROXY_TARGET must be an HTTPS API origin or a local HTTP origin.')
   }
   return url.origin
 }
@@ -20,6 +22,7 @@ function validateProxyTarget(value: string | undefined) {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const proxyTarget = validateProxyTarget(env.AUTH_API_PROXY_TARGET)
+  const proxyTargetUrl = proxyTarget ? new URL(proxyTarget) : undefined
 
   return {
     plugins: [react(), tailwindcss()],
@@ -28,7 +31,7 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: proxyTarget,
           changeOrigin: true,
-          secure: true,
+          secure: proxyTargetUrl?.protocol === 'https:',
           configure(proxy) {
             proxy.on('proxyReq', (proxyRequest, request, response) => {
               const method = request.method?.toUpperCase() ?? 'GET'

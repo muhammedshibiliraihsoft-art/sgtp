@@ -2,6 +2,7 @@
 
 from django.db import IntegrityError, transaction
 from django.db.models import Q
+from django.utils import timezone
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
@@ -18,7 +19,7 @@ from apps.catalog.measurement_models import (
     MeasurementValueTranslationSnapshot,
 )
 from apps.catalog.inventory_models import InventoryBalance
-from apps.catalog.models import GarmentFamily, GarmentVariant
+from apps.catalog.models import DesignVersion, GarmentFamily, GarmentVariant
 from apps.clients.models import Client
 from apps.tenants.models import MembershipWorkFunction, Tenant, TenantMember
 from apps.tenants.policy import ShopRolePolicy
@@ -82,9 +83,11 @@ def _valid_profile_relations(*, shop, person_model, person_id, family_id, varian
     if person is None:
         raise NotFound()
     family = get_object_or_404(
-        GarmentFamily.objects.select_for_update().filter(
-            status=GarmentFamily.Status.ACTIVE
-        ),
+        GarmentFamily.objects.select_for_update()
+        .filter(
+            status=GarmentFamily.Status.ACTIVE,
+        )
+        .filter(Q(tenant__isnull=True) | Q(tenant=shop)),
         pk=family_id,
     )
     variant = None
@@ -166,15 +169,21 @@ def _allowed_definitions(*, shop, profile, definition_ids):
     if len(definitions) != len(definition_ids):
         raise NotFound()
     by_id = {item.pk: item for item in definitions}
+    family_ids = {profile.family_id}
+    if profile.family.template_source_id:
+        family_ids.add(profile.family.template_source_id)
+    variant_ids = {profile.variant_id} if profile.variant_id else set()
+    if profile.variant and profile.variant.template_source_id:
+        variant_ids.add(profile.variant.template_source_id)
     for definition_id in definition_ids:
         definition = by_id[definition_id]
         mappings = definition.mappings.filter(
-            family=profile.family, deleted__isnull=True
+            family_id__in=family_ids, deleted__isnull=True
         )
         applicable = mappings.filter(variant__isnull=True).exists()
-        if profile.variant_id:
+        if variant_ids:
             applicable = (
-                applicable or mappings.filter(variant_id=profile.variant_id).exists()
+                applicable or mappings.filter(variant_id__in=variant_ids).exists()
             )
         if not applicable:
             raise ValidationError(
@@ -210,12 +219,18 @@ def _create_value_snapshots(*, measurement_value, definition):
 
 def _next_version(profile):
     return (
-        profile.sets.order_by("-version").values_list("version", flat=True).first() or 0
+        MeasurementSet.all_objects.filter(profile=profile)
+        .order_by("-version")
+        .values_list("version", flat=True)
+        .first()
+        or 0
     ) + 1
 
 
 @transaction.atomic
-def create_measurement_set(*, shop_id, actor, profile_id, values):
+def create_measurement_set(
+    *, shop_id, actor, profile_id, values, design_version_id=None
+):
     shop, _membership = require_measurement_access(
         shop_id, actor, write=True, lock=True
     )
@@ -230,8 +245,38 @@ def create_measurement_set(*, shop_id, actor, profile_id, values):
     if not values:
         raise ValidationError({"values": "Provide at least one measurement value."})
     definitions = _allowed_definitions(shop=shop, profile=profile, definition_ids=ids)
+    design_version = None
+    if design_version_id:
+        design_version = (
+            DesignVersion.objects.select_related("design", "design__family")
+            .filter(
+                pk=design_version_id,
+                status=DesignVersion.Status.PUBLISHED,
+                design__status="ACTIVE",
+            )
+            .filter(Q(design__tenant__isnull=True) | Q(design__tenant=shop))
+            .first()
+        )
+        if design_version is None:
+            raise ValidationError(
+                {
+                    "design_version_id": "Select a published design available to this Shop."
+                }
+            )
+        design = design_version.design
+        if design.family_id != profile.family_id:
+            raise ValidationError(
+                {
+                    "design_version_id": "Design and measurement profile families must match."
+                }
+            )
+        if design.variant_id and design.variant_id != profile.variant_id:
+            raise ValidationError(
+                {"design_version_id": "Select a design matching this profile variant."}
+            )
     measurement_set = MeasurementSet.objects.create(
         profile=profile,
+        design_version=design_version,
         version=_next_version(profile),
         created_by=actor,
         updated_by=actor,
@@ -264,7 +309,7 @@ def copy_measurement_set(*, shop_id, actor, profile_id, source_set_id):
         raise NotFound()
     source = (
         MeasurementSet.objects.select_for_update()
-        .filter(pk=source_set_id, profile=profile)
+        .filter(pk=source_set_id, profile=profile, is_active=True)
         .prefetch_related("values__label_translations")
         .first()
     )
@@ -274,6 +319,7 @@ def copy_measurement_set(*, shop_id, actor, profile_id, source_set_id):
         profile=profile,
         version=_next_version(profile),
         copied_from=source,
+        design_version=source.design_version,
         created_by=actor,
         updated_by=actor,
     )
@@ -301,6 +347,38 @@ def copy_measurement_set(*, shop_id, actor, profile_id, source_set_id):
             ]
         )
     return duplicate
+
+
+@transaction.atomic
+def deactivate_measurement_set(*, shop_id, actor, profile_id, set_id):
+    """Hide one version without destroying its immutable audit records."""
+
+    shop, _membership = require_measurement_access(
+        shop_id, actor, write=True, lock=True
+    )
+    profile = (
+        MeasurementProfile.objects.select_for_update()
+        .filter(pk=profile_id, tenant=shop, deleted__isnull=True)
+        .first()
+    )
+    if profile is None:
+        raise NotFound()
+    record = (
+        MeasurementSet.objects.select_for_update()
+        .filter(pk=set_id, profile=profile, is_active=True)
+        .first()
+    )
+    if record is None:
+        raise NotFound()
+    if MeasurementSet.objects.filter(profile=profile, is_active=True).count() <= 1:
+        raise ValidationError(
+            {"detail": "The last active measurement version cannot be deleted."}
+        )
+    MeasurementSet.all_objects.filter(pk=record.pk).update(
+        is_active=False,
+        updated_by=actor,
+        updated_at=timezone.now(),
+    )
 
 
 @transaction.atomic
@@ -342,6 +420,7 @@ def create_measurement_definition(
         family = (
             GarmentFamily.objects.select_for_update()
             .filter(pk=item["family_id"], status=GarmentFamily.Status.ACTIVE)
+            .filter(Q(tenant__isnull=True) | Q(tenant=shop))
             .first()
         )
         if family is None:
@@ -366,6 +445,7 @@ def create_measurement_definition(
             definition=definition,
             family=family,
             variant=variant,
+            sort_order=definition.sort_order,
             created_by=actor,
             updated_by=actor,
         )
