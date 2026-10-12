@@ -1,5 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
+from uuid import UUID
 
 from django.db import close_old_connections, connection
 from django.test import TransactionTestCase, skipUnlessDBFeature
@@ -19,6 +20,7 @@ from apps.catalog.models import (
 )
 from apps.catalog.services import (
     add_selection,
+    create_design,
     publish_version,
     set_global_variant_active,
     set_global_variant_default,
@@ -116,6 +118,26 @@ class CatalogConcurrencyTests(TransactionTestCase):
         self.assertEqual(
             self.design.versions.filter(status=DesignVersion.Status.DRAFT).count(), 1
         )
+
+    def test_concurrent_design_retry_key_creates_one_complete_draft(self):
+        request_id = UUID("42345678-1234-5678-1234-567812345678")
+
+        results = self.concurrently(
+            lambda actor: create_design(
+                shop_id=self.shop.pk,
+                actor=actor,
+                family=self.family,
+                variant=self.variant_a,
+                name="Concurrent Retry Design",
+                selection_options=[self.option],
+                idempotency_key=request_id,
+            )
+        )
+
+        self.assertEqual(results, ["ok", "ok"])
+        designs = Design.objects.filter(tenant=self.shop, client_request_id=request_id)
+        self.assertEqual(designs.count(), 1)
+        self.assertEqual(designs.get().versions.get().selections.count(), 1)
 
     def test_selection_racing_publish_never_mutates_published_version(self):
         def select(actor):

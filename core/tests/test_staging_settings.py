@@ -163,7 +163,7 @@ def test_settings_selector_accepts_staging_database_connection_url():
         "",
         "sqlite:///tmp/db.sqlite3",
         "postgresql://user@host:5432/db",
-        "postgresql://user:pass@host/db?sslmode=require",
+        "postgresql://user:pass@host/db?sslmode=disable",
         "postgresql://user:pass@host/db#fragment",
     ],
 )

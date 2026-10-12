@@ -52,10 +52,28 @@ describe('Main Supplier Global Catalog Families', () => {
     fireEvent.change(screen.getByLabelText('Name (English)'), { target: { value: 'Dress Shirt' } })
     fireEvent.change(screen.getByLabelText('Add option group'), { target: { value: 'group-2' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
-    await waitFor(() => expect(api.updateGlobalFamily).toHaveBeenCalledWith('family-1', [{ locale: 'en', name: 'Dress Shirt' }]))
-    expect(api.updateFamilyOptionGroups).toHaveBeenCalledWith('family-1', ['group-1', 'group-2'])
+    await waitFor(() => expect(api.updateGlobalFamily).toHaveBeenCalledWith('family-1', {
+      translations: [{ locale: 'en', name: 'Dress Shirt' }],
+      option_group_ids: ['group-1', 'group-2'],
+    }))
+    expect(api.updateFamilyOptionGroups).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: 'Archive' }))
     await waitFor(() => expect(api.setGlobalFamilyStatus).toHaveBeenCalledWith('family-1', false))
+  })
+
+  it('keeps the edited values visible and shows an error when the atomic save fails', async () => {
+    api.updateGlobalFamily.mockRejectedValueOnce(new Error('Save was not completed.'))
+    render(<GlobalCatalogPage />)
+    fireEvent.click(await screen.findByRole('button', { name: /Shirt.*shirt/i }))
+    expect(await screen.findByRole('heading', { name: 'Shirt' })).toBeInTheDocument()
+    const nameInput = screen.getByLabelText('Name (English)') as HTMLInputElement
+    fireEvent.change(nameInput, { target: { value: 'Unsaved Shirt' } })
+    fireEvent.change(screen.getByLabelText('Add option group'), { target: { value: 'group-2' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    expect(await screen.findByText('Save was not completed.')).toBeInTheDocument()
+    expect(nameInput).toHaveValue('Unsaved Shirt')
+    expect(api.updateFamilyOptionGroups).not.toHaveBeenCalled()
   })
 
   it('reactivates an archived Family through the reversible lifecycle action', async () => {

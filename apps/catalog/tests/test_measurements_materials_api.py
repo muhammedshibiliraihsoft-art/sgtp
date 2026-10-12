@@ -15,6 +15,7 @@ from apps.catalog.measurement_models import (
     MeasurementSet,
     MeasurementValue,
 )
+from apps.catalog.models import DesignVersion
 from apps.catalog.measurement_pdf import build_measurement_worksheet_pdf
 from apps.clients.models import Client, RelatedPerson
 from apps.tenants.models import (
@@ -152,6 +153,56 @@ class MeasurementMaterialApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
         return response.data
 
+    def test_measurement_snapshot_can_reference_exact_published_design_version(self):
+        profile = self.create_profile()
+        self.client.force_authenticate(self.admin)
+        design = self.client.post(
+            f"/api/v1/shops/{self.shop_a.pk}/designs/",
+            {
+                "family_id": str(self.family.pk),
+                "variant_id": str(self.variant.pk),
+                "name": "Measurement-linked Shirt",
+            },
+            format="json",
+        )
+        self.assertEqual(design.status_code, status.HTTP_201_CREATED, design.data)
+        version_id = design.data["latest_version"]["id"]
+        published = self.client.post(
+            f"/api/v1/shops/{self.shop_a.pk}/design-versions/{version_id}/publish/",
+            {},
+            format="json",
+        )
+        self.assertEqual(published.status_code, status.HTTP_200_OK, published.data)
+        self.assertEqual(
+            DesignVersion.objects.get(pk=version_id).status,
+            DesignVersion.Status.PUBLISHED,
+        )
+
+        response = self.client.post(
+            f"{self.client_profiles_url()}{profile['id']}/sets/",
+            {
+                "design_version_id": version_id,
+                "values": [
+                    {
+                        "definition_id": str(self.chest.pk),
+                        "value": "42.0000",
+                        "unit": "INCH",
+                    }
+                ],
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        self.assertEqual(str(response.data["design_version"]), version_id)
+
+        copied = self.client.post(
+            f"{self.client_profiles_url()}{profile['id']}/sets/{response.data['id']}/copy/",
+            {},
+            format="json",
+        )
+        self.assertEqual(copied.status_code, status.HTTP_201_CREATED, copied.data)
+        self.assertEqual(str(copied.data["design_version"]), version_id)
+
     def worksheet_url(self, profile, *, shop=None, client=None, related=False):
         if related:
             return (
@@ -160,7 +211,7 @@ class MeasurementMaterialApiTests(APITestCase):
             )
         return f"{self.client_profiles_url(shop=shop, client=client)}{profile['id']}/worksheet.pdf"
 
-    def test_exact_approved_system_templates_and_no_guessed_abaya_darraa_sets(self):
+    def test_each_seeded_family_has_approved_family_level_measurements(self):
         expected = {
             "mens-shirt": [
                 "full-length",
@@ -189,10 +240,36 @@ class MeasurementMaterialApiTests(APITestCase):
                 "placket-length",
                 "side-slit-height",
             ],
+            "abaya": [
+                "full-length",
+                "shoulder-width",
+                "bust-chest",
+                "waist",
+                "hip-seat",
+                "sleeve-length",
+                "upper-arm-bicep",
+                "armhole",
+                "sleeve-opening",
+                "neck-opening",
+            ],
+            "darraa-long-dress": [
+                "full-length",
+                "shoulder-width",
+                "bust-chest",
+                "waist",
+                "hip-seat",
+                "sleeve-length",
+                "upper-arm-bicep",
+                "armhole",
+                "sleeve-opening",
+                "neck-opening",
+                "hem-width",
+            ],
         }
         from apps.catalog.measurement_models import MeasurementDefinitionMapping
-        from apps.catalog.models import GarmentFamily
+        from apps.catalog.models import GarmentFamily, GarmentVariant
 
+        self.client.force_authenticate(self.admin)
         for family_code, codes in expected.items():
             family = GarmentFamily.objects.get(code=family_code)
             actual = list(
@@ -203,11 +280,70 @@ class MeasurementMaterialApiTests(APITestCase):
                 .values_list("definition__code", flat=True)
             )
             self.assertEqual(actual, codes)
-        self.assertFalse(
-            MeasurementDefinitionMapping.objects.filter(
-                family__code__in=("abaya", "darraa-long-dress"),
-                definition__tenant__isnull=True,
-            ).exists()
+            default_variant = GarmentVariant.objects.get(
+                family=family,
+                tenant__isnull=True,
+                is_default=True,
+                is_active=True,
+            )
+            response = self.client.get(
+                self.definitions_url()
+                + f"?family_id={family.pk}&variant_id={default_variant.pk}"
+            )
+            self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+            self.assertEqual(
+                [row["code"] for row in response.data["results"]],
+                codes,
+            )
+
+    def test_shop_can_add_a_measurement_to_the_garment_family_for_all_variants(self):
+        from apps.catalog.models import GarmentVariant
+
+        alternate_variant = GarmentVariant.objects.create(
+            family=self.family,
+            code="alternate-measurement-fit",
+            created_by=self.main,
+            updated_by=self.main,
+        )
+        self.client.force_authenticate(self.admin)
+
+        created = self.client.post(
+            self.definitions_url(),
+            {
+                "code": "variant-collar-drop",
+                "group_code": "supplemental",
+                "sort_order": 10,
+                "translations": [
+                    {"locale": "en", "name": "Variant Collar Drop"}
+                ],
+                "mappings": [
+                    {
+                        "family_id": str(self.family.pk),
+                        "variant_id": None,
+                    }
+                ],
+            },
+            format="json",
+        )
+
+        self.assertEqual(created.status_code, status.HTTP_201_CREATED, created.data)
+        selected = self.client.get(
+            self.definitions_url()
+            + f"?family_id={self.family.pk}&variant_id={self.variant.pk}"
+        )
+        alternate = self.client.get(
+            self.definitions_url()
+            + f"?family_id={self.family.pk}&variant_id={alternate_variant.pk}"
+        )
+        self.assertEqual(selected.status_code, status.HTTP_200_OK, selected.data)
+        self.assertEqual(alternate.status_code, status.HTTP_200_OK, alternate.data)
+        self.assertIn(
+            "variant-collar-drop",
+            [row["code"] for row in selected.data["results"]],
+        )
+        self.assertIn(
+            "variant-collar-drop",
+            [row["code"] for row in alternate.data["results"]],
         )
 
     def test_variant_filter_returns_definition_once_for_family_and_variant_mappings(
@@ -235,6 +371,294 @@ class MeasurementMaterialApiTests(APITestCase):
             sum(item["id"] == str(self.chest.pk) for item in response.data["results"]),
             1,
         )
+
+    def test_materialized_shop_family_inherits_generic_defaults_and_variant_mapping(
+        self,
+    ):
+        from apps.catalog.measurement_models import MeasurementDefinitionMapping
+        from apps.catalog.models import GarmentFamily, GarmentVariant
+        from apps.catalog.services import initialize_shop_default_catalog
+
+        initialize_shop_default_catalog(
+            shop=self.shop_a, actor=self.admin, family_ids=[self.family.pk]
+        )
+        local_family = GarmentFamily.objects.get(
+            tenant=self.shop_a, template_source=self.family
+        )
+        local_variant = GarmentVariant.objects.get(
+            tenant=self.shop_a, family=local_family, is_default=True
+        )
+        MeasurementDefinitionMapping.objects.get_or_create(
+            definition=self.chest,
+            family=self.family,
+            variant=self.variant,
+            defaults={"sort_order": 99},
+        )
+        self.client.force_authenticate(self.admin)
+
+        response = self.client.get(
+            self.definitions_url()
+            + f"?family_id={local_family.pk}&variant_id={local_variant.pk}"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        rows = response.data["results"]
+        codes = [row["code"] for row in rows]
+        self.assertEqual(
+            codes,
+            [
+                "full-length",
+                "shoulder-width",
+                "chest",
+                "waist",
+                "sleeve-length",
+                "neck",
+                "hip-seat",
+                "bicep",
+                "armhole",
+                "cuff-wrist",
+            ],
+        )
+        self.assertEqual([row["sort_order"] for row in rows], list(range(10)))
+        self.assertEqual(len(codes), len(set(codes)))
+        self.assertEqual(codes.count("chest"), 1)
+        self.assertEqual(local_variant.template_source_id, self.variant.pk)
+        self.assertEqual(
+            MeasurementDefinitionMapping.objects.filter(family=local_family).count(), 0
+        )
+
+        profile_response = self.client.post(
+            self.client_profiles_url(),
+            {
+                "family_id": str(local_family.pk),
+                "variant_id": str(local_variant.pk),
+            },
+            format="json",
+        )
+        self.assertEqual(
+            profile_response.status_code,
+            status.HTTP_201_CREATED,
+            profile_response.data,
+        )
+        local_profile_id = profile_response.data["id"]
+        local_profile_url = (
+            f"{self.client_profiles_url()}{local_profile_id}/sets/"
+        )
+        save_response = self.client.post(
+            local_profile_url,
+            {
+                "values": [
+                    {
+                        "definition_id": str(self.chest.pk),
+                        "value": "95.2500",
+                        "unit": "CM",
+                    }
+                ]
+            },
+            format="json",
+        )
+        self.assertEqual(
+            save_response.status_code, status.HTTP_201_CREATED, save_response.data
+        )
+        history_response = self.client.get(local_profile_url)
+        self.assertEqual(history_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(history_response.data["results"]), 1)
+        self.assertEqual(
+            history_response.data["results"][0]["values"][0]["definition_code_snapshot"],
+            "chest",
+        )
+
+    def test_materialized_family_defaults_survive_shop_variant_and_custom_addition(
+        self,
+    ):
+        from apps.catalog.measurement_models import MeasurementDefinitionMapping
+        from apps.catalog.models import GarmentFamily, GarmentVariant
+        from apps.catalog.services import initialize_shop_default_catalog
+
+        initialize_shop_default_catalog(
+            shop=self.shop_a, actor=self.admin, family_ids=[self.family.pk]
+        )
+        local_family = GarmentFamily.objects.get(
+            tenant=self.shop_a, template_source=self.family
+        )
+        extra_variant = GarmentVariant.objects.create(
+            tenant=self.shop_a,
+            family=local_family,
+            code="shop-fit-variant",
+            created_by=self.admin,
+            updated_by=self.admin,
+        )
+        self.client.force_authenticate(self.admin)
+
+        defaults_response = self.client.get(
+            self.definitions_url()
+            + f"?family_id={local_family.pk}&variant_id={extra_variant.pk}"
+        )
+        self.assertEqual(defaults_response.status_code, status.HTTP_200_OK)
+        default_codes = [row["code"] for row in defaults_response.data["results"]]
+        self.assertEqual(len(default_codes), 10)
+        self.assertIn("chest", default_codes)
+
+        custom = self.client.post(
+            self.definitions_url(),
+            {
+                "code": "shop-extra-measurement",
+                "group_code": "supplemental",
+                "sort_order": 10,
+                "translations": [{"locale": "en", "name": "Extra Measurement"}],
+                "mappings": [{"family_id": str(local_family.pk), "variant_id": None}],
+            },
+            format="json",
+        )
+        self.assertEqual(custom.status_code, status.HTTP_201_CREATED, custom.data)
+
+        after_add = self.client.get(
+            self.definitions_url()
+            + f"?family_id={local_family.pk}&variant_id={extra_variant.pk}"
+        )
+        self.assertEqual(after_add.status_code, status.HTTP_200_OK)
+        codes = [row["code"] for row in after_add.data["results"]]
+        self.assertEqual(len(codes), 11)
+        self.assertEqual(codes.count("chest"), 1)
+        self.assertIn("shop-extra-measurement", codes)
+        self.assertEqual(codes[-1], "shop-extra-measurement")
+        self.assertEqual(
+            [row["sort_order"] for row in after_add.data["results"]], list(range(11))
+        )
+        self.assertEqual(
+            MeasurementDefinitionMapping.objects.filter(family=local_family).count(), 1
+        )
+
+    def test_materialized_variant_inherits_only_its_source_variant_additions(self):
+        from apps.catalog.measurement_models import (
+            MeasurementDefinition,
+            MeasurementDefinitionMapping,
+            MeasurementDefinitionTranslation,
+        )
+        from apps.catalog.models import GarmentFamily, GarmentVariant
+        from apps.catalog.services import initialize_shop_default_catalog
+
+        alternate_source = GarmentVariant.objects.create(
+            family=self.family,
+            code="alternate-shirt-fit",
+            created_by=self.main,
+            updated_by=self.main,
+        )
+        custom = MeasurementDefinition.objects.create(
+            tenant=self.shop_a, code="alternate-fit-measurement", sort_order=10
+        )
+        MeasurementDefinitionTranslation.objects.create(
+            definition=custom, locale="en", name="Alternate Fit Measurement"
+        )
+        MeasurementDefinitionMapping.objects.create(
+            definition=custom,
+            family=self.family,
+            variant=alternate_source,
+            sort_order=10,
+        )
+        initialize_shop_default_catalog(
+            shop=self.shop_a, actor=self.admin, family_ids=[self.family.pk]
+        )
+        local_family = GarmentFamily.objects.get(
+            tenant=self.shop_a, template_source=self.family
+        )
+        default_variant = GarmentVariant.objects.get(
+            tenant=self.shop_a, family=local_family, is_default=True
+        )
+        local_alternate = GarmentVariant.objects.get(
+            tenant=self.shop_a, family=local_family, template_source=alternate_source
+        )
+        self.client.force_authenticate(self.admin)
+
+        default_response = self.client.get(
+            self.definitions_url()
+            + f"?family_id={local_family.pk}&variant_id={default_variant.pk}"
+        )
+        alternate_response = self.client.get(
+            self.definitions_url()
+            + f"?family_id={local_family.pk}&variant_id={local_alternate.pk}"
+        )
+
+        self.assertEqual(default_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(alternate_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(default_response.data["count"], 10)
+        self.assertEqual(alternate_response.data["count"], 11)
+        self.assertNotIn(
+            "alternate-fit-measurement",
+            [row["code"] for row in default_response.data["results"]],
+        )
+        self.assertEqual(
+            [row["code"] for row in alternate_response.data["results"]][-1],
+            "alternate-fit-measurement",
+        )
+
+    def test_materialized_defaults_resolve_for_other_family_without_cross_shop_custom_fields(
+        self,
+    ):
+        from apps.catalog.measurement_models import (
+            MeasurementDefinition,
+            MeasurementDefinitionMapping,
+            MeasurementDefinitionTranslation,
+        )
+        from apps.catalog.models import GarmentFamily
+        from apps.catalog.services import initialize_shop_default_catalog
+
+        dishdasha = GarmentFamily.objects.get(code="kuwaiti-dishdasha")
+        initialize_shop_default_catalog(
+            shop=self.shop_a, actor=self.admin, family_ids=[dishdasha.pk]
+        )
+        initialize_shop_default_catalog(
+            shop=self.shop_b, actor=self.other_admin, family_ids=[dishdasha.pk]
+        )
+        local_a = GarmentFamily.objects.get(
+            tenant=self.shop_a, template_source=dishdasha
+        )
+        local_b = GarmentFamily.objects.get(
+            tenant=self.shop_b, template_source=dishdasha
+        )
+        self.client.force_authenticate(self.admin)
+
+        response_a = self.client.get(
+            self.definitions_url() + f"?family_id={local_a.pk}"
+        )
+        self.assertEqual(response_a.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            [row["code"] for row in response_a.data["results"]],
+            [
+                "full-length",
+                "shoulder",
+                "chest",
+                "sleeve-length",
+                "neck",
+                "waist",
+                "hip-seat",
+                "upper-arm-bicep",
+                "cuff-sleeve-opening",
+                "armhole",
+                "shoulder-slope-posture",
+                "placket-length",
+                "side-slit-height",
+            ],
+        )
+
+        custom = MeasurementDefinition.objects.create(
+            tenant=self.shop_a, code="shop-a-only-measurement", sort_order=20
+        )
+        MeasurementDefinitionTranslation.objects.create(
+            definition=custom, locale="en", name="Shop A Only"
+        )
+        MeasurementDefinitionMapping.objects.create(
+            definition=custom, family=local_a, sort_order=20
+        )
+
+        self.client.force_authenticate(self.other_admin)
+        response_b = self.client.get(
+            self.definitions_url(self.shop_b) + f"?family_id={local_b.pk}"
+        )
+        self.assertEqual(response_b.status_code, status.HTTP_200_OK)
+        codes_b = [row["code"] for row in response_b.data["results"]]
+        self.assertEqual(len(codes_b), 13)
+        self.assertNotIn("shop-a-only-measurement", codes_b)
 
     def test_shop_profiles_are_independent_for_client_and_related_person(self):
         client_profile = self.create_profile()
@@ -266,6 +690,19 @@ class MeasurementMaterialApiTests(APITestCase):
         self.assertEqual(duplicate.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.client_a.measurement_profiles.count(), 1)
 
+        other_family = self.catalog_family("kuwaiti-dishdasha")
+        other_variant = other_family.variants.get(tenant__isnull=True, is_default=True)
+        other_garment = self.client.post(
+            endpoint,
+            {
+                "family_id": str(other_family.pk),
+                "variant_id": str(other_variant.pk),
+            },
+            format="json",
+        )
+        self.assertEqual(other_garment.status_code, status.HTTP_201_CREATED, other_garment.data)
+        self.assertEqual(self.client_a.measurement_profiles.count(), 2)
+
     def test_measurement_values_require_explicit_unit_and_history_is_immutable(self):
         profile = self.create_profile()
         endpoint = f"{self.client_profiles_url()}{profile['id']}/sets/"
@@ -290,6 +727,59 @@ class MeasurementMaterialApiTests(APITestCase):
                 f"{endpoint}{first['id']}/", {"values": []}, format="json"
             ).status_code,
             status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
+
+    def test_version_delete_is_recoverable_and_protects_last_active_version(self):
+        profile = self.create_profile()
+        first = self.create_set(profile, value="36.0000")
+        second = self.create_set(profile, value="37.0000")
+        endpoint = f"{self.client_profiles_url()}{profile['id']}/sets/"
+
+        removed = self.client.delete(f"{endpoint}{first['id']}/")
+        self.assertEqual(removed.status_code, status.HTTP_204_NO_CONTENT)
+        first_record = MeasurementSet.all_objects.get(pk=first["id"])
+        self.assertFalse(first_record.is_active)
+        self.assertEqual(first_record.values.count(), 1)
+        self.assertEqual(
+            self.client.get(f"{endpoint}{first['id']}/").status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
+        remaining = self.client.get(endpoint)
+        self.assertEqual(remaining.data["count"], 1)
+        self.assertEqual(remaining.data["results"][0]["id"], second["id"])
+
+        rejected = self.client.delete(f"{endpoint}{second['id']}/")
+        self.assertEqual(rejected.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(MeasurementSet.objects.get(pk=second["id"]).is_active)
+
+        third = self.create_set(profile, value="38.0000")
+        self.assertEqual(third["version"], 3)
+
+    def test_deleted_version_cannot_be_copied_compared_or_exported(self):
+        profile = self.create_profile()
+        first = self.create_set(profile, value="36.0000")
+        second = self.create_set(profile, value="37.0000")
+        base = f"{self.client_profiles_url()}{profile['id']}"
+        self.assertEqual(
+            self.client.delete(f"{base}/sets/{first['id']}/").status_code,
+            status.HTTP_204_NO_CONTENT,
+        )
+        self.assertEqual(
+            self.client.post(f"{base}/sets/{first['id']}/copy/", {}).status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
+        self.assertEqual(
+            self.client.get(
+                f"{base}/compare/",
+                {"from_set_id": first["id"], "to_set_id": second["id"]},
+            ).status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
+        self.assertEqual(
+            self.client.get(
+                f"{base}/worksheet.pdf", {"measurement_set_id": first["id"]}
+            ).status_code,
+            status.HTTP_404_NOT_FOUND,
         )
 
     def test_copy_is_independent_and_comparison_never_converts_units(self):
@@ -504,6 +994,14 @@ class MeasurementMaterialApiTests(APITestCase):
         self.client.force_authenticate(self.assigned_staff)
         allowed = self.client.get(self.definitions_url())
         self.assertEqual(allowed.status_code, status.HTTP_200_OK)
+
+    def test_main_supplier_cannot_read_client_measurements_but_configuration_remains_available(self):
+        self.create_profile()
+        self.client.force_authenticate(self.main)
+        response = self.client.get(self.client_profiles_url())
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        definitions = self.client.get(self.definitions_url(self.shop_a))
+        self.assertEqual(definitions.status_code, status.HTTP_200_OK)
 
     def test_measurement_function_does_not_authorize_inactive_membership(self):
         membership = self.assigned_staff.tenant_memberships.get(tenant=self.shop_a)

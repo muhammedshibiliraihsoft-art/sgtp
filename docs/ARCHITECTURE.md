@@ -1,5 +1,9 @@
 # Architecture
 
+## Local Login ID and PIN transition (unpublished)
+
+The local account model retains UUID primary identity and immutable generated `user_code` as an internal system reference. The human-facing User ID is stored in nullable, globally unique `login_id`, preserving entered case (after trimming outer whitespace); the database and login matching remain case-insensitive. `user_code`, email, and phone remain supported aliases where present. The existing Django password hash field accepts legacy credentials and six-digit temporary PINs. Newly provisioned login-enabled accounts get a one-time six-digit PIN and must change it on first sign-in; every new credential change is exactly six digits, replaces the previous value, and increments token version/revokes sessions. Existing hashes are not bulk-converted. VIEWER records are not login-enabled. PostgreSQL-backed atomic attempt buckets limit login and reset abuse across workers. Shop ADMIN phone reset requests persist separately from credentials; only Main Supplier may approve/reject. Phone submission alone never changes a PIN. Email self-service reset is removed. This section describes unpublished local code and is not a staging/production claim.
+
 ## Target product architecture
 
 SGTP V1 has exactly one top-level Supplier / Main Admin. That operator runs the Supplier Back Office and manages multiple isolated Shop workspaces. V1 is not a multi-supplier SaaS platform. Each Shop owns or accesses only its permitted clients, designs, measurements, materials, production work, billing, reports, history, and External Supplier records.
@@ -27,6 +31,8 @@ Ordinary Users have one immutable owning Shop and do not select among multiple S
 ### BACKOFFICE-01 implementation
 
 The Main Supplier Back Office is a React route group (`/backoffice`) that reuses the established application shell, navigation styling, and presentation preferences. It does not reuse the Work page's mock records. Shop list and lifecycle screens call the existing tenant APIs through a typed frontend service. The backend's `is_main_supplier_admin` user-profile value guides frontend routing only; each write/read remains subject to server-side authentication and authorization. Shop creation calls the existing atomic Shop + first ADMIN operation, and the API returns initial credentials once with no-store headers.
+
+Back Office exposes Global Catalog management and, from a selected Shop, a read-only directory of basic Client contact fields. It does not expose the Shop operational measurement workflow. Backend `MeasurementAccess` keeps Main Supplier access to explicitly selected-Shop measurement-definition configuration, while Client/Related Person profiles and saved measurement history remain Shop-role protected. Hiding Back Office routes is not the authorization boundary.
 
 ## V1 Supplier / Shop / External Supplier Model
 
@@ -65,9 +71,9 @@ This is the approved target structure. The root-level `core/`, `apps/accounts/`,
 ## Approved infrastructure direction
 
 - Frontend: React + Vite + Tailwind, hosted on Cloudflare Pages for staging/production delivery.
-- Backend: Django + DRF, hosted on Render.
-- Database: Render PostgreSQL.
-- Object storage: Cloudflare R2 or another approved S3-compatible private object store.
+- Backend: Django + DRF. Render remains the staging runtime; planned production is native Linux VPS (initially DigitalOcean Droplet), with Nginx → loopback Gunicorn → Django. See `docs/runbooks/PRODUCTION_NATIVE_VPS.md`.
+- Database: Render PostgreSQL for staging; an external PostgreSQL endpoint with TLS for planned production.
+- Object storage: private Cloudflare R2 for the selected production runtime; any future alternative requires a separately approved change.
 - The current private catalog-media implementation supports local filesystem storage by default and Cloudflare R2 when all R2 settings are supplied. Direct uploads use short-lived, actor/Shop/target-bound tickets; the R2 configuration and upload flow remain separate from deployment status.
 - Background jobs: Django-Q or Celery + Redis; the choice remains open until the reliability phase selects and documents one.
 - Authentication: access token plus refresh token, with the refresh token handled through an HttpOnly/Secure cookie, rotation, and reuse detection; cookie-authenticated state-changing requests also require an approved CSRF protection strategy.
@@ -91,7 +97,7 @@ apps.accounts -> User model, JWT auth, profile endpoints, admin, tests
 apps.tenants  -> Tenant model, tenant CRUD/actions, admin, tests
 apps.common   -> abstract UUID/audit/soft-delete base models
 PostgreSQL    -> configured default database
-Docker        -> development container and production web/db services
+Docker        -> development/staging container path and historical production template; selected production is native VPS
 ```
 
 ## Current versus target boundaries
@@ -117,8 +123,12 @@ Docker        -> development container and production web/db services
 
 ## Authentication
 
+### Current local account and recovery policy (unpublished)
+
+Login-enabled accounts use canonical Login ID with approved legacy login aliases retained during transition. The existing Django password hash field stores either a legacy password or a newer six-digit PIN; existing credentials are not bulk-converted. STAFF and Shop Admin accounts are login-enabled; VIEWER records are not, and their account/history/hash remain preserved. A Shop Admin may reset only active STAFF in the same Shop. Shop Admin recovery uses registered-phone request followed by authorized Back Office approval; email self-service reset is removed from the current model. Main Supplier and Back Office authority remains as already approved/implemented. This current policy supersedes the historical T3-02A/T3-04A recovery and Shop Admin reset wording below.
+
 - `AUTH_USER_MODEL = accounts.User`.
-- T3-02A authentication accepts the compatible `email` field or an `identifier` containing email/E.164 phone; both resolve to the same UUID User and password-authentication path. Anonymous account creation is denied; Main Supplier Admin may create accounts and manage login phones.
+- Historical T3-02A authentication baseline: email/phone identifiers and email self-service recovery were implemented at that checkpoint. Current login additionally supports Login ID and legacy aliases; email self-service recovery is superseded and removed. Anonymous account creation remains denied.
 - Business API requests use the versioned JWT authenticator in all environments. Development retains the Browsable API renderer; Django session authentication is reserved for Django Admin and the internal documentation portal.
 - Login and refresh routes use SimpleJWT.
 - The JWT blacklist application is installed and configured.
@@ -140,16 +150,16 @@ Docker        -> development container and production web/db services
 - Current implementation after local T3-04A: UUID primary key, immutable generated `user_code`, optional unique canonical email and E.164 phone for normal Users, and identifier login by User ID/email/phone. `USERNAME_FIELD=email` is retained for Django Admin/CLI compatibility; API auth uses the explicit identifier resolver.
 - Persist nullable User preferred locale and `system|light|dark` appearance, defaulting appearance to `system`; locale selection is `User preference → authorized Shop default → English`.
 - Shop default locale/timezone/currency are configuration only and must be resolved only after authorization. None of these preferences or settings may determine role, membership, access, or Shop selection.
-- Public self-registration is prohibited; Main Supplier Admin retains global User creation/credential-reset authority, while Shop ADMINs have only the published same-Shop STAFF/VIEWER creation/reset scope. Normal Users may omit both contacts; superusers and active Shop ADMIN contact-removal paths require email and phone. No phone verification is required.
-- Generated initial passwords are cryptographically random, hash-only at rest, emitted once with no-store, and changed at first login. Current recovery is email-based with secure, expiring, single-use behavior; password change/reset revokes refresh-token sessions.
+- Public self-registration is prohibited. Main Supplier authority remains as already implemented; Shop ADMINs create STAFF/VIEWER records only in their own Shop and reset only active same-Shop STAFF. VIEWER records are not login-enabled. Normal Users may omit both contacts; superusers and active Shop ADMIN contact-removal paths require email and phone. No phone verification is required.
+- Login-enabled accounts use the shared Django password hash field for either a retained legacy password or a newer temporary six-digit PIN. Initial/reset PINs are cryptographically random, hash-only at rest, emitted once with no-store, and changed at first credential-change gate. Refresh-token sessions are revoked after credential change/reset. Email self-service reset is not current architecture.
 - Shop timezone/currency are explicit and are never inferred; they may remain unset until configured. Main Supplier Admin manages Shop-level settings in the current foundation. Shop Admin settings authority is not granted by T3-02A.
-- Generated account credentials are one-time response data with `Cache-Control: no-store`; first-login password change gates normal authenticated API operations. Password recovery is generic to the caller and uses expiring single-use Django reset tokens delivered by configured email. Plaintext passwords/reset tokens are not written to application storage or audit records.
+- Generated account credentials are one-time response data with `Cache-Control: no-store`; the forced-credential-change gate applies as implemented. Shop Admin recovery requests are phone-identified and require Back Office approval before changing credentials; submitting a phone alone never changes a credential. Plaintext credentials are not written to application storage or audit records.
 - Shop default settings are serialized only on Main Supplier Admin reads/writes. Existing broad authenticated Shop reads retain their previous scope but omit the new settings fields; this does not implement T3-03 context or change Shop visibility policy.
 
 ### Identity and staffing architecture
 
 - Each ordinary User has one immutable `owning_shop`; its membership role and lifecycle belong to that Shop. The same real-world person may have independent accounts in different Shops, but an account cannot be shared or reassigned. Main Supplier accounts remain global with no owning Shop.
-- `TenantMember` references the ordinary account's owning Shop, and the database guards ownership/membership consistency. Shop creation atomically creates a new first ADMIN account and membership. Main Supplier may create any Shop role; a Shop ADMIN may create STAFF/VIEWER and reset current same-Shop STAFF/VIEWER credentials only.
+- `TenantMember` references the ordinary account's owning Shop, and the database guards ownership/membership consistency. Shop creation atomically creates a new first ADMIN account and membership. Main Supplier may create any approved Shop role; a Shop ADMIN may create STAFF/VIEWER records and reset only active same-Shop STAFF credentials. VIEWER is a non-login record. This supersedes the earlier STAFF/VIEWER reset scope.
 - Existing T3-04B membership/Admin safeguards remain in force. T3-04B-USER-SCOPE is published at `ed845e89d7656bf9d9e1e24f03b79e7de0d3bd9c` with exact-SHA CI success in run `36591864481`.
 - Every User receives permanent `user_code` (human User ID); UUID remains the internal key/JWT `user_id`. Normal-user email/phone are optional; active Shop ADMIN/Main Supplier accounts require both. T3-04A and the T3-04B remediation are published; the latter enforces membership promotion/lifecycle/cardinality safeguards.
 - Access Role (`ADMIN`, `STAFF`, `VIEWER`) is distinct from membership-scoped Work Functions. Each Shop permits one to two active ADMIN memberships; Main Supplier manages this hierarchy. Shop creation establishes its first ADMIN, and global deactivation must preserve at least one active ADMIN in every affected Shop.
@@ -207,10 +217,9 @@ The current `User` model uses email as Django's `USERNAME_FIELD` for Admin/CLI c
 
 ## Infrastructure
 
-- PostgreSQL 15 in Docker Compose.
-- Python 3.13 slim production/development images.
-- Production startup waits for PostgreSQL, runs migrations, collects static files, and starts Gunicorn.
-- WhiteNoise serves collected static files.
+- Docker Compose/PostgreSQL container and Python images describe the development/container path, not the selected production runtime.
+- Planned production uses a Python virtual environment and systemd-managed Gunicorn behind Nginx; PostgreSQL is external. Production migrations are an explicit deployment step, and `collectstatic` populates `STATIC_ROOT` for Nginx. See `docs/runbooks/PRODUCTION_NATIVE_VPS.md`.
+- WhiteNoise remains configured as a static-file fallback; Nginx serves collected static files in the native VPS runtime.
 - VS Code Dev Container installs development dependencies and applies migrations.
 
 ## Architecture gaps and conflicts
@@ -241,6 +250,14 @@ The current `User` model uses email as Django's `USERNAME_FIELD` for Admin/CLI c
 ## Phase 1 status and current V1 readiness
 
 Phase 1 foundation implementation is complete. T3-02A, T3-03, T3-04, T3-04A, T3-04B remediation, T3-04B-USER-SCOPE, T3-04C, and T3-05 are published; Project State Validation passed for the exact T3-05 commit. SGTP V1 is not ready for production. Business modules and end-to-end workflows remain unimplemented; future endpoints must adopt and verify the T3-04 boundary.
+
+### GARMENT-SYSTEM-BACKEND-01 (local implementation)
+
+Catalog ownership remains nullable-tenant: `tenant=NULL` denotes immutable-by-Shop global defaults; a Shop-owned family/group uses its Shop tenant. A Shop family may map global groups or same-Shop groups; global families may map global groups only. Variants, style options, measurement definitions, and Designs referencing a Shop system must remain same-Shop or global. Do not use a Shop-owned record from a different Shop.
+
+`FamilyOptionGroup` owns per-family selection policy (`SINGLE`/`MULTI`, required/optional). This is not an `OptionGroup` property because one reusable group may have different rules per garment. Existing links migrate to optional `MULTI`, preserving previous behavior. Publish enforces required groups, the single-selection maximum, and that every selection belongs to a configured group.
+
+Design is a reusable, versioned style specification and its `variant` is nullable for family-level scope. Measurement history remains a separate immutable aggregate; an optional `MeasurementSet.design_version` FK pins an exact published version without making measurement capture dependent on a Design. A family-level Design may attach to a matching-family profile of any variant; a variant-specific Design requires the same profile variant. FK deletion protection preserves provenance.
 
 ## Membership Lifecycle and Rules
 

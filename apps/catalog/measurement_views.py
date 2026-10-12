@@ -1,7 +1,7 @@
 """Shop-context APIs for measurement history and material references."""
 
 from django.db import transaction
-from django.db.models import Exists, OuterRef, Q
+from django.db.models import Exists, OuterRef, Q, Subquery
 from django.http import HttpResponse
 from rest_framework import serializers, status
 from rest_framework.exceptions import NotFound, PermissionDenied
@@ -41,12 +41,13 @@ from apps.catalog.measurement_services import (
     create_measurement_definition,
     create_measurement_profile,
     create_measurement_set,
+    deactivate_measurement_set,
     require_material_access,
     require_measurement_access,
     update_material,
 )
 from apps.catalog.measurement_pdf import build_measurement_worksheet_pdf
-from apps.catalog.models import Design, DesignVersion
+from apps.catalog.models import Design, DesignVersion, GarmentFamily, GarmentVariant
 from apps.clients.models import Client, RelatedPerson
 from apps.common.views import TenantScopedMixin
 from apps.tenants.context_views import ShopContextMixin
@@ -59,6 +60,12 @@ class CatalogPagination(PageNumberPagination):
 
 class MeasurementAccess(BasePermission):
     def has_permission(self, request, view):
+        # Main Supplier may manage measurement-definition configuration, but
+        # Client profiles and saved measurement history remain Shop-only.
+        if ShopRolePolicy.is_main_supplier_admin(request.user):
+            if getattr(view, "main_supplier_configuration_access", False):
+                return True
+            raise PermissionDenied()
         require_measurement_access(
             request.shop_context.shop.pk,
             request.user,
@@ -139,6 +146,7 @@ class PersonProfileMixin:
 
 class MeasurementDefinitionListCreateView(ShopContextMixin, TenantScopedMixin, APIView):
     permission_classes = (IsAuthenticated, PasswordChangeGate, MeasurementAccess)
+    main_supplier_configuration_access = True
 
     @extend_schema(
         operation_id="measurement_definitions_list",
@@ -185,19 +193,61 @@ class MeasurementDefinitionListCreateView(ShopContextMixin, TenantScopedMixin, A
             serializers.UUIDField().run_validation(variant_raw) if variant_raw else None
         )
         if family_id:
+            shop = request.shop_context.shop
+            family = (
+                GarmentFamily.objects.filter(
+                    pk=family_id,
+                    status=GarmentFamily.Status.ACTIVE,
+                )
+                .filter(Q(tenant__isnull=True) | Q(tenant=shop))
+                .select_related("template_source")
+                .first()
+            )
+            if family is None:
+                raise NotFound()
+
+            # Shop defaults are materialized as Shop-owned families linked to
+            # their current Back Office source. Resolve both mappings without
+            # copying measurement configuration into each Shop.
+            source_family_id = family.template_source_id or family.pk
+            applicable_family_ids = {family.pk, source_family_id}
+            source_variant_id = None
+            if variant_id:
+                variant = (
+                    GarmentVariant.objects.filter(
+                        pk=variant_id,
+                        family=family,
+                        is_active=True,
+                    )
+                    .filter(Q(tenant__isnull=True) | Q(tenant=shop))
+                    .select_related("template_source")
+                    .first()
+                )
+                if variant and variant.template_source_id:
+                    source_variant_id = variant.template_source_id
+
             applicable_mappings = MeasurementDefinitionMapping.objects.filter(
                 definition_id=OuterRef("pk"),
-                family_id=family_id,
+                family_id__in=applicable_family_ids,
                 deleted__isnull=True,
             )
             if variant_id:
-                applicable_mappings = applicable_mappings.filter(
-                    Q(variant__isnull=True) | Q(variant_id=variant_id)
-                )
+                variant_scope = Q(variant__isnull=True) | Q(variant_id=variant_id)
+                if source_variant_id:
+                    variant_scope |= Q(variant_id=source_variant_id)
+                applicable_mappings = applicable_mappings.filter(variant_scope)
             else:
                 applicable_mappings = applicable_mappings.filter(variant__isnull=True)
-            rows = rows.filter(Exists(applicable_mappings)).order_by(
-                "sort_order", "code", "id"
+            rows = (
+                rows.filter(Exists(applicable_mappings))
+                .annotate(
+                    _effective_sort_order=Subquery(
+                        applicable_mappings.order_by("sort_order", "id").values(
+                            "sort_order"
+                        )[:1]
+                    )
+                )
+                .order_by("_effective_sort_order", "sort_order", "code", "id")
             )
         return _paginated(
             request,
@@ -235,6 +285,7 @@ class MeasurementDefinitionListCreateView(ShopContextMixin, TenantScopedMixin, A
 
 class MeasurementDefinitionDetailView(ShopContextMixin, TenantScopedMixin, APIView):
     permission_classes = (IsAuthenticated, PasswordChangeGate, MeasurementAccess)
+    main_supplier_configuration_access = True
 
     def _get(self, request, definition_id):
         return (
@@ -317,6 +368,7 @@ class MeasurementDefinitionDetailView(ShopContextMixin, TenantScopedMixin, APIVi
 
 class MeasurementDefinitionArchiveView(ShopContextMixin, TenantScopedMixin, APIView):
     permission_classes = (IsAuthenticated, PasswordChangeGate, MeasurementAccess)
+    main_supplier_configuration_access = True
     measurement_archive_action = True
 
     @extend_schema(
@@ -429,8 +481,9 @@ class MeasurementSetListCreateView(
     def get(self, request, shop_id, client_id, profile_id, **kwargs):
         profile = self._profile(request, profile_id)
         rows = (
-            MeasurementSet.objects.filter(profile=profile)
+            MeasurementSet.objects.filter(profile=profile, is_active=True)
             .prefetch_related("values__label_translations")
+            .select_related("design_version")
             .order_by("-version", "id")
         )
         return _paginated(
@@ -453,10 +506,13 @@ class MeasurementSetListCreateView(
             actor=request.user,
             profile_id=profile.pk,
             values=serializer.validated_data["values"],
+            design_version_id=serializer.validated_data.get("design_version_id"),
         )
-        measurement_set = MeasurementSet.objects.prefetch_related(
-            "values__label_translations"
-        ).get(pk=measurement_set.pk)
+        measurement_set = (
+            MeasurementSet.objects.prefetch_related("values__label_translations")
+            .select_related("design_version")
+            .get(pk=measurement_set.pk)
+        )
         return Response(
             MeasurementSetSerializer(
                 measurement_set, context={"locale": _locale(request)}
@@ -481,8 +537,9 @@ class MeasurementSetDetailView(
         if profile is None:
             raise NotFound()
         record = (
-            MeasurementSet.objects.filter(profile=profile, pk=set_id)
+            MeasurementSet.objects.filter(profile=profile, pk=set_id, is_active=True)
             .prefetch_related("values__label_translations")
+            .select_related("design_version")
             .first()
         )
         if record is None:
@@ -490,6 +547,31 @@ class MeasurementSetDetailView(
         return Response(
             MeasurementSetSerializer(record, context={"locale": _locale(request)}).data
         )
+
+    @extend_schema(
+        request=None,
+        responses={204: None},
+        description=(
+            "Deactivates one immutable measurement version while retaining its "
+            "values and copy provenance. The last active version is protected."
+        ),
+    )
+    def delete(self, request, shop_id, client_id, profile_id, set_id, **kwargs):
+        person = self.get_person()
+        profile = MeasurementProfile.objects.filter(
+            pk=profile_id,
+            tenant=request.shop_context.shop,
+            **self.owner_filter(person),
+        ).first()
+        if profile is None:
+            raise NotFound()
+        deactivate_measurement_set(
+            shop_id=request.shop_context.shop.pk,
+            actor=request.user,
+            profile_id=profile.pk,
+            set_id=set_id,
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class MeasurementWorksheetPDFView(
@@ -539,9 +621,9 @@ class MeasurementWorksheetPDFView(
         if profile is None:
             raise NotFound()
 
-        versions = MeasurementSet.objects.filter(profile=profile).prefetch_related(
-            "values__label_translations"
-        )
+        versions = MeasurementSet.objects.filter(
+            profile=profile, is_active=True
+        ).prefetch_related("values__label_translations")
         requested_set_id = request.query_params.get("measurement_set_id")
         if requested_set_id:
             selected_set = versions.filter(pk=requested_set_id).first()
@@ -631,9 +713,11 @@ class MeasurementSetCopyView(
             profile_id=profile.pk,
             source_set_id=set_id,
         )
-        copied = MeasurementSet.objects.prefetch_related(
-            "values__label_translations"
-        ).get(pk=copied.pk)
+        copied = (
+            MeasurementSet.objects.prefetch_related("values__label_translations")
+            .select_related("design_version")
+            .get(pk=copied.pk)
+        )
         return Response(
             MeasurementSetSerializer(copied, context={"locale": _locale(request)}).data,
             status=status.HTTP_201_CREATED,
@@ -696,7 +780,7 @@ class MeasurementCompareView(
         to_id = serializers.UUIDField().run_validation(to_id)
         sets = list(
             MeasurementSet.objects.filter(
-                profile=profile, pk__in=(from_id, to_id)
+                profile=profile, is_active=True, pk__in=(from_id, to_id)
             ).prefetch_related("values__label_translations")
         )
         by_id = {item.pk: item for item in sets}

@@ -13,6 +13,8 @@ This repository is the source of truth for project context. Do not depend on pri
 7. `../sdb-master-audit-protocol.md` (Mandatory for all auditing tasks)
 8. Any additional document relevant to the task
 
+For meaningful production engineering work, apply the risk-based gates in `docs/PRODUCTION_ENGINEERING_STANDARD.md`. This records the user's locked Version 1.0 standard; it does not authorize unconfirmed feature work.
+
 Inspect the current code and Git status before editing. If documentation and code disagree, verify the code, update the documentation, and record the correction in `docs/CHANGELOG.md`.
 
 ## Auditing Guidelines
@@ -22,6 +24,7 @@ All auditing tasks must strictly follow the rules, procedures, and evidence hier
 ## Working rules
 
 - Preserve existing user work and make the smallest safe change.
+- STRICT LOCAL DATABASE PRESERVATION: Never switch, recreate, reset, drop, restore over, clear, or otherwise replace/alter the selected local database or its application data without the user's explicit approval. Before any local database write, verify and state the exact configured database target. A specifically requested account credential reset may update only that account's credential fields; it must not change schema, records, or database selection.
 - Never reset, force-push, or rewrite shared history.
 - Never commit secrets. Keep local configuration and credentials out of Git.
 - Run appropriate tests and record their results.

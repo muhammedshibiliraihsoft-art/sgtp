@@ -35,7 +35,7 @@ Set `DJANGO_ENV=staging`; `DEBUG` is forced false and startup fails if `DJANGO_D
 
 `.env.staging.example` contains placeholders only. Never create or commit `.env.staging`. The container build excludes local staging env files. The runtime may log the environment and safe host/port diagnostics; it must never log database URLs, passwords, tokens, CSRF values, reset tokens, or secret keys.
 
-Password-reset delivery is intentionally unavailable: the dummy email backend drops messages and does not write recovery links/tokens to logs. The configured future frontend reset path is `https://staging.birky.com/reset-password`; end-to-end recovery must not be claimed until a separately approved staging email service and frontend exist.
+Email self-service password reset is superseded and is not part of the current recovery model; no email provider or `/reset-password` email flow is required. A Shop Admin recovery request uses the registered phone number and changes no credential until authorized Back Office approval. The staging dummy email backend remains non-delivering and must never log credentials or recovery material.
 
 ## Create and manually deploy
 
@@ -77,7 +77,7 @@ The CSRF bootstrap endpoint returns only a masked CSRF token and sets the API-ho
 
 Use task `STAGING-MAIN-ADMIN-BOOTSTRAP-01` only when the staging Main Supplier login must be initialized. The `bootstrap_staging_main_admin` management command creates at most one User, does not create a Shop, refuses to promote or reset any existing User, and marks a newly created account `must_change_password=True`. It independently requires `DJANGO_ENV=staging`, settings environment `staging`, database name `sgtp_staging`, an explicit command confirmation, the Render-only enable switch, valid contact details, and a 40-character minimum password. The entrypoint runs it only when `STAGING_MAIN_ADMIN_BOOTSTRAP_ENABLED=true` and `DJANGO_ENV=staging`; the flag defaults off.
 
-For the authorized one-time operation, configure `STAGING_MAIN_ADMIN_EMAIL`, `STAGING_MAIN_ADMIN_FIRST_NAME`, `STAGING_MAIN_ADMIN_PHONE` in E.164 format, and a randomly generated one-time `STAGING_MAIN_ADMIN_PASSWORD` in Render secret settings. Enable the switch and manually deploy the accepted exact-CI-green `main` SHA. Inspect startup logs only for the generic created/no-op result; they must never reveal input values. Confirm the User through the authorized login/profile route, then immediately set the enable flag to `false` and blank all four input variables and trigger a cleanup deploy. Verify health after cleanup. Do not put secrets in Git, shell history, chat output, or logs. If the configured email or phone is already in use, the command is a successful no-op and leaves that User unchanged; investigate the existing identity separately rather than trying another password.
+For the authorized one-time operation, configure `STAGING_MAIN_ADMIN_EMAIL`, `STAGING_MAIN_ADMIN_FIRST_NAME`, `STAGING_MAIN_ADMIN_LOGIN_ID`, `STAGING_MAIN_ADMIN_PHONE` in E.164 format, and a one-time policy-compliant six-digit `STAGING_MAIN_ADMIN_PIN` in Render secret settings. Enable the switch and manually deploy the accepted exact-CI-green `main` SHA. Inspect startup logs only for the generic created/no-op result; they must never reveal input values. Confirm the User through the authorized login/profile route, then immediately set the enable flag to `false` and blank all five input variables and trigger a cleanup deploy. Verify health after cleanup. Do not put secrets in Git, shell history, chat output, or logs. If the configured email, phone, or Login ID is already in use, the command is a successful no-op and leaves that User unchanged; investigate the existing identity separately rather than trying another PIN.
 
 ### STAGING-MAIN-ADMIN-BOOTSTRAP-01 completion (2026-10-01)
 
@@ -101,6 +101,6 @@ Free Postgres has no backup/restore capability. Do not promise restore or use th
 ## Operational limitations and boundaries
 
 - Django's default process-local cache remains in use; auth throttling is not globally coordinated across instances. No Redis/Key Value is added.
-- Password reset email is disabled; private object storage, durable media, background workers, backup/restore drills, formal Phase 9 acceptance, and full frontend browser integration are not delivered by this backend task.
+- Email self-service password reset is not a current feature; private object storage, durable media, background workers, backup/restore drills, formal Phase 9 acceptance, and full frontend browser integration are not delivered by this backend task.
 - Phase 9 reuses this same staging environment after its own authorization and reset/reconfiguration; early T3-05A staging is not Phase 9 completion.
 - Production services, database, secrets, domains (`app.birky.com`, `api.birky.com`), data, DNS, migrations, and deployment are prohibited in T3-05A. Phase 10 owns Production.

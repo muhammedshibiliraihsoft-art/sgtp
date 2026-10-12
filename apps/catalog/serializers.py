@@ -34,7 +34,17 @@ class FamilySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GarmentFamily
-        fields = ("id", "code", "name", "status", "has_image", "image_content_url")
+        fields = (
+            "id",
+            "tenant",
+            "template_source",
+            "code",
+            "name",
+            "status",
+            "has_image",
+            "image_content_url",
+        )
+        read_only_fields = ("tenant", "template_source")
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_name(self, obj):
@@ -83,14 +93,19 @@ class FamilyListQuerySerializer(serializers.Serializer):
 
 class FamilyUpdateSerializer(serializers.Serializer):
     translations = TranslationInputSerializer(many=True, required=False)
+    option_group_ids = serializers.ListField(
+        child=serializers.UUIDField(), required=False
+    )
 
     def validate(self, attrs):
-        if set(self.initial_data) - {"translations"}:
+        if set(self.initial_data) - {"translations", "option_group_ids"}:
             raise serializers.ValidationError(
-                "Only family translations may be changed; the family code is immutable."
+                "Only family translations and option groups may be changed; the family code is immutable."
             )
         if not attrs:
-            raise serializers.ValidationError("Provide translations to update.")
+            raise serializers.ValidationError(
+                "Provide family translations or option groups to update."
+            )
         translations = attrs.get("translations")
         if translations is not None:
             locales = [item["locale"] for item in translations]
@@ -137,6 +152,9 @@ class ShopVariantQuerySerializer(GlobalVariantQuerySerializer):
 class DesignListQuerySerializer(serializers.Serializer):
     family = serializers.UUIDField(required=False)
     variant = serializers.UUIDField(required=False)
+    status = serializers.ChoiceField(
+        choices=("ACTIVE", "ARCHIVED", "all"), required=False, default="ACTIVE"
+    )
 
 
 class VariantSerializer(serializers.ModelSerializer):
@@ -181,6 +199,7 @@ class VariantDetailSerializer(VariantSerializer):
             "created_at",
             "updated_at",
         )
+        read_only_fields = ("tenant", "is_default_seeded")
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_description(self, obj):
@@ -227,15 +246,42 @@ class ShopVariantInputSerializer(GlobalVariantInputSerializer):
 
 class OptionGroupSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
-    families = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    families = serializers.SerializerMethodField()
+    is_global = serializers.SerializerMethodField()
 
     class Meta:
         model = OptionGroup
-        fields = ("id", "code", "name", "families")
+        fields = ("id", "tenant", "code", "name", "families", "is_global")
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_name(self, obj):
         return translated_name(obj, self.context.get("locale", "en"))
+
+    @extend_schema_field(serializers.ListField(child=serializers.UUIDField()))
+    def get_families(self, obj):
+        rows = FamilyOptionGroup.objects.filter(option_group=obj).select_related(
+            "family"
+        )
+        shop_id = self.context.get("shop_id")
+        if shop_id:
+            rows = rows.filter(family__tenant_id__in=(None, shop_id))
+        else:
+            rows = rows.filter(family__tenant__isnull=True)
+        return [
+            str(family_id) for family_id in rows.values_list("family_id", flat=True)
+        ]
+
+    @extend_schema_field(OpenApiTypes.BOOL)
+    def get_is_global(self, obj):
+        return obj.tenant_id is None
+
+
+class FamilyOptionGroupSerializer(serializers.ModelSerializer):
+    option_group = OptionGroupSerializer(read_only=True)
+
+    class Meta:
+        model = FamilyOptionGroup
+        fields = ("id", "option_group", "sort_order", "selection_mode", "is_required")
 
 
 class FamilyDetailSerializer(FamilySerializer):
@@ -532,6 +578,7 @@ class DesignSerializer(serializers.ModelSerializer):
             "variant",
             "name",
             "status",
+            "is_default_seeded",
             "latest_version",
             "created_at",
             "updated_at",
@@ -564,11 +611,15 @@ class DesignSerializer(serializers.ModelSerializer):
 
 class DesignCreateSerializer(serializers.Serializer):
     family_id = serializers.UUIDField()
-    variant_id = serializers.UUIDField()
+    variant_id = serializers.UUIDField(required=False, allow_null=True)
     name = serializers.CharField(max_length=160, trim_whitespace=True)
     translations = TranslationInputSerializer(many=True, required=False)
     source_design_id = serializers.UUIDField(required=False)
     source_version_id = serializers.UUIDField(required=False)
+    selection_ids = serializers.ListField(
+        child=serializers.UUIDField(), required=False, allow_empty=True
+    )
+    idempotency_key = serializers.UUIDField(required=False)
 
     def validate(self, attrs):
         if bool(attrs.get("source_design_id")) != bool(attrs.get("source_version_id")):
@@ -577,6 +628,17 @@ class DesignCreateSerializer(serializers.Serializer):
             )
         if not attrs["name"]:
             raise serializers.ValidationError({"name": "Name must not be blank."})
+        selection_ids = attrs.get("selection_ids", [])
+        if len(selection_ids) != len(set(selection_ids)):
+            raise serializers.ValidationError(
+                {"selection_ids": "Each style option may be selected only once."}
+            )
+        if attrs.get("source_design_id") and selection_ids:
+            raise serializers.ValidationError(
+                {
+                    "selection_ids": "Copied designs cannot add selections during creation."
+                }
+            )
         translations = attrs.get("translations")
         if translations is not None:
             locales = [item["locale"] for item in translations]
@@ -606,7 +668,86 @@ class SelectionCreateSerializer(serializers.Serializer):
 
 
 class FamilyOptionGroupUpdateSerializer(serializers.Serializer):
-    option_group_ids = serializers.ListField(child=serializers.UUIDField())
+    option_group_ids = serializers.ListField(
+        child=serializers.UUIDField(), required=False
+    )
+    option_groups = serializers.ListField(child=serializers.DictField(), required=False)
+
+    def validate(self, attrs):
+        if ("option_group_ids" in attrs) == ("option_groups" in attrs):
+            raise serializers.ValidationError(
+                "Provide either option_group_ids or option_groups."
+            )
+        if "option_group_ids" in attrs:
+            ids = attrs["option_group_ids"]
+            if len(ids) != len(set(ids)):
+                raise serializers.ValidationError(
+                    {"option_group_ids": "Provide a unique list."}
+                )
+            attrs["option_groups"] = [
+                {
+                    "option_group_id": group_id,
+                    "selection_mode": "MULTI",
+                    "is_required": False,
+                    "sort_order": index,
+                }
+                for index, group_id in enumerate(ids)
+            ]
+        attrs["option_groups"] = self._normalize_option_groups(attrs["option_groups"])
+        return attrs
+
+    def _normalize_option_groups(self, value):
+        normalized = []
+        seen = set()
+        for index, item in enumerate(value):
+            if set(item) - {
+                "option_group_id",
+                "selection_mode",
+                "is_required",
+                "sort_order",
+            }:
+                raise serializers.ValidationError(
+                    {index: "Unsupported option-group mapping fields."}
+                )
+            try:
+                group_id = serializers.UUIDField().run_validation(
+                    item.get("option_group_id")
+                )
+                mode = serializers.ChoiceField(
+                    choices=("SINGLE", "MULTI")
+                ).run_validation(item.get("selection_mode", "MULTI"))
+                required = serializers.BooleanField().run_validation(
+                    item.get("is_required", False)
+                )
+                sort_order = serializers.IntegerField(
+                    min_value=0, max_value=32767
+                ).run_validation(item.get("sort_order", index))
+            except serializers.ValidationError as exc:
+                raise serializers.ValidationError({index: exc.detail}) from exc
+            if group_id in seen:
+                raise serializers.ValidationError("Option groups must be unique.")
+            seen.add(group_id)
+            normalized.append(
+                {
+                    "option_group_id": group_id,
+                    "selection_mode": mode,
+                    "is_required": required,
+                    "sort_order": sort_order,
+                }
+            )
+        return normalized
+
+
+class ShopGarmentRecordInputSerializer(GlobalCatalogRecordInputSerializer):
+    """A Shop-owned family or option-group definition with localized names."""
+
+
+class ShopFamilyOptionGroupCreateSerializer(ShopGarmentRecordInputSerializer):
+    selection_mode = serializers.ChoiceField(
+        choices=FamilyOptionGroup.SelectionMode.choices,
+        default=FamilyOptionGroup.SelectionMode.MULTI,
+    )
+    is_required = serializers.BooleanField(default=False)
 
 
 class ReferenceImageUploadSerializer(serializers.Serializer):

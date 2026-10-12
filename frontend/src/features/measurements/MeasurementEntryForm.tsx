@@ -4,9 +4,9 @@ import { useTranslation } from 'react-i18next'
 import { MeasurementUnitControl } from './MeasurementUnitControl'
 import type { MeasurementDefinition, MeasurementUnit } from './types'
 
-// A unit is intentionally blank until the user chooses one.  The measurement
-// contract forbids an implicit CM/INCH default because it could misrepresent a value.
 export type DraftValue = { value: string; unit: MeasurementUnit | '' }
+
+const DEFAULT_MEASUREMENT_UNIT: MeasurementUnit = 'INCH'
 
 interface Props {
   definitions: MeasurementDefinition[]
@@ -39,14 +39,13 @@ interface FieldProps {
   invalid: boolean
   disabled: boolean
   onChange: (id: string, value: DraftValue) => void
+  onUnitChange: (id: string, unit: MeasurementUnit) => void
   onKeyDown: (event: KeyboardEvent<HTMLInputElement>, id: string) => void
   onBlur: () => void
   inputRefs: Map<string, HTMLInputElement>
 }
 
-const EMPTY_DRAFT: DraftValue = { value: '', unit: '' }
-
-const MeasurementField = memo(function MeasurementField({ definition, locale, value, previous, invalid, disabled, onChange, onKeyDown, onBlur, inputRefs }: FieldProps) {
+const MeasurementField = memo(function MeasurementField({ definition, locale, value, previous, invalid, disabled, onChange, onUnitChange, onKeyDown, onBlur, inputRefs }: FieldProps) {
   const { t } = useTranslation()
   const label = definitionName(definition, locale)
   const description = definitionDescription(definition, locale)
@@ -79,7 +78,7 @@ const MeasurementField = memo(function MeasurementField({ definition, locale, va
         value={current.unit}
         compact
         disabled={disabled}
-        onChange={unit => onChange(definition.id, { ...current, unit })}
+        onChange={unit => onUnitChange(definition.id, unit)}
       />
     </div>
     {description && <small id={`${inputId}-description`}>{description}</small>}
@@ -91,7 +90,11 @@ const MeasurementField = memo(function MeasurementField({ definition, locale, va
 
 export const MeasurementEntryForm = memo(function MeasurementEntryForm({ definitions, seedValues, previousValues, onDirtyChange, onSave, saving, canWrite, locale }: Props) {
   const { t } = useTranslation()
-  const [values, setValues] = useState<Record<string, DraftValue>>(seedValues)
+  const [defaultUnit, setDefaultUnit] = useState<MeasurementUnit>(DEFAULT_MEASUREMENT_UNIT)
+  const [values, setValues] = useState<Record<string, DraftValue>>(() => Object.fromEntries(definitions.map(definition => {
+    const seed = seedValues[definition.id]
+    return [definition.id, { value: seed?.value ?? '', unit: seed?.unit || DEFAULT_MEASUREMENT_UNIT }]
+  })))
   const [invalidFieldId, setInvalidFieldId] = useState<string | null>(null)
   const valuesRef = useRef(values)
   const [inputRefs] = useState(() => new Map<string, HTMLInputElement>())
@@ -110,9 +113,6 @@ export const MeasurementEntryForm = memo(function MeasurementEntryForm({ definit
   }, [definitions])
 
   const completed = definitions.reduce((count, item) => count + Number(Boolean(values[item.id]?.value.trim())), 0)
-  const selectedUnits = new Set(definitions.map(item => values[item.id]?.unit ?? ''))
-  const commonUnit = selectedUnits.size === 1 ? [...selectedUnits][0] as MeasurementUnit | '' : ''
-
   const updateValue = useCallback((definitionId: string, value: DraftValue) => {
     const next = { ...valuesRef.current, [definitionId]: value }
     valuesRef.current = next
@@ -121,6 +121,16 @@ export const MeasurementEntryForm = memo(function MeasurementEntryForm({ definit
     lastEnterRef.current = null
     onDirtyChange(true)
   }, [onDirtyChange])
+
+  const updateUnit = useCallback((definitionId: string, unit: MeasurementUnit) => {
+    const current = valuesRef.current[definitionId] ?? { value: '', unit: defaultUnit }
+    const next = { ...valuesRef.current, [definitionId]: { ...current, unit } }
+    valuesRef.current = next
+    setValues(next)
+    setInvalidFieldId(null)
+    lastEnterRef.current = null
+    onDirtyChange(true)
+  }, [defaultUnit, onDirtyChange])
 
   const focusField = useCallback((fieldId: string, selectValue: boolean) => {
     const target = inputRefs.get(fieldId)
@@ -164,8 +174,9 @@ export const MeasurementEntryForm = memo(function MeasurementEntryForm({ definit
   const applyDefaultUnit = useCallback((unit: MeasurementUnit) => {
     const next = { ...valuesRef.current }
     definitions.forEach(definition => {
-      next[definition.id] = { ...(valuesRef.current[definition.id] ?? EMPTY_DRAFT), unit }
+      next[definition.id] = { ...(valuesRef.current[definition.id] ?? { value: '', unit }), unit }
     })
+    setDefaultUnit(unit)
     valuesRef.current = next
     setValues(next)
     setInvalidFieldId(null)
@@ -188,13 +199,13 @@ export const MeasurementEntryForm = memo(function MeasurementEntryForm({ definit
     }
     const saved = await onSave(currentValues)
     if (saved) {
-      const empty: Record<string, DraftValue> = {}
+      const empty = Object.fromEntries(definitions.map(definition => [definition.id, { value: '', unit: defaultUnit }]))
       valuesRef.current = empty
       setValues(empty)
       setInvalidFieldId(null)
       onDirtyChange(false)
     }
-  }, [canWrite, completed, definitions, inputRefs, onDirtyChange, onSave, saving])
+  }, [canWrite, completed, defaultUnit, definitions, inputRefs, onDirtyChange, onSave, saving])
 
   if (!definitions.length) return <div className="measurement-empty" role="status">{t('measurements.noDefinitions')}</div>
 
@@ -204,7 +215,7 @@ export const MeasurementEntryForm = memo(function MeasurementEntryForm({ definit
     <div className="measurement-entry-tools">
       <MeasurementUnitControl
         label={t('measurements.defaultUnit')}
-        value={commonUnit}
+        value={defaultUnit}
         disabled={!canWrite || saving}
         onChange={applyDefaultUnit}
       />
@@ -216,11 +227,12 @@ export const MeasurementEntryForm = memo(function MeasurementEntryForm({ definit
         key={definition.id}
         definition={definition}
         locale={locale}
-        value={values[definition.id] ?? EMPTY_DRAFT}
+        value={values[definition.id] ?? { value: '', unit: defaultUnit }}
         previous={previousValues[definition.id]}
         invalid={invalidFieldId === definition.id}
         disabled={!canWrite || saving}
         onChange={updateValue}
+        onUnitChange={updateUnit}
         onKeyDown={handleKeyDown}
         onBlur={onBlur}
         inputRefs={inputRefs}

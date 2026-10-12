@@ -360,7 +360,20 @@ def create_shop_with_first_admin(actor, shop_data, first_admin_data):
             )
         if data.get("max_users", 0) < 1:
             raise ValidationError({"max_users": "Shop capacity must be at least 1."})
-        supplier = Supplier.objects.get(singleton_lock=True)
+        # Serialize Shop creation against the singleton supplier row so two
+        # simultaneous auto-generated slugs cannot choose the same suffix.
+        supplier = Supplier.objects.select_for_update().get(singleton_lock=True)
+        if not data.get("slug"):
+            from django.utils.text import slugify
+
+            base_slug = slugify(data["name"])[:50].strip("-") or "shop"
+            candidate = base_slug
+            suffix = 2
+            while Tenant.objects.filter(slug=candidate).exists():
+                suffix_text = f"-{suffix}"
+                candidate = f"{base_slug[:50 - len(suffix_text)].rstrip('-')}{suffix_text}"
+                suffix += 1
+            data["slug"] = candidate
         shop = Tenant(supplier=supplier, created_by=actor, is_active=True, **data)
         shop.save()
         from .shop_accounts import create_shop_account
@@ -371,4 +384,7 @@ def create_shop_with_first_admin(actor, shop_data, first_admin_data):
             role=ShopRole.ADMIN,
             account_data=first_admin_data,
         )
+        from apps.catalog.services import initialize_shop_default_catalog
+
+        initialize_shop_default_catalog(shop=shop, actor=actor)
         return shop, user, initial_password

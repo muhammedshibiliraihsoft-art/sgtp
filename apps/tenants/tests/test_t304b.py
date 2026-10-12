@@ -7,6 +7,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.test import APIClient
 
 from apps.accounts.models import User
+from apps.catalog.models import GarmentFamily
 from apps.accounts.services.user_lifecycle import deactivate_global_user
 from apps.tenants.admin import TenantAdmin, TenantMemberAdmin
 from apps.tenants.models import ShopRole, Supplier, Tenant, TenantMember
@@ -67,6 +68,11 @@ class T304BRemediationTests(TestCase):
         self.assertNotIn("first_admin_user", response.data)
         membership = TenantMember.objects.get(tenant=shop, role=ShopRole.ADMIN)
         self.assertEqual(membership.user.owning_shop_id, shop.pk)
+        self.assertTrue(
+            GarmentFamily.objects.filter(
+                tenant=shop, template_source__tenant__isnull=True
+            ).exists()
+        )
         self.assertEqual(response["Cache-Control"], "no-store")
 
     def test_created_first_admin_can_log_in_and_change_initial_password(self):

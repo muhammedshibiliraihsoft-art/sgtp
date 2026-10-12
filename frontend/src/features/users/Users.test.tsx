@@ -1,5 +1,5 @@
 import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest'
-import { cleanup, render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, cleanup, render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import { UsersPage } from './UsersPage'
 import { usersApi } from './api'
@@ -45,6 +45,12 @@ const mockMembers = [
   }
 ]
 
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>(res => { resolve = res })
+  return { promise, resolve }
+}
+
 describe('UsersPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -64,6 +70,99 @@ describe('UsersPage', () => {
     
     expect(screen.getAllByText('Staff User').length).toBeGreaterThan(0)
     expect(screen.getAllByText('staff_user').length).toBeGreaterThan(0)
+  })
+
+  it('debounces membership search without reloading Shop stats and loads the full list when cleared', async () => {
+    render(<BrowserRouter><UsersPage /></BrowserRouter>)
+    await screen.findAllByText('Admin User')
+    expect(usersApi.memberships).toHaveBeenCalledTimes(1)
+
+    const search = screen.getAllByPlaceholderText('Search by name or User ID')[0]
+    fireEvent.change(search, { target: { value: 'A' } })
+    fireEvent.change(search, { target: { value: 'Adm' } })
+    fireEvent.change(search, { target: { value: 'Admin' } })
+    expect(usersApi.memberships).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(usersApi.memberships).toHaveBeenLastCalledWith('t1', { search: 'Admin', role: 'ALL', active: 'ALL', page: 1 }))
+    expect(usersApi.memberships).toHaveBeenCalledTimes(2)
+    expect(usersApi.stats).toHaveBeenCalledTimes(1)
+
+    fireEvent.change(search, { target: { value: '' } })
+    await waitFor(() => expect(usersApi.memberships).toHaveBeenLastCalledWith('t1', { search: '', role: 'ALL', active: 'ALL', page: 1 }))
+    expect(usersApi.memberships).toHaveBeenCalledTimes(3)
+    expect(usersApi.stats).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps Shop stats independent of role filters and pagination', async () => {
+    vi.mocked(usersApi.memberships).mockResolvedValue({ count: 40, next: null, previous: null, results: mockMembers } as any)
+    render(<BrowserRouter><UsersPage /></BrowserRouter>)
+    await screen.findAllByText('Admin User')
+    fireEvent.click(screen.getAllByRole('button', { name: 'All Roles' })[0])
+    fireEvent.click(screen.getAllByRole('option', { name: 'Staff' })[0])
+    await waitFor(() => expect(usersApi.memberships).toHaveBeenLastCalledWith('t1', { search: '', role: 'STAFF', active: 'ALL', page: 1 }))
+    fireEvent.click(document.querySelector('.pagination button:last-child')!)
+    await waitFor(() => expect(usersApi.memberships).toHaveBeenLastCalledWith('t1', { search: '', role: 'STAFF', active: 'ALL', page: 2 }))
+    expect(usersApi.stats).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the member list usable and retries a failed capacity request', async () => {
+    vi.mocked(usersApi.stats).mockRejectedValueOnce(new Error('Capacity service unavailable')).mockResolvedValueOnce(mockStats)
+    render(<BrowserRouter><UsersPage /></BrowserRouter>)
+    await screen.findAllByText('Admin User')
+    expect(screen.getByRole('alert')).toHaveTextContent('Capacity service unavailable')
+    expect(usersApi.memberships).toHaveBeenCalledTimes(1)
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    await waitFor(() => expect(screen.getByText('Users: 5 / 15')).toBeInTheDocument())
+    expect(usersApi.stats).toHaveBeenCalledTimes(2)
+  })
+
+  it('ignores a stale membership response after a newer search is entered', async () => {
+    const stale = deferred<Awaited<ReturnType<typeof usersApi.memberships>>>()
+    const latest = deferred<Awaited<ReturnType<typeof usersApi.memberships>>>()
+    vi.mocked(usersApi.memberships).mockImplementation((_shopId, options) => {
+      if (options?.search === 'Old') return stale.promise
+      if (options?.search === 'New') return latest.promise
+      return Promise.resolve({ count: mockMembers.length, next: null, previous: null, results: mockMembers } as Awaited<ReturnType<typeof usersApi.memberships>>)
+    })
+    render(<BrowserRouter><UsersPage /></BrowserRouter>)
+    await screen.findAllByText('Admin User')
+    const search = screen.getAllByPlaceholderText('Search by name or User ID')[0]
+    fireEvent.change(search, { target: { value: 'Old' } })
+    await waitFor(() => expect(usersApi.memberships).toHaveBeenLastCalledWith('t1', { search: 'Old', role: 'ALL', active: 'ALL', page: 1 }))
+    fireEvent.change(search, { target: { value: 'New' } })
+    await waitFor(() => expect(usersApi.memberships).toHaveBeenLastCalledWith('t1', { search: 'New', role: 'ALL', active: 'ALL', page: 1 }))
+
+    const latestMember = { ...mockMembers[0], id: 'latest', display_name: 'New result' }
+    await act(async () => latest.resolve({ count: 1, next: null, previous: null, results: [latestMember] } as Awaited<ReturnType<typeof usersApi.memberships>>))
+    expect(await screen.findAllByText('New result')).not.toHaveLength(0)
+    const staleMember = { ...mockMembers[0], id: 'stale', display_name: 'Old result' }
+    await act(async () => stale.resolve({ count: 1, next: null, previous: null, results: [staleMember] } as Awaited<ReturnType<typeof usersApi.memberships>>))
+    expect(screen.queryByText('Old result')).not.toBeInTheDocument()
+  })
+
+  it('ignores a stale search error and loading completion after a newer result', async () => {
+    let rejectStale!: (reason: Error) => void
+    const stale = new Promise<Awaited<ReturnType<typeof usersApi.memberships>>>((_, reject) => { rejectStale = reject })
+    const latest = deferred<Awaited<ReturnType<typeof usersApi.memberships>>>()
+    vi.mocked(usersApi.memberships).mockImplementation((_shopId, options) => {
+      if (options?.search === 'Old') return stale
+      if (options?.search === 'New') return latest.promise
+      return Promise.resolve({ count: mockMembers.length, next: null, previous: null, results: mockMembers } as Awaited<ReturnType<typeof usersApi.memberships>>)
+    })
+    render(<BrowserRouter><UsersPage /></BrowserRouter>)
+    await screen.findAllByText('Admin User')
+    const search = screen.getAllByPlaceholderText('Search by name or User ID')[0]
+    fireEvent.change(search, { target: { value: 'Old' } })
+    await waitFor(() => expect(usersApi.memberships).toHaveBeenLastCalledWith('t1', { search: 'Old', role: 'ALL', active: 'ALL', page: 1 }))
+    fireEvent.change(search, { target: { value: 'New' } })
+    await waitFor(() => expect(usersApi.memberships).toHaveBeenLastCalledWith('t1', { search: 'New', role: 'ALL', active: 'ALL', page: 1 }))
+
+    const latestMember = { ...mockMembers[0], id: 'latest', display_name: 'New result' }
+    await act(async () => latest.resolve({ count: 1, next: null, previous: null, results: [latestMember] } as Awaited<ReturnType<typeof usersApi.memberships>>))
+    expect(await screen.findAllByText('New result')).not.toHaveLength(0)
+    await act(async () => rejectStale(new Error('Stale search failed')))
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.queryByText('Loading...')).not.toBeInTheDocument()
+    expect(screen.getAllByText('New result')).not.toHaveLength(0)
   })
 
   it('Shop Admin Create User exposes STAFF/VIEWER only and no Shop selector', async () => {

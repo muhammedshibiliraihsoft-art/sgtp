@@ -151,6 +151,39 @@ class TenantAPITest(TestCase):
             1,
         )
 
+    def test_create_tenant_generates_slug_when_omitted(self):
+        self.client.force_authenticate(user=self.admin_user)
+        payload = {**self.tenant_data, "name": "New Tailor Shop"}
+        payload.pop("slug")
+
+        response = self.client.post("/api/v1/tenants/", payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        self.assertEqual(response.data["slug"], "new-tailor-shop")
+
+    def test_generated_slug_gets_suffix_when_name_already_exists(self):
+        self.client.force_authenticate(user=self.admin_user)
+        Tenant.objects.create(
+            name="New Tailor Shop",
+            slug="new-tailor-shop",
+            max_users=10,
+            created_by=self.admin_user,
+            supplier=self.supplier,
+        )
+        payload = {**self.tenant_data, "name": "New Tailor Shop"}
+        payload.pop("slug")
+        payload["first_admin"] = {
+            **payload["first_admin"],
+            "login_id": "second_admin",
+            "email": "second-admin@example.test",
+            "phone": "+96550000018",
+        }
+
+        response = self.client.post("/api/v1/tenants/", payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        self.assertEqual(response.data["slug"], "new-tailor-shop-2")
+
     def test_create_tenant_as_regular_user(self):
         """Test creating tenant as regular user (should fail)"""
         self.client.force_authenticate(user=self.user)

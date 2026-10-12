@@ -38,6 +38,7 @@ const BackOfficeDashboard = lazy(() => import('./backoffice/BackOfficePages').th
 const ShopListPage = lazy(() => import('./backoffice/BackOfficePages').then(module => ({ default: module.ShopListPage })))
 const CreateShopPage = lazy(() => import('./backoffice/BackOfficePages').then(module => ({ default: module.CreateShopPage })))
 const ShopDetailPage = lazy(() => import('./backoffice/BackOfficePages').then(module => ({ default: module.ShopDetailPage })))
+const BackOfficeClientsPage = lazy(() => import('./backoffice/BackOfficePages').then(module => ({ default: module.BackOfficeClientsPage })))
 const PinResetRequestsPage = lazy(() => import('./backoffice/PinResetRequestsPage').then(module => ({ default: module.PinResetRequestsPage })))
 
 function PageLoading() { return <div className="content-wrap" role="status">Loading page…</div> }
@@ -624,7 +625,6 @@ function BackOfficeSidebar({ isPinned, setIsPinned }: { isPinned: boolean, setIs
     <nav style={{ flex: 1 }} aria-label={t('backoffice.navigation')}>
       <NavLink to="/backoffice" end className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><LayoutDashboard size={18} /><span className="nav-label">{t('backoffice.dashboard')}</span></NavLink>
       <NavLink to="/backoffice/shops" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Store size={18} /><span className="nav-label">{t('backoffice.shops')}</span></NavLink>
-      <NavLink to="/backoffice/measurements" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Ruler size={18} /><span className="nav-label">{t('measurements.title')}</span></NavLink>
       <NavLink to="/backoffice/designs" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Wand2 size={18} /><span className="nav-label">{t('backoffice.designs', 'Global Designs')}</span></NavLink>
       <NavLink to="/backoffice/catalog" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Shirt size={18} /><span className="nav-label">{t('backoffice.catalog', 'Global Catalog')}</span></NavLink>
     </nav>
@@ -662,7 +662,6 @@ function BackOfficeBottomNavigation() {
   return <nav className="bottom-nav bo-bottom-nav" aria-label={t('backoffice.navigation')}>
     <NavLink to="/backoffice" end className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}><LayoutDashboard size={20} />{t('backoffice.dashboard')}</NavLink>
     <NavLink to="/backoffice/shops" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}><Store size={20} />{t('backoffice.shops')}</NavLink>
-    <NavLink to="/backoffice/measurements" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}><Ruler size={20} />{t('measurements.title')}</NavLink>
     <button type="button" className="nav-item" onClick={() => { void signOut().catch(() => undefined).finally(() => navigate('/login', { replace: true })) }}><LogOut size={20} />{t('backoffice.signOut')}</button>
   </nav>
 }
@@ -681,7 +680,7 @@ function TopHeader({
   const isBackOffice = location.pathname.startsWith('/backoffice')
 
   const getPageContext = () => {
-    if (isBackOffice) return { main: location.pathname === '/backoffice' ? 'Back Office' : location.pathname === '/backoffice/measurements' ? 'Measurements' : location.pathname.endsWith('/new') ? 'Create Shop' : 'Shops' }
+    if (isBackOffice) return { main: location.pathname === '/backoffice' ? 'Back Office' : location.pathname.includes('/clients') ? 'Clients' : location.pathname.endsWith('/new') ? 'Create Shop' : 'Shops' }
     if (location.pathname === '/work') return { main: 'Work' }
     if (location.pathname === '/') return { main: 'Dashboard' }
     if (location.pathname.startsWith('/orders')) return { main: 'Orders' }
@@ -939,8 +938,8 @@ function Workspace() {
         <Route path="/backoffice/shops" element={<ShopListPage />} />
         <Route path="/backoffice/shops/new" element={<CreateShopPage />} />
         <Route path="/backoffice/shops/:shopId" element={<ShopDetailPage />} />
+        <Route path="/backoffice/shops/:shopId/clients" element={<BackOfficeClientsPage />} />
         <Route path="/backoffice/pin-reset-requests" element={<PinResetRequestsPage />} />
-        <Route path="/backoffice/measurements" element={<ClientMeasurementsPage />} />
         <Route path="/backoffice/catalog" element={<GlobalCatalogPage />} />
         <Route path="/backoffice/designs" element={<GlobalDesignTemplatesPage />} />
         <Route path="/backoffice/designs/:designId" element={<GlobalTemplateEditor />} />

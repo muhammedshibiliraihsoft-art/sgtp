@@ -31,6 +31,9 @@ Never place secrets, database credentials, or private API keys in `VITE_*` value
 **H. DEPLOYMENT FLOW**
 Reconcile frontend work on `main` → typecheck/lint/tests/build → review → publish only with explicit authorization. Cloudflare preview behavior depends on its external branch mapping and is not confirmed by this repository documentation.
 
+**I. ENVIRONMENT ISOLATION**
+The same frontend build is used for every Pages environment. The Pages Function reads runtime-only `API_ORIGIN` and exact `FRONTEND_ORIGIN` bindings; configure them independently for staging and production. Staging currently targets `https://birky-staging-api.onrender.com`. Production has no configured API origin in this repository and must be supplied only after its API/domain is provisioned. Missing bindings fail closed; there is no cross-environment fallback. Never put API credentials, R2 credentials, or other secrets in `VITE_*` values.
+
 ## SGTP foundation scope
 
 - React + TypeScript + Vite, React Router, Tailwind CSS v4.

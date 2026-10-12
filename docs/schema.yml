@@ -68,9 +68,11 @@ paths:
     post:
       operationId: api_v1_auth_login_create
       description: Authenticate using the legacy email/password fields or identifier/password,
-        where identifier accepts User ID, email, or E.164 phone. The response contains
-        an access JWT and user profile; the refresh JWT is set only in the HttpOnly
-        cookie.
+        where identifier accepts Login ID and approved legacy aliases. The shared
+        password field accepts existing legacy passwords or newer six-digit PINs;
+        the system is not PIN-only for existing accounts. Viewer accounts cannot authenticate.
+        The response contains an access JWT and user profile; the refresh JWT is set
+        only in the HttpOnly cookie.
       tags:
       - api
       requestBody:
@@ -121,48 +123,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/LogoutResponse'
           description: ''
-  /api/v1/auth/password/reset/:
+  /api/v1/auth/pin-reset-requests/:
     post:
-      operationId: api_v1_auth_password_reset_create
+      operationId: api_v1_auth_pin_reset_requests_create
+      description: Public request only; phone does not verify identity or change a
+        PIN. Response does not disclose account eligibility.
       tags:
       - api
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PasswordResetRequestRequest'
+              $ref: '#/components/schemas/ShopAdminPinResetRequestInputRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PasswordResetRequestRequest'
+              $ref: '#/components/schemas/ShopAdminPinResetRequestInputRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PasswordResetRequestRequest'
-      security:
-      - jwtAuth: []
-      - {}
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PasswordResetRequestResponse'
-          description: ''
-  /api/v1/auth/password/reset/confirm/:
-    post:
-      operationId: api_v1_auth_password_reset_confirm_create
-      tags:
-      - api
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PasswordResetConfirmRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/PasswordResetConfirmRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/PasswordResetConfirmRequest'
+              $ref: '#/components/schemas/ShopAdminPinResetRequestInputRequest'
         required: true
       security:
       - jwtAuth: []
@@ -172,7 +150,69 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PasswordResetConfirmResponse'
+                $ref: '#/components/schemas/ShopAdminPinResetRequestResult'
+          description: ''
+  /api/v1/auth/pin-reset-requests/{request_id}/approve/:
+    post:
+      operationId: api_v1_auth_pin_reset_requests_approve_create
+      description: Main Supplier approval returns a one-time temporary PIN; never
+        retrievable later.
+      parameters:
+      - in: path
+        name: request_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovedShopAdminPinReset'
+          description: ''
+  /api/v1/auth/pin-reset-requests/{request_id}/reject/:
+    post:
+      operationId: api_v1_auth_pin_reset_requests_reject_create
+      description: Main Supplier rejects a pending request without changing credentials.
+      parameters:
+      - in: path
+        name: request_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RejectedShopAdminPinReset'
+          description: ''
+  /api/v1/auth/pin-reset-requests/pending/:
+    get:
+      operationId: api_v1_auth_pin_reset_requests_pending_list
+      description: Main Supplier only. Lists pending Shop ADMIN PIN reset requests.
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PendingShopAdminPinReset'
           description: ''
   /api/v1/auth/token/refresh/:
     post:
@@ -350,8 +390,9 @@ paths:
   /api/v1/auth/users/{id}/reset-credentials/:
     post:
       operationId: api_v1_auth_users_reset_credentials_create
-      description: Main Supplier only. Returns one temporary credential with no-store
-        headers.
+      description: Main Supplier authority remains unchanged. A Shop ADMIN may reset
+        only an active STAFF account in the same Shop. Returns a one-time temporary
+        PIN.
       parameters:
       - in: path
         name: id
@@ -492,6 +533,20 @@ paths:
         schema:
           type: string
           format: uuid
+      - in: query
+        name: status
+        schema:
+          enum:
+          - ACTIVE
+          - ARCHIVED
+          - all
+          type: string
+          default: ACTIVE
+          minLength: 1
+        description: |-
+          * `ACTIVE` - ACTIVE
+          * `ARCHIVED` - ARCHIVED
+          * `all` - all
       - in: query
         name: variant
         schema:
@@ -959,7 +1014,6 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/FamilyOptionGroupUpdateRequest'
-        required: true
       security:
       - jwtAuth: []
       responses:
@@ -1691,6 +1745,204 @@ paths:
               schema:
                 $ref: '#/components/schemas/TenantMember'
           description: ''
+  /api/v1/shops/{shop_id}/catalog/garment-families/:
+    get:
+      operationId: shop_garment_families_list
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShopGarmentFamilyPage'
+          description: ''
+    post:
+      operationId: shop_garment_families_create
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShopGarmentRecordInputRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ShopGarmentRecordInputRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ShopGarmentRecordInputRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Family'
+          description: ''
+  /api/v1/shops/{shop_id}/catalog/garment-families/{family_id}/{action}/:
+    post:
+      operationId: shop_default_family_lifecycle
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: action
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: family_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Family'
+          description: ''
+  /api/v1/shops/{shop_id}/catalog/garment-families/{family_id}/materialize-default/:
+    post:
+      operationId: shop_default_family_materialize
+      description: Create an isolated Shop-owned working copy of one global default
+        when a Shop user chooses to edit it. Other Shops and the global source are
+        unchanged.
+      parameters:
+      - in: path
+        name: family_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Family'
+          description: ''
+  /api/v1/shops/{shop_id}/catalog/garment-families/{family_id}/option-groups/:
+    get:
+      operationId: shop_family_option_group_config_list
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: family_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FamilyOptionGroup'
+          description: ''
+    put:
+      operationId: shop_family_option_group_config_update
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions. Shop Catalog may update mappings only for families owned by the
+        selected Shop. Global families are readable but read-only here; global defaults
+        must be managed through Global Catalog.
+      parameters:
+      - in: path
+        name: family_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FamilyOptionGroupUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/FamilyOptionGroupUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FamilyOptionGroupUpdateRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FamilyOptionGroup'
+          description: ''
+        '403':
+          description: Global family mappings are read-only through the Shop Catalog
+            route.
   /api/v1/shops/{shop_id}/catalog/media/uploads/:
     post:
       operationId: shop_private_media_upload
@@ -1752,6 +2004,63 @@ paths:
                   additionalProperties: true
           description: Upload authorization or completed image metadata, based on
             action.
+  /api/v1/shops/{shop_id}/catalog/option-groups/:
+    get:
+      operationId: shop_option_groups_list
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShopOptionGroupPage'
+          description: ''
+    post:
+      operationId: shop_option_groups_create
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShopGarmentRecordInputRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ShopGarmentRecordInputRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ShopGarmentRecordInputRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OptionGroup'
+          description: ''
   /api/v1/shops/{shop_id}/catalog/style-options/:
     get:
       operationId: shop_style_options_list
@@ -2492,6 +2801,42 @@ paths:
               schema:
                 $ref: '#/components/schemas/MeasurementSet'
           description: ''
+    delete:
+      operationId: api_v1_shops_clients_measurement_profiles_sets_destroy
+      description: Deactivates one immutable measurement version while retaining its
+        values and copy provenance. The last active version is protected.
+      parameters:
+      - in: path
+        name: client_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: profile_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: set_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/v1/shops/{shop_id}/clients/{client_id}/measurement-profiles/{profile_id}/sets/{set_id}/copy/:
     post:
       operationId: api_v1_shops_clients_measurement_profiles_sets_copy_create
@@ -3132,6 +3477,48 @@ paths:
               schema:
                 $ref: '#/components/schemas/MeasurementSet'
           description: ''
+    delete:
+      operationId: api_v1_shops_clients_related_persons_measurement_profiles_sets_destroy
+      description: Deactivates one immutable measurement version while retaining its
+        values and copy provenance. The last active version is protected.
+      parameters:
+      - in: path
+        name: client_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: profile_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: related_person_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: set_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
   ? /api/v1/shops/{shop_id}/clients/{client_id}/related-persons/{related_person_id}/measurement-profiles/{profile_id}/sets/{set_id}/copy/
   : post:
       operationId: api_v1_shops_clients_related_persons_measurement_profiles_sets_copy_create
@@ -3557,6 +3944,53 @@ paths:
               schema:
                 $ref: '#/components/schemas/Selection'
           description: ''
+  /api/v1/shops/{shop_id}/design-versions/{version_id}/selections/{selection_id}/:
+    patch:
+      operationId: shop_design_selection_update
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: selection_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: version_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SelectionCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SelectionCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SelectionCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Selection'
+          description: ''
   /api/v1/shops/{shop_id}/designs/:
     get:
       operationId: shop_design_list
@@ -3574,6 +4008,20 @@ paths:
           type: string
           format: uuid
         required: true
+      - in: query
+        name: status
+        schema:
+          enum:
+          - ACTIVE
+          - ARCHIVED
+          - all
+          type: string
+          default: ACTIVE
+          minLength: 1
+        description: |-
+          * `ACTIVE` - ACTIVE
+          * `ARCHIVED` - ARCHIVED
+          * `all` - all
       - in: query
         name: variant
         schema:
@@ -3716,6 +4164,35 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/shops/{shop_id}/designs/{design_id}/restore-default/:
+    post:
+      operationId: shop_default_design_restore
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: design_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Design'
+          description: ''
   /api/v1/shops/{shop_id}/inventory/items/:
     get:
       operationId: inventory_items_list
@@ -4752,9 +5229,13 @@ components:
       properties:
         user_code:
           type: string
+        login_id:
+          type: string
+          nullable: true
         temporary_password:
           type: string
       required:
+      - login_id
       - temporary_password
       - user_code
     AppearancePreferenceEnum:
@@ -4767,6 +5248,24 @@ components:
         * `system` - System
         * `light` - Light
         * `dark` - Dark
+    ApprovedShopAdminPinReset:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+        login_id:
+          type: string
+          nullable: true
+        temporary_password:
+          type: string
+      required:
+      - id
+      - login_id
+      - status
+      - temporary_password
     BlankEnum:
       enum:
       - ''
@@ -4945,11 +5444,14 @@ components:
         variant:
           type: string
           format: uuid
+          nullable: true
         name:
           type: string
           readOnly: true
         status:
           $ref: '#/components/schemas/StatusF58Enum'
+        is_default_seeded:
+          type: boolean
         latest_version:
           allOf:
           - $ref: '#/components/schemas/DesignVersion'
@@ -4970,7 +5472,6 @@ components:
       - latest_version
       - name
       - updated_at
-      - variant
     DesignCreateRequest:
       type: object
       properties:
@@ -4980,6 +5481,7 @@ components:
         variant_id:
           type: string
           format: uuid
+          nullable: true
         name:
           type: string
           minLength: 1
@@ -4994,10 +5496,17 @@ components:
         source_version_id:
           type: string
           format: uuid
+        selection_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        idempotency_key:
+          type: string
+          format: uuid
       required:
       - family_id
       - name
-      - variant_id
     DesignReference:
       type: object
       properties:
@@ -5169,10 +5678,12 @@ components:
         identifier:
           type: string
           minLength: 1
+          maxLength: 254
         password:
           type: string
           writeOnly: true
           minLength: 1
+          maxLength: 256
       required:
       - password
     Family:
@@ -5182,6 +5693,16 @@ components:
           type: string
           format: uuid
           readOnly: true
+        tenant:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        template_source:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
         code:
           type: string
           maxLength: 48
@@ -5203,6 +5724,8 @@ components:
       - id
       - image_content_url
       - name
+      - template_source
+      - tenant
     FamilyDetail:
       type: object
       properties:
@@ -5210,6 +5733,16 @@ components:
           type: string
           format: uuid
           readOnly: true
+        tenant:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        template_source:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
         code:
           type: string
           maxLength: 48
@@ -5242,6 +5775,8 @@ components:
       - image_content_url
       - name
       - option_groups
+      - template_source
+      - tenant
       - translations
     FamilyImageMetadata:
       type: object
@@ -5277,6 +5812,28 @@ components:
           format: binary
       required:
       - image
+    FamilyOptionGroup:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        option_group:
+          allOf:
+          - $ref: '#/components/schemas/OptionGroup'
+          readOnly: true
+        sort_order:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        selection_mode:
+          $ref: '#/components/schemas/SelectionModeEnum'
+        is_required:
+          type: boolean
+      required:
+      - id
+      - option_group
     FamilyOptionGroupUpdateRequest:
       type: object
       properties:
@@ -5285,8 +5842,11 @@ components:
           items:
             type: string
             format: uuid
-      required:
-      - option_group_ids
+        option_groups:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
     FamilyTranslation:
       type: object
       properties:
@@ -5311,6 +5871,9 @@ components:
     FirstShopAdmin:
       type: object
       properties:
+        login_id:
+          type: string
+          maxLength: 32
         first_name:
           type: string
           maxLength: 30
@@ -5325,10 +5888,15 @@ components:
       required:
       - email
       - first_name
+      - login_id
       - phone
     FirstShopAdminRequest:
       type: object
       properties:
+        login_id:
+          type: string
+          minLength: 1
+          maxLength: 32
         first_name:
           type: string
           minLength: 1
@@ -5346,6 +5914,7 @@ components:
       required:
       - email
       - first_name
+      - login_id
       - phone
     FunctionsEnum:
       enum:
@@ -5996,6 +6565,12 @@ components:
           type: string
           format: uuid
           nullable: true
+        design_version:
+          type: string
+          format: uuid
+          nullable: true
+        is_active:
+          type: boolean
         created_at:
           type: string
           format: date-time
@@ -6018,6 +6593,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/MeasurementValueInputRequest'
+        design_version_id:
+          type: string
+          format: uuid
+          nullable: true
       required:
       - values
     MeasurementSetPage:
@@ -6171,6 +6750,10 @@ components:
           type: string
           format: uuid
           readOnly: true
+        tenant:
+          type: string
+          format: uuid
+          nullable: true
         code:
           type: string
           maxLength: 48
@@ -6184,11 +6767,16 @@ components:
             type: string
             format: uuid
           readOnly: true
+        is_global:
+          type: boolean
+          readOnly: true
       required:
       - code
       - families
       - id
+      - is_global
       - name
+      - tenant
     PaginatedClientList:
       type: object
       required:
@@ -6304,49 +6892,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/User'
-    PasswordResetConfirmRequest:
-      type: object
-      properties:
-        uid:
-          type: string
-          minLength: 1
-        token:
-          type: string
-          minLength: 1
-        new_password:
-          type: string
-          writeOnly: true
-          minLength: 1
-        new_password_confirm:
-          type: string
-          writeOnly: true
-          minLength: 1
-      required:
-      - new_password
-      - new_password_confirm
-      - token
-      - uid
-    PasswordResetConfirmResponse:
-      type: object
-      properties:
-        detail:
-          type: string
-      required:
-      - detail
-    PasswordResetRequestRequest:
-      type: object
-      properties:
-        email:
-          type: string
-          format: email
-          nullable: true
-    PasswordResetRequestResponse:
-      type: object
-      properties:
-        detail:
-          type: string
-      required:
-      - detail
     PatchedClientRequest:
       type: object
       properties:
@@ -6379,6 +6924,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TranslationInputRequest'
+        option_group_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
     PatchedInventoryItemUpdateRequest:
       type: object
       properties:
@@ -6463,6 +7013,10 @@ components:
           type: string
           format: uuid
           writeOnly: true
+        new_login_id:
+          type: string
+          writeOnly: true
+          maxLength: 32
         role:
           allOf:
           - $ref: '#/components/schemas/Role80eEnum'
@@ -6501,6 +7055,38 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TranslationInputRequest'
+    PendingShopAdminPinReset:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        shop:
+          type: string
+        shop_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        login_id:
+          type: string
+          nullable: true
+        phone:
+          type: string
+        requested_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+      required:
+      - id
+      - login_id
+      - name
+      - phone
+      - requested_at
+      - shop
+      - shop_id
+      - status
     PrivateMediaUploadInputRequest:
       type: object
       properties:
@@ -6549,8 +7135,22 @@ components:
       properties:
         access:
           type: string
+        user:
+          $ref: '#/components/schemas/User'
       required:
       - access
+      - user
+    RejectedShopAdminPinReset:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+      required:
+      - id
+      - status
     RelatedPerson:
       type: object
       properties:
@@ -6714,6 +7314,29 @@ components:
           format: uuid
       required:
       - style_option_id
+    SelectionModeEnum:
+      enum:
+      - SINGLE
+      - MULTI
+      type: string
+      description: |-
+        * `SINGLE` - Single selection
+        * `MULTI` - Multiple selections
+    ShopAdminPinResetRequestInputRequest:
+      type: object
+      properties:
+        phone:
+          type: string
+          minLength: 1
+      required:
+      - phone
+    ShopAdminPinResetRequestResult:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
     ShopDesignPage:
       type: object
       properties:
@@ -6731,6 +7354,66 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Design'
+      required:
+      - count
+      - next
+      - previous
+      - results
+    ShopGarmentFamilyPage:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          format: uri
+          nullable: true
+        previous:
+          type: string
+          format: uri
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Family'
+      required:
+      - count
+      - next
+      - previous
+      - results
+    ShopGarmentRecordInputRequest:
+      type: object
+      description: A Shop-owned family or option-group definition with localized names.
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 48
+          pattern: ^[-a-zA-Z0-9_]+$
+        translations:
+          type: array
+          items:
+            $ref: '#/components/schemas/TranslationInputRequest'
+      required:
+      - code
+      - translations
+    ShopOptionGroupPage:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          format: uri
+          nullable: true
+        previous:
+          type: string
+          format: uri
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/OptionGroup'
       required:
       - count
       - next
@@ -6802,6 +7485,10 @@ components:
     ShopUserCreateRequest:
       type: object
       properties:
+        login_id:
+          type: string
+          nullable: true
+          maxLength: 32
         email:
           type: string
           format: email
@@ -6832,6 +7519,9 @@ components:
           format: uuid
           readOnly: true
         user_code:
+          type: string
+          readOnly: true
+        login_id:
           type: string
           readOnly: true
         email:
@@ -6870,13 +7560,14 @@ components:
           readOnly: true
         initial_password:
           type: string
+          nullable: true
       required:
       - date_joined
       - first_name
       - id
-      - initial_password
       - is_active
       - is_main_supplier_admin
+      - login_id
       - must_change_password
       - user_code
     ShopVariantInputRequest:
@@ -7223,7 +7914,6 @@ components:
       - is_at_user_limit
       - max_users
       - name
-      - slug
       - updated_at
       - user_count
     TenantCreateRequest:
@@ -7300,7 +7990,6 @@ components:
       - first_admin
       - max_users
       - name
-      - slug
     TenantMember:
       type: object
       properties:
@@ -7318,6 +8007,13 @@ components:
           readOnly: true
         user_code:
           type: string
+          readOnly: true
+        login_id:
+          type: string
+          readOnly: true
+        user_id:
+          type: string
+          format: uuid
           readOnly: true
         display_name:
           type: string
@@ -7353,11 +8049,13 @@ components:
       - display_name
       - id
       - is_active
+      - login_id
       - tenant
       - tenant_name
       - updated_at
       - user_code
       - user_email
+      - user_id
     TenantMemberProfile:
       type: object
       description: Minimal profile visible to a member of that Shop.
@@ -7433,6 +8131,10 @@ components:
           type: string
           format: uuid
           writeOnly: true
+        new_login_id:
+          type: string
+          writeOnly: true
+          maxLength: 32
         role:
           allOf:
           - $ref: '#/components/schemas/Role80eEnum'
@@ -7496,6 +8198,9 @@ components:
         user_code:
           type: string
           readOnly: true
+        login_id:
+          type: string
+          readOnly: true
         email:
           type: string
           format: email
@@ -7536,6 +8241,7 @@ components:
       - id
       - is_active
       - is_main_supplier_admin
+      - login_id
       - must_change_password
       - phone
       - user_code
@@ -7545,6 +8251,10 @@ components:
         user_code:
           type: string
           readOnly: true
+        login_id:
+          type: string
+          nullable: true
+          maxLength: 32
         email:
           type: string
           format: email
@@ -7561,6 +8271,10 @@ components:
     UserCreateRequest:
       type: object
       properties:
+        login_id:
+          type: string
+          nullable: true
+          maxLength: 32
         email:
           type: string
           format: email

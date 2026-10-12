@@ -1,13 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { CatalogPage } from './CatalogPage'
 import i18n from '../../i18n'
 import { ApiError } from '../../services/apiClient'
 
 const api = vi.hoisted(() => ({
-  createShopStyleOption: vi.fn(), createShopVariant: vi.fn(), getAllFamilies: vi.fn(), getAllShopStyleOptions: vi.fn(),
-  getAllShopVariants: vi.fn(), getShopVariantsPage: vi.fn(), getFamilyDetail: vi.fn(), getFamilies: vi.fn(), getOptionGroups: vi.fn(),
+  createShopStyleOption: vi.fn(), createShopVariant: vi.fn(), createShopGarmentFamily: vi.fn(), createShopOptionGroup: vi.fn(), createShopFamilyOptionGroup: vi.fn(), getAllShopGarmentFamilies: vi.fn(), getAllShopOptionGroups: vi.fn(), getShopFamilyOptionGroups: vi.fn(), getAllShopStyleOptions: vi.fn(),
+  getAllShopVariants: vi.fn(), getShopVariantsPage: vi.fn(), getFamilyDetail: vi.fn(), getFamilies: vi.fn(), getOptionGroups: vi.fn(), updateShopFamilyOptionGroups: vi.fn(),
+  setShopDefaultFamilyStatus: vi.fn(), materializeShopDefaultFamily: vi.fn(),
   uploadShopStyleOptionImages: vi.fn(), updateShopStyleOptionTranslations: vi.fn(),
 }))
 
@@ -16,7 +17,7 @@ vi.mock('../../hooks/useCurrentShop', () => ({ useCurrentShop: () => ({ shopId: 
 vi.mock('../../hooks/usePrivateImage', () => ({ usePrivateImage: () => ({ objectUrl: null, isLoading: false, error: null }) }))
 vi.mock('../../services/useAuth', () => ({ useAuth: () => ({ user: { is_main_supplier_admin: false } }) }))
 
-const family = { id: 'family-1', code: 'shirt', name: 'Shirt', status: 'ACTIVE' as const, has_image: false, image_content_url: null }
+const family = { id: 'family-1', tenant: 'shop-1', code: 'shirt', name: 'Shirt', status: 'ACTIVE' as const, has_image: false, image_content_url: null }
 const group = { id: 'group-1', name: 'Collar', code: 'collar', families: ['family-1'] }
 
 function DesignRoute() {
@@ -28,8 +29,10 @@ describe('Shop Catalog garment families', () => {
   beforeEach(async () => {
     await i18n.changeLanguage('en')
     api.getFamilies.mockResolvedValue({ count: 1, next: null, previous: null, results: [family] })
-    api.getAllFamilies.mockResolvedValue([family])
-    api.getOptionGroups.mockResolvedValue([group])
+    api.getAllShopGarmentFamilies.mockResolvedValue([family])
+    api.getAllShopOptionGroups.mockResolvedValue([group])
+    api.getShopFamilyOptionGroups.mockResolvedValue([{ option_group: group, sort_order: 0, selection_mode: 'SINGLE', is_required: false }])
+    api.updateShopFamilyOptionGroups.mockResolvedValue([{ option_group: group, sort_order: 0, selection_mode: 'SINGLE', is_required: true }])
     api.getAllShopVariants.mockResolvedValue([])
     api.getShopVariantsPage.mockResolvedValue({ count: 0, next: null, previous: null, results: [] })
     api.getAllShopStyleOptions.mockResolvedValue([])
@@ -41,11 +44,115 @@ describe('Shop Catalog garment families', () => {
     render(<MemoryRouter initialEntries={['/catalog']}><Routes><Route path="/catalog" element={<CatalogPage />} /></Routes></MemoryRouter>)
     expect(await screen.findByRole('button', { name: /Shirt.*shirt/i })).toBeInTheDocument()
     fireEvent.change(screen.getByPlaceholderText('Search families by name or code'), { target: { value: 'shirt' } })
-    await waitFor(() => expect(api.getFamilies).toHaveBeenCalledWith(1, 'shirt'))
+    expect(api.getAllShopGarmentFamilies).toHaveBeenCalledWith('shop-1', 'en', 'ACTIVE')
     fireEvent.click(screen.getByRole('button', { name: /Shirt.*shirt/i }))
     expect(await screen.findByRole('heading', { name: 'Shirt' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Applicable style groups' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Archive|Edit family|New Family/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Remove from this Shop|Edit family|New Family/i })).not.toBeInTheDocument()
+  })
+
+  it('creates a Shop-local copy when a Shop user chooses to edit a global family', async () => {
+    const globalFamily = { ...family, tenant: null }
+    const globalGroup = { ...group, tenant: null, is_global: true }
+    api.getAllShopGarmentFamilies.mockResolvedValue([globalFamily])
+    api.getAllShopOptionGroups.mockResolvedValue([globalGroup])
+    api.getShopFamilyOptionGroups.mockResolvedValue([{ option_group: globalGroup, sort_order: 0, selection_mode: 'SINGLE', is_required: false }])
+    api.materializeShopDefaultFamily.mockResolvedValue({ ...family, id: 'family-shop-copy', tenant: 'shop-1', template_source: 'family-1' })
+    render(<MemoryRouter initialEntries={['/catalog']}><Routes><Route path="/catalog" element={<CatalogPage />} /></Routes></MemoryRouter>)
+
+    fireEvent.click(await screen.findByRole('button', { name: /Shirt.*shirt/i }))
+    expect(await screen.findByRole('heading', { name: 'Applicable style groups' })).toBeInTheDocument()
+    expect(screen.getByText('This is a Back Office default. Create a Shop-local copy to edit it without changing other Shops.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Collar' })).toBeInTheDocument()
+    expect(screen.getAllByRole('checkbox')[0]).toBeDisabled()
+    expect(screen.getByRole('combobox', { name: 'Selection' })).toBeDisabled()
+    expect(screen.getByRole('checkbox', { name: 'Required' })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: 'Save style groups' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit in this Shop' }))
+    await waitFor(() => expect(api.materializeShopDefaultFamily).toHaveBeenCalledWith('shop-1', 'family-1'))
+    expect(await screen.findByRole('button', { name: 'Save style groups' })).toBeEnabled()
+    expect(screen.getAllByRole('checkbox')[0]).toBeEnabled()
+    expect(api.updateShopFamilyOptionGroups).not.toHaveBeenCalled()
+  })
+
+  it('keeps the family detail loading state while Shop configuration is pending', async () => {
+    let resolveConfiguration!: (value: Array<{ option_group: typeof group; sort_order: number; selection_mode: 'SINGLE'; is_required: boolean }>) => void
+    const configuration = [{ option_group: group, sort_order: 0, selection_mode: 'SINGLE' as const, is_required: false }]
+    api.getShopFamilyOptionGroups.mockImplementationOnce(() => new Promise(resolve => { resolveConfiguration = resolve }))
+    render(<MemoryRouter initialEntries={['/catalog']}><Routes><Route path="/catalog" element={<CatalogPage />} /></Routes></MemoryRouter>)
+
+    fireEvent.click(await screen.findByRole('button', { name: /Shirt.*shirt/i }))
+    expect(await screen.findByRole('status')).toHaveTextContent('Loading family details…')
+    await act(async () => { resolveConfiguration(configuration) })
+    expect(await screen.findByRole('heading', { name: 'Applicable style groups' })).toBeInTheDocument()
+  })
+
+  it('keeps the family detail error visible when configuration cannot load', async () => {
+    api.getShopFamilyOptionGroups.mockRejectedValueOnce(new ApiError('Family configuration is unavailable.', 503, 'catalog_unavailable'))
+    render(<MemoryRouter initialEntries={['/catalog']}><Routes><Route path="/catalog" element={<CatalogPage />} /></Routes></MemoryRouter>)
+
+    fireEvent.click(await screen.findByRole('button', { name: /Shirt.*shirt/i }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Family configuration is unavailable.')
+    expect(screen.getByRole('button', { name: /Shirt/ })).toBeInTheDocument()
+  })
+
+  it('creates a Shop-owned garment family through the existing Catalog flow', async () => {
+    api.createShopGarmentFamily.mockResolvedValue({ ...family, id: 'family-shop', tenant: 'shop-1', name: 'Custom Thobe', code: 'custom-thobe' })
+    render(<MemoryRouter initialEntries={['/catalog']}><Routes><Route path="/catalog" element={<CatalogPage />} /></Routes></MemoryRouter>)
+    fireEvent.click(await screen.findByRole('button', { name: 'New Garment family' }))
+    fireEvent.change(screen.getByLabelText('Name (English)'), { target: { value: 'Custom Thobe' } })
+    fireEvent.change(screen.getByLabelText(/Code/), { target: { value: 'custom-thobe' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }))
+    await waitFor(() => expect(api.createShopGarmentFamily).toHaveBeenCalledWith('shop-1', {
+      code: 'custom-thobe', translations: [{ locale: 'en', name: 'Custom Thobe' }],
+    }))
+  })
+
+  it('saves family option-group configuration with selection and required rules', async () => {
+    render(<MemoryRouter initialEntries={['/catalog']}><Routes><Route path="/catalog" element={<CatalogPage />} /></Routes></MemoryRouter>)
+    fireEvent.click(await screen.findByRole('button', { name: /Shirt.*shirt/i }))
+    await screen.findByRole('heading', { name: 'Applicable style groups' })
+    expect(screen.getAllByRole('checkbox')[0]).toBeEnabled()
+    expect(screen.getByRole('combobox', { name: 'Selection' })).toBeEnabled()
+    fireEvent.click(await screen.findByLabelText('Required'))
+    fireEvent.click(screen.getByRole('button', { name: 'Save style groups' }))
+    await waitFor(() => expect(api.updateShopFamilyOptionGroups).toHaveBeenCalledWith('shop-1', 'family-1', [
+      { option_group_id: 'group-1', selection_mode: 'SINGLE', is_required: true, sort_order: 0 },
+    ]))
+  })
+
+  it('creates a new style group locally and attaches it to the open Shop family', async () => {
+    const newGroup = { id: 'group-new', tenant: 'shop-1', name: 'Fastening detail', code: 'fastening-detail', families: ['family-1'], is_global: false }
+    api.createShopFamilyOptionGroup.mockResolvedValue({ option_group: newGroup, sort_order: 1, selection_mode: 'MULTI', is_required: false })
+    render(<MemoryRouter initialEntries={['/catalog']}><Routes><Route path="/catalog" element={<CatalogPage />} /></Routes></MemoryRouter>)
+    fireEvent.click(await screen.findByRole('button', { name: /Shirt.*shirt/i }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Add Shop-local style group' }))
+    expect(screen.getByText('This group will be created for this Shop only and attached to this garment family.')).toBeInTheDocument()
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByRole('dialog', { name: 'Add a Shop-local style group' })).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Applicable style groups' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Add Shop-local style group' }))
+    fireEvent.change(screen.getByLabelText('Name (English)'), { target: { value: 'Fastening detail' } })
+    fireEvent.change(screen.getByLabelText(/Code/), { target: { value: 'fastening-detail' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }))
+    await waitFor(() => expect(api.createShopFamilyOptionGroup).toHaveBeenCalledWith('shop-1', 'family-1', {
+      code: 'fastening-detail', translations: [{ locale: 'en', name: 'Fastening detail' }],
+    }))
+    expect(await screen.findByRole('button', { name: 'Fastening detail' })).toBeInTheDocument()
+  })
+
+  it('lets Staff restore an archived Shop default without editing the Back Office source', async () => {
+    const archived = { ...family, status: 'ARCHIVED' as const, template_source: 'global-family' }
+    api.getAllShopGarmentFamilies.mockImplementation((_shop: string, _locale: string, state: string) => Promise.resolve(state === 'ARCHIVED' ? [archived] : [family]))
+    api.setShopDefaultFamilyStatus.mockResolvedValue({ ...family, template_source: 'global-family' })
+    render(<MemoryRouter initialEntries={['/catalog']}><Routes><Route path="/catalog" element={<CatalogPage />} /></Routes></MemoryRouter>)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Show archived defaults' }))
+    fireEvent.click(await screen.findByRole('button', { name: /Shirt.*Archived/i }))
+    expect(await screen.findByRole('heading', { name: 'Applicable style groups' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Restore latest default' }))
+    await waitFor(() => expect(api.setShopDefaultFamilyStatus).toHaveBeenCalledWith('shop-1', 'family-1', true))
   })
 
   it('filters variants by Family and opens that Family’s Designs route', async () => {
@@ -59,15 +166,14 @@ describe('Shop Catalog garment families', () => {
     expect(await screen.findByText('Design route ?family=family-1')).toBeInTheDocument()
   })
 
-  it('shows the backend total and follows pagination from the current Family search', async () => {
-    api.getFamilies.mockReset()
-    api.getFamilies.mockResolvedValueOnce({ count: 21, next: '/api/v1/catalog/families/?page=2', previous: null, results: [family] })
-    api.getFamilies.mockResolvedValueOnce({ count: 21, next: null, previous: '/api/v1/catalog/families/?page=1', results: [{ ...family, id: 'family-2', name: 'Trousers' }] })
+  it('filters the combined Shop-visible family list and paginates it locally', async () => {
+    api.getAllShopGarmentFamilies.mockResolvedValue(Array.from({ length: 21 }, (_, index) => ({ ...family, id: `family-${index}`, name: `Family ${index}`, code: `family-${index}` })))
     render(<MemoryRouter initialEntries={['/catalog']}><Routes><Route path="/catalog" element={<CatalogPage />} /></Routes></MemoryRouter>)
-    expect(await screen.findByText('21 families')).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /Family 0/ })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Next' }))
-    expect(await screen.findByRole('button', { name: /Trousers/ })).toBeInTheDocument()
-    expect(api.getFamilies).toHaveBeenLastCalledWith(2, '')
+    expect(await screen.findByRole('button', { name: /Family 20/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Family 0/ })).not.toBeInTheDocument()
+    expect(api.getAllShopGarmentFamilies).toHaveBeenCalledTimes(1)
   })
 
   it('uploads optional private reference images after creating a Shop style option', async () => {

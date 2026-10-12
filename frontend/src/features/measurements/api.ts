@@ -3,6 +3,7 @@ import type {
   InventoryFabric,
   MeasurementComparison,
   MeasurementDefinition,
+  MeasurementDefinitionCreateInput,
   MeasurementOwner,
   MeasurementPage,
   MeasurementProfile,
@@ -37,8 +38,25 @@ export const measurementApi = {
       `/api/v1/shops/${encodeURIComponent(shopId)}/measurement-definitions/?${query}`,
     )
   },
+  createDefinition(shopId: string, data: MeasurementDefinitionCreateInput): Promise<MeasurementDefinition> {
+    return apiRequest<MeasurementDefinition>(`/api/v1/shops/${encodeURIComponent(shopId)}/measurement-definitions/`, {
+      method: 'POST', body: data,
+    })
+  },
   profiles(shopId: string, clientId: string, owner: MeasurementOwner): Promise<MeasurementProfile[]> {
     return allPages<MeasurementProfile>(profilePath(shopId, clientId, owner))
+  },
+  setsPage(shopId: string, clientId: string, owner: MeasurementOwner, profileId: string, page = 1): Promise<MeasurementPage<MeasurementSet>> {
+    const query = new URLSearchParams({ page: String(page) })
+    return apiRequest<MeasurementPage<MeasurementSet>>(`${profilePath(shopId, clientId, owner)}${encodeURIComponent(profileId)}/sets/?${query}`)
+  },
+  setDetail(shopId: string, clientId: string, owner: MeasurementOwner, profileId: string, setId: string): Promise<MeasurementSet> {
+    return apiRequest<MeasurementSet>(`${profilePath(shopId, clientId, owner)}${encodeURIComponent(profileId)}/sets/${encodeURIComponent(setId)}/`)
+  },
+  deleteSet(shopId: string, clientId: string, owner: MeasurementOwner, profileId: string, setId: string): Promise<void> {
+    return apiRequest<void>(`${profilePath(shopId, clientId, owner)}${encodeURIComponent(profileId)}/sets/${encodeURIComponent(setId)}/`, {
+      method: 'DELETE',
+    })
   },
   createProfile(shopId: string, clientId: string, owner: MeasurementOwner, familyId: string, variantId: string | null) {
     return apiRequest<MeasurementProfile>(profilePath(shopId, clientId, owner), {
@@ -49,10 +67,10 @@ export const measurementApi = {
   sets(shopId: string, clientId: string, owner: MeasurementOwner, profileId: string): Promise<MeasurementSet[]> {
     return allPages<MeasurementSet>(`${profilePath(shopId, clientId, owner)}${encodeURIComponent(profileId)}/sets/`)
   },
-  saveSet(shopId: string, clientId: string, owner: MeasurementOwner, profileId: string, values: Array<{ definition_id: string; value: string; unit: 'CM' | 'INCH' }>) {
+  saveSet(shopId: string, clientId: string, owner: MeasurementOwner, profileId: string, values: Array<{ definition_id: string; value: string; unit: 'CM' | 'INCH' }>, designVersionId?: string) {
     return apiRequest<MeasurementSet>(`${profilePath(shopId, clientId, owner)}${encodeURIComponent(profileId)}/sets/`, {
       method: 'POST',
-      body: { values },
+      body: { values, ...(designVersionId ? { design_version_id: designVersionId } : {}) },
     })
   },
   copySet(shopId: string, clientId: string, owner: MeasurementOwner, profileId: string, setId: string) {
