@@ -93,6 +93,20 @@ def test_staging_settings_are_secure_and_accept_only_approved_origins():
     assert settings["email_backend"] == "django.core.mail.backends.dummy.EmailBackend"
 
 
+def test_staging_settings_accept_exact_pages_origin():
+    result = run_settings(
+        {
+            "DJANGO_CORS_ALLOWED_ORIGINS": "https://birky-staging.pages.dev",
+            "DJANGO_CSRF_TRUSTED_ORIGINS": "https://birky-staging.pages.dev",
+        }
+    )
+
+    assert result.returncode == 0, result.stderr
+    settings = json.loads(result.stdout)
+    assert settings["cors"] == ["https://birky-staging.pages.dev"]
+    assert settings["csrf"] == ["https://birky-staging.pages.dev"]
+
+
 @pytest.mark.parametrize(
     "extra",
     [
@@ -102,6 +116,10 @@ def test_staging_settings_are_secure_and_accept_only_approved_origins():
             "DJANGO_CORS_ALLOWED_ORIGINS": "https://staging.birky.com,http://localhost:3000"
         },
         {"DJANGO_CSRF_TRUSTED_ORIGINS": "https://*.birky.com"},
+        {"DJANGO_CORS_ALLOWED_ORIGINS": "https://other.pages.dev"},
+        {
+            "DJANGO_CORS_ALLOWED_ORIGINS": "https://staging.birky.com,https://birky-staging.pages.dev"
+        },
         {"RENDER_EXTERNAL_HOSTNAME": "*.onrender.com"},
         {"DJANGO_ALLOWED_HOSTS": "api.birky.com"},
         {"DJANGO_EMAIL_BACKEND": "django.core.mail.backends.console.EmailBackend"},

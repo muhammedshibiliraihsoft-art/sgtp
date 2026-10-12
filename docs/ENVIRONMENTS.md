@@ -20,9 +20,12 @@ Each deployment or environment change remains subject to the project's phase/tas
 |---|---|
 | Active staging backend/API | `birky-staging-api.onrender.com` |
 | Reserved future staging backend/API | `api-staging.birky.com` |
-| Planned staging frontend (not provisioned) | `staging.birky.com` |
+| Active provider-hosted staging frontend | `birky-staging.pages.dev` |
+| Reserved future staging frontend | `staging.birky.com` |
 
 BiRKy does not currently own/control `birky.com`. The custom API hostname is reserved only and is not configured, DNS-verified, or TLS-verified. The Render provider hostname is the current operational T3-05A backend URL.
+
+As of 2026-10-12, Cloudflare Pages serves the provider-hosted staging frontend and its same-origin `/api/*` proxy. The current staging Pages CSRF endpoint responds successfully. A PR-branch preview built, but its API proxy returns 503 because the Preview `API_ORIGIN` binding is missing. The Render API still serves the prior `staging` branch until the release candidate passes the database recovery gate and is merged.
 
 ### Production Domains (reserved, not provisioned)
 
@@ -86,7 +89,7 @@ Phase 9 does NOT create a second Staging environment. Early development use is N
 - Use demo/test data and environment-specific configuration; do not add real customer data
 - Validate locale support, RTL/LTR foundation, Light/Dark/System foundation
 
-Cloudflare Pages repository wiring uses one frontend build with environment-specific runtime bindings: staging `API_ORIGIN` points to the active Render staging API, while production `API_ORIGIN` must be supplied only after the production API is provisioned. Each environment also requires its exact `FRONTEND_ORIGIN`. These Pages bindings, root/build settings, and custom domains have not been verified in the Cloudflare dashboard; no frontend Pages deployment is claimed.
+Cloudflare Pages repository wiring uses one frontend build with environment-specific runtime bindings: staging `API_ORIGIN` points to the active Render staging API, while production `API_ORIGIN` must be supplied only after the production API is provisioned. Each environment also requires its exact `FRONTEND_ORIGIN`. The `birky-staging` Pages project and main-hostname proxy are externally observable, but its Dashboard settings and Preview bindings have not been verified; do not treat the PR preview as an integrated staging test.
 
 ### Staging Security Requirements
 

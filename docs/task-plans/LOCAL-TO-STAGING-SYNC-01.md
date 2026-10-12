@@ -1,6 +1,6 @@
 # LOCAL-TO-STAGING-SYNC-01
 
-**Status:** In progress locally; release candidate worktree prepared. No push, deploy, staging account creation, or staging database write performed.
+**Status:** Draft PR #1 is open from a reviewed release-candidate branch. No merge, Render deploy, staging account creation, or staging database write performed.
 **Target:** Existing Render staging environment (`birky-staging-api` + `birky-staging-db`); Production and the local `devdb` are out of scope.
 **Goal:** Move the verified local application state to staging, preserve useful staging data, then create and verify the requested Main Supplier Admin account for Back Office and Django Admin access.
 
@@ -20,9 +20,11 @@
 - The default local Django system check passes. The backend suite passes 546/546 against an isolated PostgreSQL cluster; three pre-existing test failures were repaired. The frontend candidate passes 189/189 tests, build, and lint (warnings only). The staging-settings check still needs a complete non-secret test configuration or the deployment environment.
 - Backend PostgreSQL tests and migration checks used the disposable `staging_sync_test` cluster on port 55432, never `devdb`. A staging-branch migration baseline and then local catalog migrations 0017–0023 both applied successfully there; Django migration drift reports no changes.
 - Prior staging inspection found the database is a Free PostgreSQL instance without a backup facility. A blind `flush` is particularly unsafe: seeded catalogue/default records are inserted by migrations, and those seed migrations would not rerun after flush because the migration ledger remains.
-- Live Render inspection confirms the staging API and database, but no staging frontend service. This frontend requires its same-origin `/api/*` Cloudflare Pages Function, so a Render Static Site alone would not run the current authentication flow. Use the repository's Cloudflare Pages architecture for staging; verify its actual branch, project, generated hostname, and runtime bindings before publishing. If Cloudflare Pages access is unavailable, keep frontend deployment as an explicit blocker rather than claiming that an API-only deployment is complete.
+- Live Render inspection confirms the staging API and database, but no staging frontend service. The Cloudflare Pages project `birky-staging` exists, and the current `https://birky-staging.pages.dev/api/v1/auth/csrf/` proxy responds successfully. The PR branch preview built successfully but returns 503 because its Preview `API_ORIGIN` binding is absent. Cloudflare Dashboard access is not currently available in the connected browser, so Pages branch mapping and runtime bindings cannot yet be inspected directly. A Render Static Site alone would not run the current Pages Function authentication flow.
 - Live Render inspection confirms `birky-staging-api` tracks the `staging` branch with commit-triggered auto-deploy; current live SHA is `e1a4aafe85308b96d329d963c91e4ccac17a9c26`. Pushing the candidate branch does not target this service, but merging into `staging` does.
 - Render's read-only SQL connector could not reach the staging database because of external TLS/IP allow-list restrictions. The staging migration ledger and data contents remain unverified.
+- Draft PR #1 is at `https://github.com/muhammedshibiliraihsoft-art/sgtp/pull/1`. Its exact-SHA GitHub `validate-project-state` check and `birky-staging` Pages check passed. A separate `sgtp` Pages project check failed; it is not the identified staging Pages project, and its logs are behind Cloudflare authentication.
+- The current Render API readiness endpoint returns 200. The staging Pages main hostname returns 200 for CSRF bootstrap. No end-to-end account workflow has been claimed.
 
 ## Execution plan
 

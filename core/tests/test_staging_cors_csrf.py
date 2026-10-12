@@ -11,6 +11,24 @@ from django.test import Client, SimpleTestCase, override_settings
     CSRF_COOKIE_SAMESITE="Lax",
 )
 class StagingCorsCsrfTests(SimpleTestCase):
+    @override_settings(
+        CORS_ALLOWED_ORIGINS=["https://birky-staging.pages.dev"],
+        CSRF_TRUSTED_ORIGINS=["https://birky-staging.pages.dev"],
+    )
+    def test_pages_origin_receives_credentialed_preflight(self):
+        response = Client().options(
+            "/api/v1/auth/csrf/",
+            HTTP_ORIGIN="https://birky-staging.pages.dev",
+            HTTP_ACCESS_CONTROL_REQUEST_METHOD="GET",
+            HTTP_HOST="api-staging.birky.com",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response["Access-Control-Allow-Origin"],
+            "https://birky-staging.pages.dev",
+        )
+
     def test_approved_origin_receives_credentialed_preflight(self):
         response = Client().options(
             "/api/v1/auth/csrf/",
