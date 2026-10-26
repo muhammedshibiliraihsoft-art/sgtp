@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Search, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react'
@@ -16,6 +16,7 @@ export function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([])
   const [count, setCount] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [page, setPage] = useState(1)
   const pageSize = 20
   const [isLoading, setIsLoading] = useState(true)
@@ -27,17 +28,36 @@ export function ClientsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false)
   
   const [deleteClient, setDeleteClient] = useState<Client | null>(null)
+  const requestId = useRef(0)
+  const searchDebounceTimer = useRef<number | null>(null)
+
+  useEffect(() => () => {
+    if (searchDebounceTimer.current !== null) window.clearTimeout(searchDebounceTimer.current)
+  }, [])
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value)
+    setPage(1)
+    if (searchDebounceTimer.current !== null) window.clearTimeout(searchDebounceTimer.current)
+    searchDebounceTimer.current = window.setTimeout(() => {
+      searchDebounceTimer.current = null
+      setDebouncedSearch(value.trim())
+    }, 250)
+  }
 
   const loadClients = useCallback(async () => {
     if (!shopId) { setIsLoading(isShopLoading); return }
+    const currentRequestId = ++requestId.current
+    if (searchQuery.trim() !== debouncedSearch) return
     setIsLoading(true); setError('')
     try {
-      const response = await clientsApi.list(shopId, searchQuery, page)
+      const response = await clientsApi.list(shopId, debouncedSearch, page)
+      if (requestId.current !== currentRequestId) return
       setClients(response.results); setCount(response.count)
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Unable to load clients.')
-    } finally { setIsLoading(false) }
-  }, [shopId, isShopLoading, searchQuery, page])
+      if (requestId.current === currentRequestId) setError(cause instanceof Error ? cause.message : 'Unable to load clients.')
+    } finally { if (requestId.current === currentRequestId) setIsLoading(false) }
+  }, [shopId, isShopLoading, searchQuery, debouncedSearch, page])
 
   useEffect(() => { void loadClients() }, [loadClients])
   const totalPages = Math.ceil(count / pageSize)
@@ -84,7 +104,7 @@ export function ClientsPage() {
           <input 
             placeholder={t('clients.searchPlaceholder')}
             value={searchQuery}
-            onChange={e => { setSearchQuery(e.target.value); setPage(1); }}
+            onChange={e => handleSearchChange(e.target.value)}
           />
         </div>
       </div>

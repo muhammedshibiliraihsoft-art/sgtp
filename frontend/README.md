@@ -43,7 +43,7 @@ Frontend branch → Validation (typecheck/lint/test/build) → Reviewed commit �
 
 ## Catalog and Designs integration status
 
-- Shop Catalog and Main Supplier Global Catalog read live catalog APIs. Shop users can browse/search paginated active garment families, inspect assigned style groups, and open family-filtered variants/designs. Main Supplier can create and edit global garment families, maintain translations, assign/reorder option groups, upload/remove a private family image, and archive/reactivate families.
+- Shop Catalog and Main Supplier Global Catalog read live catalog APIs. Shop users can browse/search paginated active garment families; opening a family shows only its variants and assigned style groups in the same wide responsive drawer. Main Supplier manages global variants from each active Family drawer rather than a separate bulk Variants tab. Variant details, permitted create/edit/archive/reactivate actions, and the next Designs step stay integrated in the existing flow.
 - Shop style options are grouped under their backend Option Groups (for example, Collar and Cuff); each group card expands to show its options and provides a group-specific add action.
 - Shop Designs and Global Design Templates use the backend design APIs for listing, archiving, draft selections, version publishing, and private reference-image uploads. Shop users can create a draft design from an existing family and Shop/global variant.
 - API responses and uploads follow the backend serializer contract. Catalog and design screens do not fall back to invented mock records when the service request fails.
@@ -64,12 +64,14 @@ Frontend branch → Validation (typecheck/lint/test/build) → Reviewed commit �
 - Selecting a Shop-owned option opens a responsive preview/editor: its English name can be updated through the existing Shop-context PATCH API, and additional private reference images can be uploaded with progress feedback. Global options remain read-only in the Shop editor; existing references are preserved. A failed post-create upload can be retried without creating the option again.
 - The Global Design Template editor also supports adding a reusable image to a selected Style Option. This is distinct from the existing Design Version `Reference images` upload, which remains attached only to that design version.
 - Measurements read `StyleOption.reference_images` from the backend; uploaded images therefore appear on the matching option card without listing R2 folders or exposing public object URLs. This display path introduces no additional permission behavior.
+- Shop Style Option thumbnails retry only transient read failures; terminal missing/invalid image responses are shown with a manual retry. The frontend cannot make an object durable if the connected staging backend stores it on an ephemeral filesystem; verify staging R2 configuration and the uploaded record/object separately.
 
 ## Local loading characteristics
 
 - Frontend routes are loaded on demand; the login illustration uses a responsive `<picture>` so only the matching viewport asset is requested. Catalog Style Options load their required option groups and options concurrently without fetching unrelated garment families.
 - Identical concurrent default GET requests share one in-flight request. There is no persistent response cache, and mutations and auth changes invalidate in-flight sharing.
 - Local Vite `/api` currently proxies to the Render staging backend. This preserves the existing Shop data and login workflow but makes local API latency dependent on the remote service/network; the local database is not an equivalent replacement without Shop data.
+- The current local performance pass keeps Shop context shared across route navigation, limits Main Supplier Catalog requests to the active tab, filters already-loaded Measurement designs on variant changes, and debounces Back Office Shop/Inventory searches. Inventory search reuses the loaded materials list; Refresh and writes still refetch it. These are request-count improvements, not a claim of zero remote latency. Authenticated browser timing remains unverified until a user-owned login session is available.
 
 ## Local handoff — Catalog style grouping (2026-10-03)
 
@@ -92,6 +94,14 @@ Frontend branch → Validation (typecheck/lint/test/build) → Reviewed commit �
 - Kept the existing app shell, design tokens, mobile drawer layout, and en/ar-KW/bn/ur locale resources. The API remains authoritative for authorization and archived Family restrictions.
 - Validation: `npm run typecheck`, `npm test` (59 tests), and `npm run build` PASS; `git diff --check` PASS (Git printed expected CRLF/LF working-copy notices). `npm run lint` exits 0 with six existing warnings in unchanged shared files (`App.tsx`, `useCurrentShop.ts`, `usePrivateImage.ts`, `ClientForm.tsx`, and `UsersPage.tsx`).
 - Responsive layout uses fluid card columns (250px minimum), one-column phone layout, a full-height phone sheet, semantic layout tokens, and logical inline positioning for RTL. Automated component/API tests cover list, search, count/pagination, browse-only detail, family-filtered Variants/Design navigation, Main Supplier create/edit/mapping/lifecycle/image controls. Authenticated visual checks at the requested desktop/tablet/phone sizes were not performed because the open localhost tab is at `/login`; credentials remain for the user to enter.
+- Local only. No commit, push, merge, or deployment was performed.
+
+## Local handoff — Family-scoped Variants UX (2026-10-05)
+
+- Shop and Main Supplier Catalog no longer expose a bulk Variants tab. Active Family details now embed only that Family's variants; Main Supplier global variants and Shop-visible global/Shop variants use the existing family-filtered endpoints. Managers can include archived variants for reactivation.
+- Variant details and create/edit forms stay within the Family drawer, without nested drawers/dialogs. The drawer is wider on desktop and full-screen on smaller screens. Arrow keys move between variant cards; Enter opens details and focuses “Continue to Designs”; the next Enter activates the existing Shop Designs or Global Designs route. Back restores focus to the chosen card.
+- Existing APIs already support Family filtering and lifecycle permissions; no backend endpoint, schema, migration, or deployment change was necessary. Variant lists are fetched only while a Family drawer is open; navigating cards does not trigger more list calls, and variant detail is requested only after selection.
+- Validation: `npm test -- --run` PASS (125 tests across 28 files); `npm run typecheck` PASS; `npm run build` PASS; `npm run lint` exits 0 with React `set-state-in-effect` warnings in existing application modules; `git diff --check` PASS; `python scripts/verify_project_state.py` PASS with dirty-worktree/test-discovery warnings. Authenticated visual browser verification was not performed because the localhost session is unauthenticated.
 - Local only. No commit, push, merge, or deployment was performed.
 
 Run `npm ci`, `npm run dev`, `npm run typecheck`, `npm run lint`, `npm test`, and `npm run build`. Ordinary Users have one backend-resolved owning Shop. Do not add a normal-user Shop selector. Read repository and frontend `AGENTS.md` before continuing.

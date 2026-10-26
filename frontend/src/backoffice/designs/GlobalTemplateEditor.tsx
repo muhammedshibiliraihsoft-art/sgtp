@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { AlertCircle, ArrowLeft, Check, ImagePlus, Loader2, Upload, X } from 'lucide-react'
 import { usePrivateImage } from '../../hooks/usePrivateImage'
+import { ResponsiveChoice } from '../../components/CustomSelect'
 import { ApiError } from '../../services/apiClient'
 import { getAllGlobalStyleOptions, getOptionGroups, uploadGlobalStyleOptionImages } from '../../features/catalog/api'
 import type { OptionGroup, StyleOption } from '../../features/catalog/types'
@@ -153,7 +154,7 @@ export function GlobalTemplateEditor() {
       {selectionOpen && <div className="design-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setSelectionOpen(false) }}>
         <form className="design-dialog" onSubmit={event => void handleAddSelection(event)} aria-labelledby="global-selection-title">
           <div className="design-dialog-heading"><h2 id="global-selection-title">Add style selection</h2><button type="button" className="icon-button" onClick={() => setSelectionOpen(false)} aria-label="Close"><X size={18} /></button></div>
-          <label>Global style option<select required value={selectedStyleId} onChange={event => setSelectedStyleId(event.target.value)}><option value="">Choose an option</option>{selectableOptions.map(option => <option key={option.id} value={option.id}>{groupNames.get(option.option_group) ?? option.option_group} · {option.name}</option>)}</select></label>
+          <label>Global style option<ResponsiveChoice ariaLabel="Global style option" required value={selectedStyleId} placeholder="Choose an option" onChange={setSelectedStyleId} options={selectableOptions.map(option => ({ value: option.id, label: `${groupNames.get(option.option_group) ?? option.option_group} · ${option.name}` }))} /></label>
           <div className="design-dialog-actions"><button type="button" className="secondary-button" onClick={() => setSelectionOpen(false)}>Cancel</button><button type="submit" className="primary-button" disabled={isAdding || !selectableOptions.length}>{isAdding ? <Loader2 className="animate-spin" size={16} /> : null} Add</button></div>
         </form>
       </div>}

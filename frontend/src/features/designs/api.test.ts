@@ -10,12 +10,15 @@ function stubJsonFetch(body: unknown) {
   return fetchMock
 }
 
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
+})
 
 describe('Design API contract', () => {
   it('creates a Shop design with the backend-required name and identifiers', async () => {
     const fetchMock = stubJsonFetch({ id: 'design-1' })
-    const payload = { family_id: 'family-1', variant_id: 'variant-1', name: 'Blue Shirt' }
+    const payload = { family_id: 'family-1', name: 'Blue Shirt' }
 
     await createShopDesign('shop-1', payload)
 
@@ -34,6 +37,7 @@ describe('Design API contract', () => {
   })
 
   it('uploads reference files using the backend images field', async () => {
+    vi.stubEnv('VITE_ENABLE_LEGACY_PRIVATE_MEDIA_FALLBACK', 'true')
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ detail: 'Private direct upload is not configured.' }), { status: 503, headers: { 'Content-Type': 'application/json' } }))
       .mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 201, headers: { 'Content-Type': 'application/json' } }))
@@ -57,12 +61,12 @@ describe('Design API contract', () => {
     expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/shops/shop-1/designs/?page=1&locale=en&family=family-1')
   })
 
-  it('composes the exact Family and Variant filters for Design listing', async () => {
+  it('composes the exact Family filter for Design listing', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ count: 0, next: null, previous: null, results: [] }), {
       status: 200, headers: { 'Content-Type': 'application/json' },
     }))
     vi.stubGlobal('fetch', fetchMock)
-    await getAllShopDesigns('shop-1', { family: 'family-1', variant: 'variant-1' })
-    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/shops/shop-1/designs/?page=1&locale=en&family=family-1&variant=variant-1')
+    await getAllShopDesigns('shop-1', { family: 'family-1' })
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/shops/shop-1/designs/?page=1&locale=en&family=family-1')
   })
 })

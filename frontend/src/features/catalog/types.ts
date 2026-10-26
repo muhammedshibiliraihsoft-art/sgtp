@@ -7,6 +7,8 @@ export type ApiPage<T> = {
 
 export interface CatalogFamily {
   id: string
+  tenant?: string | null
+  template_source?: string | null
   name: string
   code: string
   status?: 'ACTIVE' | 'ARCHIVED'
@@ -41,15 +43,27 @@ export type CatalogFamilyPage = ApiPage<CatalogFamily>
 
 export interface OptionGroup {
   id: string
+  tenant?: string | null
+  is_global?: boolean
   name: string
   code: string
   families: string[]
+}
+
+export interface FamilyOptionGroupConfig {
+  id: string
+  option_group: OptionGroup
+  sort_order: number
+  selection_mode: 'SINGLE' | 'MULTI'
+  is_required: boolean
 }
 
 export type CatalogOptionGroupPage = ApiPage<OptionGroup>
 
 export interface Variant {
   id: string
+  tenant?: string | null
+  template_source?: string | null
   family: string
   name: string
   code: string

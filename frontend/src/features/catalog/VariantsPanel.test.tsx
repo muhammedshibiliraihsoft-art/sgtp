@@ -5,7 +5,7 @@ import i18n from '../../i18n'
 import { VariantsPanel } from './VariantsPanel'
 
 const api = vi.hoisted(() => ({
-  createGlobalVariant: vi.fn(), createShopVariant: vi.fn(), getGlobalVariant: vi.fn(), getGlobalVariantsPage: vi.fn(),
+  createGlobalVariant: vi.fn(), createShopVariant: vi.fn(), getAllGlobalVariants: vi.fn(), getAllShopVariants: vi.fn(), getGlobalVariant: vi.fn(), getGlobalVariantsPage: vi.fn(),
   getShopVariant: vi.fn(), getShopVariantsPage: vi.fn(), setGlobalVariantDefault: vi.fn(), setGlobalVariantStatus: vi.fn(),
   setShopVariantStatus: vi.fn(), updateGlobalVariant: vi.fn(), updateShopVariant: vi.fn(),
 }))
@@ -26,6 +26,8 @@ function LocationText() {
 describe('VariantsPanel', () => {
   beforeEach(async () => {
     await i18n.changeLanguage('en')
+    api.getAllShopVariants.mockResolvedValue([variant])
+    api.getAllGlobalVariants.mockResolvedValue([variant])
     auth.isMain = false
     api.getShopVariantsPage.mockResolvedValue(page)
     api.getGlobalVariantsPage.mockResolvedValue(page)
@@ -103,6 +105,31 @@ describe('VariantsPanel', () => {
     expect(screen.queryByRole('button', { name: 'New Variant' })).not.toBeInTheDocument()
     expect(screen.queryByRole('group', { name: 'Status' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument()
+  })
+
+  it('shows only the embedded Family variants and completes selection to Designs without a nested drawer', async () => {
+    const nextVariant = { ...variant, id: 'variant-2', name: 'Slim', code: 'slim' }
+    api.getAllShopVariants.mockResolvedValue([variant, nextVariant])
+    api.getShopVariant.mockResolvedValue({ ...detail, id: 'variant-2', name: 'Slim', code: 'slim' })
+    render(<MemoryRouter initialEntries={['/catalog']}><Routes><Route path="/catalog" element={<VariantsPanel shopId="shop-1" families={[family]} embeddedFamilyId="family-1" canManageVariants />} /><Route path="/designs" element={<LocationText />} /></Routes></MemoryRouter>)
+    const options = await screen.findAllByRole('button', { name: /Classic|Slim/ })
+    const [firstOption, option] = options
+    expect(api.getAllShopVariants).toHaveBeenCalledWith('shop-1', 'family-1', 'en', 'all')
+    expect(screen.queryByPlaceholderText('Search variants...')).not.toBeInTheDocument()
+    expect(screen.queryByRole('navigation', { name: 'Variant pages' })).not.toBeInTheDocument()
+
+    firstOption.getBoundingClientRect = () => ({ x: 0, y: 0, left: 0, top: 0, right: 100, bottom: 50, width: 100, height: 50, toJSON: () => ({}) })
+    option.getBoundingClientRect = () => ({ x: 120, y: 0, left: 120, top: 0, right: 220, bottom: 50, width: 100, height: 50, toJSON: () => ({}) })
+    firstOption.focus()
+    fireEvent.keyDown(firstOption, { key: 'ArrowRight' })
+    expect(option).toHaveFocus()
+    fireEvent.click(option)
+    const nextStep = await screen.findByRole('button', { name: 'Continue to Designs' })
+    expect(screen.getByRole('region', { name: /Slim/ })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: /Slim/ })).not.toBeInTheDocument()
+    expect(nextStep).toHaveFocus()
+    fireEvent.click(nextStep)
+    expect(await screen.findByText('Design location ?family=family-1&variant=variant-2')).toBeInTheDocument()
   })
 
   it('creates a Global Variant with the selected Family and English translation', async () => {

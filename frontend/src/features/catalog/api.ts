@@ -2,6 +2,7 @@ import { apiRequest, multipartRequest } from '../../services/apiClient'
 import { uploadPrivateMediaBatch } from '../../services/privateMediaUpload'
 import type {
   ApiPage,
+  FamilyOptionGroupConfig,
   CatalogFamily,
   CatalogFamilyDetail,
   CatalogFamilyImageMetadata,
@@ -19,6 +20,7 @@ import type {
   Variant,
   VariantDetail,
   VariantQuery,
+  VariantStatus,
 } from './types'
 
 async function getAllPages<T>(path: string): Promise<T[]> {
@@ -47,11 +49,58 @@ export function getAllFamilies(locale = 'en'): Promise<CatalogFamily[]> {
   return getAllPages<CatalogFamily>(url.pathname + url.search)
 }
 
+export function getAllShopFamilies(shopId: string, locale = 'en'): Promise<CatalogFamily[]> {
+  const url = new URL(`/api/v1/shops/${shopId}/catalog/garment-families/`, window.location.origin)
+  url.searchParams.set('locale', locale)
+  return getAllPages<CatalogFamily>(url.pathname + url.search)
+}
+
+export function createShopFamily(shopId: string, data: CatalogFamilyInput): Promise<CatalogFamily> {
+  return apiRequest<CatalogFamily>(`/api/v1/shops/${shopId}/catalog/garment-families/`, {
+    method: 'POST',
+    body: data,
+  })
+}
+
 export async function getOptionGroups(familyId?: string, locale = 'en'): Promise<OptionGroup[]> {
   if (familyId) {
     return apiRequest<OptionGroup[]>(`/api/v1/catalog/families/${familyId}/option-groups/?locale=${encodeURIComponent(locale)}`)
   }
   return getAllPages<OptionGroup>(`/api/v1/catalog/option-groups/?locale=${encodeURIComponent(locale)}`)
+}
+
+export function getShopFamilyOptionGroups(shopId: string, familyId: string, locale = 'en'): Promise<FamilyOptionGroupConfig[]> {
+  return apiRequest<FamilyOptionGroupConfig[]>(`/api/v1/shops/${shopId}/catalog/garment-families/${familyId}/option-groups/?locale=${encodeURIComponent(locale)}`)
+}
+
+export function getAllShopOptionGroups(shopId: string, locale = 'en'): Promise<OptionGroup[]> {
+  return getAllPages<OptionGroup>(`/api/v1/shops/${shopId}/catalog/option-groups/?locale=${encodeURIComponent(locale)}`)
+}
+
+export function createShopFamilyOptionGroup(
+  shopId: string,
+  familyId: string,
+  data: { code: string; translations: TranslationInput[] },
+): Promise<FamilyOptionGroupConfig> {
+  return apiRequest<FamilyOptionGroupConfig>(`/api/v1/shops/${shopId}/catalog/garment-families/${familyId}/option-groups/create/`, {
+    method: 'POST', body: data,
+  })
+}
+
+export function updateShopFamilyOptionGroups(
+  shopId: string,
+  familyId: string,
+  optionGroups: Array<Pick<FamilyOptionGroupConfig, 'sort_order' | 'selection_mode' | 'is_required'> & { option_group_id: string }>,
+): Promise<FamilyOptionGroupConfig[]> {
+  return apiRequest<FamilyOptionGroupConfig[]>(`/api/v1/shops/${shopId}/catalog/garment-families/${familyId}/option-groups/`, {
+    method: 'PUT', body: { option_groups: optionGroups },
+  })
+}
+
+export function materializeShopDefaultFamily(shopId: string, familyId: string): Promise<CatalogFamily> {
+  return apiRequest<CatalogFamily>(`/api/v1/shops/${shopId}/catalog/garment-families/${familyId}/materialize-default/`, {
+    method: 'POST', body: {},
+  })
 }
 
 export async function getShopVariants(shopId: string, page = 1, familyId?: string): Promise<ShopVariantPage> {
@@ -111,10 +160,19 @@ export function setGlobalVariantDefault(variantId: string): Promise<VariantDetai
   return apiRequest<VariantDetail>(`/api/v1/catalog/variants/${variantId}/set-default/`, { method: 'POST', body: {} })
 }
 
-export function getAllShopVariants(shopId: string, familyId?: string, locale = 'en'): Promise<Variant[]> {
+export function getAllShopVariants(shopId: string, familyId?: string, locale = 'en', status?: VariantStatus): Promise<Variant[]> {
   const url = new URL(`/api/v1/shops/${shopId}/catalog/variants/`, window.location.origin)
   if (familyId) url.searchParams.set('family', familyId)
   url.searchParams.set('locale', locale)
+  if (status && status !== 'ACTIVE') url.searchParams.set('status', status)
+  return getAllPages<Variant>(url.pathname + url.search)
+}
+
+export function getAllGlobalVariants(familyId?: string, locale = 'en', status?: VariantStatus): Promise<Variant[]> {
+  const url = new URL('/api/v1/catalog/variants/', window.location.origin)
+  if (familyId) url.searchParams.set('family', familyId)
+  url.searchParams.set('locale', locale)
+  if (status && status !== 'ACTIVE') url.searchParams.set('status', status)
   return getAllPages<Variant>(url.pathname + url.search)
 }
 

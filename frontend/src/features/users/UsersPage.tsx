@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus, Search, ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react'
 import { usersApi } from './api'
@@ -22,11 +22,16 @@ export function UsersPage() {
   const [count, setCount] = useState(0)
   
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [statsReload, setStatsReload] = useState(0)
   const [roleFilter, setRoleFilter] = useState<'ALL' | 'ADMIN' | 'STAFF' | 'VIEWER'>('ALL')
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL')
   
   const [page, setPage] = useState(1)
   const pageSize = 20
+  const membershipRequestId = useRef(0)
+  const statsRequestId = useRef(0)
+  const searchDebounceTimer = useRef<number | null>(null)
 
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [credentialsReveal, setCredentialsReveal] = useState<{ user_code: string, initial_password: string } | null>(null)
@@ -35,27 +40,56 @@ export function UsersPage() {
   const [activeMemberMenu, setActiveMemberMenu] = useState<MembershipDTO | null>(null)
   const [actionMember, setActionMember] = useState<{ member: MembershipDTO, action: 'DEACTIVATE' | 'REACTIVATE' | 'REMOVE' | 'PROMOTE_STAFF' | 'DEMOTE_VIEWER' } | null>(null)
   const canManage = role === 'ADMIN'
+
+  useEffect(() => () => {
+    if (searchDebounceTimer.current !== null) window.clearTimeout(searchDebounceTimer.current)
+  }, [])
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value)
+    setPage(1)
+    if (searchDebounceTimer.current !== null) window.clearTimeout(searchDebounceTimer.current)
+    searchDebounceTimer.current = window.setTimeout(() => {
+      searchDebounceTimer.current = null
+      setDebouncedSearch(value.trim())
+    }, 250)
+  }
+
   const loadData = useCallback(async () => {
     if (!shopId || isShopLoading) { setIsLoading(isShopLoading); return }
     if (!canManage) { setMemberships([]); setCount(0); setStats(null); setIsLoading(false); return }
+    const requestId = ++membershipRequestId.current
+    if (searchQuery.trim() !== debouncedSearch) return
     setIsLoading(true)
     setError('')
     try {
-      const [pageData, st] = await Promise.all([
-        usersApi.memberships(shopId, { search: searchQuery, role: roleFilter, active: statusFilter, page }),
-        canManage ? usersApi.stats(shopId) : Promise.resolve(null)
-      ])
-      setMemberships(pageData.results); setCount(pageData.count); setStats(st)
+      const pageData = await usersApi.memberships(shopId, { search: debouncedSearch, role: roleFilter, active: statusFilter, page })
+      if (membershipRequestId.current !== requestId) return
+      setMemberships(pageData.results); setCount(pageData.count)
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Unable to load team members.')
+      if (membershipRequestId.current === requestId) setError(cause instanceof Error ? cause.message : 'Unable to load team members.')
     } finally {
-      setIsLoading(false)
+      if (membershipRequestId.current === requestId) setIsLoading(false)
     }
-  }, [shopId, isShopLoading, searchQuery, roleFilter, statusFilter, page, canManage])
+  }, [shopId, isShopLoading, searchQuery, debouncedSearch, roleFilter, statusFilter, page, canManage])
 
   useEffect(() => {
     void loadData()
   }, [loadData])
+
+  useEffect(() => {
+    const requestId = ++statsRequestId.current
+    if (!shopId || isShopLoading || !canManage) {
+      setStats(null)
+      return
+    }
+    usersApi.stats(shopId).then(value => {
+      if (statsRequestId.current === requestId) setStats(value)
+    }).catch(cause => {
+      if (statsRequestId.current === requestId) setError(cause instanceof Error ? cause.message : 'Unable to load team capacity.')
+    })
+    return () => { if (statsRequestId.current === requestId) statsRequestId.current += 1 }
+  }, [shopId, isShopLoading, canManage, statsReload])
 
   const paginatedMemberships = memberships
   const totalPages = Math.ceil(count / pageSize)
@@ -77,6 +111,7 @@ export function UsersPage() {
         await usersApi.setRole(member.id, 'VIEWER')
       }
       await loadData()
+      setStatsReload(value => value + 1)
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Unable to update membership.')
     } finally {
@@ -111,7 +146,7 @@ export function UsersPage() {
           <input 
             placeholder={t('users.searchPlaceholder', 'Search by name or User ID')}
             value={searchQuery}
-            onChange={e => { setSearchQuery(e.target.value); setPage(1); }}
+            onChange={e => handleSearchChange(e.target.value)}
           />
         </div>
         <div className="users-filters">
@@ -245,14 +280,15 @@ export function UsersPage() {
             setIsFormOpen(false)
             setCredentialsReveal({ user_code: creds.user_code!, initial_password: creds.initial_password! })
             void loadData()
+            setStatsReload(value => value + 1)
           }} 
         />
       )}
 
       {credentialsReveal && (
-        <div className="modal-overlay">
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="credentials-title" tabIndex={-1}>
           <div className="modal-content credentials-modal">
-            <h2>User Created Successfully</h2>
+            <h2 id="credentials-title">User Created Successfully</h2>
             <p className="warning-text">
               Please copy these generated credentials securely. 
               <strong> You will not be able to see this password again.</strong>
@@ -268,7 +304,7 @@ export function UsersPage() {
               </div>
             </div>
             <div className="modal-actions">
-              <button className="btn-primary" onClick={() => setCredentialsReveal(null)}>I have saved them</button>
+              <button data-dialog-close className="btn-primary" onClick={() => setCredentialsReveal(null)}>I have saved them</button>
             </div>
           </div>
         </div>

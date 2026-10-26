@@ -23,7 +23,7 @@ export interface CreateShopUserResult {
   user_code?: string
 }
 
-export type WorkFunctionCode = 'SALES' | 'MEASUREMENT' | 'CUTTING' | 'STITCHING' | 'FINISHING' | 'QC' | 'CASHIER'
+export type WorkFunctionCode = 'SALES' | 'MEASUREMENT' | 'CUTTING' | 'STITCHING' | 'CHECK' | 'FINISHING' | 'QC' | 'CASHIER'
 
 export interface WorkFunctionSetResponse {
   membership_id: string

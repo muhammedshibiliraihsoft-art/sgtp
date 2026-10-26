@@ -11,8 +11,10 @@ function validateProxyTarget(value: string | undefined) {
   } catch {
     throw new Error('AUTH_API_PROXY_TARGET must be a complete HTTPS API origin.')
   }
-  if (url.protocol !== 'https:' || url.origin !== value || url.pathname !== '/' || url.search || url.hash || url.username || url.password) {
-    throw new Error('AUTH_API_PROXY_TARGET must be a complete HTTPS API origin.')
+  const isLocalHttpTarget = url.protocol === 'http:'
+    && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname === '::1' ? '[::1]' : url.hostname)
+  if ((!isLocalHttpTarget && url.protocol !== 'https:') || url.origin !== value || url.pathname !== '/' || url.search || url.hash || url.username || url.password) {
+    throw new Error('AUTH_API_PROXY_TARGET must be a complete HTTPS API origin or a local loopback HTTP origin.')
   }
   return url.origin
 }

@@ -207,7 +207,7 @@ body {
 }
 button, input, select { font: inherit; }
 button { color: inherit; }
-button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible, [tabindex]:focus-visible, [role="option"]:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }

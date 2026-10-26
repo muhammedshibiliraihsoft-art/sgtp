@@ -5,6 +5,7 @@ import App from '../App'
 import i18n from '../i18n'
 import { authService } from '../services/auth'
 import { ApiError } from '../services/apiClient'
+import * as membershipsService from '../services/memberships'
 import { shopsService } from '../services/shops'
 import type { ShopDetail } from '../services/shops'
 
@@ -97,6 +98,7 @@ describe('Main Supplier Back Office', () => {
 
   it('confirms lifecycle changes and still supports logout', async () => {
     const detail = vi.spyOn(shopsService, 'detail').mockResolvedValueOnce(shop).mockResolvedValueOnce({ ...shop, is_active: false })
+    vi.spyOn(membershipsService, 'getShopMembers').mockResolvedValue([])
     const setActive = vi.spyOn(shopsService, 'setActive').mockResolvedValue({ status: 'Shop deactivated', is_active: false })
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     const logout = vi.spyOn(authService, 'logout').mockResolvedValue()

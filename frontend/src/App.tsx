@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useState, useRef } from 'react'
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
-  ArrowRight, Bell, ChevronDown, CircleHelp,
+  ArrowRight, Bell, CircleHelp,
   ClipboardList, Globe2, LayoutDashboard,
   Moon, MoreHorizontal, Plus, Search, Settings2, LogOut, ChevronUp, Sun,
   UsersRound, Scissors, CreditCard, BarChart3, Users,
@@ -10,8 +10,13 @@ import {
   PanelLeftClose, PanelLeftOpen, Shield, Ruler
 } from 'lucide-react'
 import './App.css'
+import './shared-ui.css'
 import { BrandLogo } from './components/BrandLogo'
+import { ResponsiveChoice } from './components/CustomSelect'
 import { AuthProvider } from './services/AuthContext'
+import { PasswordResetPage } from './features/auth/PasswordResetPage'
+import { CurrentShopProvider, useCurrentShop } from './hooks/useCurrentShop'
+import { DialogKeyboardManager } from './components/DialogKeyboardManager'
 import { useAuth } from './services/useAuth'
 import desktopImg from './assets/images/login/desktop.png'
 import phoneImg from './assets/images/login/phone.png'
@@ -22,6 +27,7 @@ import sidebarLogo from './assets/brand/sidebar_logo.png'
 const UsersPage = lazy(() => import('./features/users/UsersPage').then(module => ({ default: module.UsersPage })))
 const ClientsPage = lazy(() => import('./features/clients/ClientsPage').then(module => ({ default: module.ClientsPage })))
 const ClientDetailPage = lazy(() => import('./features/clients/ClientDetailPage').then(module => ({ default: module.ClientDetailPage })))
+const RelatedPersonsPage = lazy(() => import('./features/clients/RelatedPersonsPage').then(module => ({ default: module.RelatedPersonsPage })))
 const CatalogPage = lazy(() => import('./features/catalog/CatalogPage').then(module => ({ default: module.CatalogPage })))
 const DesignsPage = lazy(() => import('./features/designs/DesignsPage').then(module => ({ default: module.DesignsPage })))
 const DesignEditor = lazy(() => import('./features/designs/DesignEditor').then(module => ({ default: module.DesignEditor })))
@@ -30,10 +36,14 @@ const GlobalDesignTemplatesPage = lazy(() => import('./backoffice/designs/Global
 const GlobalTemplateEditor = lazy(() => import('./backoffice/designs/GlobalTemplateEditor').then(module => ({ default: module.GlobalTemplateEditor })))
 const MaterialsInventoryPage = lazy(() => import('./features/materials/MaterialsInventoryPage').then(module => ({ default: module.MaterialsInventoryPage })))
 const ClientMeasurementsPage = lazy(() => import('./features/measurements/ClientMeasurementsPage').then(module => ({ default: module.ClientMeasurementsPage })))
+const OrdersPage = lazy(() => import('./features/orders/OrdersPage').then(module => ({ default: module.OrdersPage })))
+const DeletedOrdersPage = lazy(() => import('./features/orders/DeletedOrdersPage').then(module => ({ default: module.DeletedOrdersPage })))
+const BillingHistoryPage = lazy(() => import('./features/billing/BillingHistoryPage').then(module => ({ default: module.BillingHistoryPage })))
 const BackOfficeDashboard = lazy(() => import('./backoffice/BackOfficePages').then(module => ({ default: module.BackOfficeDashboard })))
 const ShopListPage = lazy(() => import('./backoffice/BackOfficePages').then(module => ({ default: module.ShopListPage })))
 const CreateShopPage = lazy(() => import('./backoffice/BackOfficePages').then(module => ({ default: module.CreateShopPage })))
 const ShopDetailPage = lazy(() => import('./backoffice/BackOfficePages').then(module => ({ default: module.ShopDetailPage })))
+const FinancialPurgePage = lazy(() => import('./backoffice/FinancialPurgePage').then(module => ({ default: module.FinancialPurgePage })))
 
 function PageLoading() { return <div className="content-wrap" role="status">Loading page…</div> }
 
@@ -87,57 +97,8 @@ function useTheme() {
   return [theme, setTheme, resolvedTheme] as const
 }
 
-function CustomSelect({ value, options, onChange, icon, ariaLabel }: { value: string, options: {value: string, label: string}[], onChange: (val: string) => void, icon?: React.ReactNode, ariaLabel: string }) {
-  const [isOpen, setIsOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (ref.current && !ref.current.contains(event.target as Node)) {
-        setIsOpen(false)
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
-
-  const selectedOption = options.find(o => o.value === value)
-
-  return (
-    <div ref={ref} className="custom-select">
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        aria-label={ariaLabel}
-        aria-haspopup="listbox"
-        aria-expanded={isOpen}
-        className="select-trigger"
-      >
-        {icon}
-        <span className="select-value">{selectedOption ? selectedOption.label : value}</span>
-        <ChevronDown size={13} aria-hidden="true" />
-      </button>
-
-      {isOpen && (
-        <ul className="select-popover" role="listbox">
-          {options.map(option => (
-            <li
-              key={option.value}
-              role="option"
-              aria-selected={option.value === value}
-              className={`select-option ${option.value === value ? 'selected' : ''}`}
-              onClick={() => {
-                onChange(option.value)
-                setIsOpen(false)
-              }}
-            >
-              {option.label}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  )
+function CustomSelect({ value, options, onChange, icon, ariaLabel, compact = false }: { value: string, options: {value: string, label: string}[], onChange: (val: string) => void, icon?: React.ReactNode, ariaLabel: string, compact?: boolean }) {
+  return <ResponsiveChoice value={value} options={options} onChange={onChange} icon={icon} compact={compact} ariaLabel={ariaLabel} />
 }
 
 function LanguageMenu() {
@@ -151,6 +112,7 @@ function LanguageMenu() {
     options={options}
     onChange={(val) => void i18n.changeLanguage(val)}
     icon={<Globe2 size={15} />}
+    compact
     ariaLabel="Language"
   />
 }
@@ -166,6 +128,7 @@ function ThemeMenu({ theme, onChange }: { theme: Theme; onChange: (value: Theme)
     options={options}
     onChange={(val) => onChange(val as Theme)}
     icon={theme === 'dark' ? <Moon size={15} /> : <Sun size={15} />}
+    compact
     ariaLabel="Color theme"
   />
 }
@@ -181,6 +144,7 @@ function PaletteMenu({ palette, onChange }: { palette: Palette; onChange: (value
     value={palette}
     options={options}
     onChange={(val) => onChange(val as Palette)}
+    compact
     ariaLabel="Palette"
   />
 }
@@ -309,7 +273,7 @@ function LoginPage() {
                   type="button"
                   className="forgot-password-link"
                   style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-                  onClick={() => alert('FOLLOW-UP AUTH SCREEN REQUIRED — PASSWORD RESET')}
+                  onClick={() => navigate('/reset-password')}
                 >
                   Forgot password?
                 </button>
@@ -472,6 +436,8 @@ function SidebarContainer({
 
 function DesktopSidebar({ isPinned, setIsPinned }: { isPinned: boolean, setIsPinned: (v: boolean) => void }) {
   const { t } = useTranslation()
+  const { role, workFunctions } = useCurrentShop()
+  const canViewBilling = role === 'ADMIN' || (role === 'STAFF' && workFunctions.includes('CASHIER'))
   const { signOut, user } = useAuth()
   const navigate = useNavigate()
   const [isAccountOpen, setIsAccountOpen] = useState(false)
@@ -501,11 +467,11 @@ function DesktopSidebar({ isPinned, setIsPinned }: { isPinned: boolean, setIsPin
       <nav style={{ flex: 1 }} aria-label="Main navigation">
         <NavLink to="/" end className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><LayoutDashboard size={18} /> <span className="nav-label">{t('nav.dashboard')}</span></NavLink>
         <NavLink to="/work" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Scissors size={18} /> <span className="nav-label">{t('nav.work')}</span></NavLink>
-        <div className="nav-link-desktop nav-disabled" aria-disabled="true"><ClipboardList size={18} /> <span className="nav-label">{t('nav.orders')}</span></div>
+        <NavLink to="/orders" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><ClipboardList size={18} /> <span className="nav-label">{t('nav.orders')}</span></NavLink>
         <NavLink to="/designs" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Wand2 size={18} /> <span className="nav-label">{t('nav.designs', 'Designs')}</span></NavLink>
         <NavLink to="/catalog" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Shirt size={18} /> <span className="nav-label">{t('nav.catalog', 'Catalog')}</span></NavLink>
         <NavLink to="/clients" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><UsersRound size={18} /> <span className="nav-label">{t('nav.clients')}</span></NavLink>
-        <div className="nav-link-desktop nav-disabled" aria-disabled="true"><CreditCard size={18} /> <span className="nav-label">{t('nav.billing')}</span></div>
+        {canViewBilling && <NavLink to="/billing" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><CreditCard size={18} /> <span className="nav-label">{t('nav.billing')}</span></NavLink>}
         <NavLink to="/users" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Shield size={18} /> <span className="nav-label">{t('nav.team', 'Team')}</span></NavLink>
       </nav>
 
@@ -559,6 +525,7 @@ function BackOfficeSidebar({ isPinned, setIsPinned }: { isPinned: boolean, setIs
     <nav style={{ flex: 1 }} aria-label={t('backoffice.navigation')}>
       <NavLink to="/backoffice" end className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><LayoutDashboard size={18} /><span className="nav-label">{t('backoffice.dashboard')}</span></NavLink>
       <NavLink to="/backoffice/shops" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Store size={18} /><span className="nav-label">{t('backoffice.shops')}</span></NavLink>
+      <NavLink to="/backoffice/financial-purge" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><CreditCard size={18} /><span className="nav-label">{t('billing.purgePageTitle', 'Financial purge')}</span></NavLink>
       <NavLink to="/backoffice/measurements" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Ruler size={18} /><span className="nav-label">{t('measurements.title')}</span></NavLink>
       <NavLink to="/backoffice/designs" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Wand2 size={18} /><span className="nav-label">{t('backoffice.designs', 'Global Designs')}</span></NavLink>
       <NavLink to="/backoffice/catalog" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Shirt size={18} /><span className="nav-label">{t('backoffice.catalog', 'Global Catalog')}</span></NavLink>
@@ -597,6 +564,7 @@ function BackOfficeBottomNavigation() {
   return <nav className="bottom-nav bo-bottom-nav" aria-label={t('backoffice.navigation')}>
     <NavLink to="/backoffice" end className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}><LayoutDashboard size={20} />{t('backoffice.dashboard')}</NavLink>
     <NavLink to="/backoffice/shops" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}><Store size={20} />{t('backoffice.shops')}</NavLink>
+    <NavLink to="/backoffice/financial-purge" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}><CreditCard size={20} />{t('billing.purgePageTitle', 'Financial purge')}</NavLink>
     <NavLink to="/backoffice/measurements" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}><Ruler size={20} />{t('measurements.title')}</NavLink>
     <button type="button" className="nav-item" onClick={() => { void signOut().catch(() => undefined).finally(() => navigate('/login', { replace: true })) }}><LogOut size={20} />{t('backoffice.signOut')}</button>
   </nav>
@@ -616,7 +584,7 @@ function TopHeader({
   const isBackOffice = location.pathname.startsWith('/backoffice')
 
   const getPageContext = () => {
-    if (isBackOffice) return { main: location.pathname === '/backoffice' ? 'Back Office' : location.pathname === '/backoffice/measurements' ? 'Measurements' : location.pathname.endsWith('/new') ? 'Create Shop' : 'Shops' }
+    if (isBackOffice) return { main: location.pathname === '/backoffice' ? 'Back Office' : location.pathname === '/backoffice/measurements' ? 'Measurements' : location.pathname === '/backoffice/financial-purge' ? 'Financial purge' : location.pathname.endsWith('/new') ? 'Create Shop' : 'Shops' }
     if (location.pathname === '/work') return { main: 'Work' }
     if (location.pathname === '/') return { main: 'Dashboard' }
     if (location.pathname.startsWith('/orders')) return { main: 'Orders' }
@@ -676,7 +644,7 @@ function BottomNavigation({ onMoreClick }: { onMoreClick: () => void }) {
     <nav className="bottom-nav">
       <NavLink to="/" end className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}><LayoutDashboard size={20} />{t('nav.dashboard')}</NavLink>
       <NavLink to="/work" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}><Scissors size={20} />{t('nav.work')}</NavLink>
-      <div className="nav-item nav-disabled" aria-disabled="true"><ClipboardList size={20} />{t('nav.orders')}</div>
+      <NavLink to="/orders" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}><ClipboardList size={20} />{t('nav.orders')}</NavLink>
       <NavLink to="/clients" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}><UsersRound size={20} />{t('nav.clients')}</NavLink>
       <button className="nav-item" onClick={onMoreClick}><MoreHorizontal size={20} />{t('nav.more')}</button>
     </nav>
@@ -685,6 +653,8 @@ function BottomNavigation({ onMoreClick }: { onMoreClick: () => void }) {
 
 function MoreSheet({ isOpen, onClose, theme, setTheme }: { isOpen: boolean, onClose: () => void, theme: Theme, setTheme: (v: Theme) => void }) {
   const { t } = useTranslation()
+  const { role, workFunctions } = useCurrentShop()
+  const canViewBilling = role === 'ADMIN' || (role === 'STAFF' && workFunctions.includes('CASHIER'))
   if (!isOpen) return null;
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', background: 'rgba(0,0,0,0.4)' }} onClick={onClose}>
@@ -696,7 +666,7 @@ function MoreSheet({ isOpen, onClose, theme, setTheme }: { isOpen: boolean, onCl
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><CreditCard size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('more.billing')}</span></div>
+          {canViewBilling && <Link to="/billing" onClick={onClose} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><CreditCard size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('more.billing')}</span></Link>}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><BarChart3 size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('more.reports')}</span></div>
           <Link to="/users" onClick={onClose} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><Users size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('more.members')}</span></Link>
           <Link to="/designs" onClick={onClose} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><Wand2 size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('nav.designs', 'Designs')}</span></Link>
@@ -790,7 +760,7 @@ function WorkPreviewPage() {
           <h1 style={{ fontSize: '32px', fontWeight: 600, margin: '0 0 8px 0', letterSpacing: '-0.5px' }}>{t('work.title')}</h1>
           <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '14px' }}>{t('work.subtitle')}</p>
         </div>
-        <button className="primary-button"><Plus size={16} /> {t('work.newOrder')}</button>
+        <Link className="primary-button" to="/orders/new"><Plus size={16} /> {t('work.newOrder')}</Link>
       </div>
 
       <div className="phone-stage-selector">
@@ -850,15 +820,17 @@ function Workspace() {
   const [isSidebarPinned, setIsSidebarPinned] = useState(false)
   const isLogin = location.pathname === '/login'
   const isPasswordChange = location.pathname === '/password-change'
+  const isPasswordReset = location.pathname === '/reset-password'
 
   useEffect(() => { setIsMoreOpen(false) }, [location.pathname])
 
   if (!ready) return <main className="login-page" aria-busy="true"><p>Loading your session…</p></main>
+  if (isPasswordReset) return <PasswordResetPage />
   if (isLogin) return user && !passwordChangeRequired ? <Navigate to={user.is_main_supplier_admin ? '/backoffice' : '/'} replace /> : <LoginPage />
   if (isPasswordChange) return passwordChangeRequired ? <PasswordChangePage /> : user ? <Navigate to={user.is_main_supplier_admin ? '/backoffice' : '/'} replace /> : <Navigate to="/login" replace />
   if (!user || passwordChangeRequired) return <Navigate to={passwordChangeRequired ? '/password-change' : '/login'} replace />
 
-  if (user.is_main_supplier_admin) return <div className="app-shell">
+  if (user.is_main_supplier_admin) return <CurrentShopProvider><div className="app-shell">
     <BackOfficeSidebar isPinned={isSidebarPinned} setIsPinned={setIsSidebarPinned} />
     <main className="main-area">
       <TopHeader 
@@ -872,6 +844,7 @@ function Workspace() {
         <Route path="/backoffice/shops" element={<ShopListPage />} />
         <Route path="/backoffice/shops/new" element={<CreateShopPage />} />
         <Route path="/backoffice/shops/:shopId" element={<ShopDetailPage />} />
+        <Route path="/backoffice/financial-purge" element={<FinancialPurgePage />} />
         <Route path="/backoffice/measurements" element={<ClientMeasurementsPage />} />
         <Route path="/backoffice/catalog" element={<GlobalCatalogPage />} />
         <Route path="/backoffice/designs" element={<GlobalDesignTemplatesPage />} />
@@ -880,11 +853,11 @@ function Workspace() {
       </Routes></Suspense>
     </main>
     <BackOfficeBottomNavigation />
-  </div>
+  </div></CurrentShopProvider>
 
   if (location.pathname.startsWith('/backoffice')) return <Navigate to="/" replace />
 
-  return <div className="app-shell">
+  return <CurrentShopProvider><div className="app-shell">
     <DesktopSidebar isPinned={isSidebarPinned} setIsPinned={setIsSidebarPinned} />
     <main className="main-area">
       <TopHeader 
@@ -895,8 +868,14 @@ function Workspace() {
       />
       <Suspense fallback={<PageLoading />}><Routes>
         <Route path="/work" element={<WorkPreviewPage />} />
+        <Route path="/orders" element={<OrdersPage />} />
+        <Route path="/orders/deleted" element={<DeletedOrdersPage />} />
+        <Route path="/orders/new" element={<OrdersPage />} />
+        <Route path="/orders/:id" element={<OrdersPage />} />
+        <Route path="/billing" element={<BillingHistoryPage />} />
         <Route path="/clients" element={<ClientsPage />} />
         <Route path="/clients/:clientId" element={<ClientDetailPage />} />
+        <Route path="/clients/:clientId/related-persons" element={<RelatedPersonsPage />} />
         <Route path="/clients/:clientId/measurements" element={<ClientMeasurementsPage />} />
         <Route path="/measurements" element={<ClientMeasurementsPage />} />
         <Route path="/users" element={<UsersPage />} />
@@ -909,7 +888,7 @@ function Workspace() {
     </main>
     <BottomNavigation onMoreClick={() => setIsMoreOpen(true)} />
     <MoreSheet isOpen={isMoreOpen} onClose={() => setIsMoreOpen(false)} theme={theme} setTheme={setTheme} />
-  </div>
+  </div></CurrentShopProvider>
 }
 
 export default function App() {
@@ -919,5 +898,5 @@ export default function App() {
     document.documentElement.lang = language
     document.documentElement.dir = i18n.dir(language)
   }, [i18n, i18n.resolvedLanguage])
-  return <AuthProvider><Workspace /></AuthProvider>
+  return <AuthProvider><><DialogKeyboardManager /><Workspace /></></AuthProvider>
 }

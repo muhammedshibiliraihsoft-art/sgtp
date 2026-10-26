@@ -115,4 +115,21 @@ describe('shared API client authentication', () => {
     resolveResponse(json({ privateData: 'account A' }))
     await expect(pending).rejects.toMatchObject({ code: 'session_changed' })
   })
+
+  it('does not let a late refresh overwrite a newer login session', async () => {
+    let finishRefresh!: (response: Response) => void
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(json({ detail: 'expired' }, 401))
+      .mockResolvedValueOnce(json({ csrf_token: 'csrf' }))
+      .mockReturnValueOnce(new Promise<Response>(resolve => { finishRefresh = resolve }))
+      .mockResolvedValueOnce(json({ ok: true }))
+    vi.stubGlobal('fetch', fetchMock)
+    setAccessToken('expired-access')
+    const pending = apiRequest<{ ok: boolean }>('/api/v1/private/')
+    await vi.waitFor(() => expect(finishRefresh).toBeTypeOf('function'))
+    setAccessToken('new-login-access')
+    finishRefresh(json({ access: 'stale-refreshed-access' }))
+    await expect(pending).resolves.toEqual({ ok: true })
+    expect(new Headers(fetchMock.mock.calls[3][1].headers).get('Authorization')).toBe('Bearer new-login-access')
+  })
 })

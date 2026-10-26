@@ -19,12 +19,13 @@ describe('auth service contract', () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(json({ csrf_token: 'csrf-before' }))
       .mockResolvedValueOnce(json({ access: 'access-token', user }))
-      .mockResolvedValueOnce(json({ csrf_token: 'csrf-after' }))
     vi.stubGlobal('fetch', fetchMock)
     const session = await authService.login({ identifier: 'SGTP-USER-1', password: 'secret' })
     expect(session).toEqual({ user, passwordChangeRequired: false })
     expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ identifier: 'SGTP-USER-1', password: 'secret' })
     expect(fetchMock.mock.calls[1][1].credentials).toBe('include')
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(new Headers(fetchMock.mock.calls[1][1].headers).get('X-CSRFToken')).toBe('csrf-before')
   })
 
   it('keeps invalid-login failures distinct and does not continue to session setup', async () => {
@@ -69,6 +70,28 @@ describe('auth service contract', () => {
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ current_password: 'old', new_password: 'new', new_password_confirm: 'new' })
     await apiRequest('/api/v1/private/')
     expect(new Headers(fetchMock.mock.calls[1][1].headers).get('Authorization')).toBeNull()
+  })
+
+  it('requests generic password recovery without attaching an authenticated session', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(json({ detail: 'If the account is eligible, password reset instructions will be sent.' }))
+    vi.stubGlobal('fetch', fetchMock)
+    setAccessToken('must-not-be-sent')
+    await authService.requestPasswordReset('member@example.test')
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/api/v1/auth/password/reset/')
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ email: 'member@example.test' })
+    expect(new Headers(fetchMock.mock.calls[0][1].headers).get('Authorization')).toBeNull()
+  })
+
+  it('confirms recovery with backend field names and does not authenticate the public request', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(json({ detail: 'Password reset. Sign in with your new password.' }))
+    vi.stubGlobal('fetch', fetchMock)
+    setAccessToken('must-not-be-sent')
+    await authService.confirmPasswordReset('encoded-user', 'single-use-token', 'NewSecure-939!Pass', 'NewSecure-939!Pass')
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/api/v1/auth/password/reset/confirm/')
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+      uid: 'encoded-user', token: 'single-use-token', new_password: 'NewSecure-939!Pass', new_password_confirm: 'NewSecure-939!Pass',
+    })
+    expect(new Headers(fetchMock.mock.calls[0][1].headers).get('Authorization')).toBeNull()
   })
 
   it('clears frontend state after successful logout', async () => {

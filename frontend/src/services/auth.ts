@@ -30,9 +30,25 @@ export const authService = {
     })
     if (!data.access || !data.user) throw new ApiError('The sign-in response was incomplete.', 502, 'invalid_login_response')
     setAccessToken(data.access)
-    // Login sets a CSRF cookie; bootstrap returns a masked token usable on sibling origins.
-    await bootstrapCsrf()
+    // Login does not rotate the CSRF cookie. Keep using the masked token from the
+    // pre-login bootstrap instead of making a redundant second round trip.
     return { user: data.user, passwordChangeRequired: data.user.must_change_password }
+  },
+
+  async requestPasswordReset(email: string): Promise<void> {
+    await apiRequest('/api/v1/auth/password/reset/', {
+      method: 'POST', body: { email }, authenticated: false, retryUnauthorized: false,
+    })
+  },
+
+  async confirmPasswordReset(uid: string, token: string, newPassword: string, newPasswordConfirm: string): Promise<void> {
+    await apiRequest('/api/v1/auth/password/reset/confirm/', {
+      method: 'POST',
+      body: { uid, token, new_password: newPassword, new_password_confirm: newPasswordConfirm },
+      authenticated: false,
+      retryUnauthorized: false,
+    })
+    clearCredentials()
   },
 
   async restore(): Promise<AuthSession | null> {

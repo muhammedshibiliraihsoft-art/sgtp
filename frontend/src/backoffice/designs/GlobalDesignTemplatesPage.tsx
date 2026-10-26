@@ -44,7 +44,7 @@ export function GlobalDesignTemplatesPage() {
   return (
     <div className="content-wrap">
       <div className="design-page-heading"><div><h1>Global Design Templates</h1><p>Published global templates are available to Shops.</p></div></div>
-      <div className="design-info-note"><AlertCircle size={17} /> Creating a template needs a global-variant listing API. The backend currently exposes variant listing only inside an explicitly selected Shop, so this action is not offered here.</div>
+      <div className="design-info-note"><AlertCircle size={17} /> Global templates belong directly to a garment family and are available to Shops through the standard family-level Design flow.</div>
       {error && <div className="design-error" role="alert">{error}<button onClick={() => { setIsLoading(true); setError(null); void loadDesigns() }} disabled={isLoading}>Retry</button></div>}
       {isLoading ? <div className="design-loading"><Loader2 className="animate-spin" /></div> : <div className="design-grid">
         {designs.map((design: Design) => <article key={design.id} className="design-card">

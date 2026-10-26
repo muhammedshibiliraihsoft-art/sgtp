@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Archive, ChevronRight, Copy, Download, Ruler, Save } from 'lucide-react'
 import { apiRequest } from '../../services/apiClient'
 import { useCurrentShop } from '../../hooks/useCurrentShop'
 import { useAuth } from '../../services/useAuth'
+import { CustomSelect, ResponsiveChoice } from '../../components/CustomSelect'
 import { shopsService, type ShopSummary } from '../../services/shops'
 import { clientsApi } from '../clients/api'
 import type { Client, RelatedPerson } from '../clients/types'
-import { getAllFamilies, getAllShopStyleOptions, getAllShopVariants, getOptionGroups } from '../catalog/api'
-import type { CatalogFamily, OptionGroup, StyleOption, Variant } from '../catalog/types'
+import { getAllFamilies, getAllShopStyleOptions, getOptionGroups } from '../catalog/api'
+import type { CatalogFamily, OptionGroup, StyleOption } from '../catalog/types'
 import { createShopDesign, getShopDesign, getAllShopDesigns, addShopDesignSelection } from '../designs/api'
 import { getAllGlobalDesigns } from '../../backoffice/designs/api'
 import type { Design } from '../designs/types'
@@ -64,7 +65,9 @@ function makeOwner(wearerId: string): MeasurementOwner {
 }
 
 export function ClientMeasurementsPage() {
+  const navigate = useNavigate()
   const { clientId: routeClientId } = useParams<{ clientId?: string }>()
+  const [searchParams] = useSearchParams()
   const { t, i18n } = useTranslation()
   const { user } = useAuth()
   const { shopId: memberShopId, role, workFunctions, isLoading: shopContextLoading } = useCurrentShop()
@@ -81,7 +84,7 @@ export function ClientMeasurementsPage() {
   const [activeClientId, setActiveClientId] = useState(routeClientId || '')
   const [client, setClient] = useState<Client | null>(null)
   const [relatedPersons, setRelatedPersons] = useState<RelatedPerson[]>([])
-  const [wearerId, setWearerId] = useState('client')
+  const [wearerId, setWearerId] = useState(() => searchParams.get('wearer') || 'client')
   const [clientSearch, setClientSearch] = useState('')
   const [clientMatches, setClientMatches] = useState<Client[]>([])
   const [clientSearchLoading, setClientSearchLoading] = useState(false)
@@ -89,10 +92,9 @@ export function ClientMeasurementsPage() {
   const [clientChooserOpen, setClientChooserOpen] = useState(!routeClientId)
 
   const [families, setFamilies] = useState<CatalogFamily[]>([])
-  const [variants, setVariants] = useState<Variant[]>([])
   const [catalogLoading, setCatalogLoading] = useState(false)
-  const [familyId, setFamilyId] = useState('')
-  const [variantId, setVariantId] = useState('')
+  const [catalogLoadFailed, setCatalogLoadFailed] = useState(false)
+  const [familyId, setFamilyId] = useState(() => searchParams.get('family') || '')
   const [groups, setGroups] = useState<OptionGroup[]>([])
   const [groupsLoading, setGroupsLoading] = useState(false)
   const [groupsLoadFailed, setGroupsLoadFailed] = useState(false)
@@ -101,8 +103,11 @@ export function ClientMeasurementsPage() {
   const [optionsByGroup, setOptionsByGroup] = useState<Record<string, StyleOption[]>>({})
   const [loadingGroupId, setLoadingGroupId] = useState<string | null>(null)
   const [groupErrorId, setGroupErrorId] = useState<string | null>(null)
-  const [shopDesigns, setShopDesigns] = useState<Design[]>([])
-  const [globalDesigns, setGlobalDesigns] = useState<Design[]>([])
+  const [familyShopDesigns, setFamilyShopDesigns] = useState<Design[]>([])
+  const [familyGlobalDesigns, setFamilyGlobalDesigns] = useState<Design[]>([])
+  const [designCatalogLoadedFor, setDesignCatalogLoadedFor] = useState('')
+  const [designCatalogLoading, setDesignCatalogLoading] = useState(false)
+  const [designCatalogFailed, setDesignCatalogFailed] = useState(false)
   const [selectedDesign, setSelectedDesign] = useState<Design | null>(null)
   const [designName, setDesignName] = useState('')
   const [designSaving, setDesignSaving] = useState(false)
@@ -113,12 +118,16 @@ export function ClientMeasurementsPage() {
   const [profileId, setProfileId] = useState('')
   const [profilesLoading, setProfilesLoading] = useState(false)
   const [profilesLoadFailed, setProfilesLoadFailed] = useState(false)
+  const historyRouteHandled = useRef(false)
+  const openHistoryOnLoad = searchParams.get('view') === 'history'
   const [definitions, setDefinitions] = useState<MeasurementDefinition[]>([])
   const [definitionsLoading, setDefinitionsLoading] = useState(false)
   const [definitionsLoadFailed, setDefinitionsLoadFailed] = useState(false)
   const [sets, setSets] = useState<MeasurementSet[]>([])
+  const locallySavedSetsByProfile = useRef(new Map<string, Map<string, MeasurementSet>>())
   const [selectedSetId, setSelectedSetId] = useState('')
   const [draftValues, setDraftValues] = useState<Record<string, DraftValue>>({})
+  const [draftSeedVersion, setDraftSeedVersion] = useState(0)
   const [historyLoading, setHistoryLoading] = useState(false)
   const [savingProfile, setSavingProfile] = useState(false)
   const [savingMeasurements, setSavingMeasurements] = useState(false)
@@ -128,6 +137,7 @@ export function ClientMeasurementsPage() {
   const [compareTo, setCompareTo] = useState('')
   const [comparison, setComparison] = useState<MeasurementComparison | null>(null)
   const [comparing, setComparing] = useState(false)
+  const draftDirtyRef = useRef(false)
 
   const [showFabrics, setShowFabrics] = useState(false)
   const [fabrics, setFabrics] = useState<InventoryFabric[]>([])
@@ -138,21 +148,80 @@ export function ClientMeasurementsPage() {
   const [notice, setNotice] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
 
-  const variantsForFamily = useMemo(() => variants.filter(item => item.family === familyId && item.is_active), [variants, familyId])
+  const designCatalogScope = `${shopId}:${familyId}:${locale}:${reloadKey}`
+  useEffect(() => {
+    activeDesignCatalogScope.current = designCatalogScope
+  }, [designCatalogScope])
+  const shopDesigns = useMemo(() => designCatalogLoadedFor === designCatalogScope
+    ? familyShopDesigns
+    : [], [familyShopDesigns, designCatalogLoadedFor, designCatalogScope])
+  const globalDesigns = useMemo(() => designCatalogLoadedFor === designCatalogScope
+    ? familyGlobalDesigns
+    : [], [familyGlobalDesigns, designCatalogLoadedFor, designCatalogScope])
   const family = families.find(item => item.id === familyId) ?? null
-  const variant = variants.find(item => item.id === variantId) ?? null
   const wearer = relatedPersons.find(item => item.id === wearerId) ?? null
   const owner = useMemo(() => makeOwner(wearerId), [wearerId])
   const selectedSet = sets.find(item => item.id === selectedSetId) ?? sets[0] ?? null
+  const previousValues = useMemo(() => Object.fromEntries(
+    (sets[0]?.values ?? []).map(value => [value.definition, { value: value.value, unit: value.unit }]),
+  ), [sets])
   const optionScope = `${shopId}:${familyId}`
   const optionScopeRef = useRef(optionScope)
   const optionRequests = useRef(new Set<string>())
+  const designCatalogRequest = useRef('')
+  const activeDesignCatalogScope = useRef(designCatalogScope)
   const profileSaveInFlight = useRef(false)
+  const activeProfileScopeRef = useRef('')
   const measurementSaveInFlight = useRef(false)
   const worksheetExportInFlight = useRef(false)
   const copyInFlight = useRef(false)
   const designSaveInFlight = useRef(false)
-  const matchingProfile = profiles.find(item => item.family === familyId && item.variant === (variantId || null)) ?? null
+  const familyProfiles = profiles.filter(item => item.family === familyId)
+  const matchingProfile = familyProfiles.find(item => item.variant === null) ?? null
+  activeProfileScopeRef.current = [shopId, activeClientId, owner.kind, owner.kind === 'client' ? 'client' : owner.id, familyId].join(':')
+
+  const onDraftDirtyChange = useCallback((dirty: boolean) => {
+    draftDirtyRef.current = dirty
+  }, [])
+
+  const replaceDraftValues = useCallback((next: Record<string, DraftValue>) => {
+    draftDirtyRef.current = false
+    setDraftValues(next)
+    setDraftSeedVersion(version => version + 1)
+  }, [])
+
+  const confirmDiscardDraft = useCallback(() => {
+    if (!draftDirtyRef.current) return true
+    const discard = window.confirm(t('measurements.discardDraftConfirm', 'Discard unsaved measurement values?'))
+    if (discard) draftDirtyRef.current = false
+    return discard
+  }, [t])
+
+  useEffect(() => {
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!draftDirtyRef.current) return
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', warnBeforeUnload)
+    return () => window.removeEventListener('beforeunload', warnBeforeUnload)
+  }, [])
+
+  useEffect(() => {
+    const confirmInternalNavigation = (event: MouseEvent) => {
+      if (!draftDirtyRef.current || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+      if (!(event.target instanceof Element)) return
+      const link = event.target.closest<HTMLAnchorElement>('a[href]')
+      if (!link || (link.target && link.target !== '_self')) return
+      if (link.href.startsWith('javascript:')) return
+      if (!confirmDiscardDraft()) {
+        event.preventDefault()
+        event.stopImmediatePropagation()
+      }
+    }
+    document.addEventListener('click', confirmInternalNavigation, true)
+    return () => document.removeEventListener('click', confirmInternalNavigation, true)
+  }, [confirmDiscardDraft])
 
   useEffect(() => {
     optionScopeRef.current = optionScope
@@ -181,12 +250,15 @@ export function ClientMeasurementsPage() {
     if (!shopId || !canReadMeasurements) return
     let active = true
     setCatalogLoading(true)
-    Promise.all([getAllFamilies(locale), getAllShopVariants(shopId, undefined, locale)]).then(([familyRows, variantRows]) => {
+    setCatalogLoadFailed(false)
+    getAllFamilies(locale).then(familyRows => {
       if (!active) return
       setFamilies(familyRows)
-      setVariants(variantRows)
     }).catch(cause => {
-      if (active) setError(cause instanceof Error ? cause.message : t('measurements.loadError'))
+      if (active) {
+        setCatalogLoadFailed(true)
+        setError(cause instanceof Error ? cause.message : t('measurements.catalogLoadError'))
+      }
     }).finally(() => {
       if (active) setCatalogLoading(false)
     })
@@ -245,6 +317,7 @@ export function ClientMeasurementsPage() {
       return
     }
     let active = true
+    historyRouteHandled.current = false
     setProfilesLoading(true)
     setProfilesLoadFailed(false)
     setProfileId('')
@@ -266,6 +339,20 @@ export function ClientMeasurementsPage() {
   }, [shopId, canReadMeasurements, activeClientId, owner, reloadKey, t])
 
   useEffect(() => {
+    if (!openHistoryOnLoad || profilesLoading || profilesLoadFailed || historyRouteHandled.current) return
+    const requestedProfileId = searchParams.get('profile')
+    const requestedFamilyId = searchParams.get('family')
+    const profile = profiles.find(item => item.id === requestedProfileId)
+      ?? profiles.find(item => item.family === requestedFamilyId)
+      ?? profiles[0]
+    if (profile) {
+      historyRouteHandled.current = true
+      setFamilyId(profile.family)
+      setProfileId(profile.id)
+    }
+  }, [openHistoryOnLoad, profiles, profilesLoading, profilesLoadFailed, searchParams])
+
+  useEffect(() => {
     if (!shopId || !canReadMeasurements || !familyId) {
       setDefinitions([])
       setDefinitionsLoading(false)
@@ -276,7 +363,7 @@ export function ClientMeasurementsPage() {
     setDefinitions([])
     setDefinitionsLoading(true)
     setDefinitionsLoadFailed(false)
-    measurementApi.definitions(shopId, familyId, variantId || null, locale).then(rows => {
+    measurementApi.definitions(shopId, familyId, locale).then(rows => {
       if (active) {
         setDefinitions(rows)
         setDefinitionsLoadFailed(false)
@@ -290,7 +377,7 @@ export function ClientMeasurementsPage() {
       if (active) setDefinitionsLoading(false)
     })
     return () => { active = false }
-  }, [shopId, canReadMeasurements, familyId, variantId, locale, reloadKey, t])
+  }, [shopId, canReadMeasurements, familyId, locale, reloadKey, t])
 
   useEffect(() => {
     if (!familyId) {
@@ -318,26 +405,6 @@ export function ClientMeasurementsPage() {
   }, [familyId, locale, reloadKey, t])
 
   useEffect(() => {
-    if (!shopId || !familyId || !canReadMeasurements) {
-      setShopDesigns([])
-      setGlobalDesigns([])
-      return
-    }
-    let active = true
-    Promise.all([
-      getAllShopDesigns(shopId, { family: familyId }, locale),
-      getAllGlobalDesigns(familyId, locale),
-    ]).then(([localDesignRows, globalDesignRows]) => {
-      if (!active) return
-      setShopDesigns(localDesignRows.filter(item => !variantId || item.variant === variantId))
-      setGlobalDesigns(globalDesignRows.filter(item => !variantId || item.variant === variantId))
-    }).catch(cause => {
-      if (active) setError(cause instanceof Error ? cause.message : t('measurements.loadError'))
-    })
-    return () => { active = false }
-  }, [shopId, familyId, variantId, canReadMeasurements, locale, reloadKey, t])
-
-  useEffect(() => {
     if (!shopId || !canReadMeasurements || !activeClientId || !profileId) {
       setSets([])
       setSelectedSetId('')
@@ -348,17 +415,37 @@ export function ClientMeasurementsPage() {
     setHistoryLoading(true)
     measurementApi.sets(shopId, activeClientId, owner, profileId).then(rows => {
       if (!active) return
-      setSets(rows)
-      setSelectedSetId(current => rows.some(row => row.id === current) ? current : rows[0]?.id ?? '')
-      setCompareFrom(rows[1]?.id ?? '')
-      setCompareTo(rows[0]?.id ?? '')
+      const locallySaved = locallySavedSetsByProfile.current.get(profileId)
+      const serverIds = new Set(rows.map(row => row.id))
+      const missingLocalRows = locallySaved
+        ? [...locallySaved.values()].filter(row => !serverIds.has(row.id)).sort((a, b) => b.version - a.version)
+        : []
+      const mergedRows = [...missingLocalRows, ...rows]
+      if (locallySaved) {
+        for (const row of rows) locallySaved.delete(row.id)
+        if (locallySaved.size === 0) locallySavedSetsByProfile.current.delete(profileId)
+      }
+      setSets(mergedRows)
+      const requestedSetId = searchParams.get('set')
+      setSelectedSetId(current => mergedRows.some(row => row.id === requestedSetId)
+        ? requestedSetId!
+        : mergedRows.some(row => row.id === current) ? current : mergedRows[0]?.id ?? '')
+      setCompareFrom(mergedRows[1]?.id ?? '')
+      setCompareTo(mergedRows[0]?.id ?? '')
     }).catch(cause => {
       if (active) setError(cause instanceof Error ? cause.message : t('measurements.loadError'))
     }).finally(() => {
       if (active) setHistoryLoading(false)
     })
     return () => { active = false }
-  }, [shopId, canReadMeasurements, activeClientId, profileId, owner, reloadKey, t])
+  }, [shopId, canReadMeasurements, activeClientId, profileId, owner, reloadKey, searchParams, t])
+
+  useEffect(() => {
+    if (!openHistoryOnLoad || !profileId || historyLoading) return
+    const targetId = searchParams.get('profile') ? 'measurement-style-heading' : 'measurement-history-heading'
+    const timer = window.setTimeout(() => document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120)
+    return () => window.clearTimeout(timer)
+  }, [openHistoryOnLoad, profileId, historyLoading, sets.length, searchParams])
 
   const loadGroupOptions = useCallback(async (groupId: string, retry = false) => {
     if (!shopId) return
@@ -380,14 +467,48 @@ export function ClientMeasurementsPage() {
     }
   }, [shopId, familyId, locale, optionsByGroup])
 
+  const loadFamilyDesignCatalog = useCallback(async (retry = false) => {
+    if (!shopId || !familyId || !canReadMeasurements) return
+    const scope = `${shopId}:${familyId}:${locale}:${reloadKey}`
+    if (!retry && designCatalogLoadedFor === scope) return
+    if (designCatalogRequest.current === scope) return
+    designCatalogRequest.current = scope
+    setDesignCatalogLoading(true)
+    setDesignCatalogFailed(false)
+    try {
+      const [localDesignRows, globalDesignRows] = await Promise.all([
+        getAllShopDesigns(shopId, { family: familyId }, locale),
+        getAllGlobalDesigns(family?.template_source ?? familyId, locale),
+      ])
+      if (activeDesignCatalogScope.current !== scope) return
+      setFamilyShopDesigns(localDesignRows)
+      setFamilyGlobalDesigns(globalDesignRows)
+      setDesignCatalogLoadedFor(scope)
+    } catch (cause) {
+      if (activeDesignCatalogScope.current === scope) {
+        setDesignCatalogFailed(true)
+        setError(cause instanceof Error ? cause.message : t('measurements.loadError'))
+      }
+    } finally {
+      if (designCatalogRequest.current === scope) {
+        designCatalogRequest.current = ''
+        if (activeDesignCatalogScope.current === scope) setDesignCatalogLoading(false)
+      }
+    }
+  }, [shopId, familyId, family?.template_source, canReadMeasurements, locale, reloadKey, designCatalogLoadedFor, t])
+
+  useEffect(() => {
+    if (familyId) void loadFamilyDesignCatalog()
+  }, [familyId, loadFamilyDesignCatalog])
+
   const handleFamilyChange = (nextFamilyId: string) => {
+    if (!confirmDiscardDraft()) return
     setFamilyId(nextFamilyId)
-    setVariantId('')
     setProfileId('')
     setSets([])
     setSelectedSetId('')
     setDefinitions([])
-    setDraftValues({})
+    replaceDraftValues({})
     setGroups([])
     setOptionsByGroup({})
     setActiveGroupId(null)
@@ -401,20 +522,8 @@ export function ClientMeasurementsPage() {
     setError('')
   }
 
-  const handleVariantChange = (nextVariantId: string) => {
-    setVariantId(nextVariantId)
-    setProfileId('')
-    setSets([])
-    setSelectedSetId('')
-    setDraftValues({})
-    setSelectedDesign(null)
-    setSelectedStyles({})
-    setDesignName('')
-    setComparison(null)
-    setError('')
-  }
-
   const selectClient = (nextClient: Client) => {
+    if (!confirmDiscardDraft()) return
     setActiveClientId(nextClient.id)
     setClient(nextClient)
     setWearerId('client')
@@ -422,86 +531,118 @@ export function ClientMeasurementsPage() {
     setProfileId('')
     setSets([])
     setSelectedSetId('')
-    setDraftValues({})
+    replaceDraftValues({})
     setDefinitions([])
     setGroups([])
     setOptionsByGroup({})
     setActiveGroupId(null)
     setFamilyId('')
-    setVariantId('')
     setSelectedStyles({})
     setSelectedDesign(null)
     setFabric(null)
     setError('')
   }
 
-  const createProfile = async () => {
+  const ensureMeasurementProfile = useCallback(async (): Promise<string | null> => {
     if (
       !shopId
       || !activeClientId
       || !familyId
       || !canWriteMeasurements
       || profileSaveInFlight.current
-    ) return
+    ) return null
     if (matchingProfile) {
-      setProfileId(matchingProfile.id)
-      setNotice('')
-      return
+      return matchingProfile.id
     }
+    const requestedScope = [shopId, activeClientId, owner.kind, owner.kind === 'client' ? 'client' : owner.id, familyId].join(':')
     profileSaveInFlight.current = true
     setSavingProfile(true)
     setError('')
-    setNotice('')
     try {
-      const created = await measurementApi.createProfile(shopId, activeClientId, owner, familyId, variantId || null)
+      const created = await measurementApi.createProfile(shopId, activeClientId, owner, familyId)
+      if (activeProfileScopeRef.current !== requestedScope) return null
       setProfiles(current => [created, ...current])
-      setProfileId(created.id)
-      setNotice(t('measurements.profileCreated'))
+      return created.id
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t('measurements.profileError'))
+      const originalError = cause instanceof Error ? cause.message : t('measurements.profileError')
+      try {
+        const [latestProfiles, latestFamilies] = await Promise.all([
+          measurementApi.profiles(shopId, activeClientId, owner),
+          getAllFamilies(locale),
+        ])
+        if (activeProfileScopeRef.current === requestedScope) {
+          setProfiles(latestProfiles)
+          setFamilies(latestFamilies)
+          const existing = latestProfiles.find(item => item.family === familyId && item.variant === null)
+          if (existing) {
+            setError('')
+            return existing.id
+          }
+          if (!latestFamilies.some(item => item.id === familyId)) {
+            setFamilyId('')
+            setProfileId('')
+          }
+        }
+      } catch {
+        // Keep the original save error visible if recovery reads also fail.
+      }
+      if (activeProfileScopeRef.current === requestedScope) setError(originalError)
+      return null
     } finally {
       profileSaveInFlight.current = false
       setSavingProfile(false)
     }
-  }
+  }, [shopId, activeClientId, familyId, canWriteMeasurements, matchingProfile, owner, locale, t])
 
-  const saveMeasurements = async () => {
+  const saveMeasurements = useCallback(async (values: Record<string, DraftValue>): Promise<boolean> => {
+    const requestedScope = activeProfileScopeRef.current
     if (
       !shopId
       || !activeClientId
-      || !profileId
+      || !familyId
       || !canWriteMeasurements
+      || profilesLoading
+      || profilesLoadFailed
       || measurementSaveInFlight.current
-    ) return
-    const entered = definitions.filter(definition => draftValues[definition.id]?.value.trim())
+    ) return false
+    const entered = definitions.filter(definition => values[definition.id]?.value.trim())
     if (!entered.length || entered.some(definition => (
-      !/^-?\d+(?:\.\d{1,4})?$/.test(draftValues[definition.id].value.trim())
-      || !draftValues[definition.id].unit
+      !/^-?\d+(?:\.\d{1,4})?$/.test(values[definition.id].value.trim())
+      || !values[definition.id].unit
     ))) {
       setError(t('measurements.enterValue'))
-      return
+      return false
     }
     measurementSaveInFlight.current = true
     setSavingMeasurements(true)
     setError('')
     setNotice('')
     try {
-      const created = await measurementApi.saveSet(shopId, activeClientId, owner, profileId, entered.map(definition => ({
+      const targetProfileId = profileId || matchingProfile?.id || await ensureMeasurementProfile()
+      if (!targetProfileId || activeProfileScopeRef.current !== requestedScope) return false
+      const created = await measurementApi.saveSet(shopId, activeClientId, owner, targetProfileId, entered.map(definition => ({
         definition_id: definition.id,
-        value: draftValues[definition.id].value.trim(),
-        unit: draftValues[definition.id].unit as 'CM' | 'INCH',
+        value: values[definition.id].value.trim(),
+        unit: values[definition.id].unit as 'CM' | 'INCH',
       })))
+      if (activeProfileScopeRef.current !== requestedScope) return false
+      const localProfileSets = locallySavedSetsByProfile.current.get(targetProfileId) ?? new Map<string, MeasurementSet>()
+      localProfileSets.set(created.id, created)
+      locallySavedSetsByProfile.current.set(targetProfileId, localProfileSets)
+      setProfileId(targetProfileId)
       setSets(current => [created, ...current.filter(item => item.id !== created.id)])
       setSelectedSetId(created.id)
-      setDraftValues({})
+      replaceDraftValues({})
       setNotice(t('measurements.versionSaved'))
+      return true
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t('measurements.saveError'))
+      return false
     } finally {
       measurementSaveInFlight.current = false
       setSavingMeasurements(false)
     }
-  }
+  }, [shopId, activeClientId, familyId, profileId, matchingProfile, canWriteMeasurements, profilesLoading, profilesLoadFailed, definitions, owner, ensureMeasurementProfile, replaceDraftValues, t])
 
   const exportMeasurementWorksheet = async () => {
     if (!shopId || !activeClientId || !profileId || !selectedSet || worksheetExportInFlight.current) return
@@ -541,6 +682,8 @@ export function ClientMeasurementsPage() {
       || !canWriteMeasurements
       || copyInFlight.current
     ) return
+    if (!confirmDiscardDraft()) return
+    replaceDraftValues({})
     copyInFlight.current = true
     setCopyingSetId(set.id)
     setError('')
@@ -549,7 +692,7 @@ export function ClientMeasurementsPage() {
       const copied = await measurementApi.copySet(shopId, activeClientId, owner, profileId, set.id)
       setSets(current => [copied, ...current.filter(item => item.id !== copied.id)])
       setSelectedSetId(copied.id)
-      setDraftValues(Object.fromEntries(copied.values.map(value => [value.definition, { value: value.value, unit: value.unit }])))
+      replaceDraftValues(Object.fromEntries(copied.values.map(value => [value.definition, { value: value.value, unit: value.unit }])))
       setNotice(t('measurements.copySaved'))
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t('measurements.copyError'))
@@ -560,7 +703,8 @@ export function ClientMeasurementsPage() {
   }
 
   const setDraftFromMeasurementSet = (set: MeasurementSet) => {
-    setDraftValues(Object.fromEntries(set.values.map(value => [value.definition, { value: value.value, unit: value.unit }])))
+    if (!confirmDiscardDraft()) return
+    replaceDraftValues(Object.fromEntries(set.values.map(value => [value.definition, { value: value.value, unit: value.unit }])))
     setNotice(t('measurements.useAsStartingPoint'))
   }
 
@@ -607,6 +751,15 @@ export function ClientMeasurementsPage() {
   }
 
   const chooseExistingDesign = (designId: string) => {
+    if (selectedDesign?.id === designId) {
+      setSelectedDesign(null)
+      setDesignSaveIncomplete(false)
+      setDesignName('')
+      setDesignMessage('')
+      setActiveGroupId(null)
+      setSelectedStyles({})
+      return
+    }
     const design = [...shopDesigns, ...globalDesigns].find(item => item.id === designId) ?? null
     setSelectedDesign(design)
     setDesignSaveIncomplete(false)
@@ -625,7 +778,6 @@ export function ClientMeasurementsPage() {
     if (
       !shopId
       || !familyId
-      || !variantId
       || !canWriteMeasurements
       || designSaveInFlight.current
     ) return
@@ -645,7 +797,7 @@ export function ClientMeasurementsPage() {
     setDesignSaveIncomplete(false)
     let created: Design | null = null
     try {
-      created = await createShopDesign(shopId, { family_id: familyId, variant_id: variantId, name })
+      created = await createShopDesign(shopId, { family_id: familyId, name })
       if (!created.latest_version?.id) throw new Error(t('measurements.designDraftUnavailable'))
       for (const option of selectedOptions) {
         await addShopDesignSelection(shopId, created.latest_version.id, { style_option_id: option.id })
@@ -689,6 +841,7 @@ export function ClientMeasurementsPage() {
   }
 
   const selectSupplierShop = (nextShopId: string) => {
+    if (!confirmDiscardDraft()) return
     setSupplierShopId(nextShopId)
     setActiveClientId('')
     setClient(null)
@@ -696,10 +849,11 @@ export function ClientMeasurementsPage() {
     setClientChooserOpen(true)
     setClientSearch('')
     setFamilyId('')
-    setVariantId('')
     setProfileId('')
     setProfiles([])
     setSets([])
+    setSelectedSetId('')
+    replaceDraftValues({})
     setGroups([])
     setSelectedStyles({})
     setSelectedDesign(null)
@@ -712,7 +866,8 @@ export function ClientMeasurementsPage() {
 
   const isContextLoading = isMainSupplier ? supplierShopsLoading : shopContextLoading
   const setCount = sets.length
-  const canSaveDesign = canWriteMeasurements && Boolean(variantId) && Object.values(selectedStyles).some(rows => rows.length)
+  const canSaveDesign = canWriteMeasurements && Object.values(selectedStyles).some(rows => rows.length)
+  const showMeasurementEntry = Boolean(profileId || (familyId && canWriteMeasurements && !openHistoryOnLoad))
   const handleRetryPage = () => {
     setError('')
     setReloadKey(value => value + 1)
@@ -720,16 +875,16 @@ export function ClientMeasurementsPage() {
 
   return <div className="content-wrap measurement-workspace">
     <div className="measurement-page-heading">
-      <div><span className="backoffice-eyebrow"><Ruler size={14} /> {t('measurements.title')}</span><h1>{t('measurements.title')}{client ? ` · ${client.name}` : ''}</h1><p>{t('measurements.subtitle')}</p></div>
+      <div><span className="backoffice-eyebrow"><Ruler size={14} /> {t('measurements.title')}</span><h1 aria-label={client ? `${t('measurements.title')} · ${client.name}` : undefined}>{t('measurements.title')}{client && <span className="measurement-page-client-name">{client.name}</span>}</h1><p>{t('measurements.subtitle')}</p></div>
       {routeClientId && <Link className="btn-secondary" to={`/clients/${routeClientId}`}>← {t('clients.title')}</Link>}
     </div>
 
     {isMainSupplier && <section className="measurement-context-card info-card">
       <label htmlFor="measurement-shop-select">{t('measurements.chooseShop')}</label>
-      <select id="measurement-shop-select" value={supplierShopId} onChange={event => selectSupplierShop(event.target.value)}>
-        <option value="">{t('measurements.chooseShop')}</option>
-        {supplierShops.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
-      </select>
+      <CustomSelect id="measurement-shop-select" className="measurement-select" ariaLabel={t('measurements.chooseShop')} value={supplierShopId} onChange={selectSupplierShop} options={[
+        { value: '', label: t('measurements.chooseShop') },
+        ...supplierShops.map(item => ({ value: item.id, label: item.name })),
+      ]} />
       <small>{t('measurements.chooseShopHint')}</small>
     </section>}
 
@@ -740,7 +895,7 @@ export function ClientMeasurementsPage() {
     {isContextLoading ? <div className="measurement-empty" aria-busy="true">{t('measurements.loading')}</div>
       : !shopId ? <div className="measurement-empty" role="status">{t('measurements.noShop')}</div>
         : !canReadMeasurements ? <div className="measurement-empty" role="alert">{t('measurements.accessDenied')}</div>
-          : <>
+          : <div className="measurement-unified-card info-card">
             <section className="measurement-workflow-card info-card" aria-labelledby="measurement-client-heading">
               <div className="measurement-section-heading"><span className="measurement-step-number">01</span><div><h2 id="measurement-client-heading">{t('measurements.chooseClient')}</h2><p>{client ? `${client.name}${wearer ? ` · ${wearer.name}` : ''}` : t('measurements.searchClients')}</p></div></div>
               {clientChooserOpen || !client ? <div className="measurement-client-picker">
@@ -748,34 +903,55 @@ export function ClientMeasurementsPage() {
                 {clientSearchLoading ? <p aria-busy="true">{t('measurements.loading')}</p>
                   : clientMatches.length ? <div className="measurement-client-results">{clientMatches.map(item => <button type="button" key={item.id} onClick={() => selectClient(item)}><strong>{item.name}</strong><span>{item.phone || item.email || t('measurements.noContactDetails')}</span><ChevronRight size={18} /></button>)}</div>
                     : clientSearch.trim() ? <p>{t('measurements.noClientMatches')}</p> : null}
-              </div> : <div className="measurement-client-selected"><div><strong>{client?.name}</strong><small>{wearer ? `${t('measurements.primaryClient')}: ${client?.name} · ${wearer.name}` : client?.phone || client?.email || ''}</small></div><button type="button" className="btn-secondary" onClick={() => { setClientChooserOpen(true); setClientSearch(''); setActiveClientId(''); setClient(null); setProfileId(''); setSets([]) }}>{t('measurements.chooseClient')}</button></div>}
+              </div> : <div className="measurement-client-selected"><div><strong>{client?.name}</strong><small>{wearer ? `${t('measurements.primaryClient')}: ${client?.name} · ${wearer.name}` : client?.phone || client?.email || ''}</small></div><button type="button" className="btn-secondary" onClick={() => {
+                if (!confirmDiscardDraft()) return
+                setClientChooserOpen(true); setClientSearch(''); setActiveClientId(''); setClient(null); setProfileId(''); setSets([])
+              }}>{t('measurements.chooseClient')}</button></div>}
               {client && !clientChooserOpen && <label className="measurement-wearer-select">
                 {t('measurements.wearer')}
-                <select value={wearerId} onChange={event => {
-                  setWearerId(event.target.value)
+                <CustomSelect className="measurement-select" ariaLabel={t('measurements.wearer')} value={wearerId} onChange={nextWearerId => {
+                  if (!confirmDiscardDraft()) return
+                  setWearerId(nextWearerId)
                   setProfileId('')
                   setProfiles([])
                   setSets([])
                   setSelectedSetId('')
-                  setDraftValues({})
-                }}>
-                  <option value="client">{t('measurements.primaryClient')} - {client.name}</option>
-                  {relatedPersons.map(person => <option key={person.id} value={person.id}>{t('measurements.relatedPerson')} - {person.name}</option>)}
-                </select>
+                  replaceDraftValues({})
+                }} options={[
+                  { value: 'client', label: `${t('measurements.primaryClient')} - ${client.name}` },
+                  ...relatedPersons.map(person => ({ value: person.id, label: `${t('measurements.relatedPerson')} - ${person.name}` })),
+                ]} />
               </label>}
             </section>
 
+            {client && !clientChooserOpen && <div className="measurement-sticky-context" aria-live="polite">
+              <strong>{client.name}{wearer ? ` · ${wearer.name}` : ''}</strong>
+              <span>{family?.name ?? ''}</span>
+            </div>}
+
             {client && !clientChooserOpen && <>
               {clientLoading ? <div className="measurement-empty" aria-busy="true">{t('measurements.loading')}</div> : <>
+                <div className="measurement-columns">
+                  <div className="measurement-primary-column">
                 <section className="measurement-workflow-card info-card" aria-labelledby="measurement-garment-heading">
-                  <div className="measurement-section-heading"><span className="measurement-step-number">02</span><div><h2 id="measurement-garment-heading">{t('measurements.garment')}</h2><p>{family ? `${family.name}${variant ? ` · ${variant.name}` : ''}` : t('measurements.chooseFamily')}</p></div></div>
+                  <div className="measurement-section-heading"><span className="measurement-step-number">02</span><div><h2 id="measurement-garment-heading">{t('measurements.garment')}</h2><p>{family?.name ?? t('measurements.chooseFamily')}</p></div></div>
                   <div className="measurement-garment-selectors">
-                    <label>{t('measurements.family')}<select value={familyId} onChange={event => handleFamilyChange(event.target.value)} disabled={catalogLoading}><option value="">{t('measurements.chooseFamily')}</option>{families.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-                    <label>{t('measurements.variant')}<select value={variantId} onChange={event => handleVariantChange(event.target.value)} disabled={!familyId || catalogLoading}><option value="">{t('measurements.noVariant')}</option>{variantsForFamily.map(item => <option key={item.id} value={item.id}>{item.name}{item.is_default ? ` · ${t('measurements.defaultVariant')}` : ''}</option>)}</select></label>
+                    <label>{t('measurements.family')}<ResponsiveChoice className="measurement-select" ariaLabel={t('measurements.family')} value={familyId} onChange={handleFamilyChange} disabled={catalogLoading || catalogLoadFailed} placeholder={familyId ? undefined : t('measurements.chooseFamily')} mobilePreviewLimit={5} options={families.map(item => ({ value: item.id, label: item.name }))} /></label>
                   </div>
                   {catalogLoading && <small aria-busy="true">{t('measurements.loading')}</small>}
-                  {!catalogLoading && familyId && variantsForFamily.length === 0 && <div className="measurement-empty">{t('catalog.noVariants')}</div>}
+                  {!catalogLoading && !catalogLoadFailed && families.length === 0 && <div className="measurement-empty" role="status">{t('catalog.noFamilies')}</div>}
                 </section>
+
+                {familyId && <div className="measurement-design-persistence">
+                  <label>{t('measurements.designName')}<input maxLength={160} value={designName} onChange={event => { setDesignName(event.target.value); setSelectedDesign(null); setDesignSaveIncomplete(false) }} placeholder={`${client.name} · ${family?.name ?? t('measurements.garment')}`} /></label>
+                  <div className="measurement-design-picker-row" onFocusCapture={() => { void loadFamilyDesignCatalog() }}><label>{t('measurements.sourceShop')} / {t('measurements.sourceGlobal')}<CustomSelect className="measurement-select" ariaLabel={`${t('measurements.sourceShop')} / ${t('measurements.sourceGlobal')}`} value={selectedDesign?.id ?? ''} onChange={chooseExistingDesign} options={[
+                    { value: '', label: '—' },
+                    ...globalDesigns.map(item => ({ value: item.id, label: item.name, group: t('measurements.sourceGlobal') })),
+                    ...shopDesigns.map(item => ({ value: item.id, label: item.name, group: t('measurements.sourceShop') })),
+                  ]} /></label></div>
+                  {designCatalogLoading && <small aria-busy="true">{t('measurements.loading')}</small>}
+                  {designCatalogFailed && <div className="measurement-error-inline" role="alert"><span>{t('measurements.loadError')}</span><button type="button" className="btn-secondary" onClick={() => void loadFamilyDesignCatalog(true)} disabled={designCatalogLoading}>{t('measurements.retry')}</button></div>}
+                </div>}
 
                 {familyId && <section className="measurement-workflow-card info-card" aria-labelledby="measurement-style-heading">
                   <div className="measurement-section-heading"><span className="measurement-step-number">03</span><div><h2 id="measurement-style-heading">{t('measurements.style')}</h2><p>{t('measurements.styleHint')}</p></div></div>
@@ -791,50 +967,31 @@ export function ClientMeasurementsPage() {
                     onRetryGroup={groupId => void loadGroupOptions(groupId, true)}
                     canWrite={canWriteMeasurements}
                   />}
-                  {groups.length > 0 && <div className="measurement-design-persistence">
-                    <label>{t('measurements.designName')}<input maxLength={160} value={designName} onChange={event => { setDesignName(event.target.value); setSelectedDesign(null); setDesignSaveIncomplete(false) }} placeholder={`${client.name} · ${family?.name ?? t('measurements.garment')}`} /></label>
-                    <div className="measurement-design-picker-row"><label>{t('measurements.sourceShop')} / {t('measurements.sourceGlobal')}<select value={selectedDesign?.id ?? ''} onChange={event => chooseExistingDesign(event.target.value)}><option value="">—</option>{globalDesigns.length > 0 && <optgroup label={t('measurements.sourceGlobal')}>{globalDesigns.map(item => <option key={item.id} value={item.id}>{item.name} · {variants.find(row => row.id === item.variant)?.name ?? ''}</option>)}</optgroup>}{shopDesigns.length > 0 && <optgroup label={t('measurements.sourceShop')}>{shopDesigns.map(item => <option key={item.id} value={item.id}>{item.name} · {variants.find(row => row.id === item.variant)?.name ?? ''}</option>)}</optgroup>}</select></label><button type="button" className="btn-primary" onClick={() => void saveShopDesign()} disabled={!canSaveDesign || designSaving || Boolean(selectedDesign)}><Save size={16} />{designSaving ? t('measurements.saving') : t('measurements.saveDesign')}</button></div>
-                    <small>{t('measurements.designSessionOnly')}</small>
-                  </div>}
+                  {groups.length > 0 && <div className="measurement-design-save"><button type="button" className="btn-primary" onClick={() => void saveShopDesign()} disabled={!canSaveDesign || designSaving || Boolean(selectedDesign)}><Save size={16} />{designSaving ? t('measurements.saving') : t('measurements.saveDesign')}</button><small>{t('measurements.designSessionOnly')}</small></div>}
                 </section>}
 
-                <section className="measurement-workflow-card info-card" aria-labelledby="measurement-profile-heading">
-                  <div className="measurement-section-heading"><span className="measurement-step-number">04</span><div><h2 id="measurement-profile-heading">{t('measurements.profile')}</h2><p>{family ? `${client.name} · ${wearer?.name ?? client.name} · ${family.name}${variant ? ` · ${variant.name}` : ''}` : t('measurements.createProfile')}</p></div></div>
-                  <div className="measurement-profile-controls">
-                    <label>{t('measurements.profile')}<select aria-label={t('measurements.profile')} value={profileId} onChange={event => {
-                      const id = event.target.value
-                      setProfileId(id)
-                      const found = profiles.find(item => item.id === id)
-                      if (found) {
-                        setFamilyId(found.family)
-                        setVariantId(found.variant ?? '')
-                        setSets([])
-                        setSelectedSetId('')
-                        setDraftValues({})
-                        setSelectedStyles({})
-                        setSelectedDesign(null)
-                        setComparison(null)
-                      }
-                    }} disabled={!familyId}><option value="">{t('measurements.noProfile')}</option>{profiles.map(item => <option key={item.id} value={item.id}>{families.find(row => row.id === item.family)?.name ?? t('measurements.unknownGarment')}{item.variant ? ` · ${variants.find(row => row.id === item.variant)?.name ?? t('measurements.unknownGarment')}` : ''}</option>)}</select></label>
-                    {canWriteMeasurements && familyId && <button type="button" className="btn-secondary" onClick={() => void createProfile()} disabled={savingProfile || profilesLoading || profilesLoadFailed || Boolean(matchingProfile && profileId === matchingProfile.id)}>{savingProfile ? t('measurements.saving') : matchingProfile ? t('measurements.existingProfile') : t('measurements.createProfile')}</button>}
-                  </div>
-                  {familyId && !matchingProfile && !profileId && <small>{t('measurements.createProfileHint')}</small>}
-                </section>
+                {openHistoryOnLoad && !profilesLoading && !profilesLoadFailed && profiles.length === 0 && <div className="measurement-empty" role="status">{t('measurements.noHistory')}</div>}
 
-                {profileId && <>
+                {showMeasurementEntry && <>
                   <section className="measurement-workflow-card info-card" aria-labelledby="measurement-entry-heading">
                     <div className="measurement-section-heading"><span className="measurement-step-number">05</span><div><h2 id="measurement-entry-heading">{t('measurements.measurements')}</h2><p>{t('measurements.unitNote')}</p></div></div>
                     {historyLoading || definitionsLoading ? <div className="measurement-empty" aria-busy="true">{t('measurements.loading')}</div> : definitionsLoadFailed ? <div className="measurement-error-inline" role="alert"><span>{t('measurements.definitionsLoadError')}</span><button type="button" className="btn-secondary" onClick={handleRetryPage}>{t('measurements.retry')}</button></div> : <MeasurementEntryForm
+                      key={draftSeedVersion}
                       definitions={definitions}
-                      values={draftValues}
-                      onChange={(definitionId, value) => setDraftValues(current => ({ ...current, [definitionId]: value }))}
-                      onSave={() => void saveMeasurements()}
-                      saving={savingMeasurements}
+                      seedValues={draftValues}
+                      previousValues={previousValues}
+                      onDirtyChange={onDraftDirtyChange}
+                      onSave={saveMeasurements}
+                      saving={savingMeasurements || savingProfile || profilesLoading || profilesLoadFailed}
                       canWrite={canWriteMeasurements}
                       locale={locale}
                     />}
                   </section>
+                </>}
+                  </div>
 
+                  <aside className="measurement-secondary-column" aria-label={t('measurements.history')}>
+                {profileId && <>
                   <section className="measurement-workflow-card info-card" aria-labelledby="measurement-history-heading">
                     <div className="measurement-section-heading"><span className="measurement-step-number">06</span><div><h2 id="measurement-history-heading">{t('measurements.history')}</h2><p>{t('measurements.correctionRule', 'Old measurement records stay unchanged. Save a new version for corrections.')}</p></div>{selectedSet && canReadMeasurements && <button type="button" className="btn-secondary measurement-export-button" onClick={() => void exportMeasurementWorksheet()} disabled={exportingWorksheet}><Download size={16} />{exportingWorksheet ? t('measurements.exportingWorksheet') : t('measurements.exportWorksheet', { version: selectedSet.version })}</button>}</div>
                     {historyLoading ? <div className="measurement-empty" aria-busy="true">{t('measurements.loading')}</div> : sets.length === 0 ? <div className="measurement-empty">{t('measurements.noHistory')}</div> : <div className="measurement-history-list">{sets.map(set => <article className={`measurement-history-card${selectedSetId === set.id ? ' is-selected' : ''}`} key={set.id}>
@@ -842,7 +999,7 @@ export function ClientMeasurementsPage() {
                       <div className="measurement-history-values">{set.values.map(value => <div key={value.id}><span>{value.label}</span><strong>{value.value} {value.unit}</strong></div>)}</div>
                       {canWriteMeasurements && <div className="measurement-history-actions"><button type="button" className="btn-secondary" onClick={() => setDraftFromMeasurementSet(set)} disabled={Boolean(copyingSetId)}><Copy size={15} />{t('measurements.useAsStartingPoint')}</button><button type="button" className="btn-secondary" onClick={() => void copyMeasurementSet(set)} disabled={Boolean(copyingSetId)}><Archive size={15} />{copyingSetId === set.id ? t('measurements.saving') : t('measurements.copyVersion')}</button></div>}
                     </article>)}</div>}
-                    {sets.length > 1 && <div className="measurement-compare-controls"><label>{t('measurements.previousVersion')}<select value={compareFrom} onChange={event => setCompareFrom(event.target.value)}>{sets.map(set => <option key={set.id} value={set.id}>{t('measurements.version', { version: set.version })}</option>)}</select></label><label>{t('measurements.currentVersion')}<select value={compareTo} onChange={event => setCompareTo(event.target.value)}>{sets.map(set => <option key={set.id} value={set.id}>{t('measurements.version', { version: set.version })}</option>)}</select></label><button type="button" className="btn-secondary" onClick={() => void compareMeasurementSets()} disabled={comparing}>{comparing ? t('measurements.loading') : t('measurements.compare')}</button></div>}
+                    {sets.length > 1 && <div className="measurement-compare-controls"><label>{t('measurements.previousVersion')}<CustomSelect className="measurement-select" ariaLabel={t('measurements.previousVersion')} value={compareFrom} onChange={setCompareFrom} options={sets.map(set => ({ value: set.id, label: t('measurements.version', { version: set.version }) }))} /></label><label>{t('measurements.currentVersion')}<CustomSelect className="measurement-select" ariaLabel={t('measurements.currentVersion')} value={compareTo} onChange={setCompareTo} options={sets.map(set => ({ value: set.id, label: t('measurements.version', { version: set.version }) }))} /></label><button type="button" className="btn-secondary" onClick={() => void compareMeasurementSets()} disabled={comparing}>{comparing ? t('measurements.loading') : t('measurements.compare')}</button></div>}
                     {comparison && <div className="measurement-comparison" role="region" aria-label={t('measurements.compare')}><div className="measurement-comparison-heading"><strong>{t('measurements.previousVersion')} → {t('measurements.currentVersion')}</strong><button type="button" className="btn-secondary" onClick={() => setComparison(null)}>{t('catalog.close')}</button></div><div className="measurement-comparison-table"><div className="measurement-comparison-row is-header"><span>{t('measurements.measurements')}</span><span>{t('measurements.previousVersion')}</span><span>{t('measurements.currentVersion')}</span><span>{t('measurements.difference')}</span></div>{comparison.results.map(row => <div className="measurement-comparison-row" key={row.definition_id}><span>{row.label}</span><span>{row.from_value ?? '—'} {row.from_unit ?? ''}</span><span>{row.to_value ?? '—'} {row.to_unit ?? ''}</span><span>{row.unit_mismatch ? t('measurements.unitMismatch') : row.difference ?? '—'}</span></div>)}</div></div>}
                   </section>
                 </>}
@@ -853,12 +1010,12 @@ export function ClientMeasurementsPage() {
                   <p className="measurement-unit-note">{t('measurements.fabricNote')}</p>
                   {showFabrics && (fabricsLoading ? <div className="measurement-empty" aria-busy="true">{t('measurements.loading')}</div> : fabrics.length === 0 ? <div className="measurement-empty">{t('measurements.noFabrics')}</div> : <div className="measurement-fabric-list">{fabrics.map(item => <button type="button" key={item.material_id} className={`measurement-fabric-option${fabric?.material_id === item.material_id ? ' is-selected' : ''}`} onClick={() => setFabric(item)} aria-pressed={fabric?.material_id === item.material_id}><span><strong>{item.name}</strong><small>{item.code} · {item.unit} · {item.on_hand} {t('measurements.onHand')} · {item.reserved} {t('measurements.reserved')}</small></span><b>{item.available} {item.unit} {t('measurements.available')}</b></button>)}</div>)}
                 </section>}
+                  </aside>
 
                 {client && <MeasurementReview
                   client={client}
                   wearer={wearer}
                   family={family}
-                  variant={variant}
                   groups={groups}
                   selectedStyles={selectedStyles}
                   designName={selectedDesign?.name ?? designName}
@@ -866,9 +1023,19 @@ export function ClientMeasurementsPage() {
                   measurementSet={selectedSet}
                   historyCount={setCount}
                   fabric={fabric}
+                  onCreateOrder={selectedSet && (role === 'ADMIN' || (role === 'STAFF' && (workFunctions.includes('SALES') || workFunctions.includes('MEASUREMENT')))) ? () => {
+                    const query = new URLSearchParams({ client: client.id, measurement: selectedSet.id })
+                    if (wearer) query.set('wearer', wearer.id)
+                    const published = selectedDesign?.latest_published_version ?? (selectedDesign?.latest_version?.status === 'PUBLISHED' ? selectedDesign.latest_version : null)
+                    if (published) query.set('design', published.id)
+                    if (selectedDesign) query.set('sourceDesign', selectedDesign.id)
+                    if (fabric) query.set('material', fabric.material_id)
+                    navigate(`/orders/new?${query}`)
+                  } : undefined}
                 />}
+                </div>
               </>}
             </>}
-          </>}
+          </div>}
   </div>
 }

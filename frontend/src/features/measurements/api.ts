@@ -2,6 +2,7 @@ import { apiRequest, binaryRequest } from '../../services/apiClient'
 import type {
   InventoryFabric,
   MeasurementComparison,
+  MeasurementDefinitionCreateInput,
   MeasurementDefinition,
   MeasurementOwner,
   MeasurementPage,
@@ -30,20 +31,41 @@ function profilePath(shopId: string, clientId: string, owner: MeasurementOwner) 
 }
 
 export const measurementApi = {
-  definitions(shopId: string, familyId: string, variantId: string | null, locale: string): Promise<MeasurementDefinition[]> {
-    const query = new URLSearchParams({ family_id: familyId, locale })
-    if (variantId) query.set('variant_id', variantId)
+  allDefinitions(shopId: string, locale = 'en'): Promise<MeasurementDefinition[]> {
+    const query = new URLSearchParams({ locale })
     return allPages<MeasurementDefinition>(
       `/api/v1/shops/${encodeURIComponent(shopId)}/measurement-definitions/?${query}`,
     )
   },
+  definitions(shopId: string, familyId: string, locale: string): Promise<MeasurementDefinition[]> {
+    const query = new URLSearchParams({ family_id: familyId, locale })
+    return allPages<MeasurementDefinition>(
+      `/api/v1/shops/${encodeURIComponent(shopId)}/measurement-definitions/?${query}`,
+    )
+  },
+  createDefinition(shopId: string, data: MeasurementDefinitionCreateInput): Promise<MeasurementDefinition> {
+    return apiRequest<MeasurementDefinition>(`/api/v1/shops/${encodeURIComponent(shopId)}/measurement-definitions/`, {
+      method: 'POST', body: data,
+    })
+  },
+  attachDefinitionMapping(
+    shopId: string,
+    definitionId: string,
+    familyId: string,
+    sortOrder?: number,
+  ): Promise<MeasurementDefinition> {
+    return apiRequest<MeasurementDefinition>(`/api/v1/shops/${encodeURIComponent(shopId)}/measurement-definitions/${encodeURIComponent(definitionId)}/mappings/`, {
+      method: 'POST',
+      body: { family_id: familyId, ...(sortOrder === undefined ? {} : { sort_order: sortOrder }) },
+    })
+  },
   profiles(shopId: string, clientId: string, owner: MeasurementOwner): Promise<MeasurementProfile[]> {
     return allPages<MeasurementProfile>(profilePath(shopId, clientId, owner))
   },
-  createProfile(shopId: string, clientId: string, owner: MeasurementOwner, familyId: string, variantId: string | null) {
+  createProfile(shopId: string, clientId: string, owner: MeasurementOwner, familyId: string) {
     return apiRequest<MeasurementProfile>(profilePath(shopId, clientId, owner), {
       method: 'POST',
-      body: { family_id: familyId, variant_id: variantId },
+      body: { family_id: familyId },
     })
   },
   sets(shopId: string, clientId: string, owner: MeasurementOwner, profileId: string): Promise<MeasurementSet[]> {

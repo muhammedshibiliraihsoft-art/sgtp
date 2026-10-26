@@ -44,12 +44,12 @@ export function ConfirmActionModal({ member, action, onConfirm, onCancel }: Prop
   }
 
   return (
-    <div className="modal-overlay">
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="member-action-title" tabIndex={-1}>
       <div className="modal-content">
-        <h2>{title}</h2>
+        <h2 id="member-action-title">{title}</h2>
         <p>{message}</p>
         <div className="modal-actions">
-          <button className="btn-secondary" onClick={onCancel}>Cancel</button>
+          <button data-dialog-close className="btn-secondary" onClick={onCancel}>Cancel</button>
           <button className={btnClass} onClick={onConfirm}>{confirmText}</button>
         </div>
       </div>

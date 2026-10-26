@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { cleanup, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import { UsersPage } from './UsersPage'
 import { usersApi } from './api'
@@ -44,6 +44,8 @@ const mockMembers = [
 ]
 
 describe('UsersPage', () => {
+  afterEach(cleanup)
+
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(usersApi.memberships).mockResolvedValue({ count: mockMembers.length, next: null, previous: null, results: mockMembers } as any)
@@ -63,6 +65,20 @@ describe('UsersPage', () => {
     expect(screen.getAllByText('USR-2').length).toBeGreaterThan(0)
   })
 
+  it('debounces member search and does not refetch Shop capacity for search changes', async () => {
+    render(<BrowserRouter><UsersPage /></BrowserRouter>)
+    await screen.findAllByText('Admin User')
+    vi.mocked(usersApi.memberships).mockClear()
+    vi.mocked(usersApi.stats).mockClear()
+    const search = screen.getByPlaceholderText('Search by name or User ID')
+    fireEvent.change(search, { target: { value: 'A' } })
+    fireEvent.change(search, { target: { value: 'Ad' } })
+    fireEvent.change(search, { target: { value: 'Admin' } })
+    await waitFor(() => expect(usersApi.memberships).toHaveBeenCalledTimes(1))
+    expect(usersApi.memberships).toHaveBeenCalledWith('t1', { search: 'Admin', role: 'ALL', active: 'ALL', page: 1 })
+    expect(usersApi.stats).not.toHaveBeenCalled()
+  })
+
   it('Shop Admin Create User exposes STAFF/VIEWER only and no Shop selector', async () => {
     render(<BrowserRouter><UsersPage /></BrowserRouter>)
     await screen.findAllByText('Admin User') // Wait for data to load
@@ -73,14 +89,11 @@ describe('UsersPage', () => {
     // Check roles using CustomSelect
     // Find the dropdown button containing "Staff (Operational access)" (the default selected option)
     const roleSelectButton = screen.getAllByRole('button', { name: /Staff \(Operational access\)/i })[0]
-    fireEvent.click(roleSelectButton) // Open dropdown
-    
-    // Check that STAFF and VIEWER are available options
-    expect(screen.getAllByRole('button', { name: /Staff \(Operational access\)/i }).length).toBeGreaterThan(0)
-    expect(screen.getAllByRole('button', { name: /Viewer \(Read-only\)/i }).length).toBeGreaterThan(0)
+    expect(roleSelectButton).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /Viewer \(Read-only\)/i })).toBeInTheDocument()
     
     // Check that ADMIN is NOT available
-    expect(screen.queryByRole('button', { name: /Admin/i })).not.toBeInTheDocument()
+    expect(within(screen.getByRole('dialog')).queryByRole('button', { name: /^Admin$/i })).not.toBeInTheDocument()
     
     // Check no shop selector
     expect(screen.queryByLabelText(/Shop/i)).not.toBeInTheDocument()

@@ -3,12 +3,11 @@ import { uploadPrivateMediaBatch } from '../../services/privateMediaUpload'
 import type { ApiPage } from '../catalog/types'
 import type { Design, DesignCreateRequest, DesignReference, DesignSelection, PublishResponse, SelectionCreateRequest, ShopDesignPage } from './types'
 
-function pageUrl(path: string, page: number, familyId?: string, variantId?: string, locale = 'en') {
+function pageUrl(path: string, page: number, familyId?: string, locale = 'en') {
   const url = new URL(path, window.location.origin)
   url.searchParams.set('page', String(page))
   url.searchParams.set('locale', locale)
   if (familyId) url.searchParams.set('family', familyId)
-  if (variantId) url.searchParams.set('variant', variantId)
   return url.pathname + url.search
 }
 
@@ -32,6 +31,14 @@ export function addShopDesignSelection(shopId: string, versionId: string, data: 
   return apiRequest<DesignSelection>(`/api/v1/shops/${shopId}/design-versions/${versionId}/selections/`, { method: 'POST', body: data })
 }
 
+export function updateShopDesignSelection(shopId: string, versionId: string, selectionId: string, data: SelectionCreateRequest): Promise<DesignSelection> {
+  return apiRequest<DesignSelection>(`/api/v1/shops/${shopId}/design-versions/${versionId}/selections/${selectionId}/`, { method: 'PATCH', body: data })
+}
+
+export function removeUnmappedShopDesignSelection(shopId: string, versionId: string, selectionId: string): Promise<void> {
+  return apiRequest<void>(`/api/v1/shops/${shopId}/design-versions/${versionId}/selections/${selectionId}/`, { method: 'DELETE' })
+}
+
 export function publishShopDesignVersion(shopId: string, versionId: string): Promise<PublishResponse> {
   return apiRequest<PublishResponse>(`/api/v1/shops/${shopId}/design-versions/${versionId}/publish/`, { method: 'POST', body: {} })
 }
@@ -48,11 +55,11 @@ export function uploadShopDesignReferences(shopId: string, versionId: string, fi
   })
 }
 
-export async function getAllShopDesigns(shopId: string, filters: { family?: string; variant?: string } = {}, locale = 'en'): Promise<Design[]> {
+export async function getAllShopDesigns(shopId: string, filters: { family?: string } = {}, locale = 'en'): Promise<Design[]> {
   let page = 1
   const designs: Design[] = []
   while (true) {
-    const response = await apiRequest<ApiPage<Design>>(pageUrl(`/api/v1/shops/${shopId}/designs/`, page, filters.family, filters.variant, locale))
+    const response = await apiRequest<ApiPage<Design>>(pageUrl(`/api/v1/shops/${shopId}/designs/`, page, filters.family, locale))
     designs.push(...response.results)
     if (!response.next) return designs
     page += 1

@@ -97,6 +97,7 @@ export async function bootstrapCsrf(): Promise<string> {
 
 async function refreshAccessToken(): Promise<string> {
   if (!refreshPromise) {
+    const refreshGeneration = authGeneration
     refreshPromise = (async () => {
       const csrf = await bootstrapCsrf()
       let response: Response
@@ -109,11 +110,16 @@ async function refreshAccessToken(): Promise<string> {
         throw new ApiError('Unable to reach the service. Check your connection and try again.', 0, 'network_unavailable')
       }
       const data = await readResponse<{ access: string }>(response)
+      if (authGeneration !== refreshGeneration) {
+        throw new ApiError('Your session changed. Please retry the request.', 401, 'session_changed')
+      }
       accessToken = data.access
       return data.access
     })().catch((error: unknown) => {
-      clearCredentials()
-      unauthorizedHandler?.()
+      if (authGeneration === refreshGeneration) {
+        clearCredentials()
+        unauthorizedHandler?.()
+      }
       throw error
     }).finally(() => { refreshPromise = null })
   }
@@ -146,7 +152,14 @@ async function coreRequest(path: string, options: RequestOptions, body?: BodyIni
     if (accessToken && accessToken !== tokenUsed) {
       return coreRequest(path, { ...options, retryUnauthorized: false }, body)
     }
-    await refreshAccessToken()
+    try {
+      await refreshAccessToken()
+    } catch (error) {
+      if (accessToken && accessToken !== tokenUsed) {
+        return coreRequest(path, { ...options, retryUnauthorized: false }, body)
+      }
+      throw error
+    }
     return coreRequest(path, { ...options, retryUnauthorized: false }, body)
   }
   if (response.status === 401 && authenticated) {

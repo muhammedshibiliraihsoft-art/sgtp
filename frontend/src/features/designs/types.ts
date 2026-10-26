@@ -47,10 +47,12 @@ export interface Design {
   id: string
   tenant: string | null
   family: string
-  variant: string
+  family_status?: 'ACTIVE' | 'ARCHIVED'
+  variant: string | null
   name: string
   status: 'ACTIVE' | 'ARCHIVED'
   latest_version: DesignVersion | null
+  latest_published_version?: DesignVersion | null
   created_at: string
   updated_at: string
 }
@@ -64,7 +66,6 @@ export interface ShopDesignPage {
 
 export interface DesignCreateRequest {
   family_id: string
-  variant_id: string
   name: string
   translations?: Array<{ locale: 'en' | 'ar-KW' | 'bn' | 'ur'; name: string; description?: string }>
 }

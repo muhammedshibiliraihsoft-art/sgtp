@@ -3,6 +3,9 @@
   gap: 18px;
   width: min(100%, 1320px);
 }
+.measurement-review-order-action { display: flex; justify-content: flex-end; padding-top: 16px; }
+.measurement-review-order-action .btn-primary { min-height: 44px; min-width: 180px; background: #000; border-color: #000; color: #fff; }
+@media (max-width: 600px) { .measurement-review-order-action .btn-primary { width: 100%; } }
 
 .measurement-page-heading,
 .measurement-section-heading,
@@ -19,6 +22,7 @@
 
 .measurement-page-heading { align-items: flex-start; }
 .measurement-page-heading h1 { margin: 6px 0; font-size: clamp(26px, 4vw, 34px); }
+.measurement-page-client-name::before { content: ' · '; }
 .measurement-page-heading p,
 .measurement-section-heading p { margin: 4px 0 0; color: var(--color-text-muted); }
 .measurement-workspace .info-card {
@@ -29,6 +33,38 @@
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
 }
+.measurement-workspace .measurement-unified-card { display: grid; gap: 4px; padding: 12px 24px; overflow: visible; }
+.measurement-unified-card .measurement-workflow-card.info-card,
+.measurement-unified-card .measurement-review.info-card {
+  padding: 20px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.measurement-unified-card .measurement-workflow-card:last-child,
+.measurement-unified-card .measurement-review.info-card { border-bottom: 0; }
+.measurement-unified-card .measurement-step-number { display: none; }
+.measurement-sticky-context {
+  position: sticky;
+  z-index: 3;
+  top: calc(var(--topbar-height, 64px) + 8px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+.measurement-sticky-context strong { overflow: hidden; color: var(--color-text); text-overflow: ellipsis; white-space: nowrap; }
+.measurement-sticky-context span { overflow: hidden; text-align: end; text-overflow: ellipsis; white-space: nowrap; }
 
 .measurement-context-card { display: grid; gap: 8px; max-width: 680px; }
 .measurement-context-card label,
@@ -43,13 +79,7 @@
   font-size: 13px;
   font-weight: 600;
 }
-.measurement-context-card select,
-.measurement-garment-selectors select,
-.measurement-profile-controls select,
 .measurement-design-persistence input,
-.measurement-design-persistence select,
-.measurement-compare-controls select,
-.measurement-wearer-select select,
 .measurement-client-picker input {
   width: 100%;
   min-height: 44px;
@@ -60,24 +90,18 @@
   color: var(--color-text);
   font: inherit;
 }
-.measurement-context-card select:hover:not(:disabled),
-.measurement-garment-selectors select:hover:not(:disabled),
-.measurement-profile-controls select:hover:not(:disabled),
-.measurement-design-persistence select:hover:not(:disabled),
-.measurement-compare-controls select:hover:not(:disabled),
-.measurement-wearer-select select:hover:not(:disabled) { border-color: var(--color-primary); }
-.measurement-context-card select:focus-visible,
-.measurement-garment-selectors select:focus-visible,
-.measurement-profile-controls select:focus-visible,
-.measurement-design-persistence select:focus-visible,
-.measurement-compare-controls select:focus-visible,
-.measurement-wearer-select select:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
-.measurement-context-card select:disabled,
-.measurement-garment-selectors select:disabled,
-.measurement-profile-controls select:disabled,
-.measurement-design-persistence select:disabled,
-.measurement-compare-controls select:disabled,
-.measurement-wearer-select select:disabled { cursor: not-allowed; opacity: .65; }
+.measurement-select { display: block; width: 100%; min-width: 0; }
+.measurement-select .responsive-choice-tile {
+  min-height: 44px;
+  height: auto;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--color-canvas);
+  color: var(--color-text);
+  font: inherit;
+  text-align: start;
+}
+.measurement-select .responsive-choice-tile:hover:not(:disabled) { border-color: var(--color-primary); }
 .measurement-context-card small,
 .measurement-design-persistence small,
 .measurement-workflow-card > small { color: var(--color-text-muted); }
@@ -138,9 +162,14 @@
 }
 .measurement-profile-controls { grid-template-columns: minmax(0, 1fr) auto; }
 .measurement-profile-controls .btn-secondary { min-height: 44px; }
+.measurement-profile-prompt { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+.measurement-profile-prompt .btn-secondary { min-height: 40px; }
+.measurement-profile-prompt small { color: var(--color-text-muted); }
 .measurement-design-persistence { display: grid; gap: 12px; padding-top: 18px; border-top: 1px solid var(--color-border); }
 .measurement-design-picker-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 12px; }
 .measurement-design-picker-row button { min-height: 44px; white-space: nowrap; }
+.measurement-design-save { display: grid; justify-items: start; gap: 8px; }
+.measurement-design-save button { min-height: 44px; }
 
 .measurement-style-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .measurement-style-group { min-width: 0; overflow: hidden; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-canvas); }
@@ -166,7 +195,7 @@
 .measurement-option-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
 .measurement-option-card {
   display: grid;
-  grid-template-rows: 132px auto auto;
+  grid-template-rows: 132px auto;
   min-width: 0;
   padding: 8px;
   border: 1px solid var(--color-border);
@@ -174,16 +203,24 @@
   background: var(--color-surface);
   color: var(--color-text);
   text-align: start;
-  cursor: pointer;
 }
 .measurement-option-card:hover { border-color: var(--color-primary); }
 .measurement-option-card.is-selected { border-color: var(--color-primary); box-shadow: 0 0 0 2px var(--color-primary-soft); }
+.measurement-option-select { display: grid; align-content: start; gap: 2px; min-width: 0; padding: 0; border: 0; background: transparent; color: inherit; text-align: start; cursor: pointer; }
+.measurement-option-select:disabled { cursor: not-allowed; opacity: .65; }
+.measurement-option-select:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; border-radius: 6px; }
 .measurement-option-image,
 .measurement-image-fallback { width: 100%; height: 132px; border-radius: 8px; object-fit: cover; }
+.measurement-image-frame { width: 100%; height: 132px; min-width: 0; overflow: hidden; border-radius: 8px; }
+.measurement-image-frame > .measurement-option-image,
+.measurement-image-frame > .measurement-image-fallback { width: 100%; height: 100%; border-radius: inherit; }
 .measurement-reference-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 4px; height: 132px; overflow: hidden; border-radius: 8px; }
 .measurement-reference-gallery .measurement-option-image,
 .measurement-reference-gallery .measurement-image-fallback { height: 132px; min-width: 0; border-radius: 6px; }
 .measurement-image-fallback { display: grid; place-items: center; background: var(--color-surface-subtle); color: var(--color-text-muted); }
+.measurement-image-error { position: relative; }
+.measurement-image-error-text { max-width: 90%; font-size: 10px; font-weight: 500; line-height: 1.2; text-align: center; }
+.measurement-image-retry { position: absolute; inset-block-end: 5px; inset-inline-end: 5px; display: grid; width: 30px; height: 30px; place-items: center; border: 1px solid var(--color-border); border-radius: 50%; background: var(--color-surface); color: var(--color-text); cursor: pointer; }
 .measurement-image-skeleton { width: 100%; height: 100%; border-radius: inherit; background: linear-gradient(100deg, var(--color-surface-subtle) 25%, var(--color-border) 45%, var(--color-surface-subtle) 65%); background-size: 200% 100%; animation: measurement-image-pulse 1.2s ease-in-out infinite; }
 @keyframes measurement-image-pulse { to { background-position-x: -200%; } }
 .measurement-option-copy { display: grid; gap: 3px; padding: 9px 3px 4px; overflow-wrap: anywhere; }
@@ -192,11 +229,10 @@
 .measurement-option-source { justify-self: start; padding: 3px 7px; border-radius: 20px; background: var(--color-surface-subtle); }
 .measurement-error-inline { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--color-danger); }
 
-.measurement-entry { display: grid; gap: 14px; }
-.measurement-entry-header { align-items: flex-start; }
+.measurement-entry { display: grid; gap: 10px; }
 .measurement-entry-header h3,
 .measurement-review h3 { margin: 0; }
-.measurement-entry-header p { margin: 6px 0 0; color: var(--color-text-muted); font-size: 13px; }
+.measurement-entry-header p { margin: 0; color: var(--color-text-muted); font-size: 13px; }
 .measurement-field-group h4 { margin: 0 0 10px; text-transform: capitalize; }
 .measurement-entry-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 10px 0 12px; border-bottom: 1px solid var(--color-border); }
 .measurement-global-unit-hint { margin: 0; color: var(--color-text-muted); font-size: 12px; }
@@ -219,6 +255,9 @@
 .measurement-field input::-webkit-outer-spin-button { margin: 0; appearance: none; }
 .measurement-field input:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 .measurement-field small { color: var(--color-text-muted); font-size: 12px; font-weight: 400; }
+.measurement-field .measurement-previous-hint { min-height: 1em; font-weight: 400; }
+.measurement-field-error { margin: 0; color: var(--color-danger); font-size: 13px; }
+.measurement-field input[aria-invalid="true"] { border-color: var(--color-danger); }
 .measurement-unit-note { margin: 0; color: var(--color-text-muted); font-size: 12px; }
 .measurement-empty { padding: 14px; border: 1px dashed var(--color-border); border-radius: 10px; color: var(--color-text-muted); }
 .measurement-inline-retry { margin-inline-start: 12px; border: 0; background: transparent; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; }
@@ -264,16 +303,52 @@
 .measurement-review-groups li { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: center; gap: 10px; }
 .measurement-review-groups .measurement-option-image,
 .measurement-review-groups .measurement-image-fallback { width: 52px; height: 52px; border-radius: 8px; }
+.measurement-review-groups .measurement-image-frame { width: 52px; height: 52px; flex: 0 0 52px; }
 .measurement-review-groups li > span { display: grid; gap: 4px; min-width: 0; }
 .measurement-review-groups li small { color: var(--color-text-muted); }
 
+@media (min-width: 1101px) {
+  .measurement-workspace { gap: 12px; }
+  .measurement-page-heading { align-items: center; }
+  .measurement-page-heading h1 { margin: 2px 0; font-size: 30px; }
+  .measurement-page-heading p { margin-top: 2px; }
+  .measurement-workspace .measurement-unified-card { gap: 0; padding: 10px 20px; }
+  .measurement-unified-card .measurement-workflow-card.info-card,
+  .measurement-unified-card .measurement-review.info-card { padding: 14px 4px; }
+  .measurement-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(310px, .9fr);
+    align-items: start;
+    gap: 0 28px;
+  }
+  .measurement-primary-column,
+  .measurement-secondary-column { display: grid; align-content: start; min-width: 0; }
+  .measurement-secondary-column { min-width: 0; }
+  .measurement-columns > .measurement-review { grid-column: 1 / -1; }
+  .measurement-section-heading { gap: 12px; }
+}
+
 @media (min-width: 761px) and (max-width: 1100px) {
+  .measurement-workspace { gap: 14px; }
+  .measurement-page-heading h1 { font-size: clamp(25px, 3vw, 31px); }
+  .measurement-workspace .measurement-unified-card { gap: 0; padding: 8px 18px; }
+  .measurement-unified-card .measurement-workflow-card.info-card,
+  .measurement-unified-card .measurement-review.info-card { padding: 16px 4px; }
+  .measurement-columns { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .measurement-primary-column,
+  .measurement-secondary-column { display: grid; align-content: start; min-width: 0; }
+  .measurement-secondary-column { border-top: 1px solid var(--color-border); }
   .measurement-field-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; }
   .measurement-workspace .info-card { padding: 17px; }
 }
 
 @media (max-width: 760px) {
+  .measurement-columns { display: contents; }
   .measurement-workspace .info-card { padding: 15px; }
+  .measurement-workspace .measurement-unified-card { gap: 0; padding: 8px; }
+  .measurement-unified-card .measurement-workflow-card.info-card,
+  .measurement-unified-card .measurement-review.info-card { padding: 12px 0; }
+  .measurement-unified-card .measurement-workflow-card[aria-labelledby="measurement-entry-heading"] { gap: 10px; }
   .measurement-garment-selectors,
   .measurement-field-grid,
   .measurement-style-groups,
@@ -285,11 +360,31 @@
   .measurement-profile-controls .btn-secondary,
   .measurement-design-picker-row button,
   .measurement-compare-controls .btn-secondary { width: 100%; }
-  .measurement-entry-header { align-items: stretch; flex-direction: column; }
-  .measurement-entry-header .btn-primary { width: 100%; min-height: 46px; }
+  .measurement-design-save button { width: 100%; justify-content: center; }
+  .measurement-entry-header { align-items: center; gap: 8px; }
+  .measurement-entry-header .btn-primary { flex: 0 0 auto; min-height: 40px; padding: 8px 12px; }
+  .measurement-sticky-context { top: calc(var(--topbar-height, 64px) + 8px); align-items: flex-start; flex-direction: column; gap: 3px; }
+  .measurement-sticky-context span { text-align: start; }
   .measurement-entry-tools { align-items: flex-start; flex-direction: column; }
-  .measurement-page-heading { flex-direction: column; }
-  .measurement-option-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .measurement-page-heading { align-items: center; flex-direction: row; gap: 8px; }
+  .measurement-page-heading > div:first-child { flex: 1; min-width: 0; }
+  .measurement-page-heading .backoffice-eyebrow,
+  .measurement-page-heading p { display: none; }
+  .measurement-page-heading h1 { margin: 0; font-size: clamp(21px, 5.5vw, 25px); line-height: 1.2; }
+  .measurement-page-client-name { display: block; margin-top: 2px; color: var(--color-text-muted); font-size: 13px; font-weight: 500; line-height: 1.25; }
+  .measurement-page-client-name::before { content: ''; }
+  .measurement-page-heading > .btn-secondary { flex: 0 0 auto; min-height: 40px; padding: 8px 11px; font-size: 13px; }
+  .measurement-design-persistence { gap: 8px; padding-top: 8px; border-top: 0; }
+  .measurement-option-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .measurement-option-card { grid-template-rows: auto auto; gap: 2px; padding: 5px; }
+  .measurement-option-card .measurement-image-frame { height: auto; aspect-ratio: 1; }
+  .measurement-option-card .measurement-reference-gallery { height: auto; aspect-ratio: 1; grid-auto-rows: minmax(0, 1fr); }
+  .measurement-option-card .measurement-reference-gallery .measurement-option-image,
+  .measurement-option-card .measurement-reference-gallery .measurement-image-fallback { height: 100%; }
+  .measurement-option-copy { gap: 2px; padding: 5px 1px 2px; font-size: 12px; line-height: 1.25; }
+  .measurement-option-copy small,
+  .measurement-option-source { font-size: 10px; line-height: 1.2; }
+  .measurement-option-source { max-width: 100%; padding: 2px 5px; }
   .measurement-review-heading { flex-direction: column; }
 }
 
@@ -298,6 +393,19 @@
   .measurement-field-inputs { grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
   .measurement-unit-options { grid-template-columns: repeat(2, minmax(48px, 1fr)); }
   .measurement-unit-options button { min-width: 46px; padding-inline: 6px; }
-  .measurement-option-grid { grid-template-columns: 1fr; }
+  .measurement-option-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .measurement-history-actions { display: grid; grid-template-columns: 1fr; }
+}
+
+@media (max-width: 520px) {
+  .measurement-review { gap: 12px; }
+  .measurement-review-heading { align-items: center; flex-direction: row; gap: 10px; }
+  .measurement-review-heading h2 { font-size: 17px; }
+  .measurement-review-count { flex: none; padding: 4px 8px; font-size: 11px; }
+  .measurement-review-summary-list { gap: 0; }
+  .measurement-review-summary-list article { display: grid; grid-template-columns: minmax(88px, .8fr) minmax(0, 1.2fr); align-items: baseline; gap: 3px 10px; padding: 9px 0; border: 0; border-bottom: 1px solid var(--color-border); border-radius: 0; background: transparent; }
+  .measurement-review-summary-list article:last-child { border-bottom: 0; }
+  .measurement-review-summary-list article h3 { grid-column: 1; grid-row: 1 / span 2; align-self: start; color: var(--color-text-muted); font-size: 12px; font-weight: 500; }
+  .measurement-review-summary-list article p { grid-column: 2; margin: 0; font-size: 13px; text-align: end; }
+  .measurement-review-summary-list article small { grid-column: 2; color: var(--color-text-muted); font-size: 11px; text-align: end; overflow-wrap: anywhere; }
 }

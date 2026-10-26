@@ -15,6 +15,7 @@ const FUNCTIONS: { code: WorkFunctionCode, label: string, icon: React.ReactNode 
   { code: 'MEASUREMENT', label: 'Measurement', icon: <Ruler size={16} /> },
   { code: 'CUTTING', label: 'Cutting', icon: <Scissors size={16} /> },
   { code: 'STITCHING', label: 'Stitching', icon: <Layers size={16} /> },
+  { code: 'CHECK', label: 'Check', icon: <ClipboardCheck size={16} /> },
   { code: 'FINISHING', label: 'Finishing', icon: <Sparkles size={16} /> },
   { code: 'QC', label: 'Quality control', icon: <ClipboardCheck size={16} /> },
   { code: 'CASHIER', label: 'Cashier', icon: <Calculator size={16} /> }
@@ -54,9 +55,9 @@ export function WorkFunctionsModal({ shopId, membership, onClose }: Props) {
   }
 
   return (
-    <div className="modal-overlay">
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="work-functions-title" tabIndex={-1}>
       <div className="modal-content">
-        <h2>Work Functions</h2>
+        <h2 id="work-functions-title">Work Functions</h2>
         <p className="modal-subtitle">Manage functions for {membership.display_name}</p>
         
         {error && <div className="form-error">{error}</div>}
@@ -85,7 +86,7 @@ export function WorkFunctionsModal({ shopId, membership, onClose }: Props) {
         )}
 
         <div className="modal-actions">
-          <button className="btn-secondary" onClick={onClose} disabled={isSaving || isLoading}>Cancel</button>
+          <button data-dialog-close className="btn-secondary" onClick={onClose} disabled={isSaving || isLoading}>Cancel</button>
           <button className="btn-primary" onClick={handleSave} disabled={isSaving || isLoading}>
             {isSaving ? 'Saving...' : 'Save Functions'}
           </button>

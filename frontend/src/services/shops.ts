@@ -67,6 +67,7 @@ export type ShopRequestContext = {
   role: 'ADMIN' | 'STAFF' | 'VIEWER' | null
   is_main_supplier: boolean
   work_functions: string[]
+  billing_currency?: string | null
 }
 
 const basePath = '/api/v1/tenants/'
