@@ -20,7 +20,12 @@ class MeasurementTranslationSerializer(serializers.Serializer):
 
 class MeasurementMappingInputSerializer(serializers.Serializer):
     family_id = serializers.UUIDField()
-    variant_id = serializers.UUIDField(required=False, allow_null=True)
+
+
+class MeasurementDefinitionMappingCreateSerializer(
+    MeasurementMappingInputSerializer
+):
+    sort_order = serializers.IntegerField(min_value=0, max_value=32767, required=False)
 
 
 class MeasurementDefinitionCreateSerializer(serializers.Serializer):
@@ -39,7 +44,7 @@ class MeasurementDefinitionCreateSerializer(serializers.Serializer):
         return value
 
     def validate_mappings(self, value):
-        keys = [(item["family_id"], item.get("variant_id")) for item in value]
+        keys = [item["family_id"] for item in value]
         if len(keys) != len(set(keys)):
             raise serializers.ValidationError("Mappings must be unique.")
         return value
@@ -65,6 +70,7 @@ class MeasurementDefinitionTranslationReadSerializer(serializers.Serializer):
 
 class MeasurementDefinitionReadSerializer(serializers.ModelSerializer):
     is_global = serializers.SerializerMethodField()
+    sort_order = serializers.SerializerMethodField()
     translations = MeasurementDefinitionTranslationReadSerializer(
         many=True, read_only=True
     )
@@ -87,23 +93,25 @@ class MeasurementDefinitionReadSerializer(serializers.ModelSerializer):
     def get_is_global(self, obj):
         return obj.tenant_id is None
 
+    @extend_schema_field(serializers.IntegerField())
+    def get_sort_order(self, obj):
+        return getattr(obj, "_effective_sort_order", obj.sort_order)
+
     @extend_schema_field(serializers.ListField(child=serializers.DictField()))
     def get_mappings(self, obj):
         return [
             {
                 "family_id": str(item.family_id),
-                "variant_id": str(item.variant_id) if item.variant_id else None,
                 "sort_order": item.sort_order,
             }
             for item in obj.mappings.filter(deleted__isnull=True).order_by(
-                "family__code", "sort_order", "variant_id"
+                "family__code", "sort_order"
             )
         ]
 
 
 class MeasurementProfileCreateSerializer(serializers.Serializer):
     family_id = serializers.UUIDField()
-    variant_id = serializers.UUIDField(required=False, allow_null=True)
 
 
 class MeasurementProfileSerializer(serializers.ModelSerializer):
@@ -121,6 +129,7 @@ class MeasurementValueInputSerializer(serializers.Serializer):
 
 class MeasurementSetCreateSerializer(serializers.Serializer):
     values = MeasurementValueInputSerializer(many=True, allow_empty=False)
+    design_version_id = serializers.UUIDField(required=False, allow_null=True)
 
     def validate_values(self, value):
         ids = [item["definition_id"] for item in value]
@@ -166,7 +175,16 @@ class MeasurementSetSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MeasurementSet
-        fields = ("id", "profile", "version", "copied_from", "created_at", "values")
+        fields = (
+            "id",
+            "profile",
+            "version",
+            "copied_from",
+            "design_version",
+            "is_active",
+            "created_at",
+            "values",
+        )
 
 
 class MaterialCreateSerializer(serializers.ModelSerializer):

@@ -1,0 +1,24 @@
+# Native VPS production wiring (not deployed)
+
+Production runtime is **native Linux VPS**, currently intended for a DigitalOcean Droplet. The same release and files can run on Hetzner, EC2, or another standard Linux VPS by changing infrastructure, DNS/TLS, and environment values—not Django application code. Render staging remains separate. `docker-compose.prod.yml`, `Dockerfile`, and `entrypoint.prod.sh` are historical/container templates, **not** the selected production runtime; in particular, their automatic migration behavior is not used here.
+
+Internet → Nginx (TLS/80/443) → Gunicorn (`127.0.0.1:8000`) → Django. PostgreSQL is an external endpoint; private media lives in Cloudflare R2. The Vite frontend is separate. Never expose port 8000 or database credentials publicly. Allow only 80/443 as needed; decide SSH and database network ACLs at deployment time.
+
+## Server files and environment
+
+- Deploy the approved repository release to `/srv/sgtp/current`, readable by dedicated non-root `sgtp` user; install pinned `requirements.txt` into `/srv/sgtp/current/.venv`.
+- Use [the non-secret environment template](../../deploy/production.env.example) to create `/etc/sgtp/production.env` **on the server only**, root-owned and mode `0600`. systemd reads it; do not commit, print, or send its values. Set `DJANGO_ENV=production`, a strong `DJANGO_SECRET_KEY`, `DJANGO_DEBUG=False`, explicit `DJANGO_ALLOWED_HOSTS`, and comma-separated explicit HTTPS `DJANGO_CORS_ALLOWED_ORIGINS` and `DJANGO_CSRF_TRUSTED_ORIGINS` (frontend origin plus any other genuine browser origin). No wildcards or staging hosts.
+- Choose either a complete `DATABASE_URL` (PostgreSQL URL with supported `sslmode`/`sslrootcert` query options) or complete split `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`. For remote DB, set TLS mode via URL or `DJANGO_DB_SSLMODE`; use `verify-full` and `DJANGO_DB_SSLROOTCERT` if the provider's CA requires it. Missing/unsafe remote TLS fails startup. Do not leave an empty `DATABASE_URL` assignment.
+- Set all four required private R2 values: `R2_BUCKET_NAME`, `R2_ENDPOINT` (account-level HTTPS endpoint), `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, with `R2_REGION=auto`. Missing/partial R2 configuration fails production startup; do not use a public bucket or local media fallback.
+- Install [systemd unit](../../deploy/systemd/sgtp.service) in the host's systemd unit directory. Its `EnvironmentFile` loads the server-only values. Gunicorn uses configurable `WEB_CONCURRENCY`, `GUNICORN_THREADS`, and `GUNICORN_TIMEOUT`; initial values are conservative, not a benchmark. The unit never migrates the DB.
+- Adapt [Nginx site template](../../deploy/nginx/sgtp.conf.example) to the actual API hostname and issued certificate paths. Nginx serves collected `/static/` from `STATIC_ROOT` and forwards requests to loopback Gunicorn. It **overwrites** any client `X-Forwarded-Proto` with `https`, matching Django `SECURE_PROXY_SSL_HEADER`, `SECURE_SSL_REDIRECT`, and secure cookies. The HTTP listener redirects and does not proxy. No `/assets/` filesystem alias: private R2 media stays behind application authorization. `client_max_body_size 12m` permits the existing 10 MiB application image limit plus request overhead.
+- Set `AUTH_TRUSTED_CLIENT_IP_HEADER=HTTP_X_REAL_IP` only with this Nginx boundary: it overwrites `X-Real-IP` from `$remote_addr`, and Gunicorn remains bound to loopback. The default `REMOTE_ADDR` is safe when no trusted proxy header is configured. Do not select `HTTP_X_FORWARDED_FOR` or trust client-provided header chains.
+
+## Deployment-time sequence (not executed by this task)
+
+1. Authorize the exact release; provision Linux VPS, non-root user, firewall, external PostgreSQL, private R2, DNS and TLS. Confirm backup/restore before data changes.
+2. Deploy the same approved release to `/srv/sgtp/current`; create venv and install locked dependencies. Create the server-only environment file with restricted ownership/mode and configure systemd/Nginx from the templates.
+3. With the production environment loaded, run `python manage.py check --deploy` and `python manage.py collectstatic --noinput`. Confirm the database migration plan and backup; run `python manage.py migrate` as an **explicit, authorized deployment step**, never on every service startup.
+4. Validate `systemd-analyze verify` and `nginx -t` against the real paths/certificates; start/restart `sgtp.service` and reload Nginx. Check HTTPS, CSRF/CORS/login, static assets, private image authorization, and health endpoints from outside. Tune worker count after measuring memory/latency.
+
+Still deployment-time, not repository wiring defects: exact VPS size/distribution, production domains/certificates, secret values, DB credentials/ACL and CA, firewall/SSH, migration timing, PostgreSQL and R2 backup/restore verification, and live smoke/monitoring. No production resource was provisioned or validated here.

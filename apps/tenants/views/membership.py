@@ -50,14 +50,28 @@ class TenantMemberViewSet(viewsets.ModelViewSet):
         )
 
     def perform_update(self, serializer):
+        self._promotion_credentials = None
         if "role" in serializer.validated_data:
             role = serializer.validated_data.pop("role")
+            new_login_id = serializer.validated_data.pop("new_login_id", None)
             serializer.instance = membership_service.change_membership_role(
                 actor=self.request.user,
                 membership_id=serializer.instance.pk,
                 new_role=role,
+                new_login_id=new_login_id,
             )
+            self._promotion_credentials = serializer.instance.promotion_credentials
+        else:
+            serializer.validated_data.pop("new_login_id", None)
         serializer.save(updated_by=self.request.user)
+
+    def partial_update(self, request, *args, **kwargs):
+        response = super().partial_update(request, *args, **kwargs)
+        if self._promotion_credentials:
+            response.data.update(self._promotion_credentials)
+            response["Cache-Control"] = "no-store"
+            response["Pragma"] = "no-cache"
+        return response
 
     def perform_destroy(self, instance):
         membership_service.remove_membership(

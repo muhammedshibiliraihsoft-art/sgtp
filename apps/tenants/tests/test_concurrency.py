@@ -32,6 +32,7 @@ class T302ConcurrencyTests(TransactionTestCase):
                     account_data={
                         "email": f"capacity{index}@test.com",
                         "first_name": f"Staff{index}",
+                        "login_id": f"staff{index}",
                     },
                 )
                 results_list[index] = status.HTTP_201_CREATED

@@ -3,6 +3,7 @@ from rest_framework.test import APITestCase
 
 from apps.accounts.models import User
 from apps.catalog.models import (
+    Design,
     DesignVersion,
     FamilyOptionGroup,
     GarmentFamily,
@@ -12,6 +13,50 @@ from apps.tenants.models import ShopRole, Supplier, Tenant, TenantMember
 
 
 class MensShirtDefaultCatalogTests(APITestCase):
+    def test_every_seeded_family_default_variant_has_published_style_presets_only(self):
+        expected = {
+            "kuwaiti-dishdasha": {
+                "Everyday White Dishdasha",
+                "Minimal Ivory Dishdasha",
+                "Tonal Detail Dishdasha",
+            },
+            "mens-shirt": {
+                "Classic Formal Shirt",
+                "Smart Casual Shirt",
+                "Modern Evening Shirt",
+            },
+            "abaya": {
+                "Classic Closed Abaya",
+                "Everyday Open Abaya",
+                "Embroidered Occasion Abaya",
+            },
+            "darraa-long-dress": {
+                "Everyday Darraa",
+                "Neckline Embroidered Darraa",
+                "Flowing Occasion Long Dress",
+            },
+        }
+        for family_code, names in expected.items():
+            family = GarmentFamily.objects.get(code=family_code)
+            variant = family.variants.filter(
+                tenant__isnull=True, is_active=True, is_default=True
+            ).first()
+            self.assertIsNotNone(variant)
+            actual = set(
+                Design.objects.filter(
+                    tenant__isnull=True,
+                    family=family,
+                    variant=variant,
+                    versions__status=DesignVersion.Status.PUBLISHED,
+                ).values_list("versions__translations__name", flat=True)
+            )
+            self.assertEqual(actual, names)
+
+        from apps.catalog.measurement_models import MeasurementProfile, MeasurementSet
+
+        self.assertEqual(MeasurementProfile.objects.count(), 0)
+        self.assertEqual(MeasurementSet.objects.count(), 0)
+
     def test_mens_shirt_has_scoped_style_sections_and_published_presets(self):
         family = GarmentFamily.objects.get(code="mens-shirt")
         variant = GarmentVariant.objects.get(

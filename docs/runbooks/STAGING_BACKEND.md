@@ -2,7 +2,7 @@
 
 ## Purpose and status
 
-This runbook covers the early shared, non-production backend established by T3-05A. It is not the formal Phase 9 release-candidate sign-off and is never Production. The Render Blueprint and backend/database are operational. The existing synthetic fixture is retained, and the T3-05A live auth/token and Shop-isolation matrix is verified. Custom-domain DNS/TLS and real-browser frontend integration remain deferred.
+This runbook covers the early shared, non-production backend established by T3-05A. It is not the formal Phase 9 release-candidate sign-off and is never Production. Render reports the API/DB resources available, but the current application HTTP smoke check could not resolve the API hostname from this executor. The existing synthetic fixture and T3-05A auth/token and Shop-isolation results are historical checkpoint evidence, not a fresh application check. The 2026-10-18 release preflight verified the service source repository/branch/deploy SHA; that artifact still contains Variant mutation routes and has no `catalog.0024` migration. The staging database's empty IP allowlist blocked SQL inspection, so its current schema, migration ledger, and rows remain **UNVERIFIED**. Custom-domain DNS/TLS and real-browser frontend integration remain deferred.
 
 Active API: `https://birky-staging-api.onrender.com`
 Reserved future API target: `https://api-staging.birky.com` (BiRKy does not currently own/control `birky.com`; no active custom-domain declaration, DNS verification, or TLS verification)
@@ -12,7 +12,7 @@ Planned frontend (later F7-01A; not provisioned): `https://staging.birky.com`
 
 - Provider: Render Web Service using the repository Dockerfile and an isolated Render PostgreSQL resource.
 - Resource names: `birky-staging-api` and `birky-staging-db`.
-- Repository branch: `main`; auto-deploy is explicitly off. Deploy only an intentionally accepted, exact-SHA GitHub-CI-green checkpoint, manually.
+- Live Render snapshot (2026-10-18): service `birky-staging-api` uses `https://github.com/muhammedshibiliraihsoft-art/sgtp`, branch `staging`, blank root directory, Docker context `.`, Dockerfile `./Dockerfile`, and auto-deploy trigger `commit`. Latest live deploy is `dep-db6bmmflk1mc73cloku0` at SHA `4db6d9fe14d389c89721707e44ed4526af6a5be3` (2026-10-12); `origin/staging` and the local Git object database contain this SHA. Inspecting that exact source shows Variant mutation methods and Variant-compatible Design/Profile create fields, but no `catalog.0024_retire_variant_measurement_mappings`. This is source-artifact evidence, not a live API response. Render listed no frontend service; Cloudflare Pages settings were not available to this preflight. A GET request could not resolve the API hostname from the current executor. Do not assume the older manual-deploy process still describes provider state; re-check before any publication.
 - Region: Frankfurt for web and database co-location and proximity to the approved Kuwait-oriented timezone configuration. This is an operational latency choice, not a legal data-residency commitment. Render does not support changing a resource's region in place.
 - Database: PostgreSQL 15, separate staging resource, `sgtp_staging` database name, internal connection string, no public IP allow-list entries.
 - Health check: `/api/health/ready/`; liveness remains `/api/health/live/`.
@@ -35,15 +35,17 @@ Set `DJANGO_ENV=staging`; `DEBUG` is forced false and startup fails if `DJANGO_D
 
 `.env.staging.example` contains placeholders only. Never create or commit `.env.staging`. The container build excludes local staging env files. The runtime may log the environment and safe host/port diagnostics; it must never log database URLs, passwords, tokens, CSRF values, reset tokens, or secret keys.
 
-Password-reset delivery is intentionally unavailable: the dummy email backend drops messages and does not write recovery links/tokens to logs. The configured future frontend reset path is `https://staging.birky.com/reset-password`; end-to-end recovery must not be claimed until a separately approved staging email service and frontend exist.
+Email self-service password reset is superseded and is not part of the current recovery model; no email provider or `/reset-password` email flow is required. A Shop Admin recovery request uses the registered phone number and changes no credential until authorized Back Office approval. The staging dummy email backend remains non-delivering and must never log credentials or recovery material.
 
-## Create and manually deploy
+## Create and publish
+
+The following is a controlled publication procedure, not a claim that the current service is manual-deploy or connected to `main`. The 2026-10-18 Render snapshot reports commit-triggered auto-deploy from `staging`; any branch push may therefore publish and run committed migrations during startup. Verify current provider branch, trigger, exact deploy SHA, and DB readiness before authorizing a push or deployment. No publication or configuration change was made during the read-only Variant-retirement audit.
 
 1. Connect the repository in the authorized Render workspace and inspect the Blueprint preview before applying it. Confirm both resources remain Free, Frankfurt, and named as staging; confirm the DB is isolated and no paid feature/add-on is selected.
 2. If Render requests GitHub authorization, account login, or billing details, the account owner performs that action. Do not share credentials in chat.
-3. Applied configuration currently provisions `birky-staging-api` and `birky-staging-db`, both Free in Frankfurt, with auto-deploy off. The API is active at `https://birky-staging-api.onrender.com`; PostgreSQL 15 uses logical DB/user `sgtp_staging`.
+3. The resources are `birky-staging-api` and `birky-staging-db`, both Free in Frankfurt. The API is active at `https://birky-staging-api.onrender.com`; PostgreSQL 15 uses logical DB/user `sgtp_staging`. Current provider branch/auto-deploy state is the snapshot above and may differ from the original provisioning setup.
 4. The custom API domain is deferred until BiRKy controls `birky.com`. Do not add a custom domain or configure guessed DNS; when ownership is established, use only the exact record Render provides.
-5. For each deploy, select a pushed `main` SHA whose `Project State Validation` workflow succeeded for that exact SHA. Trigger deployment manually from Render. Record the deployed application SHA and deploy identifier, separately from later docs-only `main` commits.
+5. For each authorized publication, select an accepted SHA whose `Project State Validation` workflow succeeded for that exact SHA; verify the configured provider branch and deployment trigger first. Record the deployed application SHA and deploy identifier. Do not assume a docs-only commit is the live application revision.
 6. The container waits for PostgreSQL for at most `DB_WAIT_TIMEOUT_SECONDS`, fails nonzero on timeout, applies committed migrations (`migrate --noinput`), runs `collectstatic`, and then execs Gunicorn using Render's `PORT` and optional concurrency settings. Migration failure stops startup. Never generate migrations in Staging.
 
 ## Health, smoke tests, and application checks
@@ -77,7 +79,7 @@ The CSRF bootstrap endpoint returns only a masked CSRF token and sets the API-ho
 
 Use task `STAGING-MAIN-ADMIN-BOOTSTRAP-01` only when the staging Main Supplier login must be initialized. The `bootstrap_staging_main_admin` management command creates at most one User, does not create a Shop, refuses to promote or reset any existing User, and marks a newly created account `must_change_password=True`. It independently requires `DJANGO_ENV=staging`, settings environment `staging`, database name `sgtp_staging`, an explicit command confirmation, the Render-only enable switch, valid contact details, and a 40-character minimum password. The entrypoint runs it only when `STAGING_MAIN_ADMIN_BOOTSTRAP_ENABLED=true` and `DJANGO_ENV=staging`; the flag defaults off.
 
-For the authorized one-time operation, configure `STAGING_MAIN_ADMIN_EMAIL`, `STAGING_MAIN_ADMIN_FIRST_NAME`, `STAGING_MAIN_ADMIN_PHONE` in E.164 format, and a randomly generated one-time `STAGING_MAIN_ADMIN_PASSWORD` in Render secret settings. Enable the switch and manually deploy the accepted exact-CI-green `main` SHA. Inspect startup logs only for the generic created/no-op result; they must never reveal input values. Confirm the User through the authorized login/profile route, then immediately set the enable flag to `false` and blank all four input variables and trigger a cleanup deploy. Verify health after cleanup. Do not put secrets in Git, shell history, chat output, or logs. If the configured email or phone is already in use, the command is a successful no-op and leaves that User unchanged; investigate the existing identity separately rather than trying another password.
+For any separately authorized one-time operation, first re-check Render's configured branch and trigger. The latest snapshot above reports `staging` + commit-triggered auto-deploy; do not follow the earlier `main`/manual-deploy assumption. Configure `STAGING_MAIN_ADMIN_EMAIL`, `STAGING_MAIN_ADMIN_FIRST_NAME`, `STAGING_MAIN_ADMIN_LOGIN_ID`, `STAGING_MAIN_ADMIN_PHONE` in E.164 format, and a one-time policy-compliant six-digit `STAGING_MAIN_ADMIN_PIN` in Render secret settings only after approval. Enable the switch only for an accepted exact-CI-green commit on the configured branch. Inspect startup logs only for the generic created/no-op result; they must never reveal input values. Confirm the User through the authorized login/profile route, then immediately set the enable flag to `false` and blank all five input variables and trigger a cleanup deploy. Verify health after cleanup. Do not put secrets in Git, shell history, chat output, or logs. If the configured email, phone, or Login ID is already in use, the command is a successful no-op and leaves that User unchanged; investigate the existing identity separately rather than trying another PIN.
 
 ### STAGING-MAIN-ADMIN-BOOTSTRAP-01 completion (2026-10-01)
 
@@ -101,6 +103,6 @@ Free Postgres has no backup/restore capability. Do not promise restore or use th
 ## Operational limitations and boundaries
 
 - Django's default process-local cache remains in use; auth throttling is not globally coordinated across instances. No Redis/Key Value is added.
-- Password reset email is disabled; private object storage, durable media, background workers, backup/restore drills, formal Phase 9 acceptance, and full frontend browser integration are not delivered by this backend task.
+- Email self-service password reset is not a current feature; private object storage, durable media, background workers, backup/restore drills, formal Phase 9 acceptance, and full frontend browser integration are not delivered by this backend task.
 - Phase 9 reuses this same staging environment after its own authorization and reset/reconfiguration; early T3-05A staging is not Phase 9 completion.
 - Production services, database, secrets, domains (`app.birky.com`, `api.birky.com`), data, DNS, migrations, and deployment are prohibited in T3-05A. Phase 10 owns Production.

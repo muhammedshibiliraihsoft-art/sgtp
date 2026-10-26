@@ -39,13 +39,13 @@ Measurement entities: global or Shop-owned `MeasurementDefinition`; locale trans
 
 Seed only these approved mappings: Men's Shirt — Full Length, Shoulder Width, Chest, Waist, Sleeve Length, Neck, Hip/Seat, Bicep, Armhole, Cuff/Wrist; Kuwaiti Dishdasha — Full Length, Shoulder, Chest, Sleeve Length, Neck, Waist, Hip/Seat, Upper Arm/Bicep, Cuff/Sleeve Opening, Armhole, Shoulder Slope/Posture, Placket Length, Side Slit Height. Use stable codes and English canonical labels; locale support is en, ar-KW, bn, ur with English fallback. Do not seed guessed Abaya/Darraa templates or Pant/Thobe aliases.
 
-Values may be partial. Each value requires an explicit Decimal and `INCH` or `CM`; no default, conversion, or BODY/GARMENT/FINISHED distinction. Sets/values/snapshot labels cannot be edited or deleted; corrections create a new version. Copying creates independent value rows and records `copied_from`. Compare only within the same profile; return a difference only when units match, and return both raw values/units without conversion when they differ. Historical labels stay stable if reusable definition translations later change. Shop custom definitions are reusable only inside the Shop and mapped family/optional variant; require an English canonical label; archive rather than delete or restore.
+Values may be partial. Each persisted value requires an explicit Decimal and `INCH` or `CM`; the Body Measurement entry UI defaults new fields to `INCH`, applies a main unit change to every field, allows later per-field unit changes, and performs no conversion. No BODY/GARMENT/FINISHED distinction is introduced. Sets/values/snapshot labels cannot be edited or hard-deleted; corrections create a new version. An authorized version delete deactivates the set atomically while preserving values, snapshots, audit/copy provenance, and the version-number high-water mark; the last active version cannot be deactivated. Inactive sets are excluded from read/copy/compare/PDF flows. Copying creates independent value rows and records `copied_from`. Compare only within the same profile; return a difference only when units match, and return both raw values/units without conversion when they differ. Historical labels stay stable if reusable definition translations later change. Shop custom definitions are reusable only inside the Shop and mapped family/optional variant; require an English canonical label; archive rather than delete or restore.
 
 Materials in T4-03: only UUID, required Shop, name, optional Shop-local code, description, ACTIVE/ARCHIVED state, audit fields and timestamps. T4-03A is a later additive task and does not rewrite this completed contract.
 
 MEASUREMENT-E2E-01 adds a frontend integration slice under separate authorization. It uses backend Family/Variant data, the actual ordered Family → Option Group mapping, Shop/global Design APIs, and the immutable measurement APIs. It does not introduce a Work aggregate, material reservation, or production workflow. The additive `catalog.0012_seed_mens_shirt_design_defaults` data migration maps the approved Men’s Shirt sections (Sleeve, Collar, Cuff, Pocket, Placket, Embroidery, Color) and supplies Classic Formal Shirt, Smart Casual Shirt, and Modern Evening Shirt as published global defaults for Standard Shirt.
 
-API: `/api/v1/shops/{shop_id}/measurement-definitions/` (GET/POST), definition detail (GET/PATCH), and `/archive/`; client-nested `/clients/{client_id}/measurement-profiles/`, profile detail, `/sets/` GET/POST, set detail GET, set `/copy/` POST, and profile `/compare/` GET; Related Person equivalents nested under `/clients/{client_id}/related-persons/{related_person_id}/measurement-profiles/`; `/materials/` (GET/POST), material detail (GET/PATCH), and `/archive/` POST. No hard-delete or Work-specific route. Use page-number pagination, stable ordering, selected-Shop filtering, and uniform non-disclosing 404 for foreign/missing nested records.
+API: `/api/v1/shops/{shop_id}/measurement-definitions/` (GET/POST), definition detail (GET/PATCH), and `/archive/`; client-nested `/clients/{client_id}/measurement-profiles/`, profile detail, `/sets/` GET/POST, set detail GET/DELETE (DELETE deactivates), set `/copy/` POST, and profile `/compare/` GET; Related Person equivalents nested under `/clients/{client_id}/related-persons/{related_person_id}/measurement-profiles/`; `/materials/` (GET/POST), material detail (GET/PATCH), and `/archive/` POST. No hard-delete or Work-specific route. Use page-number pagination, stable ordering, selected-Shop filtering, and uniform non-disclosing 404 for foreign/missing nested records.
 
 Permissions: Main Supplier must select a Shop path and is scoped to that Shop's private records; may read/manage where the rule allows. ADMIN has full measurement and custom-definition management and material read/write/archive. Active STAFF with `MEASUREMENT` may read/create profiles/sets, copy/compare, create definitions and edit only own safe custom-definition metadata, but may not archive definitions. STAFF without the function and VIEWER have no measurement PII/history access. For Materials, STAFF and VIEWER are read-only and require no Work Function. Inactive/removed memberships are denied; function eligibility never replaces role/context authorization.
 
@@ -61,6 +61,18 @@ Objective: enforce domain rules outside views. Dependencies: T4-04. Steps: trans
 
 ### T4-06 Domain integration validation
 Objective: verify the complete shop workflow before billing. Dependencies: T4-05. Steps: API integration scenario from request to completed; verify data links and isolation. DoD: documented evidence.
+
+**Verified complete (2026-10-21; local, unpublished):** Added and ran a focused
+API regression that creates a Work with its Client, published DesignVersion,
+and MeasurementSet, assigns/advances through every approved stage to Completed,
+verifies source links remain stable, and checks foreign-Shop list/detail
+isolation. Existing Work tests also reject cross-Shop linked source IDs.
+Backend Work suite: 22/22 passed on isolated PostgreSQL 15 after fresh migration
+replay through `works.0002`; sibling Orders tests: 36/36; frontend typecheck and
+build passed; Django model check and migration drift check passed. Persistent
+`devdb`/`testdb`, staging, and production were not used. No application
+behavior/API/schema/migration changed. Browser-level combined E2E remains
+unverified. Phase 5 remains separately gated.
 
 ## T4-03A — Inventory & Stock Foundation (separately approved)
 

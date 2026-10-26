@@ -29,7 +29,9 @@ from apps.catalog.models import (
     StyleOption,
     StyleOptionImage,
     StyleOptionTranslation,
+    ShopDesignPrice,
 )
+from apps.billing.idempotency import mutation_response
 from apps.catalog.serializers import (
     DesignListQuerySerializer,
     DesignCreateSerializer,
@@ -39,6 +41,7 @@ from apps.catalog.serializers import (
     DesignVersionSerializer,
     DesignReferenceGallerySerializer,
     FamilyOptionGroupUpdateSerializer,
+    FamilyOptionGroupSerializer,
     FamilyDetailSerializer,
     FamilyImageMetadataSerializer,
     FamilyImageUploadSerializer,
@@ -53,12 +56,15 @@ from apps.catalog.serializers import (
     ReferenceImageUploadSerializer,
     SelectionCreateSerializer,
     ShopStyleOptionInputSerializer,
+    ShopGarmentRecordInputSerializer,
+    ShopFamilyOptionGroupCreateSerializer,
     ShopVariantInputSerializer,
     ShopVariantQuerySerializer,
     SelectionSerializer,
     StyleImageSerializer,
     StyleOptionSerializer,
     StyleOptionUpdateSerializer,
+    ShopDesignPriceSerializer,
     VariantDetailSerializer,
     VariantUpdateSerializer,
     VariantSerializer,
@@ -73,25 +79,34 @@ from apps.catalog.services import (
     create_global_design,
     create_global_variant,
     create_shop_variant,
+    materialize_shop_default_family,
     publish_global_version,
     publish_version,
     remove_family_image,
     set_family_status,
+    set_shop_default_family_status,
+    restore_shop_default_design,
     set_global_variant_active,
     set_global_variant_default,
     set_shop_variant_active,
     upload_design_references,
     upload_family_image,
     upload_style_images,
-    update_family_translations,
+    remove_unmapped_draft_selections,
+    remove_unmapped_draft_selection,
+    replace_global_family_option_groups,
+    update_global_family_configuration,
     update_global_variant,
+    update_selection,
     update_shop_style_option,
     update_shop_variant,
 )
+from apps.catalog.price_services import set_shop_design_price
 from apps.catalog.private_uploads import complete_upload, issue_upload
 from apps.catalog.models import PrivateMediaUpload
 from apps.accounts.permissions import PasswordChangeGate
 from apps.tenants.context_views import ShopContextMixin
+from apps.tenants.financial_access import IsShopFinancialUser
 from apps.tenants.policy import ShopRolePolicy
 from apps.common.views import TenantScopedMixin
 
@@ -104,6 +119,14 @@ class MainSupplierOnly(BasePermission):
 def _locale(request):
     locale = request.query_params.get("locale", "en")
     return locale if locale in {"en", "ar-KW", "bn", "ur"} else "en"
+
+
+def _shop_catalog_style_options(shop):
+    """Return selectable Catalog options, excluding per-Design snapshot copies."""
+    return StyleOption.objects.filter(
+        (Q(tenant__isnull=True) | Q(tenant=shop)),
+        source_style_option__isnull=True,
+    )
 
 
 def _shop_write_allowed(context):
@@ -285,7 +308,7 @@ class FamilyListView(APIView):
         family_status = query.validated_data["status"]
         if not is_main_supplier and family_status != GarmentFamily.Status.ACTIVE:
             raise PermissionDenied()
-        families = GarmentFamily.objects.all()
+        families = GarmentFamily.objects.filter(tenant__isnull=True)
         if family_status != "all":
             families = families.filter(status=family_status)
         search = query.validated_data.get("search", "").strip()
@@ -344,7 +367,10 @@ class FamilyDetailView(APIView):
 
     def _family(self, request, family_id):
         family = get_object_or_404(
-            GarmentFamily.objects.prefetch_related("translations"), pk=family_id
+            GarmentFamily.objects.filter(tenant__isnull=True).prefetch_related(
+                "translations"
+            ),
+            pk=family_id,
         )
         if (
             family.status != GarmentFamily.Status.ACTIVE
@@ -373,9 +399,17 @@ class FamilyDetailView(APIView):
             raise PermissionDenied()
         data = FamilyUpdateSerializer(data=request.data)
         data.is_valid(raise_exception=True)
-        family = update_family_translations(
+        option_group_mappings = None
+        if "option_group_ids" in data.validated_data:
+            groups_data = FamilyOptionGroupUpdateSerializer(
+                data={"option_group_ids": data.validated_data["option_group_ids"]}
+            )
+            groups_data.is_valid(raise_exception=True)
+            option_group_mappings = groups_data.validated_data["option_groups"]
+        family = update_global_family_configuration(
             family_id=family_id,
-            translations=data.validated_data.get("translations", []),
+            translations=data.validated_data.get("translations"),
+            option_group_mappings=option_group_mappings,
             actor=request.user,
         )
         family = self._family(request, family_id)
@@ -426,7 +460,9 @@ class FamilyImageView(APIView):
     permission_classes = (IsAuthenticated, PasswordChangeGate)
 
     def _family(self, request, family_id):
-        family = get_object_or_404(GarmentFamily.objects.all(), pk=family_id)
+        family = get_object_or_404(
+            GarmentFamily.objects.filter(tenant__isnull=True), pk=family_id
+        )
         if (
             family.status != GarmentFamily.Status.ACTIVE
             and not ShopRolePolicy.is_main_supplier_admin(request.user)
@@ -500,7 +536,9 @@ class OptionGroupListView(APIView):
     def get(self, request):
         return _page_response(
             request,
-            OptionGroup.objects.all().prefetch_related("families", "translations"),
+            OptionGroup.objects.filter(tenant__isnull=True).prefetch_related(
+                "families", "translations"
+            ),
             OptionGroupSerializer,
             context={"locale": _locale(request)},
         )
@@ -546,6 +584,7 @@ class OptionGroupListView(APIView):
 
 class GlobalVariantsView(APIView):
     permission_classes = (IsAuthenticated, PasswordChangeGate, MainSupplierOnly)
+    http_method_names = ["get", "head", "options"]
 
     @extend_schema(
         parameters=[GlobalVariantQuerySerializer],
@@ -603,6 +642,7 @@ class GlobalVariantsView(APIView):
 
 class GlobalVariantDetailView(APIView):
     permission_classes = (IsAuthenticated, PasswordChangeGate, MainSupplierOnly)
+    http_method_names = ["get", "head", "options"]
 
     def _variant(self, variant_id):
         return get_object_or_404(
@@ -646,6 +686,7 @@ class GlobalVariantDetailView(APIView):
 
 class GlobalVariantLifecycleView(APIView):
     permission_classes = (IsAuthenticated, PasswordChangeGate, MainSupplierOnly)
+    http_method_names = ["options"]
 
     @extend_schema(request=None, responses=VariantDetailSerializer)
     def post(self, request, variant_id, action):
@@ -679,7 +720,9 @@ class FamilyOptionGroupsView(APIView):
         operation_id="catalog_family_option_groups_list",
     )
     def get(self, request, family_id):
-        family = get_object_or_404(GarmentFamily.objects.all(), pk=family_id)
+        family = get_object_or_404(
+            GarmentFamily.objects.filter(tenant__isnull=True), pk=family_id
+        )
         if (
             family.status != GarmentFamily.Status.ACTIVE
             and not ShopRolePolicy.is_main_supplier_admin(request.user)
@@ -708,32 +751,384 @@ class FamilyOptionGroupsView(APIView):
         if not ShopRolePolicy.is_main_supplier_admin(request.user):
             raise PermissionDenied()
         family = get_object_or_404(
-            GarmentFamily.objects.select_for_update(), pk=family_id
+            GarmentFamily.objects.select_for_update().filter(tenant__isnull=True),
+            pk=family_id,
         )
-        ids = request.data.get("option_group_ids")
-        if not isinstance(ids, list) or len(ids) != len(set(ids)):
-            raise serializers.ValidationError(
-                {"option_group_ids": "Provide a unique list."}
+        data = FamilyOptionGroupUpdateSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        replace_global_family_option_groups(
+            family=family,
+            option_group_mappings=data.validated_data["option_groups"],
+            actor=request.user,
+        )
+        return self.get(request, family_id)
+
+
+class ShopGarmentFamilyListCreateView(ShopContextMixin, TenantScopedMixin, APIView):
+    permission_classes = (IsAuthenticated, PasswordChangeGate)
+
+    @extend_schema(
+        responses=_page_schema("ShopGarmentFamilyPage", FamilySerializer),
+        operation_id="shop_garment_families_list",
+    )
+    def get(self, request, shop_id):
+        shop = request.shop_context.shop
+        copied_template_ids = GarmentFamily.objects.filter(
+            tenant=shop, template_source__isnull=False
+        ).values("template_source_id")
+        families = GarmentFamily.objects.filter(
+            Q(tenant=shop)
+            | (Q(tenant__isnull=True) & ~Q(pk__in=copied_template_ids))
+        )
+        family_status = request.query_params.get("status", "ACTIVE").upper()
+        if family_status == "ACTIVE":
+            families = families.filter(status=GarmentFamily.Status.ACTIVE)
+        elif family_status == "ARCHIVED":
+            families = families.filter(
+                tenant=shop, status=GarmentFamily.Status.ARCHIVED
             )
-        groups = list(OptionGroup.objects.filter(pk__in=ids))
-        if len(groups) != len(ids):
-            raise serializers.ValidationError(
-                {"option_group_ids": "Unknown option group."}
+        elif family_status != "ALL":
+            raise serializers.ValidationError({"status": "Use ACTIVE, ARCHIVED, or all."})
+        else:
+            families = families.filter(
+                Q(tenant=shop)
+                | (
+                    Q(tenant__isnull=True, status=GarmentFamily.Status.ACTIVE)
+                    & ~Q(pk__in=copied_template_ids)
+                )
             )
+        families = families.prefetch_related("translations")
+        return _page_response(
+            request, families, FamilySerializer, context={"locale": _locale(request)}
+        )
+
+    @extend_schema(
+        request=ShopGarmentRecordInputSerializer,
+        responses={201: FamilySerializer},
+        operation_id="shop_garment_families_create",
+    )
+    @transaction.atomic
+    def post(self, request, shop_id):
+        _lock_shop_write_context(request, shop_id)
+        if not _shop_write_allowed(request.shop_context):
+            raise PermissionDenied()
+        data = ShopGarmentRecordInputSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        values = data.validated_data
+        try:
+            family = GarmentFamily.objects.create(
+                tenant=request.shop_context.shop,
+                code=values["code"],
+                created_by=request.user,
+                updated_by=request.user,
+            )
+            GarmentFamilyTranslation.objects.bulk_create(
+                [
+                    GarmentFamilyTranslation(
+                        family=family,
+                        created_by=request.user,
+                        updated_by=request.user,
+                        **item,
+                    )
+                    for item in values["translations"]
+                ]
+            )
+        except IntegrityError:
+            raise serializers.ValidationError(
+                {"code": "This Shop garment family code is already in use."}
+            ) from None
+        return Response(
+            FamilySerializer(family, context={"locale": _locale(request)}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class ShopDefaultFamilyMaterializeView(ShopContextMixin, TenantScopedMixin, APIView):
+    permission_classes = (IsAuthenticated, PasswordChangeGate)
+
+    @extend_schema(
+        request=None,
+        responses={200: FamilySerializer},
+        operation_id="shop_default_family_materialize",
+        description=(
+            "Create an isolated Shop-owned working copy of one global default when "
+            "a Shop user chooses to edit it. Other Shops and the global source are unchanged."
+        ),
+    )
+    @transaction.atomic
+    def post(self, request, shop_id, family_id):
+        _lock_shop_write_context(request, shop_id)
+        if not _shop_write_allowed(request.shop_context):
+            raise PermissionDenied()
+        family = materialize_shop_default_family(
+            shop_id=shop_id, actor=request.user, family_id=family_id
+        )
+        return Response(
+            FamilySerializer(family, context={"locale": _locale(request)}).data
+        )
+
+
+class ShopOptionGroupListCreateView(ShopContextMixin, TenantScopedMixin, APIView):
+    permission_classes = (IsAuthenticated, PasswordChangeGate)
+
+    @extend_schema(
+        responses=_page_schema("ShopOptionGroupPage", OptionGroupSerializer),
+        operation_id="shop_option_groups_list",
+    )
+    def get(self, request, shop_id):
+        shop = request.shop_context.shop
+        groups = OptionGroup.objects.filter(
+            Q(tenant__isnull=True) | Q(tenant=shop)
+        ).prefetch_related("translations", "families")
+        return _page_response(
+            request,
+            groups,
+            OptionGroupSerializer,
+            context={"locale": _locale(request), "shop_id": shop.pk},
+        )
+
+    @extend_schema(
+        request=ShopGarmentRecordInputSerializer,
+        responses={201: OptionGroupSerializer},
+        operation_id="shop_option_groups_create",
+    )
+    @transaction.atomic
+    def post(self, request, shop_id):
+        _lock_shop_write_context(request, shop_id)
+        if not _shop_write_allowed(request.shop_context):
+            raise PermissionDenied()
+        data = ShopGarmentRecordInputSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        values = data.validated_data
+        try:
+            group = OptionGroup.objects.create(
+                tenant=request.shop_context.shop,
+                code=values["code"],
+                created_by=request.user,
+                updated_by=request.user,
+            )
+            OptionGroupTranslation.objects.bulk_create(
+                [
+                    OptionGroupTranslation(
+                        option_group=group,
+                        created_by=request.user,
+                        updated_by=request.user,
+                        **item,
+                    )
+                    for item in values["translations"]
+                ]
+            )
+        except IntegrityError:
+            raise serializers.ValidationError(
+                {"code": "This Shop option group code is already in use."}
+            ) from None
+        return Response(
+            OptionGroupSerializer(
+                group,
+                context={
+                    "locale": _locale(request),
+                    "shop_id": request.shop_context.shop.pk,
+                },
+            ).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class ShopFamilyOptionGroupsView(ShopContextMixin, TenantScopedMixin, APIView):
+    permission_classes = (IsAuthenticated, PasswordChangeGate)
+
+    def _family(self, request, family_id, *, for_update=False):
+        families = GarmentFamily.objects.filter(
+            Q(tenant__isnull=True) | Q(tenant=request.shop_context.shop),
+            status=GarmentFamily.Status.ACTIVE,
+        )
+        if for_update:
+            families = families.select_for_update()
+        return get_object_or_404(families, pk=family_id)
+
+    @extend_schema(
+        responses=FamilyOptionGroupSerializer(many=True),
+        operation_id="shop_family_option_group_config_list",
+    )
+    def get(self, request, shop_id, family_id):
+        family = self._family(request, family_id)
+        rows = (
+            FamilyOptionGroup.objects.filter(family=family)
+            .select_related("option_group")
+            .prefetch_related("option_group__translations")
+        )
+        return Response(
+            FamilyOptionGroupSerializer(
+                rows,
+                many=True,
+                context={
+                    "locale": _locale(request),
+                    "shop_id": request.shop_context.shop.pk,
+                },
+            ).data
+        )
+
+    @extend_schema(
+        request=FamilyOptionGroupUpdateSerializer,
+        responses={
+            status.HTTP_200_OK: FamilyOptionGroupSerializer(many=True),
+            status.HTTP_403_FORBIDDEN: OpenApiResponse(
+                description=(
+                    "Global family mappings are read-only through the Shop Catalog route."
+                )
+            ),
+        },
+        description=(
+            "Resolve and attach Shop context after DRF authentication, before "
+            "permissions. Shop Catalog may update mappings only for families "
+            "owned by the selected Shop. Global families are readable but "
+            "read-only here; global defaults must be managed through Global Catalog."
+        ),
+        operation_id="shop_family_option_group_config_update",
+    )
+    @transaction.atomic
+    def put(self, request, shop_id, family_id):
+        _lock_shop_write_context(request, shop_id)
+        if not _shop_write_allowed(request.shop_context):
+            raise PermissionDenied()
+        family = self._family(request, family_id, for_update=True)
+        if family.tenant_id != request.shop_context.shop.pk:
+            raise PermissionDenied(
+                "Global family mappings can only be changed through Global Catalog."
+            )
+        data = FamilyOptionGroupUpdateSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        config = data.validated_data["option_groups"]
+        group_ids = [item["option_group_id"] for item in config]
+        groups = {
+            group.pk: group
+            for group in OptionGroup.objects.filter(pk__in=group_ids).filter(
+                Q(tenant__isnull=True) | Q(tenant=request.shop_context.shop)
+            )
+        }
+        if len(groups) != len(group_ids):
+            raise serializers.ValidationError(
+                {"option_groups": "A group is unavailable to this Shop."}
+            )
+        remove_unmapped_draft_selections(
+            family=family, mapped_option_group_ids=group_ids
+        )
         FamilyOptionGroup.objects.filter(family=family).delete()
         FamilyOptionGroup.objects.bulk_create(
             [
                 FamilyOptionGroup(
                     family=family,
-                    option_group=group,
-                    sort_order=index,
+                    option_group=groups[item["option_group_id"]],
+                    sort_order=item["sort_order"],
+                    selection_mode=item["selection_mode"],
+                    is_required=item["is_required"],
                     created_by=request.user,
                     updated_by=request.user,
                 )
-                for index, group in enumerate(groups)
+                for item in config
             ]
         )
-        return self.get(request, family_id)
+        return self.get(request, shop_id, family_id)
+
+
+class ShopFamilyOptionGroupCreateView(ShopContextMixin, TenantScopedMixin, APIView):
+    """Create a Shop-owned option group and attach it to one Shop family atomically."""
+
+    permission_classes = (IsAuthenticated, PasswordChangeGate)
+
+    @extend_schema(
+        request=ShopFamilyOptionGroupCreateSerializer,
+        responses={status.HTTP_201_CREATED: FamilyOptionGroupSerializer},
+        operation_id="shop_family_option_group_create",
+    )
+    @transaction.atomic
+    def post(self, request, shop_id, family_id):
+        _lock_shop_write_context(request, shop_id)
+        if not _shop_write_allowed(request.shop_context):
+            raise PermissionDenied()
+        family = get_object_or_404(
+            GarmentFamily.objects.select_for_update().filter(
+                tenant=request.shop_context.shop,
+                status=GarmentFamily.Status.ACTIVE,
+            ),
+            pk=family_id,
+        )
+        data = ShopFamilyOptionGroupCreateSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        values = data.validated_data
+        try:
+            group = OptionGroup.objects.create(
+                tenant=request.shop_context.shop,
+                code=values["code"],
+                created_by=request.user,
+                updated_by=request.user,
+            )
+            OptionGroupTranslation.objects.bulk_create(
+                [
+                    OptionGroupTranslation(
+                        option_group=group,
+                        created_by=request.user,
+                        updated_by=request.user,
+                        **item,
+                    )
+                    for item in values["translations"]
+                ]
+            )
+            mapping = FamilyOptionGroup.objects.create(
+                family=family,
+                option_group=group,
+                sort_order=(
+                    FamilyOptionGroup.objects.filter(family=family).count()
+                ),
+                selection_mode=values["selection_mode"],
+                is_required=values["is_required"],
+                created_by=request.user,
+                updated_by=request.user,
+            )
+        except IntegrityError:
+            raise serializers.ValidationError(
+                {"code": "This Shop option group code is already in use."}
+            ) from None
+        mapping = (
+            FamilyOptionGroup.objects.filter(pk=mapping.pk)
+            .select_related("option_group")
+            .prefetch_related("option_group__translations")
+            .get()
+        )
+        return Response(
+            FamilyOptionGroupSerializer(
+                mapping,
+                context={
+                    "locale": _locale(request),
+                    "shop_id": request.shop_context.shop.pk,
+                },
+            ).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class ShopDefaultFamilyLifecycleView(ShopContextMixin, TenantScopedMixin, APIView):
+    permission_classes = (IsAuthenticated, PasswordChangeGate)
+
+    @extend_schema(
+        request=None,
+        responses=FamilySerializer,
+        operation_id="shop_default_family_lifecycle",
+    )
+    @transaction.atomic
+    def post(self, request, shop_id, family_id, action):
+        if action not in {"archive", "restore"}:
+            raise NotFound()
+        _lock_shop_write_context(request, shop_id)
+        if not _shop_write_allowed(request.shop_context):
+            raise PermissionDenied()
+        family = set_shop_default_family_status(
+            shop_id=shop_id,
+            actor=request.user,
+            family_id=family_id,
+            is_active=action == "restore",
+        )
+        return Response(FamilySerializer(family, context={"locale": _locale(request)}).data)
 
 
 class GlobalStyleOptionsView(APIView):
@@ -833,6 +1228,7 @@ class GlobalStyleOptionDetailView(APIView):
 
 class ShopVariantsView(ShopContextMixin, APIView):
     permission_classes = (IsAuthenticated,)
+    http_method_names = ["get", "head", "options"]
 
     @extend_schema(
         parameters=[ShopVariantQuerySerializer],
@@ -904,6 +1300,7 @@ class ShopVariantsView(ShopContextMixin, APIView):
 
 class ShopVariantDetailView(ShopContextMixin, APIView):
     permission_classes = (IsAuthenticated,)
+    http_method_names = ["get", "head", "options"]
 
     def _variant(self, request, variant_id):
         visible = GarmentVariant.objects.filter(
@@ -957,6 +1354,7 @@ class ShopVariantDetailView(ShopContextMixin, APIView):
 
 class ShopVariantLifecycleView(ShopContextMixin, APIView):
     permission_classes = (IsAuthenticated,)
+    http_method_names = ["options"]
 
     @extend_schema(request=None, responses=VariantDetailSerializer)
     def post(self, request, shop_id, variant_id, action):
@@ -998,9 +1396,8 @@ class ShopStyleOptionsView(ShopContextMixin, APIView):
     def get(self, request, shop_id):
         shop = request.shop_context.shop
         options = (
-            StyleOption.objects.filter(
-                Q(tenant__isnull=True) | Q(tenant=shop), is_active=True
-            )
+            _shop_catalog_style_options(shop)
+            .filter(is_active=True)
             .select_related("option_group")
             .prefetch_related(
                 "translations",
@@ -1034,7 +1431,10 @@ class ShopStyleOptionsView(ShopContextMixin, APIView):
         data.is_valid(raise_exception=True)
         values = data.validated_data
         group = get_object_or_404(
-            OptionGroup.objects.all(), pk=values["option_group_id"]
+            OptionGroup.objects.filter(
+                Q(tenant__isnull=True) | Q(tenant=request.shop_context.shop)
+            ),
+            pk=values["option_group_id"],
         )
         try:
             with transaction.atomic():
@@ -1076,7 +1476,10 @@ class ShopStyleOptionDetailView(ShopContextMixin, APIView):
         if not _shop_write_allowed(request.shop_context):
             raise PermissionDenied()
         option = get_object_or_404(
-            StyleOption.objects.filter(tenant=request.shop_context.shop), pk=option_id
+            _shop_catalog_style_options(request.shop_context.shop).filter(
+                tenant=request.shop_context.shop
+            ),
+            pk=option_id,
         )
         data = StyleOptionUpdateSerializer(data=request.data)
         data.is_valid(raise_exception=True)
@@ -1204,7 +1607,7 @@ class DesignListCreateView(ShopContextMixin, TenantScopedMixin, APIView):
 
     def get_queryset(self):
         context = self._get_authorized_shop_context()
-        return Design.objects.filter(tenant=context.shop)
+        return Design.objects.filter(tenant=context.shop).select_related("family")
 
     @extend_schema(
         parameters=[DesignListQuerySerializer],
@@ -1214,17 +1617,16 @@ class DesignListCreateView(ShopContextMixin, TenantScopedMixin, APIView):
     def get(self, request, shop_id):
         query = DesignListQuerySerializer(data=request.query_params)
         query.is_valid(raise_exception=True)
+        values = query.validated_data
         designs = (
             self.get_queryset()
-            .filter(status=Design.Status.ACTIVE)
             .prefetch_related("versions")
         )
-        family_id = query.validated_data.get("family")
+        if values["status"] != "all":
+            designs = designs.filter(status=values["status"])
+        family_id = values.get("family")
         if family_id:
             designs = designs.filter(family_id=family_id)
-        variant_id = query.validated_data.get("variant")
-        if variant_id:
-            designs = designs.filter(variant_id=variant_id)
         return _page_response(
             request,
             designs,
@@ -1237,23 +1639,21 @@ class DesignListCreateView(ShopContextMixin, TenantScopedMixin, APIView):
         responses=DesignSerializer,
         operation_id="shop_design_create",
     )
+    @transaction.atomic
     def post(self, request, shop_id):
         if not _shop_write_allowed(request.shop_context):
             raise PermissionDenied()
         data = DesignCreateSerializer(data=request.data)
         data.is_valid(raise_exception=True)
         values = data.validated_data
+        if "price" in values and not IsShopFinancialUser().has_permission(request, self):
+            raise PermissionDenied("Shop ADMIN or CASHIER STAFF access required.")
         family = get_object_or_404(
-            GarmentFamily.objects.filter(status=GarmentFamily.Status.ACTIVE),
-            pk=values["family_id"],
-        )
-        variant = get_object_or_404(
-            GarmentVariant.objects.filter(
-                (Q(tenant__isnull=True) | Q(tenant=request.shop_context.shop)),
-                is_active=True,
+            GarmentFamily.objects.filter(
+                Q(tenant__isnull=True) | Q(tenant=request.shop_context.shop),
+                status=GarmentFamily.Status.ACTIVE,
             ),
-            pk=values["variant_id"],
-            family=family,
+            pk=values["family_id"],
         )
         source = source_version = None
         if values.get("source_design_id"):
@@ -1262,9 +1662,9 @@ class DesignListCreateView(ShopContextMixin, TenantScopedMixin, APIView):
                 status=Design.Status.ACTIVE,
             )
             source = get_object_or_404(source_qs, pk=values["source_design_id"])
-            if source.family_id != family.pk or source.variant_id != variant.pk:
+            if source.family_id != family.pk:
                 raise serializers.ValidationError(
-                    "A copied design must keep its source garment family and variant."
+                    "A copied design must keep its source garment family."
                 )
             source_version = get_object_or_404(
                 DesignVersion.objects.filter(
@@ -1276,20 +1676,38 @@ class DesignListCreateView(ShopContextMixin, TenantScopedMixin, APIView):
                 shop_id=shop_id,
                 actor=request.user,
                 family=family,
-                variant=variant,
                 name=values["name"],
                 source=source,
                 source_version=source_version,
                 translations=values.get("translations"),
             )
         else:
+            selection_ids = values.get("selection_ids", [])
+            options = list(
+                _shop_catalog_style_options(request.shop_context.shop)
+                .filter(pk__in=selection_ids, is_active=True)
+                .select_related("option_group")
+            )
+            if len(options) != len(selection_ids):
+                raise NotFound()
             design = create_design(
                 shop_id=shop_id,
                 actor=request.user,
                 family=family,
-                variant=variant,
                 name=values["name"],
                 translations=values.get("translations"),
+                selection_options=options,
+                idempotency_key=values.get("idempotency_key"),
+            )
+        if "price" in values:
+            set_shop_design_price(
+                context=request.shop_context,
+                actor=request.user,
+                design_id=design.pk,
+                amount=values["price"]["amount"],
+                reject_change=bool(values.get("idempotency_key")),
+                idempotency_key=values.get("idempotency_key") or request.headers.get("Idempotency-Key", "").strip(),
+                request_id=request.headers.get("X-Request-ID", "")[:128],
             )
         design.refresh_from_db()
         return Response(
@@ -1300,13 +1718,85 @@ class DesignListCreateView(ShopContextMixin, TenantScopedMixin, APIView):
         )
 
 
+class ShopDesignPriceView(ShopContextMixin, APIView):
+    permission_classes = (IsAuthenticated, IsShopFinancialUser)
+
+    @extend_schema(
+        responses=ShopDesignPriceSerializer,
+        operation_id="shop_design_price_retrieve",
+    )
+    def get(self, request, shop_id, design_id):
+        price = get_object_or_404(
+            ShopDesignPrice.objects.select_related("design"),
+            tenant=request.shop_context.shop,
+            design_id=design_id,
+        )
+        return Response(
+            ShopDesignPriceSerializer(
+                {
+                    "design_id": price.design_id,
+                    "amount": price.amount,
+                    "currency": price.currency,
+                    "updated_at": price.updated_at,
+                }
+            ).data
+        )
+
+    @extend_schema(
+        request=ShopDesignPriceSerializer,
+        responses=ShopDesignPriceSerializer,
+        operation_id="shop_design_price_set",
+    )
+    @transaction.atomic
+    def put(self, request, shop_id, design_id):
+        data = ShopDesignPriceSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        if set(request.data) != {"amount"}:
+            raise serializers.ValidationError("Only amount can be changed.")
+        price = set_shop_design_price(
+            context=request.shop_context,
+            actor=request.user,
+            design_id=design_id,
+            amount=data.validated_data["amount"],
+            idempotency_key=request.headers.get("Idempotency-Key", "").strip(),
+            request_id=request.headers.get("X-Request-ID", "")[:128],
+        )
+        return mutation_response(price, ShopDesignPriceSerializer)
+
+
+class ShopDefaultDesignRestoreView(ShopContextMixin, APIView):
+    permission_classes = (IsAuthenticated, PasswordChangeGate)
+
+    @extend_schema(
+        request=None,
+        responses=DesignSerializer,
+        operation_id="shop_default_design_restore",
+    )
+    @transaction.atomic
+    def post(self, request, shop_id, design_id):
+        _lock_shop_write_context(request, shop_id)
+        if not _shop_write_allowed(request.shop_context):
+            raise PermissionDenied()
+        design = restore_shop_default_design(
+            shop_id=shop_id, actor=request.user, design_id=design_id
+        )
+        return Response(
+            DesignSerializer(
+                design, context={"shop_id": shop_id, "locale": _locale(request)}
+            ).data
+        )
+
+
 class DesignDetailView(ShopContextMixin, APIView):
     permission_classes = (IsAuthenticated,)
 
     @extend_schema(responses=DesignSerializer, operation_id="shop_design_retrieve")
     def get(self, request, shop_id, design_id):
         design = get_object_or_404(
-            Design.objects.filter(tenant=request.shop_context.shop), pk=design_id
+            Design.objects.filter(tenant=request.shop_context.shop).prefetch_related(
+                "versions"
+            ),
+            pk=design_id,
         )
         return Response(
             DesignSerializer(
@@ -1410,9 +1900,8 @@ class DesignSelectionView(ShopContextMixin, APIView):
         data = SelectionCreateSerializer(data=request.data)
         data.is_valid(raise_exception=True)
         option = get_object_or_404(
-            StyleOption.objects.filter(
-                Q(tenant__isnull=True) | Q(tenant=request.shop_context.shop),
-                is_active=True,
+            _shop_catalog_style_options(request.shop_context.shop).filter(
+                is_active=True
             ),
             pk=data.validated_data["style_option_id"],
         )
@@ -1425,6 +1914,57 @@ class DesignSelectionView(ShopContextMixin, APIView):
             SelectionSerializer(selection, context={"locale": _locale(request)}).data,
             status=status.HTTP_201_CREATED,
         )
+
+
+class DesignSelectionDetailView(ShopContextMixin, APIView):
+    permission_classes = (IsAuthenticated,)
+
+    @extend_schema(
+        request=SelectionCreateSerializer,
+        responses=SelectionSerializer,
+        operation_id="shop_design_selection_update",
+    )
+    @transaction.atomic
+    def patch(self, request, shop_id, version_id, selection_id):
+        _lock_shop_write_context(request, shop_id)
+        if not _shop_write_allowed(request.shop_context):
+            raise PermissionDenied()
+        data = SelectionCreateSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        option = get_object_or_404(
+            _shop_catalog_style_options(request.shop_context.shop).filter(
+                is_active=True
+            ),
+            pk=data.validated_data["style_option_id"],
+        )
+        selection = update_selection(
+            shop_id=shop_id,
+            actor=request.user,
+            version_id=version_id,
+            selection_id=selection_id,
+            option=option,
+        )
+        return Response(
+            SelectionSerializer(selection, context={"locale": _locale(request)}).data
+        )
+
+    @extend_schema(
+        request=None,
+        responses={204: OpenApiResponse(description="Stale Draft selection removed.")},
+        operation_id="shop_design_selection_remove_unmapped_draft",
+    )
+    @transaction.atomic
+    def delete(self, request, shop_id, version_id, selection_id):
+        _lock_shop_write_context(request, shop_id)
+        if not _shop_write_allowed(request.shop_context):
+            raise PermissionDenied()
+        remove_unmapped_draft_selection(
+            shop_id=shop_id,
+            actor=request.user,
+            version_id=version_id,
+            selection_id=selection_id,
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class PublishDesignVersionView(ShopContextMixin, APIView):
@@ -1529,7 +2069,7 @@ class GlobalDesignTemplatesView(APIView):
         query.is_valid(raise_exception=True)
         designs = Design.objects.filter(
             tenant__isnull=True, status=Design.Status.ACTIVE
-        )
+        ).select_related("family")
         main_supplier = ShopRolePolicy.is_main_supplier_admin(request.user)
         if not main_supplier:
             designs = designs.filter(
@@ -1538,9 +2078,6 @@ class GlobalDesignTemplatesView(APIView):
         family_id = query.validated_data.get("family")
         if family_id:
             designs = designs.filter(family_id=family_id)
-        variant_id = query.validated_data.get("variant")
-        if variant_id:
-            designs = designs.filter(variant_id=variant_id)
         return _page_response(
             request,
             designs,
@@ -1564,18 +2101,14 @@ class GlobalDesignTemplatesView(APIView):
                 "Global defaults cannot be copied from Shop designs."
             )
         family = get_object_or_404(
-            GarmentFamily.objects.filter(status=GarmentFamily.Status.ACTIVE),
+            GarmentFamily.objects.filter(
+                tenant__isnull=True, status=GarmentFamily.Status.ACTIVE
+            ),
             pk=values["family_id"],
-        )
-        variant = get_object_or_404(
-            GarmentVariant.objects.filter(tenant__isnull=True, is_active=True),
-            pk=values["variant_id"],
-            family=family,
         )
         design = create_global_design(
             actor=request.user,
             family=family,
-            variant=variant,
             name=values["name"],
             translations=values.get("translations"),
         )

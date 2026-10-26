@@ -1,4 +1,5 @@
 from django.db import models
+from django.db import transaction
 from django.core.validators import RegexValidator
 from backend.core.models import BaseModel
 
@@ -107,3 +108,21 @@ class Tenant(BaseModel):
             raise ValidationError(
                 {"max_users": "Cannot be lower than the current Shop user count."}
             )
+
+    def save(self, *args, **kwargs):
+        update_fields = kwargs.get("update_fields")
+        if not self._state.adding and (not update_fields or "default_currency" in update_fields):
+            with transaction.atomic():
+                original = type(self).objects.select_for_update().filter(pk=self.pk).values("default_currency").first()
+                if original and original["default_currency"] != self.default_currency:
+                    from apps.billing.models import Invoice
+                    from apps.catalog.models import ShopDesignPrice
+
+                    if ShopDesignPrice.objects.filter(tenant_id=self.pk).exists() or Invoice.objects.filter(tenant_id=self.pk).exists():
+                        from django.core.exceptions import ValidationError
+
+                        raise ValidationError({
+                            "default_currency": "Shop currency is frozen after Design prices or financial history exist; an explicitly reviewed migration is required."
+                        })
+                return super().save(*args, **kwargs)
+        return super().save(*args, **kwargs)

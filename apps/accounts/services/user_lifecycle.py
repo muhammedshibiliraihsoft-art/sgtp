@@ -11,17 +11,10 @@ from apps.accounts.security import generate_initial_password, set_password_and_r
 
 
 def reset_user_credentials(actor, target_user):
-    """Use global authority or same-Shop ADMIN authority for normal members."""
+    """Allow only a Shop ADMIN to reset an active same-Shop STAFF credential."""
     current_actor = User.objects.filter(
         pk=getattr(actor, "pk", None), is_active=True
     ).first()
-    if ShopRolePolicy.is_main_supplier_admin(current_actor):
-        with transaction.atomic():
-            target = User.objects.select_for_update().get(pk=target_user.pk)
-            password = generate_initial_password(target)
-            set_password_and_revoke_sessions(target, password, must_change=True)
-            return password
-
     shop_id = getattr(current_actor, "owning_shop_id", None)
     if not shop_id:
         raise NotFound()
@@ -40,7 +33,7 @@ def reset_user_credentials(actor, target_user):
             .filter(
                 tenant=shop,
                 user_id=target_user.pk,
-                role__in=[ShopRole.STAFF, ShopRole.VIEWER],
+                role=ShopRole.STAFF,
                 is_active=True,
                 deleted__isnull=True,
             )

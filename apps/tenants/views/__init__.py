@@ -142,6 +142,7 @@ class TenantViewSet(viewsets.ModelViewSet):
         self.perform_create(serializer)
         data = TenantAdminSerializer(self._created_shop).data
         data["first_admin_user_code"] = self._created_first_admin.user_code
+        data["first_admin_login_id"] = self._created_first_admin.login_id
         data["initial_password"] = self._initial_password
         response = Response(data, status=status.HTTP_201_CREATED)
         response["Cache-Control"] = "no-store"

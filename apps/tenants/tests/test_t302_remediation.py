@@ -282,12 +282,12 @@ class T302RemediationTests(TestCase):
         for index in range(2):
             create_shop_account(
                 main, self.shop.pk, ShopRole.STAFF,
-                {"first_name": f"Capacity{index}", "email": f"capacity{index}@test.com"},
+                {"first_name": f"Capacity{index}", "login_id": f"capacity{index}", "email": f"capacity{index}@test.com"},
             )
         with self.assertRaises(Exception):
             create_shop_account(
                 main, self.shop.pk, ShopRole.STAFF,
-                {"first_name": "Full", "email": "capacity-full@test.com"},
+                {"first_name": "Full", "login_id": "capacity_full", "email": "capacity-full@test.com"},
             )
 
     def test_patch_user_identity_spoofing_denied(self):

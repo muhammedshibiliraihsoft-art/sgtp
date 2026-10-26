@@ -17,8 +17,9 @@ from apps.catalog.measurement_services import (
     create_measurement_definition,
     create_measurement_profile,
     create_measurement_set,
+    deactivate_measurement_set,
 )
-from apps.catalog.models import GarmentFamily, GarmentVariant
+from apps.catalog.models import GarmentFamily
 from apps.clients.models import Client
 from apps.tenants.models import ShopRole, Supplier, Tenant, TenantMember
 
@@ -47,12 +48,6 @@ class MeasurementConcurrencyTests(TransactionTestCase):
         )
         self.client_record = Client.objects.create(tenant=self.shop, name="Race Client")
         self.family, _created = GarmentFamily.objects.get_or_create(code="mens-shirt")
-        self.variant, _created = GarmentVariant.objects.get_or_create(
-            family=self.family,
-            tenant=None,
-            code="standard-shirt",
-            defaults={"is_default": True},
-        )
         self.chest, _created = MeasurementDefinition.objects.get_or_create(
             tenant=None, code="chest", defaults={"sort_order": 0}
         )
@@ -60,7 +55,7 @@ class MeasurementConcurrencyTests(TransactionTestCase):
             definition=self.chest, locale="en", defaults={"name": "Chest"}
         )
         MeasurementDefinitionMapping.objects.get_or_create(
-            definition=self.chest, family=self.family, variant=None
+            definition=self.chest, family=self.family
         )
 
     def concurrently(self, operation):
@@ -92,7 +87,6 @@ class MeasurementConcurrencyTests(TransactionTestCase):
             person_model=Client,
             person_id=self.client_record.pk,
             family_id=self.family.pk,
-            variant_id=self.variant.pk,
         )
 
     def test_profile_creation_race_keeps_one_profile(self):
@@ -144,6 +138,35 @@ class MeasurementConcurrencyTests(TransactionTestCase):
             [1, 2, 3],
         )
         self.assertEqual(profile.sets.filter(copied_from=original).count(), 2)
+
+    def test_concurrent_deletes_cannot_remove_both_active_versions(self):
+        profile = self.profile_operation(self.actor)
+        first = create_measurement_set(
+            shop_id=self.shop.pk,
+            actor=self.actor,
+            profile_id=profile.pk,
+            values=[{"definition_id": self.chest.pk, "value": "38", "unit": "CM"}],
+        )
+        second = create_measurement_set(
+            shop_id=self.shop.pk,
+            actor=self.actor,
+            profile_id=profile.pk,
+            values=[{"definition_id": self.chest.pk, "value": "39", "unit": "CM"}],
+        )
+
+        ids = iter((first.pk, second.pk))
+
+        def remove(actor):
+            return deactivate_measurement_set(
+                shop_id=self.shop.pk,
+                actor=actor,
+                profile_id=profile.pk,
+                set_id=next(ids),
+            )
+
+        results = self.concurrently(remove)
+        self.assertEqual(sum(result != "rejected" for result in results), 1)
+        self.assertEqual(profile.sets.filter(is_active=True).count(), 1)
 
     def test_concurrent_custom_definition_code_creation_keeps_one_code(self):
         def create(actor):

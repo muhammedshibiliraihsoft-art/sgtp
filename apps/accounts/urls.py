@@ -6,8 +6,10 @@ from .views import (
     CustomTokenRefreshView,
     csrf_bootstrap,
     logout_view,
-    password_reset_confirm,
-    password_reset_request,
+    shop_admin_pin_reset_request,
+    shop_admin_pin_reset_list,
+    shop_admin_pin_reset_approve,
+    shop_admin_pin_reset_reject,
 )
 
 router = DefaultRouter()
@@ -18,7 +20,9 @@ urlpatterns = [
     path('login/', CustomTokenObtainPairView.as_view(), name='login'),
     path('logout/', logout_view, name='logout'),
     path('token/refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
-    path('password/reset/', password_reset_request, name='password_reset_request'),
-    path('password/reset/confirm/', password_reset_confirm, name='password_reset_confirm'),
+    path('pin-reset-requests/', shop_admin_pin_reset_request, name='shop_admin_pin_reset_request'),
+    path('pin-reset-requests/pending/', shop_admin_pin_reset_list, name='shop_admin_pin_reset_list'),
+    path('pin-reset-requests/<uuid:request_id>/approve/', shop_admin_pin_reset_approve, name='shop_admin_pin_reset_approve'),
+    path('pin-reset-requests/<uuid:request_id>/reject/', shop_admin_pin_reset_reject, name='shop_admin_pin_reset_reject'),
     path('', include(router.urls)),
 ]

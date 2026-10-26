@@ -68,6 +68,7 @@ class T305ShopManagementConcurrencyTests(TransactionTestCase):
                 role=ShopRole.STAFF,
                 account_data={
                     "first_name": "Staff",
+                    "login_id": "race_staff",
                     "email": "t305-race-staff@example.test",
                     "phone": "+96550000003",
                 },

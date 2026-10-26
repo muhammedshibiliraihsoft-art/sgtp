@@ -4,6 +4,7 @@ from django.db import IntegrityError, transaction
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 
 from apps.accounts.models import User
+from apps.accounts.identity import normalize_login_id
 from apps.accounts.security import generate_initial_password
 from apps.tenants.models import ShopRole, Tenant, TenantMember
 from apps.tenants.policy import ShopRolePolicy
@@ -42,6 +43,16 @@ def create_shop_account(actor, shop_id, role, account_data):
             raise ValidationError({"shop": "Shop has reached its user limit."})
 
         data = dict(account_data)
+        login_enabled = role != ShopRole.VIEWER
+        if login_enabled:
+            try:
+                data["login_id"] = normalize_login_id(data.get("login_id"))
+            except ValueError as exc:
+                raise ValidationError({"login_id": str(exc)}) from exc
+        else:
+            if data.get("login_id"):
+                raise ValidationError({"login_id": "Viewer accounts do not have login credentials."})
+            data["login_id"] = None
         for key in ("email", "phone"):
             if data.get(key) == "":
                 data[key] = None
@@ -67,14 +78,16 @@ def create_shop_account(actor, shop_id, role, account_data):
             email=data.get("email"),
             phone=data.get("phone"),
             first_name=data.get("first_name", ""),
+            login_id=data["login_id"],
             last_name=data.get("last_name", ""),
         )
-        initial_password = generate_initial_password(candidate)
+        initial_password = generate_initial_password(candidate) if login_enabled else None
         try:
             user = User.objects.create_user(
                 password=initial_password,
                 owning_shop=shop,
-                must_change_password=True,
+                login_enabled=login_enabled,
+                must_change_password=login_enabled,
                 **data,
             )
         except IntegrityError as exc:
@@ -89,6 +102,8 @@ def create_shop_account(actor, shop_id, role, account_data):
                 ) from exc
             if constraint in {"unique_user_email_casefold", "accounts_user_email_key"}:
                 raise ValidationError({"email": "This email is unavailable."}) from exc
+            if constraint == "unique_user_login_id_casefold":
+                raise ValidationError({"login_id": "This User ID is unavailable."}) from exc
             raise
 
         TenantMember.objects.create(

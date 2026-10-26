@@ -61,7 +61,7 @@ class MembershipWorkFunctionModelTests(TestCase):
             )
             for code in CATALOG
         ]
-        self.assertEqual(len(rows), 7)
+        self.assertEqual(len(rows), 8)
         self.assertEqual(
             set(self.membership.work_functions.values_list("function_code", flat=True)),
             set(CATALOG),
@@ -84,7 +84,7 @@ class MembershipWorkFunctionModelTests(TestCase):
         with self.assertRaises(IntegrityError):
             with transaction.atomic():
                 MembershipWorkFunction.objects.create(
-                    membership=self.membership, function_code="CHECK"
+                    membership=self.membership, function_code="UNKNOWN"
                 )
 
     def test_assignment_history_row_cannot_be_reassigned_or_rewritten(self):
@@ -217,7 +217,7 @@ class MembershipWorkFunctionAPITests(APITestCase):
             [],
         )
         duplicate = self.client.put(url, {"functions": ["QC", "QC"]}, format="json")
-        unknown = self.client.put(url, {"functions": ["CHECK"]}, format="json")
+        unknown = self.client.put(url, {"functions": ["UNKNOWN"]}, format="json")
         self.assertEqual(duplicate.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(unknown.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -397,9 +397,13 @@ class MembershipWorkFunctionMigrationTests(TransactionTestCase):
     """The additive migration never assigns inferred functions to old members."""
 
     migrate_from = [
-        ("tenants", "0008_tenant_default_currency_tenant_default_locale_and_more")
+        ("tenants", "0008_tenant_default_currency_tenant_default_locale_and_more"),
+        ("accounts", "0005_user_shop_ownership"),
     ]
-    migrate_to = [("tenants", "0009_membership_work_functions")]
+    migrate_to = [
+        ("tenants", "0009_membership_work_functions"),
+        ("accounts", "0005_user_shop_ownership"),
+    ]
 
     def tearDown(self):
         executor = MigrationExecutor(connection)
@@ -413,6 +417,7 @@ class MembershipWorkFunctionMigrationTests(TransactionTestCase):
         OldSupplier = old_state.apps.get_model("tenants", "Supplier")
         OldTenant = old_state.apps.get_model("tenants", "Tenant")
         OldMembership = old_state.apps.get_model("tenants", "TenantMember")
+        OldUser = old_state.apps.get_model("accounts", "User")
 
         supplier, _created = OldSupplier.objects.get_or_create(
             singleton_lock=True,
@@ -424,13 +429,12 @@ class MembershipWorkFunctionMigrationTests(TransactionTestCase):
             slug="legacy-functions-migration-shop",
             max_users=20,
         )
-        current_shop = Tenant.objects.defer(
-            "default_currency", "default_locale", "default_timezone"
-        ).get(pk=shop.pk)
-        user = create_test_user(
-            owning_shop=current_shop,
+        user = OldUser.objects.create(
             email="legacy-functions-migration@example.test",
             first_name="Legacy",
+            password="!",
+            user_code="U-23456789ABCDEFGH",
+            owning_shop_id=shop.pk,
         )
         removed = OldMembership.objects.create(
             tenant_id=shop.pk,

@@ -107,7 +107,7 @@ class MeasurementDefinitionTranslation(BaseModel):
 
 
 class MeasurementDefinitionMapping(BaseModel):
-    """Family applicability, optionally restricted to one garment variant."""
+    """Family-level applicability for one measurement definition."""
 
     definition = models.ForeignKey(
         MeasurementDefinition, on_delete=models.PROTECT, related_name="mappings"
@@ -115,50 +115,26 @@ class MeasurementDefinitionMapping(BaseModel):
     family = models.ForeignKey(
         GarmentFamily, on_delete=models.PROTECT, related_name="measurement_mappings"
     )
-    variant = models.ForeignKey(
-        GarmentVariant,
-        null=True,
-        blank=True,
-        on_delete=models.PROTECT,
-        related_name="measurement_mappings",
-    )
     sort_order = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
                 fields=("definition", "family"),
-                condition=Q(variant__isnull=True, deleted__isnull=True),
+                condition=Q(deleted__isnull=True),
                 name="measure_map_family_uniq",
-            ),
-            models.UniqueConstraint(
-                fields=("definition", "family", "variant"),
-                condition=Q(variant__isnull=False, deleted__isnull=True),
-                name="measure_map_variant_uniq",
             ),
         ]
 
     def clean(self):
         super().clean()
-        if (
-            self.variant_id
-            and self.family_id
-            and self.variant.family_id != self.family_id
-        ):
-            raise ValidationError(
-                {"variant": "Variant must belong to the selected family."}
-            )
-        if self.definition_id and self.variant_id:
-            if self._state.adding and not self.variant.is_active:
-                raise ValidationError(
-                    {"variant": "New measurement mappings require an active variant."}
-                )
-            if (
-                self.definition.tenant_id != self.variant.tenant_id
-                and self.variant.tenant_id
+        if self.definition_id and self.family_id:
+            if self.family.tenant_id not in (
+                None,
+                self.definition.tenant_id,
             ):
                 raise ValidationError(
-                    {"variant": "Variant must be global or belong to this Shop."}
+                    {"family": "Family must be global or owned by the definition Shop."}
                 )
 
     def save(self, *args, **kwargs):
@@ -256,6 +232,10 @@ class MeasurementProfile(BaseModel):
                 raise ValidationError(
                     "Related Person billing owner must remain its Primary Client."
                 )
+        if self.family_id and self.family.tenant_id not in (None, self.tenant_id):
+            raise ValidationError(
+                {"family": "Family must be global or owned by this Shop."}
+            )
         if (
             self.variant_id
             and self.family_id
@@ -312,6 +292,14 @@ class MeasurementSet(BaseModel):
     copied_from = models.ForeignKey(
         "self", null=True, blank=True, on_delete=models.PROTECT, related_name="copies"
     )
+    design_version = models.ForeignKey(
+        "catalog.DesignVersion",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="measurement_sets",
+    )
+    is_active = models.BooleanField(default=True)
     objects = ImmutableHistoryManager()
 
     class Meta:
@@ -332,6 +320,29 @@ class MeasurementSet(BaseModel):
             )
         if self.copied_from_id and self.copied_from.profile_id != self.profile_id:
             raise ValidationError("A copied set must come from the same profile.")
+        if self.design_version_id:
+            version = self.design_version
+            design = version.design
+            profile = self.profile
+            if version.status != "PUBLISHED":
+                raise ValidationError(
+                    {"design_version": "Only a published DesignVersion can be linked."}
+                )
+            if design.family_id != profile.family_id:
+                raise ValidationError(
+                    {
+                        "design_version": "Design and measurement profile families must match."
+                    }
+                )
+            if design.tenant_id not in (None, profile.tenant_id):
+                raise ValidationError(
+                    {"design_version": "Design is not available to this Shop."}
+                )
+            if design.family.tenant_id not in (None, profile.tenant_id):
+                raise ValidationError(
+                    {"design_version": "Design family is not available to this Shop."}
+                )
+        self.full_clean()
         return super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):

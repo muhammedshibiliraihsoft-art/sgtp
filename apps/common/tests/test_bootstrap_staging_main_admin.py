@@ -16,7 +16,8 @@ BOOTSTRAP_ENV = {
     "STAGING_MAIN_ADMIN_EMAIL": "shibili.test@example.com",
     "STAGING_MAIN_ADMIN_FIRST_NAME": "Shibili",
     "STAGING_MAIN_ADMIN_PHONE": "+916282911854",
-    "STAGING_MAIN_ADMIN_PASSWORD": secrets.token_urlsafe(48),
+    "STAGING_MAIN_ADMIN_LOGIN_ID": "shibili_main",
+    "STAGING_MAIN_ADMIN_PIN": "048731",
 }
 pytestmark = pytest.mark.django_db
 
@@ -41,19 +42,20 @@ def run_bootstrap(env=None, *, confirmed=True, database_name="sgtp_staging"):
 
 
 def test_creates_one_main_admin_and_requires_password_change():
-    password = BOOTSTRAP_ENV["STAGING_MAIN_ADMIN_PASSWORD"]
+    pin = BOOTSTRAP_ENV["STAGING_MAIN_ADMIN_PIN"]
     output = run_bootstrap()
 
     user = User.objects.get(email="shibili.test@example.com")
     assert user.first_name == "Shibili"
+    assert user.login_id == "shibili_main"
     assert user.phone == "+916282911854"
     assert user.is_active and user.is_staff and user.is_superuser
     assert user.owning_shop_id is None
     assert user.must_change_password
-    assert user.check_password(password)
+    assert user.check_password(pin)
     assert User.objects.filter(is_superuser=True).count() == 1
     assert "created" in output
-    assert password not in output
+    assert pin not in output
 
 
 def test_existing_contact_collision_is_a_noop():
@@ -107,19 +109,19 @@ def test_guards_refuse_creation_without_mutation(
     assert User.objects.count() == before
 
 
-def test_weak_password_is_rejected_without_mutation():
+def test_invalid_pin_is_rejected_without_mutation():
     before = User.objects.count()
-    with pytest.raises(CommandError, match="at least 40 characters"):
-        run_bootstrap({"STAGING_MAIN_ADMIN_PASSWORD": "weak"})
+    with pytest.raises(CommandError, match="Login ID or PIN is invalid"):
+        run_bootstrap({"STAGING_MAIN_ADMIN_PIN": "invalid"})
     assert User.objects.count() == before
 
 
 def test_repeated_run_never_resets_or_promotes_existing_user():
     run_bootstrap()
     user = User.objects.get(email="shibili.test@example.com")
-    original_password = BOOTSTRAP_ENV["STAGING_MAIN_ADMIN_PASSWORD"]
+    original_pin = BOOTSTRAP_ENV["STAGING_MAIN_ADMIN_PIN"]
     changed_config = {
-        "STAGING_MAIN_ADMIN_PASSWORD": secrets.token_urlsafe(48),
+        "STAGING_MAIN_ADMIN_PIN": "857204",
         "STAGING_MAIN_ADMIN_FIRST_NAME": "Changed Name",
     }
 
@@ -127,6 +129,6 @@ def test_repeated_run_never_resets_or_promotes_existing_user():
 
     user.refresh_from_db()
     assert user.first_name == "Shibili"
-    assert user.check_password(original_password)
-    assert not user.check_password(changed_config["STAGING_MAIN_ADMIN_PASSWORD"])
+    assert user.check_password(original_pin)
+    assert not user.check_password(changed_config["STAGING_MAIN_ADMIN_PIN"])
     assert "no account changes were made" in output

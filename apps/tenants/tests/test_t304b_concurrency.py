@@ -135,6 +135,7 @@ class T304BConcurrencyTests(TransactionTestCase):
                     "max_users": 2,
                 },
                 {
+                    "login_id": "race_first_admin",
                     "first_name": "First",
                     "email": "race-first-admin@example.test",
                     "phone": "+96550999996",

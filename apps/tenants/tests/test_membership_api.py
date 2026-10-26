@@ -113,7 +113,8 @@ class TenantMemberAPITest(APITestCase):
     def test_superuser_can_update_any(self):
         self.client.force_authenticate(user=self.super_admin)
         r = self.client.patch(
-            f"{self.list_url}{self.mem_a_viewer.id}/", {"role": ShopRole.STAFF}
+            f"{self.list_url}{self.mem_a_viewer.id}/",
+            {"role": ShopRole.STAFF, "new_login_id": "super_promoted"},
         )
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.mem_a_viewer.refresh_from_db()
@@ -191,6 +192,7 @@ class TenantMemberAPITest(APITestCase):
             {
                 "email": "new-shop-a-staff@test.com",
                 "first_name": "New",
+                "login_id": "new_shop_staff",
                 "role": ShopRole.STAFF,
             },
             format="json",
@@ -219,9 +221,34 @@ class TenantMemberAPITest(APITestCase):
     def test_shop_admin_can_update_own(self):
         self.client.force_authenticate(user=self.shop_a_admin)
         r = self.client.patch(
-            f"{self.list_url}{self.mem_a_viewer.id}/", {"role": ShopRole.STAFF}
+            f"{self.list_url}{self.mem_a_viewer.id}/",
+            {"role": ShopRole.STAFF, "new_login_id": "promoted_viewer"},
         )
         self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(r.data["login_id"], "promoted_viewer")
+        self.assertRegex(r.data["temporary_password"], r"^[0-9]{6}$")
+        self.shop_a_viewer.refresh_from_db()
+        self.assertTrue(self.shop_a_viewer.must_change_password)
+        self.assertTrue(self.shop_a_viewer.check_password(r.data["temporary_password"]))
+        self.assertEqual(self.mem_a_viewer.role, ShopRole.VIEWER)
+        self.mem_a_viewer.refresh_from_db()
+        self.assertEqual(self.mem_a_viewer.role, ShopRole.STAFF)
+
+        pin = r.data["temporary_password"]
+        version = self.shop_a_viewer.auth_version
+        demoted = self.client.patch(
+            f"{self.list_url}{self.mem_a_viewer.id}/", {"role": ShopRole.VIEWER}
+        )
+        self.assertEqual(demoted.status_code, status.HTTP_200_OK, demoted.data)
+        self.shop_a_viewer.refresh_from_db()
+        self.assertTrue(self.shop_a_viewer.check_password(pin))
+        self.assertEqual(self.shop_a_viewer.auth_version, version + 1)
+        login = self.client.post(
+            "/api/v1/auth/login/",
+            {"identifier": "promoted_viewer", "password": pin},
+            format="json",
+        )
+        self.assertEqual(login.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_shop_admin_cannot_update_other(self):
         mem_b = TenantMember.objects.create(

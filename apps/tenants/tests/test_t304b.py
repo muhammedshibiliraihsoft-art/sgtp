@@ -7,6 +7,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.test import APIClient
 
 from apps.accounts.models import User
+from apps.catalog.models import GarmentFamily
 from apps.accounts.services.user_lifecycle import deactivate_global_user
 from apps.tenants.admin import TenantAdmin, TenantMemberAdmin
 from apps.tenants.models import ShopRole, Supplier, Tenant, TenantMember
@@ -43,6 +44,7 @@ class T304BRemediationTests(TestCase):
             "max_users": 3,
             "first_admin": first_admin or {
                 "first_name": "First",
+                "login_id": slug.replace("-", "_")[:32],
                 "email": f"{slug}@example.test",
                 "phone": f"+965500000{User.objects.count() + 2:02d}",
             },
@@ -66,22 +68,42 @@ class T304BRemediationTests(TestCase):
         self.assertNotIn("first_admin_user", response.data)
         membership = TenantMember.objects.get(tenant=shop, role=ShopRole.ADMIN)
         self.assertEqual(membership.user.owning_shop_id, shop.pk)
+        self.assertTrue(
+            GarmentFamily.objects.filter(
+                tenant=shop, template_source__tenant__isnull=True
+            ).exists()
+        )
         self.assertEqual(response["Cache-Control"], "no-store")
 
     def test_created_first_admin_can_log_in_and_change_initial_password(self):
+        payload = self.create_shop_payload("login-shop")
+        payload["first_admin"]["login_id"] = "  MainTailor_01  "
         created = self.client.post(
             "/api/v1/tenants/",
-            self.create_shop_payload("login-shop"),
+            payload,
             format="json",
         )
         self.assertEqual(created.status_code, 201, created.data)
         user = User.objects.get(user_code=created.data["first_admin_user_code"])
+        self.assertEqual(created.data["first_admin_login_id"], "MainTailor_01")
+        self.assertEqual(user.login_id, "MainTailor_01")
+        self.assertTrue(user.login_enabled)
         initial_password = created.data["initial_password"]
+        self.assertRegex(initial_password, r"^[0-9]{6}$")
+        self.assertNotEqual(user.password, initial_password)
+        self.assertTrue(user.check_password(initial_password))
+        self.assertTrue(user.must_change_password)
+
+        memberships = self.client.get(
+            f"/api/v1/memberships/?tenant={created.data['id']}&role=ADMIN"
+        )
+        self.assertEqual(memberships.status_code, 200, memberships.data)
+        self.assertEqual(memberships.data["results"][0]["login_id"], "MainTailor_01")
 
         shop_admin_client = APIClient()
         login = shop_admin_client.post(
             "/api/v1/auth/login/",
-            {"identifier": user.user_code, "password": initial_password},
+            {"identifier": "MainTailor_01", "password": initial_password},
             format="json",
         )
         self.assertEqual(login.status_code, 200, login.data)
@@ -97,14 +119,28 @@ class T304BRemediationTests(TestCase):
             "/api/v1/auth/users/password/change/",
             {
                 "current_password": initial_password,
-                "new_password": "ShopAdminSecure-939!Pass",
-                "new_password_confirm": "ShopAdminSecure-939!Pass",
+                "new_password": "048731",
+                "new_password_confirm": "048731",
             },
             format="json",
         )
         self.assertEqual(changed.status_code, 200, changed.data)
         user.refresh_from_db()
         self.assertFalse(user.must_change_password)
+        self.assertTrue(user.check_password("048731"))
+
+        old_password_login = shop_admin_client.post(
+            "/api/v1/auth/login/",
+            {"identifier": "MainTailor_01", "password": initial_password},
+            format="json",
+        )
+        new_password_login = shop_admin_client.post(
+            "/api/v1/auth/login/",
+            {"identifier": "MainTailor_01", "password": "048731"},
+            format="json",
+        )
+        self.assertEqual(old_password_login.status_code, 401)
+        self.assertEqual(new_password_login.status_code, 200, new_password_login.data)
 
     def test_shop_creation_rejects_invalid_first_admin_without_orphan(self):
         first_admin = {

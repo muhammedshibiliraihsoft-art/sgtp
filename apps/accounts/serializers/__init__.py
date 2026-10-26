@@ -1,6 +1,5 @@
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import update_last_login
-from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed
@@ -13,7 +12,9 @@ from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from ..models import User
-from ..identity import USER_CODE_PATTERN, normalize_email
+from ..identity import USER_CODE_PATTERN, LOGIN_ID_PATTERN, normalize_email, normalize_login_id
+from ..security import validate_pin
+from ..abuse import consume, release, source
 from ..phone_numbers import InvalidUserPhone, normalize_user_phone
 from apps.tenants.models import Tenant
 
@@ -22,6 +23,7 @@ class UserSerializer(serializers.ModelSerializer):
     phone = serializers.CharField(read_only=True)
     must_change_password = serializers.BooleanField(read_only=True)
     user_code = serializers.CharField(read_only=True)
+    login_id = serializers.CharField(read_only=True)
     is_main_supplier_admin = serializers.SerializerMethodField()
     email = serializers.EmailField(required=False, allow_null=True, allow_blank=True)
     first_name = serializers.CharField(required=True, allow_blank=False, max_length=30)
@@ -31,6 +33,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "user_code",
+            "login_id",
             "email",
             "first_name",
             "last_name",
@@ -45,6 +48,7 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = (
             "id",
             "user_code",
+            "login_id",
             "date_joined",
             "is_active",
             "phone",
@@ -122,6 +126,7 @@ class UserAdminSerializer(UserSerializer):
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
+    login_id = serializers.CharField(required=False, allow_null=True, allow_blank=True, max_length=32)
     email = serializers.EmailField(required=False, allow_null=True, allow_blank=True)
     first_name = serializers.CharField(required=True, allow_blank=False, max_length=30)
     phone = serializers.CharField(
@@ -138,13 +143,24 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("user_code", "email", "first_name", "last_name", "phone", "shop", "role")
+        fields = ("user_code", "login_id", "email", "first_name", "last_name", "phone", "shop", "role")
         read_only_fields = ("user_code",)
 
     def validate_email(self, value):
         normalized = normalize_email(value)
         if normalized and User.objects.filter(email__iexact=normalized).exists():
             raise serializers.ValidationError("This email is already assigned.", code="duplicate_email")
+        return normalized
+
+    def validate_login_id(self, value):
+        if value in (None, ""):
+            return None
+        try:
+            normalized = normalize_login_id(value)
+        except ValueError as exc:
+            raise serializers.ValidationError(str(exc)) from exc
+        if User.objects.filter(login_id__iexact=normalized).exists():
+            raise serializers.ValidationError("This User ID is unavailable.")
         return normalized
 
     def validate_first_name(self, value):
@@ -164,6 +180,15 @@ class UserCreateSerializer(serializers.ModelSerializer):
             )
         return normalized
 
+    def validate(self, attrs):
+        role = attrs.get("role")
+        login_id = attrs.get("login_id")
+        if role == "VIEWER" and login_id:
+            raise serializers.ValidationError({"login_id": "Viewer accounts do not have login credentials."})
+        if role != "VIEWER" and not login_id:
+            raise serializers.ValidationError({"login_id": "This field is required for login-enabled accounts."})
+        return attrs
+
     def create(self, validated_data):
         from apps.tenants.services.shop_accounts import create_shop_account
 
@@ -182,7 +207,7 @@ class ShopUserCreateSerializer(UserCreateSerializer):
     shop = None
 
     class Meta(UserCreateSerializer.Meta):
-        fields = ("user_code", "email", "first_name", "last_name", "phone", "role")
+        fields = ("user_code", "login_id", "email", "first_name", "last_name", "phone", "role")
 
     def to_internal_value(self, data):
         if "shop" in data or "tenant" in data or "owning_shop" in data:
@@ -207,8 +232,9 @@ class ShopUserCreateSerializer(UserCreateSerializer):
 
 class EmailOrPhoneTokenObtainPairSerializer(TokenObtainPairSerializer):
     identifier = serializers.CharField(
-        required=False, write_only=True, trim_whitespace=True
+        required=False, write_only=True, trim_whitespace=True, max_length=254
     )
+    password = serializers.CharField(write_only=True, required=False, max_length=256)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -231,6 +257,8 @@ class EmailOrPhoneTokenObtainPairSerializer(TokenObtainPairSerializer):
             return ("user_code", value.upper())
         if "@" in value:
             return ("email", normalize_email(value))
+        if LOGIN_ID_PATTERN.fullmatch(value):
+            return ("login_id", value)
         if not value.startswith("+"):
             raise AuthenticationFailed(
                 "Invalid credentials.", code="invalid_credentials"
@@ -270,13 +298,26 @@ class EmailOrPhoneTokenObtainPairSerializer(TokenObtainPairSerializer):
                 "Invalid credentials.", code="invalid_credentials"
             )
 
+        request = self.context.get("request")
+        source_id = source(request) if request else "unknown"
+        identifier_lookup = {
+            f"{kind}__iexact" if kind == "login_id" else kind: normalized_identifier
+        }
+        candidate = User.objects.filter(**identifier_lookup).only("pk").first()
+        source_allowed = consume("login-source", source_id, limit=60)
+        counter_kind = "login-account" if candidate else "login-unknown-source"
+        counter_value = str(candidate.pk) if candidate else source_id
+        counter_limit = 8 if candidate else 12
+        allowed = consume(
+            counter_kind, counter_value, limit=counter_limit
+        ) and source_allowed
         authenticated_user = authenticate(
             request=self.context.get("request"),
             identifier=normalized_identifier,
             identifier_kind=kind,
             password=attrs["password"],
         )
-        if not authenticated_user:
+        if not allowed or not authenticated_user:
             raise AuthenticationFailed(
                 "Invalid credentials.", code="invalid_credentials"
             )
@@ -297,7 +338,7 @@ class EmailOrPhoneTokenObtainPairSerializer(TokenObtainPairSerializer):
                 or user.password != authenticated_user.password
                 or not User.objects.filter(
                     pk=user.pk,
-                    **{kind: normalized_identifier},
+                    **identifier_lookup,
                 ).exists()
             ):
                 raise AuthenticationFailed(
@@ -308,6 +349,8 @@ class EmailOrPhoneTokenObtainPairSerializer(TokenObtainPairSerializer):
             data = {"refresh": str(refresh), "access": str(refresh.access_token)}
             if api_settings.UPDATE_LAST_LOGIN:
                 update_last_login(None, user)
+            release("login-source", source_id, limit=60)
+            release(counter_kind, counter_value, limit=counter_limit)
             return data
 
 
@@ -325,7 +368,12 @@ class VersionedTokenRefreshSerializer(TokenRefreshSerializer):
             raise InvalidToken(exc.args[0]) from exc
         except (KeyError, TypeError, ValueError) as exc:
             raise InvalidToken("Token is invalid or revoked.") from exc
-        if not user or not user.is_active or token_version != user.auth_version:
+        if (
+            not user
+            or not user.is_active
+            or not user.login_enabled
+            or token_version != user.auth_version
+        ):
             raise InvalidToken("Token is invalid or revoked.")
         data = super().validate(attrs)
         data["user"] = UserSerializer(user).data
@@ -333,50 +381,21 @@ class VersionedTokenRefreshSerializer(TokenRefreshSerializer):
 
 
 class PasswordChangeSerializer(serializers.Serializer):
-    current_password = serializers.CharField(write_only=True)
-    new_password = serializers.CharField(write_only=True)
-    new_password_confirm = serializers.CharField(write_only=True)
+    current_password = serializers.CharField(write_only=True, max_length=256)
+    new_password = serializers.CharField(write_only=True, max_length=256)
+    new_password_confirm = serializers.CharField(write_only=True, max_length=256)
 
     def validate(self, attrs):
-        user = self.context["request"].user
-        if not user.check_password(attrs["current_password"]):
-            raise serializers.ValidationError(
-                {"current_password": "Current password is incorrect."}
-            )
         if attrs["new_password"] != attrs["new_password_confirm"]:
             raise serializers.ValidationError(
                 {"new_password_confirm": "Passwords do not match."}
             )
         try:
-            validate_password(attrs["new_password"], user=user)
+            validate_pin(attrs["new_password"])
         except DjangoValidationError as exc:
             raise serializers.ValidationError(
                 {"new_password": list(exc.messages)}
             ) from exc
-        return attrs
-
-
-class PasswordResetRequestSerializer(serializers.Serializer):
-    email = serializers.EmailField(required=False, allow_null=True, allow_blank=True)
-
-
-class PasswordResetConfirmSerializer(serializers.Serializer):
-    uid = serializers.CharField()
-    token = serializers.CharField()
-    new_password = serializers.CharField(write_only=True)
-    new_password_confirm = serializers.CharField(write_only=True)
-
-    def validate(self, attrs):
-        if attrs["new_password"] != attrs["new_password_confirm"]:
-            raise serializers.ValidationError(
-                {"new_password_confirm": "Passwords do not match."}
-            )
-        user = self.context.get("reset_user")
-        if user:
-            try:
-                validate_password(attrs["new_password"], user=user)
-            except DjangoValidationError as exc:
-                raise serializers.ValidationError(
-                    {"new_password": list(exc.messages)}
-                ) from exc
+        if attrs["new_password"] == attrs["current_password"]:
+            raise serializers.ValidationError({"new_password": "Choose a different PIN."})
         return attrs

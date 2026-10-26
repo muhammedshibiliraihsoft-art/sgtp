@@ -11,7 +11,7 @@ from apps.tenants.context import resolve_shop_context
 
 
 class ShopUserCreatedSerializer(UserAdminSerializer):
-    initial_password = serializers.CharField()
+    initial_password = serializers.CharField(required=False, allow_null=True)
 
     class Meta(UserAdminSerializer.Meta):
         fields = UserAdminSerializer.Meta.fields + ("initial_password",)
@@ -35,7 +35,8 @@ class ShopUserCreateView(APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         data = UserAdminSerializer(user).data
-        data["initial_password"] = serializer.initial_password
+        if serializer.initial_password:
+            data["initial_password"] = serializer.initial_password
         response = Response(data, status=status.HTTP_201_CREATED)
         response["Cache-Control"] = "no-store"
         response["Pragma"] = "no-cache"

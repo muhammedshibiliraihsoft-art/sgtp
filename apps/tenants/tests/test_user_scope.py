@@ -56,16 +56,22 @@ class ShopScopedAccountTests(TestCase):
             email = f"{role.lower()}-created@example.test"
             response = self.client.post(
                 f"/api/v1/shops/{self.shop_a.pk}/users/",
-                {"email": email, "first_name": "New", "role": role},
+                {"email": email, "first_name": "New", "login_id": f"{role.lower()}_created" if role == ShopRole.STAFF else None, "role": role},
                 format="json",
             )
             self.assertEqual(response.status_code, 201, response.data)
             self.assertEqual(response["Cache-Control"], "no-store")
             user = User.objects.get(email=email)
             self.assertEqual(user.owning_shop_id, self.shop_a.pk)
-            self.assertTrue(user.must_change_password)
-            self.assertTrue(user.check_password(response.data["initial_password"]))
-            self.assertNotEqual(user.password, response.data["initial_password"])
+            if role == ShopRole.STAFF:
+                self.assertTrue(user.must_change_password)
+                self.assertTrue(user.check_password(response.data["initial_password"]))
+                self.assertNotEqual(user.password, response.data["initial_password"])
+            else:
+                self.assertIsNone(user.login_id)
+                self.assertFalse(user.login_enabled)
+                self.assertFalse(user.has_usable_password())
+                self.assertNotIn("initial_password", response.data)
             self.assertEqual(
                 TenantMember.objects.get(user=user).role,
                 role,
@@ -76,6 +82,7 @@ class ShopScopedAccountTests(TestCase):
             {
                 "first_name": "No",
                 "role": ShopRole.ADMIN,
+                "login_id": "unauthorized_admin",
                 "email": "new-admin@example.test",
                 "phone": "+96550100030",
             },
@@ -108,12 +115,14 @@ class ShopScopedAccountTests(TestCase):
     def test_main_supplier_creates_selected_shop_roles(self):
         self.client.force_authenticate(self.main)
         for index, role in enumerate(ShopRole.values):
+            login_id = f"role{index}" if role != ShopRole.VIEWER else None
             response = self.client.post(
                 "/api/v1/auth/users/",
                 {
                     "shop": str(self.shop_a.pk),
                     "role": role,
                     "first_name": f"Role{index}",
+                    "login_id": login_id,
                     "email": f"role{index}@example.test",
                     "phone": f"+965501000{index + 40:02d}",
                 },
@@ -186,7 +195,7 @@ class ShopScopedAccountTests(TestCase):
                     )
                 self.assertIn("not owned", str(error.exception).lower())
 
-    def test_shop_admin_resets_only_current_same_shop_staff_or_viewer(self):
+    def test_shop_admin_resets_only_current_same_shop_staff(self):
         target = self.make_member(
             self.shop_a, "reset-staff@example.test", ShopRole.STAFF
         )
@@ -199,6 +208,12 @@ class ShopScopedAccountTests(TestCase):
         target.refresh_from_db()
         self.assertTrue(target.must_change_password)
         self.assertTrue(target.check_password(allowed.data["temporary_password"]))
+
+        viewer = self.make_member(self.shop_a, "reset-viewer@example.test", ShopRole.VIEWER)
+        denied_viewer = self.client.post(
+            f"/api/v1/auth/users/{viewer.pk}/reset-credentials/", {}, format="json"
+        )
+        self.assertEqual(denied_viewer.status_code, 404)
 
         for candidate in (
             self.admin_a,

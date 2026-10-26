@@ -1,5 +1,5 @@
 from django.contrib.auth.models import BaseUserManager
-from ..identity import normalize_email
+from ..identity import normalize_email, normalize_login_id
 
 
 class UserManager(BaseUserManager):
@@ -43,6 +43,19 @@ class UserManager(BaseUserManager):
         has_first_name = bool((extra_fields.get("first_name") or "").strip())
         if not normalized_email or not normalized_phone or not has_first_name:
             raise ValueError("Superusers require email, phone, and first_name.")
+
+        if extra_fields.get("login_id"):
+            try:
+                extra_fields["login_id"] = normalize_login_id(extra_fields["login_id"])
+            except ValueError as exc:
+                raise ValueError(
+                    "New Main Supplier accounts require a valid Login ID."
+                ) from exc
+            # Django's createsuperuser command validates operator-entered
+            # bootstrap passwords against the normal password validators. The
+            # first authenticated operation must therefore replace that
+            # bootstrap secret with the required six-digit PIN.
+            extra_fields["must_change_password"] = True
 
         extra_fields["phone"] = normalized_phone
         return self.create_user(normalized_email, password, **extra_fields)

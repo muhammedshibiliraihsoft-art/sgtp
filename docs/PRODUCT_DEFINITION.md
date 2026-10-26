@@ -41,7 +41,7 @@ This section is authoritative for V1 business meaning:
 
 ## V1 Account and Preference Policy
 
-- Confirmed business rules are maintained canonically in `docs/BUSINESS_RULES.md`. Public self-registration is prohibited. Each ordinary account is permanently owned by exactly one Shop; the same real-world person in different Shops uses independent accounts. Main Supplier creates Shop-owned accounts with any approved role; a Shop ADMIN creates only same-Shop STAFF/VIEWER accounts and resets only current same-Shop STAFF/VIEWER credentials. **Published in T3-04A:** UUID identity plus permanent generated User ID, required first name/optional last name display name, optional normal-user email/phone, User ID/email/phone login aliases, admin-grade contact safeguards, generated controlled recovery, and preserved JWT/CSRF/refresh lifecycle. Original T3-04B membership lifecycle/cardinality safeguards and the T3-04B-USER-SCOPE ownership/scoped-account changes are published; User-Scope commit `ed845e89d7656bf9d9e1e24f03b79e7de0d3bd9c` passed GitHub Actions run `36591864481`. T3-05 implements and publishes exact User-ID membership lookup and broader Shop management; its exact-SHA CI passed in run `36614638187`. The membership Work-Function foundation is implemented and published under T3-04C with exact-SHA CI success. T3-03 URL-path Shop context and T3-04 query/object primitives remain implemented and must not be weakened.
+- Confirmed business rules are maintained canonically in `docs/BUSINESS_RULES.md`. Public self-registration is prohibited. Each ordinary account is permanently owned by exactly one Shop; the same real-world person in different Shops uses independent accounts. Main Supplier creates Shop-owned accounts with any approved role; a Shop ADMIN creates only same-Shop STAFF/VIEWER accounts and resets only current same-Shop STAFF/VIEWER credentials. **Published in T3-04A:** UUID identity plus permanent generated internal `user_code`; the current user-facing User ID is the case-preserving value entered when provisioning a login-enabled account, with case-insensitive uniqueness/login matching; required first name/optional last name display name, optional normal-user email/phone, admin-grade contact safeguards, generated controlled recovery, and preserved JWT/CSRF/refresh lifecycle. The internal `user_code` remains a legacy-compatible alias. Original T3-04B membership lifecycle/cardinality safeguards and the T3-04B-USER-SCOPE ownership/scoped-account changes are published; User-Scope commit `ed845e89d7656bf9d9e1e24f03b79e7de0d3bd9c` passed GitHub Actions run `36591864481`. T3-05 implements and publishes exact User-ID membership lookup and broader Shop management; its exact-SHA CI passed in run `36614638187`. The membership Work-Function foundation is implemented and published under T3-04C with exact-SHA CI success. T3-03 URL-path Shop context and T3-04 query/object primitives remain implemented and must not be weakened.
 
 ### Approved identity, membership, and staffing target
 
@@ -74,7 +74,7 @@ Client Request
   → Reports / History
 ```
 
-The flow must be persisted, connected, auditable, and authorization-aware. A completed work item must be connectable to the client, design, measurements, materials, production history, billing, and reports.
+The flow must be persisted, connected, auditable, and authorization-aware. Work is connectable to client, design, measurements, materials, production history, billing, and reports. Billing drafts and issue/partial-payment operations may occur before production completion; payment never bypasses or advances a Work stage.
 
 ## V1 contents
 
@@ -87,7 +87,7 @@ The flow must be persisted, connected, auditable, and authorization-aware. A com
 - Measurements linked to the appropriate client/work context
 - Fabric/material records linked to work
 - Production work with controlled transitions through cutting, stitching, check, finishing, QC, and completion
-- Billing connected to completed work
+- Billing connected to Work at any production stage, with completed Work still available for final settlement
 - Reports, history, and PDF output
 - International account phone support with email-or-phone login; persisted nullable preferred locale and Light/Dark/System appearance preferences (implementation remains future work).
 - English (`en`), Arabic Kuwait (`ar-KW`), Bangla (`bn`), and Urdu (`ur`) UI localization, English fallback, Arabic/Urdu RTL, English/Bangla LTR, and mixed-direction field support.
@@ -120,7 +120,7 @@ The supplier/main admin can operate the back office, create and manage shops, an
 
 V1 is complete only when the integrated end-to-end journey is verified:
 
-`Supplier → Back Office → Shop → Client → Work → Design → Measurement → Fabric → Production → Completion → Billing → Reports`
+`Supplier → Back Office → Shop → Client → Work → Design → Measurement → Fabric → Production ↔ Billing → Completion → Reports`
 
 The final validation must demonstrate:
 
@@ -131,7 +131,7 @@ The final validation must demonstrate:
 5. Clients and related persons follow V1 rules.
 6. Designs, measurements, and materials work together.
 7. Work follows the defined production workflow.
-8. Billing is connected to completed work.
+8. Billing is connected to Work. Draft invoices may be created at any stage; issue and partial payment may occur before completion without advancing production. Local authenticated browser-to-API E2E, Shop-scoped history/outstanding, and disposable PostgreSQL migration/restore checks are verified. The persistent application database remains unmigrated; external R2, production alerting/monitoring, retention/anonymization, and production restore remain release gates. Current code generates bounded PDFs synchronously and does not claim a background worker.
 9. Reports and PDFs work correctly.
 10. Files are stored securely and persistently.
 11. Background tasks do not unnecessarily block core operations.
@@ -154,3 +154,6 @@ Running backends, frontends, individual APIs, individual pages, or isolated test
 ## V1 boundaries
 
 The approved hierarchy and workflow are fixed for V1. New business modules, technology-stack changes, or direct AI/integration control of core operations require an explicit product decision and documentation update. This document is the target reference; implementation documents must be updated whenever a change affects the target.
+# Garment structure
+
+The supported active structure is `GarmentFamily -> Design`. Garments own their style-group configuration and measurement applicability directly. Variant selection, Variant configuration, and active Variant materialization are retired from active workflows. Global and Shop bootstrap must complete without active Variant rows. Existing Variant records and Design/Measurement references may remain temporarily only for compatibility, immutable history, or migration safety; they must not drive new active product behavior.

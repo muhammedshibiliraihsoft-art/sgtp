@@ -338,6 +338,57 @@ class ShopContextAPITests(APITestCase):
             {"shop_id", "role", "is_main_supplier", "work_functions"},
         )
 
+    def test_shop_admin_receives_only_billing_currency_from_shop_defaults(self):
+        self.shop_a.default_locale = "ar-KW"
+        self.shop_a.default_timezone = "Asia/Kuwait"
+        self.shop_a.default_currency = "KWD"
+        self.shop_a.save(
+            update_fields=[
+                "default_locale",
+                "default_timezone",
+                "default_currency",
+            ]
+        )
+        admin = self.make_user("billing-admin@example.test", owning_shop=self.shop_a)
+        TenantMember.objects.create(
+            tenant=self.shop_a, user=admin, role=ShopRole.ADMIN
+        )
+
+        response = self.request_context(admin, self.shop_a.pk)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["billing_currency"], "KWD")
+        self.assertNotIn("default_locale", response.data)
+        self.assertNotIn("default_timezone", response.data)
+
+    def test_cashier_receives_billing_currency_but_other_staff_do_not(self):
+        self.shop_a.default_currency = "USD"
+        self.shop_a.save(update_fields=["default_currency"])
+        cashier = self.make_user("cashier@example.test", owning_shop=self.shop_a)
+        cashier_membership = TenantMember.objects.create(
+            tenant=self.shop_a, user=cashier, role=ShopRole.STAFF
+        )
+        MembershipWorkFunction.objects.create(
+            membership=cashier_membership, function_code="CASHIER"
+        )
+        measurement_staff = self.make_user(
+            "measurement-staff@example.test", owning_shop=self.shop_a
+        )
+        measurement_membership = TenantMember.objects.create(
+            tenant=self.shop_a, user=measurement_staff, role=ShopRole.STAFF
+        )
+        MembershipWorkFunction.objects.create(
+            membership=measurement_membership, function_code="MEASUREMENT"
+        )
+
+        cashier_response = self.request_context(cashier, self.shop_a.pk)
+        staff_response = self.request_context(measurement_staff, self.shop_a.pk)
+
+        self.assertEqual(cashier_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(cashier_response.data["billing_currency"], "USD")
+        self.assertEqual(staff_response.status_code, status.HTTP_200_OK)
+        self.assertNotIn("billing_currency", staff_response.data)
+
     def test_resolver_requires_authenticated_active_user(self):
         from django.contrib.auth.models import AnonymousUser
         from rest_framework.exceptions import NotAuthenticated

@@ -54,6 +54,14 @@ def update_shop(actor, shop_id, changes):
     with transaction.atomic():
         shop = _locked_shop(shop_id)
         current_actor = _current_main_supplier(actor)
+        if "default_currency" in changes and changes["default_currency"] != shop.default_currency:
+            from apps.billing.models import Invoice
+            from apps.catalog.models import ShopDesignPrice
+
+            if ShopDesignPrice.objects.filter(tenant=shop).exists() or Invoice.objects.filter(tenant=shop).exists():
+                raise ValidationError({
+                    "default_currency": "Shop currency is frozen after Design prices or financial history exist; an explicitly reviewed migration is required."
+                })
         for name, value in changes.items():
             setattr(shop, name, value)
         if shop.max_users < shop.user_count:

@@ -8,6 +8,12 @@ from django.utils import timezone
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 
 from apps.accounts.models import User
+from apps.accounts.identity import normalize_login_id
+from apps.accounts.security import (
+    generate_initial_password,
+    revoke_user_sessions,
+    set_password_and_revoke_sessions,
+)
 from apps.tenants.models import ShopRole, Supplier, Tenant, TenantMember
 from apps.tenants.policy import ShopRolePolicy
 
@@ -126,7 +132,7 @@ def create_membership(actor, shop_id, user_id, role):
         )
 
 
-def change_membership_role(actor, membership_id, new_role):
+def change_membership_role(actor, membership_id, new_role, *, new_login_id=None):
     with transaction.atomic():
         try:
             initial = TenantMember.objects.only("tenant_id").get(pk=membership_id)
@@ -158,9 +164,41 @@ def change_membership_role(actor, membership_id, new_role):
             if count_effective_admins(shop.pk) <= 1:
                 raise ValidationError("Shop must have at least 1 active ADMIN.")
 
+        promotion_credentials = None
+        if old_role == ShopRole.VIEWER and new_role == ShopRole.STAFF:
+            login_id = user.login_id
+            if login_id is None:
+                try:
+                    login_id = normalize_login_id(new_login_id)
+                except ValueError as exc:
+                    raise ValidationError({"new_login_id": str(exc)}) from exc
+                if User.objects.filter(login_id__iexact=login_id).exclude(pk=user.pk).exists():
+                    raise ValidationError({"new_login_id": "This Login ID is unavailable."})
+                user.login_id = login_id
+                user.save(update_fields=["login_id", "updated_at"])
+            elif new_login_id:
+                try:
+                    requested_login_id = normalize_login_id(new_login_id)
+                except ValueError as exc:
+                    raise ValidationError({"new_login_id": str(exc)}) from exc
+                if requested_login_id != login_id:
+                    raise ValidationError({"new_login_id": "This account's Login ID cannot be changed."})
+            temporary_pin = generate_initial_password(user)
+            set_password_and_revoke_sessions(user, temporary_pin, must_change=True)
+            promotion_credentials = {
+                "login_id": login_id,
+                "temporary_password": temporary_pin,
+            }
+        elif new_role == ShopRole.VIEWER:
+            revoke_user_sessions(user)
+
         membership.role = new_role
         membership.updated_by = actor
         membership.save(update_fields=["role", "updated_by", "updated_at"])
+        if user.login_enabled != (new_role != ShopRole.VIEWER):
+            user.login_enabled = new_role != ShopRole.VIEWER
+            user.save(update_fields=["login_enabled", "updated_at"])
+        membership.promotion_credentials = promotion_credentials
         return membership
 
 
@@ -322,7 +360,20 @@ def create_shop_with_first_admin(actor, shop_data, first_admin_data):
             )
         if data.get("max_users", 0) < 1:
             raise ValidationError({"max_users": "Shop capacity must be at least 1."})
-        supplier = Supplier.objects.get(singleton_lock=True)
+        # Serialize Shop creation against the singleton supplier row so two
+        # simultaneous auto-generated slugs cannot choose the same suffix.
+        supplier = Supplier.objects.select_for_update().get(singleton_lock=True)
+        if not data.get("slug"):
+            from django.utils.text import slugify
+
+            base_slug = slugify(data["name"])[:50].strip("-") or "shop"
+            candidate = base_slug
+            suffix = 2
+            while Tenant.objects.filter(slug=candidate).exists():
+                suffix_text = f"-{suffix}"
+                candidate = f"{base_slug[:50 - len(suffix_text)].rstrip('-')}{suffix_text}"
+                suffix += 1
+            data["slug"] = candidate
         shop = Tenant(supplier=supplier, created_by=actor, is_active=True, **data)
         shop.save()
         from .shop_accounts import create_shop_account
@@ -333,4 +384,7 @@ def create_shop_with_first_admin(actor, shop_data, first_admin_data):
             role=ShopRole.ADMIN,
             account_data=first_admin_data,
         )
+        from apps.catalog.services import initialize_shop_default_catalog
+
+        initialize_shop_default_catalog(shop=shop, actor=actor)
         return shop, user, initial_password
