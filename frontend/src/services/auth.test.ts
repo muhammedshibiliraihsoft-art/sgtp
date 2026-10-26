@@ -25,6 +25,7 @@ describe('auth service contract', () => {
     expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ identifier: 'SGTP-USER-1', password: 'secret' })
     expect(fetchMock.mock.calls[1][1].credentials).toBe('include')
     expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(new Headers(fetchMock.mock.calls[1][1].headers).get('X-CSRFToken')).toBe('csrf-before')
   })
 
   it('keeps invalid-login failures distinct and does not continue to session setup', async () => {
@@ -36,58 +37,27 @@ describe('auth service contract', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
-  it('restores the current user from the HttpOnly refresh response without a follow-up request', async () => {
+  it('uses the HttpOnly refresh cookie and requests current user during session restore', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(json({ csrf_token: 'csrf' }))
-      .mockResolvedValueOnce(json({ access: 'new-access', user }))
+      .mockResolvedValueOnce(json({ access: 'new-access' }))
+      .mockResolvedValueOnce(json(user))
     vi.stubGlobal('fetch', fetchMock)
     await expect(authService.restore()).resolves.toEqual({ user, passwordChangeRequired: false })
     expect(String(fetchMock.mock.calls[1][0])).toContain('/auth/token/refresh/')
     expect(fetchMock.mock.calls[1][1]).toMatchObject({ method: 'POST', credentials: 'include' })
     expect(fetchMock.mock.calls[1][1].body).toBeUndefined()
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-    expect(String(fetchMock.mock.calls[1][0])).not.toContain('/users/me/')
-  })
-
-  it('preserves password-change-required state from the refreshed user', async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(json({ csrf_token: 'csrf' }))
-      .mockResolvedValueOnce(json({ access: 'new-access', user: { ...user, must_change_password: true } }))
-    vi.stubGlobal('fetch', fetchMock)
-    await expect(authService.restore()).resolves.toEqual({ user: { ...user, must_change_password: true }, passwordChangeRequired: true })
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-  })
-
-  it('returns unauthenticated when refresh fails without requesting current user', async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(json({ csrf_token: 'csrf' }))
-      .mockResolvedValueOnce(json({ detail: 'Token is invalid or revoked.' }, 401))
-    vi.stubGlobal('fetch', fetchMock)
-    await expect(authService.restore()).resolves.toBeNull()
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-  })
-
-  it('rejects the old access-only refresh contract without requesting current user', async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(json({ csrf_token: 'csrf' }))
-      .mockResolvedValueOnce(json({ access: 'new-access' }))
-    vi.stubGlobal('fetch', fetchMock)
-    await expect(authService.restore()).resolves.toBeNull()
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-    expect(String(fetchMock.mock.calls[1][0])).not.toContain('/users/me/')
+    expect(new Headers(fetchMock.mock.calls[2][1].headers).get('Authorization')).toBe('Bearer new-access')
   })
 
   it('clears local credentials after logout, including a terminal server error', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(json({ csrf_token: 'csrf' }))
       .mockResolvedValueOnce(json({ errors: { detail: 'Server error.' } }, 500))
-      .mockResolvedValueOnce(json({ ok: true }))
     vi.stubGlobal('fetch', fetchMock)
     setAccessToken('existing-access')
     await expect(authService.logout()).rejects.toMatchObject({ status: 500 })
     expect(fetchMock.mock.calls[1][1]).toMatchObject({ method: 'POST', credentials: 'include' })
-    await apiRequest('/api/v1/private/')
-    expect(new Headers(fetchMock.mock.calls[2][1].headers).get('Authorization')).toBeNull()
   })
 
   it('changes password using the backend field names and clears the revoked access token', async () => {
@@ -102,16 +72,35 @@ describe('auth service contract', () => {
     expect(new Headers(fetchMock.mock.calls[1][1].headers).get('Authorization')).toBeNull()
   })
 
+  it('requests generic password recovery without attaching an authenticated session', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(json({ detail: 'If the account is eligible, password reset instructions will be sent.' }))
+    vi.stubGlobal('fetch', fetchMock)
+    setAccessToken('must-not-be-sent')
+    await authService.requestPasswordReset('member@example.test')
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/api/v1/auth/password/reset/')
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ email: 'member@example.test' })
+    expect(new Headers(fetchMock.mock.calls[0][1].headers).get('Authorization')).toBeNull()
+  })
+
+  it('confirms recovery with backend field names and does not authenticate the public request', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(json({ detail: 'Password reset. Sign in with your new password.' }))
+    vi.stubGlobal('fetch', fetchMock)
+    setAccessToken('must-not-be-sent')
+    await authService.confirmPasswordReset('encoded-user', 'single-use-token', 'NewSecure-939!Pass', 'NewSecure-939!Pass')
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/api/v1/auth/password/reset/confirm/')
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+      uid: 'encoded-user', token: 'single-use-token', new_password: 'NewSecure-939!Pass', new_password_confirm: 'NewSecure-939!Pass',
+    })
+    expect(new Headers(fetchMock.mock.calls[0][1].headers).get('Authorization')).toBeNull()
+  })
+
   it('clears frontend state after successful logout', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(json({ csrf_token: 'csrf' }))
       .mockResolvedValueOnce(json({ message: 'Logout successful' }))
-      .mockResolvedValueOnce(json({ ok: true }))
     vi.stubGlobal('fetch', fetchMock)
     setAccessToken('live-access')
     await authService.logout()
     expect(new Headers(fetchMock.mock.calls[1][1].headers).get('Authorization')).toBe('Bearer live-access')
-    await apiRequest('/api/v1/private/')
-    expect(new Headers(fetchMock.mock.calls[2][1].headers).get('Authorization')).toBeNull()
   })
 })

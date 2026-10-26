@@ -5,9 +5,9 @@ import { useTranslation } from 'react-i18next'
 import { ArrowLeft, ArrowRight, Check, Copy, Plus, Store } from 'lucide-react'
 import { shopsService, shopFieldErrors } from '../services/shops'
 import type { CreatedShop, CreateShopInput, ShopDetail, ShopSummary } from '../services/shops'
-import { usersApi } from '../features/users/api'
-import { clientsApi } from '../features/clients/api'
-import type { Client } from '../features/clients/types'
+import { ResponsiveChoice } from '../components/CustomSelect'
+import { getShopMembers } from '../services/memberships'
+import type { ShopMember } from '../services/memberships'
 import './backoffice.css'
 
 function ErrorNotice({ message }: { message: string }) {
@@ -53,7 +53,7 @@ export function BackOfficeDashboard() {
       <div><h2>{t('backoffice.manageShops')}</h2><p>{t('backoffice.manageIntro')}</p></div>
       <Link className="bo-secondary-button" to="/backoffice/shops">{t('backoffice.viewShops')} <ArrowRight size={16} /></Link>
     </div>
-    <Link className="bo-secondary-button" to="/backoffice/pin-reset-requests">Shop Admin PIN Reset Requests <ArrowRight size={16} /></Link>
+    <div className="bo-actions"><Link className="bo-secondary-button" to="/backoffice/pin-reset-requests">{t('auth.pinResetRequests', 'PIN reset requests')}</Link></div>
   </div>
 }
 
@@ -98,8 +98,8 @@ export function ShopListPage() {
     <div className="bo-toolbar"><label htmlFor="bo-shop-search">{t('backoffice.searchShops')}</label>
       <div className="bo-toolbar-controls"><input id="bo-shop-search" type="search" value={searchInput} onChange={event => { setSearchInput(event.target.value); setPage(1) }}
         placeholder={t('backoffice.searchPlaceholder')} />
-        <label className="bo-filter-field" htmlFor="bo-shop-status">{t('backoffice.filterStatus')}<select id="bo-shop-status" value={active} onChange={event => { setLoading(true); setActive(event.target.value as typeof active); setPage(1) }}><option value="all">{t('backoffice.allShops')}</option><option value="true">{t('backoffice.active')}</option><option value="false">{t('backoffice.inactive')}</option></select></label>
-        <label className="bo-filter-field" htmlFor="bo-shop-order">{t('backoffice.sortBy')}<select id="bo-shop-order" value={ordering} onChange={event => { setLoading(true); setOrdering(event.target.value as typeof ordering); setPage(1) }}><option value="name">{t('backoffice.nameAscending')}</option><option value="-name">{t('backoffice.nameDescending')}</option><option value="-created_at">{t('backoffice.newest')}</option><option value="created_at">{t('backoffice.oldest')}</option></select></label>
+        <div className="bo-filter-field"><span>{t('backoffice.filterStatus')}</span><ResponsiveChoice id="bo-shop-status" ariaLabel={t('backoffice.filterStatus')} value={active} onChange={value => { setLoading(true); setActive(value as typeof active); setPage(1) }} options={[{ value: 'all', label: t('backoffice.allShops') }, { value: 'true', label: t('backoffice.active') }, { value: 'false', label: t('backoffice.inactive') }]} /></div>
+        <div className="bo-filter-field"><span>{t('backoffice.sortBy')}</span><ResponsiveChoice id="bo-shop-order" ariaLabel={t('backoffice.sortBy')} value={ordering} onChange={value => { setLoading(true); setOrdering(value as typeof ordering); setPage(1) }} options={[{ value: 'name', label: t('backoffice.nameAscending') }, { value: '-name', label: t('backoffice.nameDescending') }, { value: '-created_at', label: t('backoffice.newest') }, { value: 'created_at', label: t('backoffice.oldest') }]} /></div>
       </div>
     </div>
     {error && <ErrorNotice message={error} />}
@@ -134,7 +134,7 @@ function Field({ label, name, value, onChange, error, required, type = 'text', h
 
 const blankCreate: CreateShopInput = {
   name: '', slug: '', max_users: 5,
-  first_admin: { first_name: '', last_name: '', login_id: '', email: '', phone: '' },
+  first_admin: { first_name: '', last_name: '', email: '', phone: '' },
   contact_email: '', contact_phone: '', default_locale: null, default_timezone: null, default_currency: null,
   address_line1: '', address_line2: '', city: '', state: '', postal_code: '', country: '',
 }
@@ -153,12 +153,6 @@ export function CreateShopPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   const change = (key: keyof CreateShopInput, value: string | number | null) => setForm(previous => ({ ...previous, [key]: value }))
-  const changeShopName = (name: string) => setForm(previous => ({
-    ...previous,
-    name,
-    slug: name.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50).replace(/-+$/g, ''),
-  }))
   const changeAdmin = (key: keyof CreateShopInput['first_admin'], value: string) => setForm(previous => ({ ...previous, first_admin: { ...previous.first_admin, [key]: value } }))
   const changePhoneNumber = (value: string) => {
     const pastedCountryCode = ['+965', '+91'].find(code => value.trim().startsWith(code))
@@ -178,7 +172,7 @@ export function CreateShopPage() {
     try {
       const response = await shopsService.create({
         ...form,
-        name: form.name.trim(), slug: form.slug,
+        name: form.name.trim(), slug: form.slug.trim().toLowerCase(),
         first_admin: { ...form.first_admin, first_name: form.first_admin.first_name.trim(), email: form.first_admin.email.trim(), phone: `${phoneCountryCode}${phoneNumber}` },
       })
       setCreated(response)
@@ -196,14 +190,14 @@ export function CreateShopPage() {
   if (created) return <div className="content-wrap bo-content"><section className="bo-card bo-success" aria-live="polite">
     <div className="bo-success-icon"><Check size={25} /></div><span className="bo-eyebrow">{t('backoffice.eyebrow')}</span>
     <h1>{t('backoffice.createdTitle')}</h1><p>{t('backoffice.createdMessage', { name: created.name })}</p>
-    <div className="bo-credential"><span>{t('backoffice.userId')}</span><strong>{created.first_admin_login_id}</strong>
-      <button type="button" className="bo-secondary-button" onClick={() => void copy(created.first_admin_login_id || '', t('backoffice.userId'))}><Copy size={15} />{t('backoffice.copy')}</button></div>
-    <div className="bo-credential"><span>Temporary PIN</span><strong>{showPassword ? created.initial_password : '••••••'}</strong>
+    <div className="bo-credential"><span>{t('backoffice.userId')}</span><strong>{created.first_admin_user_code}</strong>
+      <button type="button" className="bo-secondary-button" onClick={() => void copy(created.first_admin_user_code, t('backoffice.userId'))}><Copy size={15} />{t('backoffice.copy')}</button></div>
+    <div className="bo-credential"><span>{t('backoffice.temporaryPassword')}</span><strong>{showPassword ? created.initial_password : '••••••••••••'}</strong>
       <div className="bo-inline-actions"><button type="button" className="bo-secondary-button" onClick={() => setShowPassword(!showPassword)}>{showPassword ? t('backoffice.hide') : t('backoffice.show')}</button>
         <button type="button" className="bo-secondary-button" onClick={() => void copy(created.initial_password, t('backoffice.temporaryPassword'))}><Copy size={15} />{t('backoffice.copy')}</button></div></div>
     <p className="bo-sensitive-note">{t('backoffice.saveCredentialsNow')}</p>
     {copied && <p className="bo-muted" role="status">{copied === t('backoffice.copyFailed') ? copied : t('backoffice.copied', { item: copied })}</p>}
-    <div className="bo-actions"><button type="button" className="bo-secondary-button" onClick={() => void copy(`${created.first_admin_login_id}\n${created.initial_password}`, t('backoffice.both'))}><Copy size={15} />{t('backoffice.copyBoth')}</button>
+    <div className="bo-actions"><button type="button" className="bo-secondary-button" onClick={() => void copy(`${created.first_admin_user_code}\n${created.initial_password}`, t('backoffice.both'))}><Copy size={15} />{t('backoffice.copyBoth')}</button>
       <button type="button" className="primary-button" onClick={() => { const id = created.id; setCreated(null); navigate(`/backoffice/shops/${id}`, { replace: true }) }}>{t('backoffice.doneOpenShop')} <ArrowRight size={16} /></button></div>
   </section></div>
 
@@ -213,20 +207,16 @@ export function CreateShopPage() {
     <form className="bo-form" onSubmit={event => void submit(event)}>
       {error && <ErrorNotice message={error} />}
       <section className="bo-card"><div className="bo-section-heading"><span>01</span><div><h2>{t('backoffice.shopDetails')}</h2><p>{t('backoffice.shopDetailsHint')}</p></div></div>
-        <div className="bo-form-grid"><Field label={t('backoffice.shopName')} name="name" value={form.name} onChange={changeShopName} error={fieldErrors.name} required />
-          <label className="bo-field" htmlFor="bo-slug"><span>{t('backoffice.slug')}</span><input id="bo-slug" name="slug" value={form.slug} readOnly aria-readonly="true" />
-            <small>{t('backoffice.slugHint')}</small>{fieldErrors.slug && <small className="bo-field-error">{fieldErrors.slug}</small>}</label>
+        <div className="bo-form-grid"><Field label={t('backoffice.shopName')} name="name" value={form.name} onChange={value => change('name', value)} error={fieldErrors.name} required />
+          <Field label={t('backoffice.slug')} name="slug" value={form.slug} onChange={value => change('slug', value)} error={fieldErrors.slug} hint={t('backoffice.slugHint')} required />
           <Field label={t('backoffice.maxUsers')} name="max_users" type="number" min={1} value={form.max_users} onChange={value => change('max_users', Number(value))} error={fieldErrors.max_users} required /></div></section>
       <section className="bo-card"><div className="bo-section-heading"><span>02</span><div><h2>{t('backoffice.firstAdmin')}</h2><p>{t('backoffice.firstAdminHint')}</p></div></div>
         <div className="bo-form-grid"><Field label={t('backoffice.firstName')} name="first_admin.first_name" value={form.first_admin.first_name} onChange={value => changeAdmin('first_name', value)} error={fieldErrors['first_admin.first_name']} required />
           <Field label={t('backoffice.lastName')} name="first_admin.last_name" value={form.first_admin.last_name || ''} onChange={value => changeAdmin('last_name', value)} error={fieldErrors['first_admin.last_name']} />
-          <Field label={t('backoffice.userId')} name="first_admin.login_id" value={form.first_admin.login_id} onChange={value => changeAdmin('login_id', value)} error={fieldErrors['first_admin.login_id']} required />
           <Field label={t('backoffice.email')} name="first_admin.email" type="email" value={form.first_admin.email} onChange={value => changeAdmin('email', value)} error={fieldErrors['first_admin.email']} required />
           <label className="bo-field" htmlFor="bo-first_admin.phone"><span>{t('backoffice.phone')} *</span>
             <div className="bo-phone-input-group">
-              <select aria-label={t('backoffice.phoneCountryCode')} value={phoneCountryCode} onChange={event => setPhoneCountryCode(event.target.value)}>
-                <option value="+965">Kuwait (+965)</option><option value="+91">India (+91)</option>
-              </select>
+              <ResponsiveChoice ariaLabel={t('backoffice.phoneCountryCode')} value={phoneCountryCode} onChange={setPhoneCountryCode} options={[{ value: '+965', label: 'Kuwait (+965)' }, { value: '+91', label: 'India (+91)' }]} />
               <input id="bo-first_admin.phone" name="first_admin.phone" type="tel" inputMode="numeric" value={phoneNumber}
                 onChange={event => changePhoneNumber(event.target.value)} required aria-invalid={Boolean(fieldErrors['first_admin.phone'])}
                 aria-describedby={fieldErrors['first_admin.phone'] ? 'bo-first_admin.phone-error' : undefined} />
@@ -243,7 +233,7 @@ export function CreateShopPage() {
           <Field label={t('backoffice.state')} name="state" value={form.state || ''} onChange={value => change('state', value)} error={fieldErrors.state} />
           <Field label={t('backoffice.postalCode')} name="postal_code" value={form.postal_code || ''} onChange={value => change('postal_code', value)} error={fieldErrors.postal_code} />
           <Field label={t('backoffice.country')} name="country" value={form.country || ''} onChange={value => change('country', value)} error={fieldErrors.country} />
-          <label className="bo-field" htmlFor="bo-default_locale"><span>{t('backoffice.locale')}</span><select id="bo-default_locale" value={form.default_locale || ''} onChange={event => change('default_locale', event.target.value || null)}><option value="">{t('backoffice.useDefault')}</option><option value="en">English</option><option value="ar-KW">العربية</option><option value="bn">বাংলা</option><option value="ur">اردو</option></select></label>
+          <div className="bo-field"><span>{t('backoffice.locale')}</span><ResponsiveChoice id="bo-default_locale" ariaLabel={t('backoffice.locale')} value={form.default_locale || ''} placeholder={t('backoffice.useDefault')} onChange={value => change('default_locale', value || null)} options={[{ value: 'en', label: 'English' }, { value: 'ar-KW', label: 'العربية' }, { value: 'bn', label: 'বাংলা' }, { value: 'ur', label: 'اردو' }]} /></div>
           <Field label={t('backoffice.currency')} name="default_currency" value={form.default_currency || ''} onChange={value => change('default_currency', value.toUpperCase())} error={fieldErrors.default_currency} hint={t('backoffice.currencyHint')} />
           <Field label={t('backoffice.timezone')} name="default_timezone" value={form.default_timezone || ''} onChange={value => change('default_timezone', value)} error={fieldErrors.default_timezone} hint={t('backoffice.timezoneHint')} /></div></section>
       <div className="bo-actions"><Link className="bo-secondary-button" to="/backoffice/shops">{t('backoffice.cancel')}</Link><button className="primary-button" type="submit" disabled={busy}>{busy ? t('backoffice.saving') : t('backoffice.createShop')}</button></div>
@@ -251,55 +241,28 @@ export function CreateShopPage() {
   </div>
 }
 
-type EditDraft = Pick<ShopDetail, 'name' | 'max_users' | 'contact_email' | 'contact_phone' | 'default_locale' | 'default_currency' | 'default_timezone' | 'address_line1' | 'address_line2' | 'city' | 'state' | 'postal_code' | 'country'>
+type EditDraft = Pick<ShopDetail, 'name' | 'slug' | 'max_users' | 'contact_email' | 'contact_phone' | 'default_locale' | 'default_currency' | 'default_timezone' | 'address_line1' | 'address_line2' | 'city' | 'state' | 'postal_code' | 'country'>
 
 export function ShopDetailPage() {
   const { t } = useTranslation()
   const { shopId } = useParams()
   const [shop, setShop] = useState<ShopDetail | null>(null)
+  const [members, setMembers] = useState<ShopMember[]>([])
   const [draft, setDraft] = useState<EditDraft | null>(null)
   const [editing, setEditing] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [adminUserIds, setAdminUserIds] = useState<string[]>([])
-  const [adminUserIdsLoaded, setAdminUserIdsLoaded] = useState(false)
-  const [adminUserIdsLoading, setAdminUserIdsLoading] = useState(false)
-  const [adminUserIdsError, setAdminUserIdsError] = useState(false)
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (!shopId) return
     let current = true
-    shopsService.detail(shopId).then(result => { if (current) { setShop(result); setDraft({ name: result.name, max_users: result.max_users, contact_email: result.contact_email, contact_phone: result.contact_phone, default_locale: result.default_locale, default_currency: result.default_currency, default_timezone: result.default_timezone, address_line1: result.address_line1, address_line2: result.address_line2, city: result.city, state: result.state, postal_code: result.postal_code, country: result.country }) } })
+    Promise.all([shopsService.detail(shopId), getShopMembers(shopId)]).then(([result, shopMembers]) => { if (current) { setShop(result); setMembers(shopMembers); setDraft({ name: result.name, slug: result.slug, max_users: result.max_users, contact_email: result.contact_email, contact_phone: result.contact_phone, default_locale: result.default_locale, default_currency: result.default_currency, default_timezone: result.default_timezone, address_line1: result.address_line1, address_line2: result.address_line2, city: result.city, state: result.state, postal_code: result.postal_code, country: result.country }) } })
       .catch((cause: unknown) => { if (current) setError(cause instanceof Error ? cause.message : t('backoffice.loadFailed')) })
     return () => { current = false }
   }, [shopId, t])
 
   const change = (key: keyof EditDraft, value: string | number | null) => setDraft(previous => previous ? { ...previous, [key]: value } : previous)
-
-  const loadAdminUserIds = async () => {
-    if (!shopId || adminUserIdsLoaded || adminUserIdsLoading) return
-    setAdminUserIdsLoading(true)
-    setAdminUserIdsError(false)
-    try {
-      const memberships = await usersApi.memberships(shopId, { role: 'ADMIN', active: 'ALL' })
-      setAdminUserIds(memberships.results.map(member => member.login_id || '').filter(Boolean))
-      setAdminUserIdsLoaded(true)
-    } catch {
-      setAdminUserIdsError(true)
-    } finally {
-      setAdminUserIdsLoading(false)
-    }
-  }
-
-  const toggleEditing = () => {
-    if (editing) {
-      setEditing(false)
-      return
-    }
-    setEditing(true)
-    void loadAdminUserIds()
-  }
 
   const save = async (event: FormEvent) => {
     event.preventDefault()
@@ -328,13 +291,11 @@ export function ShopDetailPage() {
     {!shop || !draft ? !error && <p role="status" className="bo-muted">{t('backoffice.loading')}</p> : <>
       <PageHeading eyebrow={t('backoffice.eyebrow')} title={shop.name} subtitle={shop.slug}
         action={<Status active={shop.is_active} />} />
-      <div className="bo-detail-actions">{!editing && <Link className="bo-secondary-button" to={`/backoffice/shops/${shop.id}/clients`}>View Clients</Link>}<button type="button" className="bo-secondary-button" onClick={toggleEditing}>{editing ? t('backoffice.cancel') : t('backoffice.editShop')}</button>
+      <div className="bo-detail-actions"><button type="button" className="bo-secondary-button" onClick={() => setEditing(!editing)}>{editing ? t('backoffice.cancel') : t('backoffice.editShop')}</button>
         <button type="button" className="bo-secondary-button" disabled={busy} onClick={() => void changeActive()}>{shop.is_active ? t('backoffice.deactivate') : t('backoffice.activate')}</button></div>
       {editing ? <form className="bo-form" onSubmit={event => void save(event)}><section className="bo-card"><h2>{t('backoffice.shopDetails')}</h2><div className="bo-form-grid">
-        <label className="bo-field"><span>{t('backoffice.shopAdminUserIds')}</span><input readOnly aria-busy={adminUserIdsLoading} value={adminUserIdsLoading ? t('backoffice.loadingUserIds') : adminUserIdsError ? t('backoffice.userIdsLoadFailed') : adminUserIds.join(', ') || '—'} />
-          {adminUserIdsError && <button type="button" className="bo-secondary-button" onClick={() => void loadAdminUserIds()}>{t('backoffice.retry')}</button>}</label>
         <Field label={t('backoffice.shopName')} name="name" value={draft.name} onChange={value => change('name', value)} error={fieldErrors.name} required />
-        <label className="bo-field" htmlFor="bo-shop-slug"><span>{t('backoffice.slug')}</span><input id="bo-shop-slug" name="slug" value={shop.slug} readOnly aria-readonly="true" /><small>{t('backoffice.slugHint')}</small></label>
+        <Field label={t('backoffice.slug')} name="slug" value={draft.slug} onChange={value => change('slug', value)} error={fieldErrors.slug} required />
         <Field label={t('backoffice.maxUsers')} name="max_users" type="number" min={1} value={draft.max_users} onChange={value => change('max_users', Number(value))} error={fieldErrors.max_users} required />
         <Field label={t('backoffice.contactEmail')} name="contact_email" type="email" value={draft.contact_email} onChange={value => change('contact_email', value)} error={fieldErrors.contact_email} />
         <Field label={t('backoffice.contactPhone')} name="contact_phone" type="tel" value={draft.contact_phone} onChange={value => change('contact_phone', value)} error={fieldErrors.contact_phone} />
@@ -344,7 +305,7 @@ export function ShopDetailPage() {
         <Field label={t('backoffice.state')} name="state" value={draft.state} onChange={value => change('state', value)} error={fieldErrors.state} />
         <Field label={t('backoffice.postalCode')} name="postal_code" value={draft.postal_code} onChange={value => change('postal_code', value)} error={fieldErrors.postal_code} />
         <Field label={t('backoffice.country')} name="country" value={draft.country} onChange={value => change('country', value)} error={fieldErrors.country} />
-        <label className="bo-field" htmlFor="bo-detail-locale"><span>{t('backoffice.locale')}</span><select id="bo-detail-locale" value={draft.default_locale || ''} onChange={event => change('default_locale', event.target.value || null)}><option value="">{t('backoffice.useDefault')}</option><option value="en">English</option><option value="ar-KW">العربية</option><option value="bn">বাংলা</option><option value="ur">اردو</option></select></label>
+        <div className="bo-field"><span>{t('backoffice.locale')}</span><ResponsiveChoice id="bo-detail-locale" ariaLabel={t('backoffice.locale')} value={draft.default_locale || ''} placeholder={t('backoffice.useDefault')} onChange={value => change('default_locale', value || null)} options={[{ value: 'en', label: 'English' }, { value: 'ar-KW', label: 'العربية' }, { value: 'bn', label: 'বাংলা' }, { value: 'ur', label: 'اردو' }]} /></div>
         <Field label={t('backoffice.currency')} name="default_currency" value={draft.default_currency || ''} onChange={value => change('default_currency', value.toUpperCase())} error={fieldErrors.default_currency} />
         <Field label={t('backoffice.timezone')} name="default_timezone" value={draft.default_timezone || ''} onChange={value => change('default_timezone', value)} error={fieldErrors.default_timezone} />
       </div></section><div className="bo-actions"><button type="submit" className="primary-button" disabled={busy}>{busy ? t('backoffice.saving') : t('backoffice.saveChanges')}</button></div></form>
@@ -356,59 +317,18 @@ export function ShopDetailPage() {
           <div><dt>{t('backoffice.address')}</dt><dd>{[shop.address_line1, shop.address_line2, shop.city, shop.state, shop.postal_code, shop.country].filter(Boolean).join(', ') || '—'}</dd></div>
           <div><dt>{t('backoffice.createdAt')}</dt><dd>{new Date(shop.created_at).toLocaleDateString()}</dd></div>
         </dl></div>}
-    </>}
-  </div>
-}
-
-export function BackOfficeClientsPage() {
-  const { shopId } = useParams()
-  const [clients, setClients] = useState<Client[]>([])
-  const [shopName, setShopName] = useState('')
-  const [page, setPage] = useState(1)
-  const [hasNext, setHasNext] = useState(false)
-  const [hasPrevious, setHasPrevious] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-
-  useEffect(() => {
-    if (!shopId) return
-    let current = true
-    setLoading(true)
-    setError('')
-    Promise.all([shopsService.detail(shopId), clientsApi.list(shopId, '', page)])
-      .then(([shop, response]) => {
-        if (!current) return
-        setShopName(shop.name)
-        setClients(response.results)
-        setHasNext(Boolean(response.next))
-        setHasPrevious(Boolean(response.previous))
-      })
-      .catch((cause: unknown) => {
-        if (current) setError(cause instanceof Error ? cause.message : 'Unable to load Clients.')
-      })
-      .finally(() => { if (current) setLoading(false) })
-    return () => { current = false }
-  }, [shopId, page])
-
-  return <div className="content-wrap bo-content">
-    <Link className="bo-back" to={shopId ? `/backoffice/shops/${shopId}` : '/backoffice/shops'}><ArrowLeft size={16} />Back to Shop</Link>
-    <PageHeading eyebrow="Back Office" title="Clients" subtitle={shopName || 'Shop contact directory'} />
-    {error && <ErrorNotice message={error} />}
-    {loading ? <p role="status" className="bo-muted">Loading Clients…</p> : clients.length === 0 ?
-      <div className="bo-card"><p className="bo-muted">No Clients are recorded for this Shop.</p></div> :
-      <div className="bo-client-list" aria-label="Shop Clients">
-        {clients.map(client => <article className="bo-card bo-client-card" key={client.id}>
-          <h2>{client.name?.trim() || 'Guest'}</h2>
-          <dl className="bo-detail-grid">
-            <div><dt>Phone</dt><dd>{client.phone?.trim() || '—'}</dd></div>
-            <div><dt>Email</dt><dd>{client.email?.trim() || '—'}</dd></div>
-          </dl>
-        </article>)}
-        {(hasPrevious || hasNext) && <div className="bo-actions">
-          <button type="button" className="bo-secondary-button" disabled={!hasPrevious || loading} onClick={() => setPage(value => value - 1)}>Previous</button>
-          <span className="bo-muted">Page {page}</span>
-          <button type="button" className="bo-secondary-button" disabled={!hasNext || loading} onClick={() => setPage(value => value + 1)}>Next</button>
+      {!editing && <section className="bo-card bo-shop-members"><h2>{t('backoffice.shopUsers')}</h2>
+        {members.length === 0 ? <p className="bo-muted">{t('backoffice.noShopUsers')}</p> : <div className="bo-member-list">
+          {members.map(member => <article className="bo-member-card" key={member.id}>
+            <h3>{member.display_name || member.login_id || member.user_code}</h3>
+            <dl><div><dt>{t('backoffice.memberUserId')}</dt><dd>{member.user_code}</dd></div>
+              {member.login_id && <div><dt>{t('backoffice.loginId')}</dt><dd>{member.login_id}</dd></div>}
+              <div><dt>{t('backoffice.email')}</dt><dd>{member.user_email || '—'}</dd></div>
+              <div><dt>{t('backoffice.phone')}</dt><dd>{member.user_phone || '—'}</dd></div>
+            </dl>
+          </article>)}
         </div>}
-      </div>}
+      </section>}
+    </>}
   </div>
 }

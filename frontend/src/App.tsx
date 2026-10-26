@@ -1,8 +1,8 @@
-import { lazy, Suspense, useEffect, useState, useRef, useId } from 'react'
+import { lazy, Suspense, useEffect, useState, useRef } from 'react'
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
-  ArrowRight, Bell, ChevronDown, CircleHelp, Eye, EyeOff,
+  ArrowRight, Bell, CircleHelp,
   ClipboardList, Globe2, LayoutDashboard,
   Moon, MoreHorizontal, Plus, Search, Settings2, LogOut, ChevronUp, Sun,
   UsersRound, Scissors, CreditCard, BarChart3, Users,
@@ -10,22 +10,24 @@ import {
   PanelLeftClose, PanelLeftOpen, Shield, Ruler
 } from 'lucide-react'
 import './App.css'
+import './shared-ui.css'
 import { BrandLogo } from './components/BrandLogo'
+import { ResponsiveChoice } from './components/CustomSelect'
 import { AuthProvider } from './services/AuthContext'
-import { CurrentShopProvider } from './hooks/useCurrentShop'
+import { PinResetPage } from './PinResetPage'
+import { CurrentShopProvider, useCurrentShop } from './hooks/useCurrentShop'
 import { DialogKeyboardManager } from './components/DialogKeyboardManager'
 import { useAuth } from './services/useAuth'
-import { ApiError } from './services/apiClient'
-import { PinResetPage } from './PinResetPage'
-import desktopImg from './assets/images/login/desktop.webp'
-import phoneImg from './assets/images/login/phone.webp'
-import tabletPortraitImg from './assets/images/login/tablet-portrait.webp'
-import tabletLandscapeImg from './assets/images/login/tablet-landscape.webp'
+import desktopImg from './assets/images/login/desktop.png'
+import phoneImg from './assets/images/login/phone.png'
+import tabletPortraitImg from './assets/images/login/tablet-portrait.png'
+import tabletLandscapeImg from './assets/images/login/tablet-landscape.png'
 import sidebarLogo from './assets/brand/sidebar_logo.png'
 
 const UsersPage = lazy(() => import('./features/users/UsersPage').then(module => ({ default: module.UsersPage })))
 const ClientsPage = lazy(() => import('./features/clients/ClientsPage').then(module => ({ default: module.ClientsPage })))
 const ClientDetailPage = lazy(() => import('./features/clients/ClientDetailPage').then(module => ({ default: module.ClientDetailPage })))
+const RelatedPersonsPage = lazy(() => import('./features/clients/RelatedPersonsPage').then(module => ({ default: module.RelatedPersonsPage })))
 const CatalogPage = lazy(() => import('./features/catalog/CatalogPage').then(module => ({ default: module.CatalogPage })))
 const DesignsPage = lazy(() => import('./features/designs/DesignsPage').then(module => ({ default: module.DesignsPage })))
 const DesignEditor = lazy(() => import('./features/designs/DesignEditor').then(module => ({ default: module.DesignEditor })))
@@ -34,11 +36,14 @@ const GlobalDesignTemplatesPage = lazy(() => import('./backoffice/designs/Global
 const GlobalTemplateEditor = lazy(() => import('./backoffice/designs/GlobalTemplateEditor').then(module => ({ default: module.GlobalTemplateEditor })))
 const MaterialsInventoryPage = lazy(() => import('./features/materials/MaterialsInventoryPage').then(module => ({ default: module.MaterialsInventoryPage })))
 const ClientMeasurementsPage = lazy(() => import('./features/measurements/ClientMeasurementsPage').then(module => ({ default: module.ClientMeasurementsPage })))
+const OrdersPage = lazy(() => import('./features/orders/OrdersPage').then(module => ({ default: module.OrdersPage })))
+const DeletedOrdersPage = lazy(() => import('./features/orders/DeletedOrdersPage').then(module => ({ default: module.DeletedOrdersPage })))
+const BillingHistoryPage = lazy(() => import('./features/billing/BillingHistoryPage').then(module => ({ default: module.BillingHistoryPage })))
 const BackOfficeDashboard = lazy(() => import('./backoffice/BackOfficePages').then(module => ({ default: module.BackOfficeDashboard })))
 const ShopListPage = lazy(() => import('./backoffice/BackOfficePages').then(module => ({ default: module.ShopListPage })))
 const CreateShopPage = lazy(() => import('./backoffice/BackOfficePages').then(module => ({ default: module.CreateShopPage })))
 const ShopDetailPage = lazy(() => import('./backoffice/BackOfficePages').then(module => ({ default: module.ShopDetailPage })))
-const BackOfficeClientsPage = lazy(() => import('./backoffice/BackOfficePages').then(module => ({ default: module.BackOfficeClientsPage })))
+const FinancialPurgePage = lazy(() => import('./backoffice/FinancialPurgePage').then(module => ({ default: module.FinancialPurgePage })))
 const PinResetRequestsPage = lazy(() => import('./backoffice/PinResetRequestsPage').then(module => ({ default: module.PinResetRequestsPage })))
 
 function PageLoading() { return <div className="content-wrap" role="status">Loading page…</div> }
@@ -93,94 +98,8 @@ function useTheme() {
   return [theme, setTheme, resolvedTheme] as const
 }
 
-function CustomSelect({ value, options, onChange, icon, ariaLabel }: { value: string, options: {value: string, label: string}[], onChange: (val: string) => void, icon?: React.ReactNode, ariaLabel: string }) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [activeIndex, setActiveIndex] = useState(0)
-  const ref = useRef<HTMLDivElement>(null)
-  const triggerRef = useRef<HTMLButtonElement>(null)
-  const optionRefs = useRef<Array<HTMLLIElement | null>>([])
-  const listboxId = useId()
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (ref.current && !ref.current.contains(event.target as Node)) {
-        setIsOpen(false)
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
-
-  useEffect(() => {
-    if (isOpen) optionRefs.current[activeIndex]?.focus()
-  }, [isOpen, activeIndex])
-
-  const selectedOption = options.find(o => o.value === value)
-  const openAt = (index: number) => {
-    if (!options.length) return
-    setActiveIndex(Math.max(0, Math.min(index, options.length - 1)))
-    setIsOpen(true)
-  }
-  const choose = (option: { value: string, label: string }) => {
-    onChange(option.value)
-    setIsOpen(false)
-    triggerRef.current?.focus()
-  }
-
-  return (
-    <div ref={ref} className="custom-select">
-      <button
-        ref={triggerRef}
-        type="button"
-        onClick={() => isOpen ? setIsOpen(false) : openAt(Math.max(0, options.findIndex(option => option.value === value)))}
-        aria-label={ariaLabel}
-        aria-haspopup="listbox"
-        aria-expanded={isOpen}
-        aria-controls={isOpen ? listboxId : undefined}
-        className="select-trigger"
-        onKeyDown={event => {
-          if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-            event.preventDefault()
-            openAt(Math.max(0, options.findIndex(option => option.value === value)))
-          } else if (event.key === 'Home') { event.preventDefault(); openAt(0) }
-          else if (event.key === 'End') { event.preventDefault(); openAt(options.length - 1) }
-        }}
-      >
-        {icon}
-        <span className="select-value">{selectedOption ? selectedOption.label : value}</span>
-        <ChevronDown size={13} aria-hidden="true" />
-      </button>
-
-      {isOpen && (
-        <ul className="select-popover" id={listboxId} role="listbox" aria-label={ariaLabel}>
-          {options.map((option, index) => (
-            <li
-              key={option.value}
-              ref={element => { optionRefs.current[index] = element }}
-              role="option"
-              aria-selected={option.value === value}
-              tabIndex={activeIndex === index ? 0 : -1}
-              className={`select-option ${option.value === value ? 'selected' : ''}`}
-              onClick={() => choose(option)}
-              onKeyDown={event => {
-                let next: number | null = null
-                if (event.key === 'ArrowDown') next = (index + 1) % options.length
-                else if (event.key === 'ArrowUp') next = (index - 1 + options.length) % options.length
-                else if (event.key === 'Home') next = 0
-                else if (event.key === 'End') next = options.length - 1
-                else if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); choose(option) }
-                else if (event.key === 'Escape') { event.preventDefault(); setIsOpen(false); triggerRef.current?.focus() }
-                else if (event.key === 'Tab') setIsOpen(false)
-                if (next !== null) { event.preventDefault(); setActiveIndex(next) }
-              }}
-            >
-              {option.label}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  )
+function CustomSelect({ value, options, onChange, icon, ariaLabel, compact = false }: { value: string, options: {value: string, label: string}[], onChange: (val: string) => void, icon?: React.ReactNode, ariaLabel: string, compact?: boolean }) {
+  return <ResponsiveChoice value={value} options={options} onChange={onChange} icon={icon} compact={compact} ariaLabel={ariaLabel} />
 }
 
 function LanguageMenu() {
@@ -194,6 +113,7 @@ function LanguageMenu() {
     options={options}
     onChange={(val) => void i18n.changeLanguage(val)}
     icon={<Globe2 size={15} />}
+    compact
     ariaLabel="Language"
   />
 }
@@ -209,6 +129,7 @@ function ThemeMenu({ theme, onChange }: { theme: Theme; onChange: (value: Theme)
     options={options}
     onChange={(val) => onChange(val as Theme)}
     icon={theme === 'dark' ? <Moon size={15} /> : <Sun size={15} />}
+    compact
     ariaLabel="Color theme"
   />
 }
@@ -224,6 +145,7 @@ function PaletteMenu({ palette, onChange }: { palette: Palette; onChange: (value
     value={palette}
     options={options}
     onChange={(val) => onChange(val as Palette)}
+    compact
     ariaLabel="Palette"
   />
 }
@@ -238,33 +160,27 @@ function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const submitInFlight = useRef(false)
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (submitInFlight.current) return
     setError('')
 
     if (!identifier.trim()) {
-      setError(t('auth.identifierRequired'))
+      setError('Please enter your User ID, email, or phone number.')
       return
     }
     if (!password) {
-      setError(t('auth.credentialRequired'))
+      setError('Please enter your password.')
       return
     }
 
-    submitInFlight.current = true
     setIsLoading(true)
     try {
       const mustChangePassword = await signIn(identifier.trim(), password)
       navigate(mustChangePassword ? '/password-change' : '/', { replace: true })
     } catch (err: unknown) {
-      if (err instanceof ApiError && err.status === 429) setError(t('auth.loginRateLimited'))
-      else if (err instanceof ApiError && (err.status === 0 || err.status >= 500)) setError(t('auth.networkError'))
-      else setError(t('auth.loginFailed'))
+      setError(err instanceof Error ? err.message : 'Unable to sign in right now. Please try again.')
     } finally {
-      submitInFlight.current = false
       setIsLoading(false)
     }
   }
@@ -299,8 +215,10 @@ function LoginPage() {
             </div>
 
             <div className="login-header">
-              <h1>{t('welcomeBack')} 👋</h1>
-              <p className="login-subtitle">{t('auth.loginSubtitle')}</p>
+              <h1>{t('welcomeBack') === 'welcomeBack' ? 'Welcome back 👋' : t('welcomeBack')}</h1>
+              <p className="login-subtitle">
+                {t('login.subtitle') === 'login.subtitle' ? 'Please enter your email, phone number or username to continue.' : t('login.subtitle')}
+              </p>
             </div>
 
             <form className="login-form" onSubmit={handleSubmit}>
@@ -311,41 +229,41 @@ function LoginPage() {
               )}
 
               <div className="form-group">
-                <label className="field-label" htmlFor="identifier">{t('auth.identifier')}</label>
                 <div className="input-with-icon">
                   <UsersRound className="input-icon" size={18} aria-hidden="true" />
                   <input
                     id="identifier"
                     type="text"
                     autoComplete="username"
-                    placeholder={t('auth.identifierPlaceholder')}
+                    placeholder="Email / Phone / Username"
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
                     disabled={isLoading}
+                    aria-label="User ID, Email, or Phone"
                   />
                 </div>
               </div>
 
               <div className="form-group">
-                <label className="field-label" htmlFor="password">{t('auth.credential')}</label>
                 <div className="input-with-icon">
                   <Settings2 className="input-icon" size={18} aria-hidden="true" />
                   <input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="current-password"
-                    placeholder={t('auth.credentialPlaceholder')}
+                    placeholder="Password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={isLoading}
+                    aria-label="Password"
                   />
                   <button
                     type="button"
                     className="password-toggle"
                     onClick={() => setShowPassword(!showPassword)}
-                    aria-label={showPassword ? t('auth.hideCredential') : t('auth.showCredential')}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                   >
-                    {showPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+                    <CircleHelp size={18} />
                   </button>
                 </div>
               </div>
@@ -358,12 +276,12 @@ function LoginPage() {
                   style={{ background: 'none', border: 'none', cursor: 'pointer' }}
                   onClick={() => navigate('/forgot-password')}
                 >
-                  {t('auth.recoverAccess')}
+                  Forgot password?
                 </button>
               </div>
 
               <button className="primary-button submit-button" type="submit" disabled={isLoading}>
-                {isLoading ? t('auth.signingIn') : t('auth.signIn')} <ArrowRight size={18} />
+                {isLoading ? 'Logging in...' : 'Log in'} <ArrowRight size={18} />
               </button>
             </form>
           </div>
@@ -379,7 +297,6 @@ function LoginPage() {
 }
 
 function PasswordChangePage() {
-  const { t } = useTranslation()
   const { changePassword } = useAuth()
   const navigate = useNavigate()
   const [currentPassword, setCurrentPassword] = useState('')
@@ -387,50 +304,32 @@ function PasswordChangePage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const submitInFlight = useRef(false)
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault()
     setError('')
-    if (submitInFlight.current) return
-    if (!/^[0-9]{6}$/.test(newPassword)) {
-      setError(t('authValidation.newPinInvalid'))
-      return
-    }
-    if (newPassword !== confirmPassword) {
-      setError(t('authValidation.pinMismatch'))
-      return
-    }
-    submitInFlight.current = true
     setIsLoading(true)
     try {
       await changePassword(currentPassword, newPassword, confirmPassword)
-      navigate('/login', { replace: true, state: { notice: t('auth.pinChangedNotice') } })
+      navigate('/login', { replace: true, state: { notice: 'Password changed. Sign in with your new password.' } })
     } catch (cause: unknown) {
-      const backendErrors = cause instanceof ApiError ? JSON.stringify(cause.payload ?? {}).toLowerCase() : ''
-      if (cause instanceof ApiError && (cause.status === 0 || cause.status >= 500)) setError(t('auth.networkError'))
-      else if (/current_password|current password/.test(backendErrors)) setError(t('authValidation.currentCredentialInvalid'))
-      else if (/new_password_confirm|confirm.*(match|same)|mismatch/.test(backendErrors)) setError(t('authValidation.pinMismatch'))
-      else if (/new_password|pin/.test(backendErrors)) setError(t('authValidation.newPinInvalid'))
-      else setError(t('auth.changeFailed'))
+      setError(cause instanceof Error ? cause.message : 'Unable to change your password. Please try again.')
     } finally {
-      submitInFlight.current = false
       setIsLoading(false)
     }
   }
 
   return <main className="login-page"><section className="login-form-area"><div className="login-form-container">
-    <div className="login-header"><h1>{t('auth.changePinTitle')}</h1><p className="login-subtitle">{t('auth.changePinIntro')}</p></div>
+    <div className="login-header"><h1>Change your password</h1><p className="login-subtitle">Set a new password before continuing.</p></div>
     <form className="login-form" onSubmit={submit}>
       {error && <div className="login-error-message" role="alert">{error}</div>}
-      <label className="field-label" htmlFor="current-password">{t('auth.currentCredential')}</label>
+      <label className="field-label" htmlFor="current-password">Current password</label>
       <input id="current-password" type="password" autoComplete="current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} required disabled={isLoading} />
-      <label className="field-label" htmlFor="new-password">{t('auth.newPin')}</label>
-      <input id="new-password" type="password" inputMode="numeric" autoComplete="new-password" minLength={6} maxLength={6} pattern="[0-9]{6}" aria-describedby="new-pin-hint" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} required disabled={isLoading} />
-      <span className="auth-field-hint" id="new-pin-hint">{t('auth.sixDigitPinHint')}</span>
-      <label className="field-label" htmlFor="confirm-password">{t('auth.confirmPin')}</label>
-      <input id="confirm-password" type="password" inputMode="numeric" autoComplete="new-password" minLength={6} maxLength={6} pattern="[0-9]{6}" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required disabled={isLoading} />
-      <button className="primary-button submit-button" type="submit" disabled={isLoading}>{isLoading ? t('auth.saving') : t('auth.changePinButton')}</button>
+      <label className="field-label" htmlFor="new-password">New password</label>
+      <input id="new-password" type="password" autoComplete="new-password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} required disabled={isLoading} />
+      <label className="field-label" htmlFor="confirm-password">Confirm new password</label>
+      <input id="confirm-password" type="password" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required disabled={isLoading} />
+      <button className="primary-button submit-button" type="submit" disabled={isLoading}>{isLoading ? 'Saving...' : 'Change password'}</button>
     </form>
   </div></section></main>
 }
@@ -538,6 +437,8 @@ function SidebarContainer({
 
 function DesktopSidebar({ isPinned, setIsPinned }: { isPinned: boolean, setIsPinned: (v: boolean) => void }) {
   const { t } = useTranslation()
+  const { role, workFunctions } = useCurrentShop()
+  const canViewBilling = role === 'ADMIN' || (role === 'STAFF' && workFunctions.includes('CASHIER'))
   const { signOut, user } = useAuth()
   const navigate = useNavigate()
   const [isAccountOpen, setIsAccountOpen] = useState(false)
@@ -567,11 +468,11 @@ function DesktopSidebar({ isPinned, setIsPinned }: { isPinned: boolean, setIsPin
       <nav style={{ flex: 1 }} aria-label="Main navigation">
         <NavLink to="/" end className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><LayoutDashboard size={18} /> <span className="nav-label">{t('nav.dashboard')}</span></NavLink>
         <NavLink to="/work" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Scissors size={18} /> <span className="nav-label">{t('nav.work')}</span></NavLink>
-        <div className="nav-link-desktop nav-disabled" aria-disabled="true"><ClipboardList size={18} /> <span className="nav-label">{t('nav.orders')}</span></div>
+        <NavLink to="/orders" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><ClipboardList size={18} /> <span className="nav-label">{t('nav.orders')}</span></NavLink>
         <NavLink to="/designs" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Wand2 size={18} /> <span className="nav-label">{t('nav.designs', 'Designs')}</span></NavLink>
         <NavLink to="/catalog" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Shirt size={18} /> <span className="nav-label">{t('nav.catalog', 'Catalog')}</span></NavLink>
         <NavLink to="/clients" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><UsersRound size={18} /> <span className="nav-label">{t('nav.clients')}</span></NavLink>
-        <div className="nav-link-desktop nav-disabled" aria-disabled="true"><CreditCard size={18} /> <span className="nav-label">{t('nav.billing')}</span></div>
+        {canViewBilling && <NavLink to="/billing" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><CreditCard size={18} /> <span className="nav-label">{t('nav.billing')}</span></NavLink>}
         <NavLink to="/users" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Shield size={18} /> <span className="nav-label">{t('nav.team', 'Team')}</span></NavLink>
       </nav>
 
@@ -625,6 +526,9 @@ function BackOfficeSidebar({ isPinned, setIsPinned }: { isPinned: boolean, setIs
     <nav style={{ flex: 1 }} aria-label={t('backoffice.navigation')}>
       <NavLink to="/backoffice" end className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><LayoutDashboard size={18} /><span className="nav-label">{t('backoffice.dashboard')}</span></NavLink>
       <NavLink to="/backoffice/shops" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Store size={18} /><span className="nav-label">{t('backoffice.shops')}</span></NavLink>
+      <NavLink to="/backoffice/financial-purge" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><CreditCard size={18} /><span className="nav-label">{t('billing.purgePageTitle', 'Financial purge')}</span></NavLink>
+      <NavLink to="/backoffice/pin-reset-requests" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Shield size={18} /><span className="nav-label">{t('auth.pinResetRequests', 'PIN reset requests')}</span></NavLink>
+      <NavLink to="/backoffice/measurements" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Ruler size={18} /><span className="nav-label">{t('measurements.title')}</span></NavLink>
       <NavLink to="/backoffice/designs" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Wand2 size={18} /><span className="nav-label">{t('backoffice.designs', 'Global Designs')}</span></NavLink>
       <NavLink to="/backoffice/catalog" className={({ isActive }) => `nav-link-desktop${isActive ? ' active' : ''}`}><Shirt size={18} /><span className="nav-label">{t('backoffice.catalog', 'Global Catalog')}</span></NavLink>
     </nav>
@@ -662,6 +566,8 @@ function BackOfficeBottomNavigation() {
   return <nav className="bottom-nav bo-bottom-nav" aria-label={t('backoffice.navigation')}>
     <NavLink to="/backoffice" end className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}><LayoutDashboard size={20} />{t('backoffice.dashboard')}</NavLink>
     <NavLink to="/backoffice/shops" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}><Store size={20} />{t('backoffice.shops')}</NavLink>
+    <NavLink to="/backoffice/financial-purge" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}><CreditCard size={20} />{t('billing.purgePageTitle', 'Financial purge')}</NavLink>
+    <NavLink to="/backoffice/measurements" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}><Ruler size={20} />{t('measurements.title')}</NavLink>
     <button type="button" className="nav-item" onClick={() => { void signOut().catch(() => undefined).finally(() => navigate('/login', { replace: true })) }}><LogOut size={20} />{t('backoffice.signOut')}</button>
   </nav>
 }
@@ -680,7 +586,7 @@ function TopHeader({
   const isBackOffice = location.pathname.startsWith('/backoffice')
 
   const getPageContext = () => {
-    if (isBackOffice) return { main: location.pathname === '/backoffice' ? 'Back Office' : location.pathname.includes('/clients') ? 'Clients' : location.pathname.endsWith('/new') ? 'Create Shop' : 'Shops' }
+    if (isBackOffice) return { main: location.pathname === '/backoffice' ? 'Back Office' : location.pathname === '/backoffice/measurements' ? 'Measurements' : location.pathname === '/backoffice/financial-purge' ? 'Financial purge' : location.pathname.endsWith('/new') ? 'Create Shop' : 'Shops' }
     if (location.pathname === '/work') return { main: 'Work' }
     if (location.pathname === '/') return { main: 'Dashboard' }
     if (location.pathname.startsWith('/orders')) return { main: 'Orders' }
@@ -740,7 +646,7 @@ function BottomNavigation({ onMoreClick }: { onMoreClick: () => void }) {
     <nav className="bottom-nav">
       <NavLink to="/" end className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}><LayoutDashboard size={20} />{t('nav.dashboard')}</NavLink>
       <NavLink to="/work" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}><Scissors size={20} />{t('nav.work')}</NavLink>
-      <div className="nav-item nav-disabled" aria-disabled="true"><ClipboardList size={20} />{t('nav.orders')}</div>
+      <NavLink to="/orders" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}><ClipboardList size={20} />{t('nav.orders')}</NavLink>
       <NavLink to="/clients" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}><UsersRound size={20} />{t('nav.clients')}</NavLink>
       <button className="nav-item" onClick={onMoreClick}><MoreHorizontal size={20} />{t('nav.more')}</button>
     </nav>
@@ -749,6 +655,8 @@ function BottomNavigation({ onMoreClick }: { onMoreClick: () => void }) {
 
 function MoreSheet({ isOpen, onClose, theme, setTheme }: { isOpen: boolean, onClose: () => void, theme: Theme, setTheme: (v: Theme) => void }) {
   const { t } = useTranslation()
+  const { role, workFunctions } = useCurrentShop()
+  const canViewBilling = role === 'ADMIN' || (role === 'STAFF' && workFunctions.includes('CASHIER'))
   if (!isOpen) return null;
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', background: 'rgba(0,0,0,0.4)' }} onClick={onClose}>
@@ -760,7 +668,7 @@ function MoreSheet({ isOpen, onClose, theme, setTheme }: { isOpen: boolean, onCl
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><CreditCard size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('more.billing')}</span></div>
+          {canViewBilling && <Link to="/billing" onClick={onClose} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><CreditCard size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('more.billing')}</span></Link>}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><BarChart3 size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('more.reports')}</span></div>
           <Link to="/users" onClick={onClose} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><Users size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('more.members')}</span></Link>
           <Link to="/designs" onClick={onClose} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '12px', color: 'var(--color-primary)' }}><Wand2 size={24} /><span style={{ fontSize: '12px', color: 'var(--color-text)', fontWeight: 500 }}>{t('nav.designs', 'Designs')}</span></Link>
@@ -854,7 +762,7 @@ function WorkPreviewPage() {
           <h1 style={{ fontSize: '32px', fontWeight: 600, margin: '0 0 8px 0', letterSpacing: '-0.5px' }}>{t('work.title')}</h1>
           <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '14px' }}>{t('work.subtitle')}</p>
         </div>
-        <button className="primary-button"><Plus size={16} /> {t('work.newOrder')}</button>
+        <Link className="primary-button" to="/orders/new"><Plus size={16} /> {t('work.newOrder')}</Link>
       </div>
 
       <div className="phone-stage-selector">
@@ -914,13 +822,13 @@ function Workspace() {
   const [isSidebarPinned, setIsSidebarPinned] = useState(false)
   const isLogin = location.pathname === '/login'
   const isPasswordChange = location.pathname === '/password-change'
-  const isPinReset = location.pathname === '/forgot-password'
+  const isPinReset = location.pathname === '/forgot-password' || location.pathname === '/reset-password'
 
   useEffect(() => { setIsMoreOpen(false) }, [location.pathname])
 
   if (!ready) return <main className="login-page" aria-busy="true"><p>Loading your session…</p></main>
-  if (isLogin) return user && !passwordChangeRequired ? <Navigate to={user.is_main_supplier_admin ? '/backoffice' : '/'} replace /> : <LoginPage />
   if (isPinReset) return <PinResetPage />
+  if (isLogin) return user && !passwordChangeRequired ? <Navigate to={user.is_main_supplier_admin ? '/backoffice' : '/'} replace /> : <LoginPage />
   if (isPasswordChange) return passwordChangeRequired ? <PasswordChangePage /> : user ? <Navigate to={user.is_main_supplier_admin ? '/backoffice' : '/'} replace /> : <Navigate to="/login" replace />
   if (!user || passwordChangeRequired) return <Navigate to={passwordChangeRequired ? '/password-change' : '/login'} replace />
 
@@ -938,8 +846,9 @@ function Workspace() {
         <Route path="/backoffice/shops" element={<ShopListPage />} />
         <Route path="/backoffice/shops/new" element={<CreateShopPage />} />
         <Route path="/backoffice/shops/:shopId" element={<ShopDetailPage />} />
-        <Route path="/backoffice/shops/:shopId/clients" element={<BackOfficeClientsPage />} />
+        <Route path="/backoffice/financial-purge" element={<FinancialPurgePage />} />
         <Route path="/backoffice/pin-reset-requests" element={<PinResetRequestsPage />} />
+        <Route path="/backoffice/measurements" element={<ClientMeasurementsPage />} />
         <Route path="/backoffice/catalog" element={<GlobalCatalogPage />} />
         <Route path="/backoffice/designs" element={<GlobalDesignTemplatesPage />} />
         <Route path="/backoffice/designs/:designId" element={<GlobalTemplateEditor />} />
@@ -962,8 +871,14 @@ function Workspace() {
       />
       <Suspense fallback={<PageLoading />}><Routes>
         <Route path="/work" element={<WorkPreviewPage />} />
+        <Route path="/orders" element={<OrdersPage />} />
+        <Route path="/orders/deleted" element={<DeletedOrdersPage />} />
+        <Route path="/orders/new" element={<OrdersPage />} />
+        <Route path="/orders/:id" element={<OrdersPage />} />
+        <Route path="/billing" element={<BillingHistoryPage />} />
         <Route path="/clients" element={<ClientsPage />} />
         <Route path="/clients/:clientId" element={<ClientDetailPage />} />
+        <Route path="/clients/:clientId/related-persons" element={<RelatedPersonsPage />} />
         <Route path="/clients/:clientId/measurements" element={<ClientMeasurementsPage />} />
         <Route path="/measurements" element={<ClientMeasurementsPage />} />
         <Route path="/users" element={<UsersPage />} />

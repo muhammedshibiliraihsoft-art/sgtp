@@ -31,6 +31,18 @@ export const clientsApi = {
   related(shopId: string, clientId: string) {
     return apiRequest<PaginatedResponse<RelatedPerson>>(`${base(shopId)}${encodeURIComponent(clientId)}/related-persons/`)
   },
+  async relatedAll(shopId: string, clientId: string) {
+    const results: RelatedPerson[] = []
+    let next: string | null = `${base(shopId)}${encodeURIComponent(clientId)}/related-persons/`
+    while (next) {
+      const page: PaginatedResponse<RelatedPerson> = await apiRequest<PaginatedResponse<RelatedPerson>>(next)
+      results.push(...page.results)
+      if (!page.next) break
+      const url: URL = new URL(page.next, window.location.origin)
+      next = `${url.pathname}${url.search}`
+    }
+    return results
+  },
   createRelated(shopId: string, clientId: string, input: ContactInput) {
     return apiRequest<ContactWriteResult<RelatedPerson>>(`${base(shopId)}${encodeURIComponent(clientId)}/related-persons/`, { method: 'POST', body: contactBody(input) })
   },

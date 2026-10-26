@@ -21,8 +21,7 @@ export class ApiError extends Error {
 
 let accessToken: string | null = null
 let csrfToken: string | null = null
-type RefreshResponse<TUser = unknown> = { access: string; user: TUser }
-let refreshPromise: Promise<RefreshResponse> | null = null
+let refreshPromise: Promise<string> | null = null
 let unauthorizedHandler: (() => void) | null = null
 let authGeneration = 0
 const inFlightReads = new Map<string, Promise<unknown>>()
@@ -96,8 +95,9 @@ export async function bootstrapCsrf(): Promise<string> {
   return csrfToken
 }
 
-async function refreshAccessToken(): Promise<RefreshResponse> {
+async function refreshAccessToken(): Promise<string> {
   if (!refreshPromise) {
+    const refreshGeneration = authGeneration
     refreshPromise = (async () => {
       const csrf = await bootstrapCsrf()
       let response: Response
@@ -109,26 +109,17 @@ async function refreshAccessToken(): Promise<RefreshResponse> {
       } catch {
         throw new ApiError('Unable to reach the service. Check your connection and try again.', 0, 'network_unavailable')
       }
-      const data = await readResponse<RefreshResponse>(response)
-      if (
-        !data
-        || typeof data.access !== 'string'
-        || !data.access
-        || !data.user
-        || typeof data.user !== 'object'
-        || Array.isArray(data.user)
-      ) {
-        throw new ApiError(
-          'The session refresh response was incomplete.',
-          502,
-          'invalid_refresh_response',
-        )
+      const data = await readResponse<{ access: string }>(response)
+      if (authGeneration !== refreshGeneration) {
+        throw new ApiError('Your session changed. Please retry the request.', 401, 'session_changed')
       }
       accessToken = data.access
-      return data
+      return data.access
     })().catch((error: unknown) => {
-      clearCredentials()
-      unauthorizedHandler?.()
+      if (authGeneration === refreshGeneration) {
+        clearCredentials()
+        unauthorizedHandler?.()
+      }
       throw error
     }).finally(() => { refreshPromise = null })
   }
@@ -161,7 +152,14 @@ async function coreRequest(path: string, options: RequestOptions, body?: BodyIni
     if (accessToken && accessToken !== tokenUsed) {
       return coreRequest(path, { ...options, retryUnauthorized: false }, body)
     }
-    await refreshAccessToken()
+    try {
+      await refreshAccessToken()
+    } catch (error) {
+      if (accessToken && accessToken !== tokenUsed) {
+        return coreRequest(path, { ...options, retryUnauthorized: false }, body)
+      }
+      throw error
+    }
     return coreRequest(path, { ...options, retryUnauthorized: false }, body)
   }
   if (response.status === 401 && authenticated) {
@@ -219,6 +217,6 @@ export async function binaryRequest(path: string, options: RequestOptions = {}):
   return response.blob()
 }
 
-export async function refreshSession<TUser = unknown>(): Promise<RefreshResponse<TUser>> {
-  return await refreshAccessToken() as RefreshResponse<TUser>
+export async function refreshSession(): Promise<string> {
+  return refreshAccessToken()
 }

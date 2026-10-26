@@ -23,7 +23,7 @@ export interface MeasurementDefinition {
   is_active: boolean
   is_global: boolean
   translations: Array<{ locale: string; name: string; description: string }>
-  mappings: Array<{ family_id: string; variant_id: string | null; sort_order: number }>
+  mappings: Array<{ family_id: string; sort_order: number }>
 }
 
 export interface MeasurementDefinitionCreateInput {
@@ -31,7 +31,7 @@ export interface MeasurementDefinitionCreateInput {
   group_code?: string
   sort_order?: number
   translations: Array<{ locale: 'en' | 'ar-KW' | 'bn' | 'ur'; name: string; description?: string }>
-  mappings: Array<{ family_id: string; variant_id?: string | null }>
+  mappings: Array<{ family_id: string }>
 }
 
 export interface MeasurementValue {
@@ -50,8 +50,6 @@ export interface MeasurementSet {
   profile: string
   version: number
   copied_from: string | null
-  design_version?: string | null
-  is_active: boolean
   created_at: string
   values: MeasurementValue[]
 }

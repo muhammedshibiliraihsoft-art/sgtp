@@ -345,8 +345,8 @@
    LOGIN PAGE
    ========================================= */
 .login-page {
+
   min-height: 100vh;
-  min-height: 100dvh;
   background: var(--color-canvas); /* Soft page background */
   display: flex;
   flex-direction: column;
@@ -376,8 +376,7 @@
 
 .login-form-container {
   width: 100%;
-  max-width: min(400px, 100%);
-  box-sizing: border-box;
+  max-width: clamp(320px, 90vw, 400px);
   display: flex;
   flex-direction: column;
   gap: clamp(16px, 3vh, 20px);
@@ -417,22 +416,6 @@
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-}
-
-.field-label {
-  display: block;
-  color: var(--color-text);
-  font-size: 13px;
-  font-weight: 600;
-  text-align: start;
-}
-
-.auth-field-hint {
-  color: var(--color-text-muted);
-  font-size: 12px;
-  line-height: 1.5;
-  text-align: start;
 }
 
 .input-with-icon {
@@ -443,21 +426,19 @@
 
 .input-icon {
   position: absolute;
-  inset-inline-start: 12px;
+  left: 12px;
   color: var(--color-text-muted);
 }
 
 .input-with-icon input {
   width: 100%;
-  height: 48px;
-  box-sizing: border-box;
-  padding-inline: 38px 48px;
-  padding-block: 0;
+  height: 44px;
+  padding: 0 12px 0 38px;
   border: 1px solid var(--color-border);
   border-radius: 10px;
   background: var(--color-canvas);
   color: var(--color-text);
-  font-size: 16px;
+  font-size: 14px;
   transition: all 0.2s ease;
 }
 
@@ -469,14 +450,12 @@
 
 .password-toggle {
   position: absolute;
-  inset-inline-end: 8px;
+  right: 12px;
   background: none;
   border: none;
   color: var(--color-text-muted);
   cursor: pointer;
-  min-width: 40px;
-  min-height: 40px;
-  padding: 8px;
+  padding: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -504,7 +483,7 @@
 }
 
 .submit-button {
-  min-height: 48px;
+  height: 44px;
   font-size: 14px;
   font-weight: 600;
   margin-top: 4px;
@@ -519,25 +498,6 @@
   font-size: 13px;
   font-weight: 500;
   text-align: center;
-}
-
-.login-form-container > .login-form > input {
-  width: 100%;
-  min-height: 48px;
-  box-sizing: border-box;
-  padding: 10px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
-  background: var(--color-canvas);
-  color: var(--color-text);
-  font-size: 16px;
-}
-
-.login-form-container input:focus-visible,
-.password-toggle:focus-visible,
-.forgot-password-link:focus-visible {
-  outline: 3px solid var(--color-primary-soft);
-  outline-offset: 2px;
 }
 
 /* Visual Slot Base (Phone) */
@@ -579,9 +539,7 @@
   }
   .login-card {
     max-width: 100%;
-    min-height: 100vh;
-    min-height: 100dvh;
-    height: auto;
+    height: 100vh;
     border-radius: 0;
     box-shadow: none;
     background: transparent;
@@ -620,9 +578,7 @@
   .login-card {
     flex-direction: row-reverse;
     max-width: 100%;
-    min-height: 100vh;
-    min-height: 100dvh;
-    height: auto;
+    height: 100vh;
     border-radius: 0;
     box-shadow: none;
     background: transparent;
@@ -643,8 +599,7 @@
   }
   .login-visual-slot {
     flex: 1;
-    min-height: 100vh;
-    min-height: 100dvh;
+    height: 100vh;
     max-width: none;
     margin: 0;
     clip-path: ellipse(100% 150% at 100% 50%); /* Concave cutout on left */
@@ -664,8 +619,7 @@
   .login-card {
     flex-direction: row-reverse; /* Image on right, form on left */
     max-width: 960px; /* Controlled width */
-    min-height: 580px;
-    height: auto;
+    height: 580px; /* Controlled height */
     border-radius: 32px;
     background: var(--color-surface);
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.05);
@@ -699,19 +653,6 @@
   .login-header {
     text-align: left;
   }
-}
-
-@media (min-width: 1025px) and (max-height: 700px) and (hover: hover) {
-  .login-page { padding-block: 16px; }
-  .login-card { min-height: 0; }
-  .login-form-area { padding-block: 20px; }
-  .login-form-container { gap: 12px; }
-  .login-form { gap: 12px; }
-}
-
-@media (max-width: 359px) {
-  .login-form-area { padding-inline: 16px; }
-  .login-visual-slot { margin-block-end: 16px; }
 }
 
 /* Responsive Image Styling */

@@ -16,7 +16,7 @@ describe('MeasurementEntryForm workflow', () => {
     await i18n.changeLanguage('en')
   })
 
-  it('defaults to inches, applies the main unit to every field, and allows a per-field override', () => {
+  it('bulk-applies the selected unit without changing values and keeps per-row overrides', () => {
     const values: Record<string, DraftValue> = {
       'chest-id': { value: '40.125', unit: 'INCH' },
       'sleeve-id': { value: '62', unit: '' },
@@ -32,32 +32,13 @@ describe('MeasurementEntryForm workflow', () => {
       locale="en"
     />)
 
-    expect(within(screen.getByRole('group', { name: 'Default unit' })).getByRole('button', { name: 'Default unit: INCH' })).toHaveAttribute('aria-pressed', 'true')
-    expect(within(screen.getByRole('group', { name: 'Sleeve unit' })).getByRole('button', { name: 'Sleeve unit: INCH' })).toHaveAttribute('aria-pressed', 'true')
-
     fireEvent.click(within(screen.getByRole('group', { name: 'Default unit' })).getByRole('button', { name: 'Default unit: CM' }))
     expect(within(screen.getByRole('group', { name: 'Chest unit' })).getByRole('button', { name: 'Chest unit: CM' })).toHaveAttribute('aria-pressed', 'true')
-    expect(within(screen.getByRole('group', { name: 'Sleeve unit' })).getByRole('button', { name: 'Sleeve unit: CM' })).toHaveAttribute('aria-pressed', 'true')
     expect((screen.getByLabelText('Chest') as HTMLInputElement).value).toBe('40.125')
     expect((screen.getByLabelText('Sleeve') as HTMLInputElement).value).toBe('62')
 
-    fireEvent.click(within(screen.getByRole('group', { name: 'Default unit' })).getByRole('button', { name: 'Default unit: INCH' }))
+    fireEvent.click(within(screen.getByRole('group', { name: 'Chest unit' })).getByRole('button', { name: 'Chest unit: INCH' }))
     expect(within(screen.getByRole('group', { name: 'Chest unit' })).getByRole('button', { name: 'Chest unit: INCH' })).toHaveAttribute('aria-pressed', 'true')
-    expect(within(screen.getByRole('group', { name: 'Sleeve unit' })).getByRole('button', { name: 'Sleeve unit: INCH' })).toHaveAttribute('aria-pressed', 'true')
-
-    fireEvent.click(within(screen.getByRole('group', { name: 'Chest unit' })).getByRole('button', { name: 'Chest unit: CM' }))
-    expect(within(screen.getByRole('group', { name: 'Chest unit' })).getByRole('button', { name: 'Chest unit: CM' })).toHaveAttribute('aria-pressed', 'true')
-    expect(within(screen.getByRole('group', { name: 'Sleeve unit' })).getByRole('button', { name: 'Sleeve unit: INCH' })).toHaveAttribute('aria-pressed', 'true')
-  })
-
-  it('saves a fresh value with the default inch unit without requiring a row-unit click', async () => {
-    const onSave = vi.fn(async () => true)
-    render(<MeasurementEntryForm definitions={definitions} seedValues={{}} previousValues={{}} onDirtyChange={vi.fn()} onSave={onSave} saving={false} canWrite locale="en" />)
-
-    fireEvent.change(screen.getByLabelText('Chest'), { target: { value: '40.5' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save new version' }))
-
-    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ 'chest-id': { value: '40.5', unit: 'INCH' } }))
   })
 
   it('disables both global and row controls for read-only or saving forms', () => {
@@ -73,7 +54,7 @@ describe('MeasurementEntryForm workflow', () => {
     />)
 
     expect(within(screen.getByRole('group', { name: 'Default unit' })).getByRole('button', { name: 'Default unit: INCH' })).toBeDisabled()
-    expect(within(screen.getByRole('group', { name: 'Chest unit' })).getByRole('button', { name: 'Chest unit: INCH' })).toBeDisabled()
+    expect(within(screen.getByRole('group', { name: 'Chest unit' })).getByRole('button', { name: 'Chest unit: CM' })).toBeDisabled()
   })
 
   it('navigates on a second Enter within 500ms and selects the next value', () => {

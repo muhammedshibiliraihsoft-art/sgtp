@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createGlobalFamily, createGlobalVariant, createShopFamilyOptionGroup, createShopGarmentFamily, createShopOptionGroup, createShopStyleOption, createShopVariant, getAllGlobalVariants, getAllShopGarmentFamilies, getAllShopOptionGroups, getAllShopVariants, getFamilies, getFamilyDetail, getGlobalVariant, getGlobalVariantsPage, getShopFamilyOptionGroups, getShopVariantsPage, materializeShopDefaultFamily, removeGlobalFamilyImage, setGlobalFamilyStatus, setGlobalVariantDefault, setGlobalVariantStatus, setShopVariantStatus, updateGlobalFamily, updateGlobalVariant, updateShopFamilyOptionGroups, updateShopStyleOptionTranslations, updateShopVariant, uploadGlobalFamilyImage, uploadShopStyleOptionImages } from './api'
+import { createGlobalFamily, createGlobalVariant, createShopFamily, createShopStyleOption, createShopVariant, getAllFamilies, getAllGlobalVariants, getAllShopFamilies, getAllShopVariants, getFamilies, getFamilyDetail, getGlobalVariant, getGlobalVariantsPage, getShopVariantsPage, removeGlobalFamilyImage, setGlobalFamilyStatus, setGlobalVariantDefault, setGlobalVariantStatus, setShopVariantStatus, updateFamilyOptionGroups, updateGlobalFamily, updateGlobalVariant, updateShopStyleOptionTranslations, updateShopVariant, uploadGlobalFamilyImage, uploadShopStyleOptionImages } from './api'
 
 function stubJsonFetch(responses: unknown[]) {
   const fetchMock = vi.fn()
@@ -27,51 +27,6 @@ afterEach(() => {
 })
 
 describe('Catalog API contract', () => {
-  it('creates and attaches a Shop-local group through the family-scoped endpoint', async () => {
-    const config = { option_group: { id: 'group-1', tenant: 'shop-1' }, sort_order: 2, selection_mode: 'MULTI', is_required: false }
-    const fetchMock = stubJsonFetch([config])
-    const payload = { code: 'fastening-detail', translations: [{ locale: 'en' as const, name: 'Fastening detail' }] }
-    await createShopFamilyOptionGroup('shop-1', 'family-1', payload)
-    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/shops/shop-1/catalog/garment-families/family-1/option-groups/create/')
-    expect(fetchMock.mock.calls[0][1]?.method).toBe('POST')
-    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual(payload)
-  })
-
-  it('uses Shop-scoped family/group creation and family configuration endpoints', async () => {
-    const fetchMock = stubJsonFetch([
-      { count: 1, next: null, previous: null, results: [{ id: 'family-1' }] },
-      { count: 1, next: null, previous: null, results: [{ id: 'group-1' }] },
-      { id: 'family-2' },
-      { id: 'group-2' },
-      [{ id: 'config-1', option_group: { id: 'group-1' }, sort_order: 0, selection_mode: 'SINGLE', is_required: false }],
-      [{ id: 'config-1', option_group: { id: 'group-1' }, sort_order: 0, selection_mode: 'MULTI', is_required: true }],
-    ])
-    const payload = { code: 'custom-shirt', translations: [{ locale: 'en' as const, name: 'Custom Shirt' }] }
-
-    await getAllShopGarmentFamilies('shop-1')
-    await getAllShopOptionGroups('shop-1')
-    await createShopGarmentFamily('shop-1', payload)
-    await createShopOptionGroup('shop-1', { code: 'collar', translations: [{ locale: 'en', name: 'Collar' }] })
-    await getShopFamilyOptionGroups('shop-1', 'family-2')
-    await updateShopFamilyOptionGroups('shop-1', 'family-2', [{ option_group_id: 'group-1', sort_order: 0, selection_mode: 'MULTI', is_required: true }])
-
-    expect(fetchMock.mock.calls.map(([path]) => path)).toEqual([
-      '/api/v1/shops/shop-1/catalog/garment-families/?locale=en&status=ACTIVE',
-      '/api/v1/shops/shop-1/catalog/option-groups/?locale=en',
-      '/api/v1/shops/shop-1/catalog/garment-families/',
-      '/api/v1/shops/shop-1/catalog/option-groups/',
-      '/api/v1/shops/shop-1/catalog/garment-families/family-2/option-groups/?locale=en',
-      '/api/v1/shops/shop-1/catalog/garment-families/family-2/option-groups/',
-    ])
-    expect(JSON.parse(String(fetchMock.mock.calls[5][1]?.body))).toEqual({ option_groups: [{ option_group_id: 'group-1', sort_order: 0, selection_mode: 'MULTI', is_required: true }] })
-  })
-
-  it('materializes one selected global default through the Shop-scoped endpoint', async () => {
-    const fetchMock = stubJsonFetch([{ id: 'family-local', tenant: 'shop-1', template_source: 'family-global' }])
-    await materializeShopDefaultFamily('shop-1', 'family-global')
-    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/shops/shop-1/catalog/garment-families/family-global/materialize-default/')
-    expect(fetchMock.mock.calls[0][1]?.method).toBe('POST')
-  })
   it('sends the backend variant payload and shop route', async () => {
     const fetchMock = stubJsonFetch([{ id: 'variant-1', family: 'family-1', code: 'kurta', name: 'Kurta', is_default: false }])
     const payload = { family_id: 'family-1', code: 'kurta', translations: [{ locale: 'en' as const, name: 'Kurta' }] }
@@ -80,6 +35,29 @@ describe('Catalog API contract', () => {
 
     expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/shops/shop-1/catalog/variants/')
     expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual(payload)
+  })
+
+  it('creates a Shop-owned family through the existing Shop Catalog route', async () => {
+    const fetchMock = stubJsonFetch([{ id: 'family-shop', tenant: 'shop-1', code: 'evening-coat', name: 'Evening Coat' }])
+    const payload = { code: 'evening-coat', translations: [{ locale: 'en' as const, name: 'Evening Coat' }] }
+
+    await createShopFamily('shop-1', payload)
+
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/shops/shop-1/catalog/garment-families/')
+    expect(fetchMock.mock.calls[0][1]?.method).toBe('POST')
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual(payload)
+  })
+
+  it('discovers active global and Shop-owned families from the selected Shop Catalog', async () => {
+    const fetchMock = stubJsonFetch([{ count: 2, next: null, previous: null, results: [
+      { id: 'family-global', name: 'Shirt', code: 'shirt' },
+      { id: 'family-shop', name: 'Evening Coat', code: 'evening-coat', tenant: 'shop-1' },
+    ] }])
+
+    const families = await getAllShopFamilies('shop-1')
+
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/shops/shop-1/catalog/garment-families/?locale=en')
+    expect(families.map(family => family.id)).toEqual(['family-global', 'family-shop'])
   })
 
   it('sends the backend style-option field names', async () => {
@@ -113,6 +91,23 @@ describe('Catalog API contract', () => {
     expect(fetchMock.mock.calls.map(call => call[0])).toEqual([
       '/api/v1/shops/shop-1/catalog/variants/?locale=en',
       '/api/v1/shops/shop-1/catalog/variants/?page=2',
+    ])
+  })
+
+  it('preserves same-name family records by ID and code from the global family API', async () => {
+    const fetchMock = stubJsonFetch([{
+      count: 2, next: null, previous: null, results: [
+        { id: 'family-global', name: "Men's Shirt", code: 'mens-shirt' },
+        { id: 'family-other', name: "Men's Shirt", code: 'mens-shirt-special' },
+      ],
+    }])
+
+    const families = await getAllFamilies('en')
+
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/catalog/families/?locale=en')
+    expect(families.map(family => [family.id, family.code, family.name])).toEqual([
+      ['family-global', 'mens-shirt', "Men's Shirt"],
+      ['family-other', 'mens-shirt-special', "Men's Shirt"],
     ])
   })
 
@@ -198,12 +193,14 @@ describe('Catalog API contract', () => {
     expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual(payload)
   })
 
-  it('updates family translations and ordered option groups through one request', async () => {
-    const fetchMock = stubJsonFetch([{}])
+  it('updates only translations and assigns ordered option groups with the existing routes', async () => {
+    const fetchMock = stubJsonFetch([{}, []])
     const translations = [{ locale: 'en' as const, name: 'Shirt' }]
-    await updateGlobalFamily('family-1', { translations, option_group_ids: ['group-2', 'group-1'] })
+    await updateGlobalFamily('family-1', translations)
+    await updateFamilyOptionGroups('family-1', ['group-2', 'group-1'])
     expect(fetchMock.mock.calls.map(call => [call[0], call[1]?.method, call[1]?.body])).toEqual([
-      ['/api/v1/catalog/families/family-1/', 'PATCH', JSON.stringify({ translations, option_group_ids: ['group-2', 'group-1'] })],
+      ['/api/v1/catalog/families/family-1/', 'PATCH', JSON.stringify({ translations })],
+      ['/api/v1/catalog/families/family-1/option-groups/', 'PUT', JSON.stringify({ option_group_ids: ['group-2', 'group-1'] })],
     ])
   })
 

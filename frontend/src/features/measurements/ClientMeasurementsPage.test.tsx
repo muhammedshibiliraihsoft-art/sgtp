@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import i18n from '../../i18n'
 import { ClientMeasurementsPage } from './ClientMeasurementsPage'
@@ -10,9 +10,9 @@ const mock = vi.hoisted(() => ({
   apiRequest: vi.fn(),
   shopsList: vi.fn(),
   clientList: vi.fn(), clientDetail: vi.fn(),
-  getAllShopGarmentFamilies: vi.fn(), getAllShopVariants: vi.fn(), getShopFamilyOptionGroups: vi.fn(), getAllShopStyleOptions: vi.fn(),
-  getAllShopDesigns: vi.fn(), getAllGlobalDesigns: vi.fn(), createShopDesign: vi.fn(),
-  definitions: vi.fn(), createDefinition: vi.fn(), profiles: vi.fn(), createProfile: vi.fn(), sets: vi.fn(), saveSet: vi.fn(), copySet: vi.fn(), deleteSet: vi.fn(), compare: vi.fn(), fabrics: vi.fn(), exportWorksheet: vi.fn(),
+  getAllFamilies: vi.fn(), getOptionGroups: vi.fn(), getAllShopStyleOptions: vi.fn(),
+  getAllShopDesigns: vi.fn(), getAllGlobalDesigns: vi.fn(), createShopDesign: vi.fn(), getShopDesign: vi.fn(), addShopDesignSelection: vi.fn(),
+  definitions: vi.fn(), profiles: vi.fn(), createProfile: vi.fn(), sets: vi.fn(), saveSet: vi.fn(), copySet: vi.fn(), compare: vi.fn(), fabrics: vi.fn(), exportWorksheet: vi.fn(),
 }))
 
 vi.mock('../../hooks/useCurrentShop', () => ({ useCurrentShop: () => mock.context }))
@@ -21,16 +21,17 @@ vi.mock('../../services/shops', () => ({ shopsService: { list: mock.shopsList } 
 vi.mock('../../services/apiClient', () => ({ apiRequest: mock.apiRequest, binaryRequest: vi.fn() }))
 vi.mock('../clients/api', () => ({ clientsApi: { list: mock.clientList, detail: mock.clientDetail } }))
 vi.mock('../catalog/api', () => ({
-  getAllShopGarmentFamilies: mock.getAllShopGarmentFamilies, getAllShopVariants: mock.getAllShopVariants,
-  getShopFamilyOptionGroups: mock.getShopFamilyOptionGroups, getAllShopStyleOptions: mock.getAllShopStyleOptions,
+  getAllFamilies: mock.getAllFamilies,
+  getOptionGroups: mock.getOptionGroups, getAllShopStyleOptions: mock.getAllShopStyleOptions,
 }))
 vi.mock('../designs/api', () => ({
   getAllShopDesigns: mock.getAllShopDesigns, createShopDesign: mock.createShopDesign,
+  getShopDesign: mock.getShopDesign, addShopDesignSelection: mock.addShopDesignSelection,
 }))
 vi.mock('../../backoffice/designs/api', () => ({ getAllGlobalDesigns: mock.getAllGlobalDesigns }))
 vi.mock('./api', () => ({ measurementApi: {
-  definitions: mock.definitions, createDefinition: mock.createDefinition, profiles: mock.profiles, createProfile: mock.createProfile,
-  sets: mock.sets, saveSet: mock.saveSet, copySet: mock.copySet, deleteSet: mock.deleteSet, compare: mock.compare, fabrics: mock.fabrics,
+  definitions: mock.definitions, profiles: mock.profiles, createProfile: mock.createProfile,
+  sets: mock.sets, saveSet: mock.saveSet, copySet: mock.copySet, compare: mock.compare, fabrics: mock.fabrics,
   exportWorksheet: mock.exportWorksheet,
 } }))
 vi.mock('../../hooks/usePrivateImage', () => ({ usePrivateImage: () => ({ objectUrl: null, isLoading: false, error: null }) }))
@@ -42,10 +43,10 @@ const secondFamily = { id: 'family-2', name: 'Kuwaiti Dishdasha', code: 'kuwaiti
 const variant = { id: 'variant-1', family: family.id, name: 'Standard Shirt', code: 'standard-shirt', is_default: true, is_global: true, is_active: true }
 const group = { id: 'group-sleeve', name: 'Sleeve', code: 'sleeve', families: [family.id] }
 const option = { id: 'option-full-sleeve', option_group: group.id, tenant: null, code: 'full-sleeve', name: 'Full Sleeve', is_active: true, is_global: true, reference_images: [] }
-const profile = { id: 'profile-1', client: client.id, related_person: null, family: family.id, variant: variant.id, created_at: '2026-01-01T00:00:00Z' }
-const definition = { id: 'definition-chest', code: 'CHEST', group_code: 'BODY', sort_order: 1, is_active: true, is_global: true, translations: [{ locale: 'en', name: 'Chest', description: 'Around the chest' }], mappings: [{ family_id: family.id, variant_id: variant.id, sort_order: 1 }] }
+const profile = { id: 'profile-1', client: client.id, related_person: null, family: family.id, variant: null, created_at: '2026-01-01T00:00:00Z' }
+const definition = { id: 'definition-chest', code: 'CHEST', group_code: 'BODY', sort_order: 1, is_active: true, is_global: true, translations: [{ locale: 'en', name: 'Chest', description: 'Around the chest' }], mappings: [{ family_id: family.id, sort_order: 1 }] }
 const makeSet = (id: string, version: number, value: string, unit: 'CM' | 'INCH' = 'CM') => ({
-  id, profile: profile.id, version, copied_from: null, is_active: true, created_at: `2026-01-0${version}T10:00:00Z`,
+  id, profile: profile.id, version, copied_from: null, created_at: `2026-01-0${version}T10:00:00Z`,
   values: [{ id: `${id}-value`, definition: definition.id, definition_code_snapshot: 'CHEST', label_snapshot: 'Chest', label: 'Chest', translations: {}, value, unit }],
 })
 
@@ -66,13 +67,19 @@ async function chooseDropdownOption(label: string, optionValue: string) {
     [relatedPerson.id]: 'Related Person - Sara',
     'shop-1': 'Test Shop',
   }
-  fireEvent.click(await screen.findByLabelText(label))
-  fireEvent.click(await screen.findByRole('option', { name: optionLabels[optionValue] }))
+  const choice = await screen.findByRole('group', { name: label })
+  const visibleOption = within(choice).queryByRole('button', { name: optionLabels[optionValue] })
+  if (visibleOption) fireEvent.click(visibleOption)
+  else {
+    fireEvent.click(within(choice).getByRole('button', { name: /more/ }))
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: optionLabels[optionValue] }))
+  }
 }
 
 describe('Client Measurement workflow', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
+    Object.defineProperty(Element.prototype, 'scrollIntoView', { configurable: true, value: vi.fn() })
     await i18n.changeLanguage('en')
     mock.context = { shopId: 'shop-1', role: 'ADMIN', workFunctions: [], isLoading: false }
     mock.user = { is_main_supplier_admin: false }
@@ -80,14 +87,12 @@ describe('Client Measurement workflow', () => {
     mock.clientList.mockResolvedValue({ count: 1, next: null, previous: null, results: [client] })
     mock.clientDetail.mockResolvedValue(client)
     mock.apiRequest.mockResolvedValue({ count: 0, next: null, previous: null, results: [] })
-    mock.getAllShopGarmentFamilies.mockResolvedValue([family])
-    mock.getAllShopVariants.mockResolvedValue([variant])
-    mock.getShopFamilyOptionGroups.mockResolvedValue([{ option_group: group, sort_order: 0, selection_mode: 'SINGLE', is_required: false }])
+    mock.getAllFamilies.mockResolvedValue([family])
+    mock.getOptionGroups.mockResolvedValue([group])
     mock.getAllShopStyleOptions.mockResolvedValue([option])
     mock.getAllShopDesigns.mockResolvedValue([])
     mock.getAllGlobalDesigns.mockResolvedValue([])
     mock.definitions.mockResolvedValue([definition])
-    mock.createDefinition.mockResolvedValue({ ...definition, id: 'definition-custom', code: 'sleeve-length', sort_order: 2, translations: [{ locale: 'en', name: 'Sleeve Length', description: '' }] })
     mock.profiles.mockResolvedValue([])
     mock.createProfile.mockResolvedValue(profile)
     mock.sets.mockResolvedValue([])
@@ -95,7 +100,6 @@ describe('Client Measurement workflow', () => {
       ...makeSet('set-created', 1, values[0].value, values[0].unit),
     }))
     mock.copySet.mockResolvedValue(makeSet('set-copy', 3, '102.5'))
-    mock.deleteSet.mockResolvedValue(undefined)
     mock.compare.mockResolvedValue({ from_set_id: 'set-1', to_set_id: 'set-2', results: [{ definition_id: definition.id, code: 'CHEST', label: 'Chest', from_value: '100', from_unit: 'CM', to_value: '42', to_unit: 'INCH', difference: null, unit_mismatch: true }] })
     mock.fabrics.mockResolvedValue([])
     mock.exportWorksheet.mockResolvedValue(new Blob(['%PDF-1.4']))
@@ -103,66 +107,91 @@ describe('Client Measurement workflow', () => {
 
   afterEach(cleanup)
 
-  it('filters family designs locally when variant changes without repeating design requests', async () => {
-    const otherVariant = { ...variant, id: 'variant-2', name: 'Slim Shirt', code: 'slim-shirt' }
-    mock.getAllShopVariants.mockResolvedValue([variant, otherVariant])
+  it('loads all family designs without a Variant selector or Variant request', async () => {
     mock.getAllShopDesigns.mockResolvedValue([
-      { id: 'design-1', name: 'Standard design', variant: variant.id },
-      { id: 'design-2', name: 'Slim design', variant: otherVariant.id },
+      { id: 'design-1', name: 'Standard design', family: family.id, variant: variant.id },
+      { id: 'design-2', name: 'Family design', family: family.id, variant: null },
     ])
     renderPage()
     await chooseDropdownOption('Garment family', family.id)
-    await waitFor(() => expect(mock.getAllShopDesigns).toHaveBeenCalledTimes(1))
-    await chooseDropdownOption('Variant', otherVariant.id)
-    expect(await screen.findByRole('button', { name: /Slim design/ })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Standard design/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Variant' })).not.toBeInTheDocument()
+    fireEvent.focus(await screen.findByLabelText('Shop design / Global template'))
+    await waitFor(() => expect(mock.getAllShopDesigns).toHaveBeenCalledWith('shop-1', { family: family.id }, 'en'))
+    fireEvent.click(screen.getByLabelText('Shop design / Global template'))
+    expect(await screen.findByRole('button', { name: /Standard design/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Family design/ })).toBeInTheDocument()
+  })
+
+  it('shows fresh measurement fields without opening a legacy Variant profile', async () => {
+    mock.profiles.mockResolvedValue([{ ...profile, variant: variant.id }])
+    renderPage()
+
+    await chooseDropdownOption('Garment family', family.id)
+
+    expect(await screen.findByLabelText('Chest')).toHaveValue('')
+    expect(screen.queryByRole('button', { name: /Create profile|Open existing profile/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Measurement history' })).not.toBeInTheDocument()
+    expect(mock.createProfile).not.toHaveBeenCalled()
+    expect(mock.sets).not.toHaveBeenCalled()
+  })
+
+  it('shows a blank new-entry form when a Family profile exists but history was not requested', async () => {
+    mock.profiles.mockResolvedValue([profile])
+    renderPage()
+
+    await chooseDropdownOption('Garment family', family.id)
+
+    expect(await screen.findByLabelText('Chest')).toHaveValue('')
+    expect(screen.queryByRole('heading', { name: 'Measurement history' })).not.toBeInTheDocument()
+    expect(mock.sets).not.toHaveBeenCalled()
+    expect(mock.createProfile).not.toHaveBeenCalled()
+  })
+
+  it('loads saved design choices for the selected family and reuses them on focus', async () => {
+    renderPage()
+    await chooseDropdownOption('Garment family', family.id)
+    await waitFor(() => expect(mock.getOptionGroups).toHaveBeenCalledWith(family.id, 'en'))
+    await waitFor(() => {
+      expect(mock.getAllShopDesigns).toHaveBeenCalledWith('shop-1', { family: family.id }, 'en')
+      expect(mock.getAllGlobalDesigns).toHaveBeenCalledWith(family.id, 'en')
+    })
+    fireEvent.focus(await screen.findByLabelText('Shop design / Global template'))
+    await waitFor(() => {
+      expect(mock.getAllShopDesigns).toHaveBeenCalledTimes(1)
+      expect(mock.getAllGlobalDesigns).toHaveBeenCalledTimes(1)
+    })
+    fireEvent.blur(screen.getByLabelText('Shop design / Global template'))
+    fireEvent.focus(screen.getByLabelText('Shop design / Global template'))
     expect(mock.getAllShopDesigns).toHaveBeenCalledTimes(1)
     expect(mock.getAllGlobalDesigns).toHaveBeenCalledTimes(1)
   })
 
   it('loads real catalog data and saves a new version with an explicit per-field unit', async () => {
-    mock.sets.mockResolvedValue([makeSet('set-created', 1, '61.2500', 'INCH')])
     renderPage()
-    expect(await screen.findByRole('heading', { name: /Measurements · Amina/ })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Measurements · Amina' })).toBeInTheDocument()
     expect(mock.clientDetail).toHaveBeenCalledWith('shop-1', client.id)
 
     await chooseDropdownOption('Garment family', family.id)
-    await waitFor(() => expect(mock.getShopFamilyOptionGroups).toHaveBeenCalledWith('shop-1', family.id, 'en'))
-    await chooseDropdownOption('Variant', variant.id)
+    await waitFor(() => expect(mock.getOptionGroups).toHaveBeenCalledWith(family.id, 'en'))
     fireEvent.click(await screen.findByRole('button', { name: /Sleeve/ }))
     fireEvent.click(await screen.findByRole('button', { name: /Full Sleeve/ }))
 
+    expect(mock.definitions).toHaveBeenCalledWith('shop-1', family.id, 'en')
     const chestInput = await screen.findByLabelText('Chest')
-    expect(mock.definitions).toHaveBeenCalledWith('shop-1', family.id, variant.id, 'en')
+    expect(mock.createProfile).not.toHaveBeenCalled()
     fireEvent.change(chestInput, { target: { value: '61.2500' } })
     fireEvent.click(screen.getByRole('button', { name: 'Chest unit: INCH' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Save new version' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Save new version' }))
 
+    expect(mock.createProfile).toHaveBeenCalledWith('shop-1', client.id, { kind: 'client' }, family.id)
     expect((await screen.findAllByText('Version 1')).length).toBeGreaterThan(0)
     expect(mock.saveSet).toHaveBeenCalledWith('shop-1', client.id, { kind: 'client' }, profile.id, [
       { definition_id: definition.id, value: '61.2500', unit: 'INCH' },
     ])
-    expect(mock.createProfile).toHaveBeenCalledWith('shop-1', client.id, { kind: 'client' }, family.id, variant.id)
     expect(mock.saveSet).toHaveBeenCalledTimes(1)
     expect(screen.getAllByRole('button', { name: /^Version 1/ })).toHaveLength(1)
     expect(screen.getAllByText('61.2500 INCH').length).toBeGreaterThan(0)
     expect(screen.getAllByText(/Sleeve/).length).toBeGreaterThan(0)
-  })
-
-  it('creates a Shop measurement definition mapped to the garment family across variants', async () => {
-    renderPage()
-    await chooseDropdownOption('Garment family', family.id)
-    await chooseDropdownOption('Variant', variant.id)
-    fireEvent.click(await screen.findByRole('button', { name: 'Add measurement' }))
-    fireEvent.change(screen.getByLabelText('Measurement name'), { target: { value: 'Sleeve Length' } })
-    fireEvent.change(screen.getByLabelText(/Code/), { target: { value: 'sleeve-length' } })
-    fireEvent.change(screen.getByLabelText('Group (optional)'), { target: { value: 'BODY' } })
-    fireEvent.click(screen.getAllByRole('button', { name: 'Add measurement' })[1])
-    await waitFor(() => expect(mock.createDefinition).toHaveBeenCalledWith('shop-1', {
-      code: 'sleeve-length', group_code: 'BODY', sort_order: 1,
-      translations: [{ locale: 'en', name: 'Sleeve Length' }],
-      mappings: [{ family_id: family.id, variant_id: null }],
-    }))
   })
 
   it('exports the selected authorized Measurement version as a PDF', async () => {
@@ -173,9 +202,7 @@ describe('Client Measurement workflow', () => {
     const revokeObjectUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
 
-    renderPage()
-    await chooseDropdownOption('Garment family', family.id)
-    await chooseDropdownOption('Variant', variant.id)
+    renderPage(`/clients/${client.id}/measurements?view=history&wearer=client&family=${family.id}&profile=${profile.id}&set=${first.id}`)
     const exportButton = await screen.findByRole('button', { name: 'Export Version 1 PDF' })
     fireEvent.click(exportButton)
 
@@ -195,10 +222,12 @@ describe('Client Measurement workflow', () => {
     mock.profiles.mockResolvedValue([profile])
     let finishSave: ((value: ReturnType<typeof makeSet>) => void) | undefined
     mock.saveSet.mockImplementationOnce(() => new Promise(resolve => { finishSave = resolve }))
+    mock.sets.mockImplementation(async () => mock.saveSet.mock.calls.length
+      ? [makeSet('set-once', 1, '100', 'CM')]
+      : [])
 
     renderPage()
     await chooseDropdownOption('Garment family', family.id)
-    await chooseDropdownOption('Variant', variant.id)
     fireEvent.change(await screen.findByLabelText('Chest'), { target: { value: '100' } })
     fireEvent.click(screen.getByRole('button', { name: 'Chest unit: CM' }))
 
@@ -213,89 +242,23 @@ describe('Client Measurement workflow', () => {
   })
 
   it('creates a persisted Shop Design from the selected group-based styles', async () => {
-    const saved = { id: 'design-1', tenant: 'shop-1', family: family.id, variant: variant.id, name: 'Amina Shirt', status: 'ACTIVE', latest_version: { id: 'version-1', selections: [{ option_group: group.id, style_option: option.id, selected_code: option.code, selected_name_en: option.name, style_option_name: option.name, style_option_translations: [], style_option_images: [] }] }, created_at: '', updated_at: '' }
-    mock.createShopDesign.mockResolvedValue(saved)
+    const draft = { id: 'design-1', tenant: 'shop-1', family: family.id, variant: variant.id, name: 'Amina Shirt', status: 'ACTIVE', latest_version: { id: 'version-1', selections: [] }, created_at: '', updated_at: '' }
+    const saved = { ...draft, latest_version: { ...draft.latest_version, selections: [{ option_group: group.id, style_option: option.id, selected_code: option.code, selected_name_en: option.name, style_option_name: option.name, style_option_translations: [], style_option_images: [] }] } }
+    mock.createShopDesign.mockResolvedValue(draft)
+    mock.addShopDesignSelection.mockResolvedValue({})
+    mock.getShopDesign.mockResolvedValue(saved)
 
     renderPage()
     await chooseDropdownOption('Garment family', family.id)
-    await chooseDropdownOption('Variant', variant.id)
     fireEvent.click(await screen.findByRole('button', { name: /Sleeve/ }))
     fireEvent.click(await screen.findByRole('button', { name: /Full Sleeve/ }))
-    fireEvent.click(screen.getByRole('button', { name: 'Add New Design' }))
     fireEvent.change(screen.getByLabelText('Design name'), { target: { value: 'Amina Shirt' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save current selections as a Shop Design' }))
 
     expect(await screen.findByText('Design saved in Shop Designs.')).toBeInTheDocument()
-    expect(await screen.findByRole('button', { name: /Amina Shirt/ })).toBeInTheDocument()
-    expect(mock.createShopDesign).toHaveBeenCalledWith('shop-1', {
-      family_id: family.id,
-      variant_id: variant.id,
-      name: 'Amina Shirt',
-      selection_ids: [option.id],
-      idempotency_key: expect.any(String),
-    })
-  })
-
-  it('allows a named design to be saved when the family has no style groups', async () => {
-    mock.getShopFamilyOptionGroups.mockResolvedValue([])
-    const saved = { id: 'design-empty', tenant: 'shop-1', family: family.id, variant: variant.id, name: 'Plain Draft', status: 'ACTIVE', latest_version: { id: 'version-empty', selections: [] }, created_at: '', updated_at: '' }
-    mock.createShopDesign.mockResolvedValue(saved)
-    renderPage()
-    await chooseDropdownOption('Garment family', family.id)
-    await chooseDropdownOption('Variant', variant.id)
-    fireEvent.click(await screen.findByRole('button', { name: 'Add New Design' }))
-    fireEvent.change(screen.getByLabelText('Design name'), { target: { value: 'Plain Draft' } })
-    const save = screen.getByRole('button', { name: 'Save current selections as a Shop Design' })
-    expect(save).toBeEnabled()
-    fireEvent.click(save)
-    await screen.findByText('Design saved in Shop Designs.')
-    expect(mock.createShopDesign).toHaveBeenCalledWith('shop-1', expect.objectContaining({
-      name: 'Plain Draft', selection_ids: [], idempotency_key: expect.any(String),
-    }))
-  })
-
-  it('creates a family-level design from Measurements without selecting a Variant', async () => {
-    mock.getShopFamilyOptionGroups.mockResolvedValue([])
-    const saved = { id: 'design-family', tenant: 'shop-1', family: family.id, variant: null, name: 'Family Design', status: 'ACTIVE', latest_version: { id: 'version-family', selections: [] }, created_at: '', updated_at: '' }
-    mock.createShopDesign.mockResolvedValue(saved)
-    renderPage()
-    await chooseDropdownOption('Garment family', family.id)
-    fireEvent.click(await screen.findByRole('button', { name: 'Add New Design' }))
-    fireEvent.change(screen.getByLabelText('Design name'), { target: { value: 'Family Design' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save current selections as a Shop Design' }))
-    await screen.findByText('Design saved in Shop Designs.')
-    expect(mock.createShopDesign).toHaveBeenCalledWith('shop-1', expect.objectContaining({
-      family_id: family.id, variant_id: null, name: 'Family Design', selection_ids: [],
-    }))
-  })
-
-  it('does not treat a style-group API failure as an empty configurable family', async () => {
-    mock.getShopFamilyOptionGroups.mockRejectedValue(new Error('Style groups unavailable'))
-    renderPage()
-    await chooseDropdownOption('Garment family', family.id)
-    await chooseDropdownOption('Variant', variant.id)
-    fireEvent.click(await screen.findByRole('button', { name: 'Add New Design' }))
-    fireEvent.change(screen.getByLabelText('Design name'), { target: { value: 'Blocked Draft' } })
-    expect(screen.getByRole('button', { name: 'Save current selections as a Shop Design' })).toBeDisabled()
-    expect(await screen.findByText('Unable to load the configured style sections.')).toBeInTheDocument()
-    expect(mock.createShopDesign).not.toHaveBeenCalled()
-  })
-
-  it('reuses the same retry key after an unconfirmed design save failure', async () => {
-    const saved = { id: 'design-retry', tenant: 'shop-1', family: family.id, variant: variant.id, name: 'Retry Draft', status: 'ACTIVE', latest_version: { id: 'version-retry', selections: [] }, created_at: '', updated_at: '' }
-    mock.getShopFamilyOptionGroups.mockResolvedValue([])
-    mock.createShopDesign.mockRejectedValueOnce(new Error('Network unavailable')).mockResolvedValueOnce(saved)
-    renderPage()
-    await chooseDropdownOption('Garment family', family.id)
-    await chooseDropdownOption('Variant', variant.id)
-    fireEvent.click(await screen.findByRole('button', { name: 'Add New Design' }))
-    fireEvent.change(screen.getByLabelText('Design name'), { target: { value: 'Retry Draft' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save current selections as a Shop Design' }))
-    await screen.findByText('Network unavailable')
-    const firstKey = mock.createShopDesign.mock.calls[0][1].idempotency_key
-    fireEvent.click(screen.getByRole('button', { name: 'Save current selections as a Shop Design' }))
-    await screen.findByText('Design saved in Shop Designs.')
-    expect(mock.createShopDesign.mock.calls[1][1].idempotency_key).toBe(firstKey)
+    expect(mock.createShopDesign).toHaveBeenCalledWith('shop-1', { family_id: family.id, name: 'Amina Shirt' })
+    expect(mock.addShopDesignSelection).toHaveBeenCalledWith('shop-1', 'version-1', { style_option_id: option.id })
+    expect(mock.getShopDesign).toHaveBeenCalledWith('shop-1', 'design-1')
   })
 
   it('keeps measurement profiles and saves scoped to the selected Related Person', async () => {
@@ -309,26 +272,47 @@ describe('Client Measurement workflow', () => {
     fireEvent.change(await screen.findByLabelText('Chest'), { target: { value: '88.5' } })
     fireEvent.click(screen.getByRole('button', { name: 'Chest unit: CM' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save new version' }))
-    await waitFor(() => expect(mock.createProfile).toHaveBeenCalledWith('shop-1', client.id, { kind: 'related_person', id: relatedPerson.id }, family.id, null))
+    await waitFor(() => expect(mock.createProfile).toHaveBeenCalledWith('shop-1', client.id, { kind: 'related_person', id: relatedPerson.id }, family.id))
     await waitFor(() => expect(mock.saveSet).toHaveBeenCalledWith('shop-1', client.id, { kind: 'related_person', id: relatedPerson.id }, 'related-profile', [
       { definition_id: definition.id, value: '88.5', unit: 'CM' },
     ]))
   })
 
-  it('saves a fresh measurement with the default inch unit', async () => {
-    mock.createProfile.mockResolvedValue(profile)
+  it('recovers an existing profile after a duplicate-create response and loads its history', async () => {
+    mock.profiles
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([profile])
+    mock.createProfile.mockRejectedValueOnce(new Error('A profile already exists for this person and garment.'))
     renderPage()
+
     await chooseDropdownOption('Garment family', family.id)
-    fireEvent.change(await screen.findByLabelText('Chest'), { target: { value: '61.2500' } })
+    fireEvent.change(await screen.findByLabelText('Chest'), { target: { value: '95' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Chest unit: CM' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save new version' }))
 
     await waitFor(() => expect(mock.saveSet).toHaveBeenCalledWith('shop-1', client.id, { kind: 'client' }, profile.id, [
-      { definition_id: definition.id, value: '61.2500', unit: 'INCH' },
+      { definition_id: definition.id, value: '95', unit: 'CM' },
     ]))
+    await waitFor(() => expect(mock.profiles).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(mock.sets).toHaveBeenCalledWith('shop-1', client.id, { kind: 'client' }, profile.id))
+    expect(await screen.findByLabelText('Chest')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('requires a user-selected unit before it saves a measurement version', async () => {
+    renderPage()
+    await chooseDropdownOption('Garment family', family.id)
+    fireEvent.change(await screen.findByLabelText('Chest'), { target: { value: '61.2500' } })
+    await screen.findByRole('button', { name: 'Save new version' })
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Save new version' })).toBeEnabled())
+    fireEvent.click(screen.getByRole('button', { name: 'Save new version' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Enter at least one valid measurement value before saving.')
+    expect(mock.saveSet).not.toHaveBeenCalled()
   })
 
   it('clears unsaved values when the selected garment family changes', async () => {
-    mock.getAllShopGarmentFamilies.mockResolvedValue([family, secondFamily])
+    mock.getAllFamilies.mockResolvedValue([family, secondFamily])
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
     renderPage()
     await chooseDropdownOption('Garment family', family.id)
@@ -336,12 +320,12 @@ describe('Client Measurement workflow', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Chest unit: INCH' }))
 
     await chooseDropdownOption('Garment family', secondFamily.id)
-    await waitFor(() => expect(mock.definitions).toHaveBeenCalledWith('shop-1', secondFamily.id, null, 'en'))
+    await waitFor(() => expect(mock.definitions).toHaveBeenCalledWith('shop-1', secondFamily.id, 'en'))
     expect(confirm).toHaveBeenCalledWith('Discard unsaved measurement values?')
 
     expect((await screen.findByLabelText('Chest') as HTMLInputElement).value).toBe('')
     expect(screen.getByRole('button', { name: 'Chest unit: CM' })).toHaveAttribute('aria-pressed', 'false')
-    expect(screen.getByRole('button', { name: 'Chest unit: INCH' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Chest unit: INCH' })).toHaveAttribute('aria-pressed', 'false')
     confirm.mockRestore()
   })
 
@@ -350,9 +334,8 @@ describe('Client Measurement workflow', () => {
     mock.sets.mockResolvedValue([makeSet('set-1', 1, '100', 'CM')])
     let completeCopy: ((value: ReturnType<typeof makeSet>) => void) | undefined
     mock.copySet.mockImplementation(() => new Promise(resolve => { completeCopy = resolve }))
-    renderPage()
-    await chooseDropdownOption('Garment family', family.id)
-    await chooseDropdownOption('Variant', variant.id)
+    renderPage(`/clients/${client.id}/measurements?view=history&wearer=client&family=${family.id}&profile=${profile.id}`)
+
     const copyButton = await screen.findByRole('button', { name: /Copy as a new immutable version/ })
     fireEvent.click(copyButton)
     fireEvent.click(copyButton)
@@ -368,56 +351,36 @@ describe('Client Measurement workflow', () => {
       makeSet('set-2', 2, '101', 'CM'),
       makeSet('set-1', 1, '100', 'CM'),
     ])
-    renderPage()
-    await chooseDropdownOption('Garment family', family.id)
-    await chooseDropdownOption('Variant', variant.id)
+    renderPage(`/clients/${client.id}/measurements?view=history&wearer=client&family=${family.id}&profile=${profile.id}`)
     fireEvent.click(await screen.findByRole('button', { name: 'Compare versions' }))
 
     await waitFor(() => expect(mock.compare).toHaveBeenCalledWith('shop-1', client.id, { kind: 'client' }, profile.id, 'set-2', 'set-3'))
   })
 
-  it('warns before deleting an allowed version and refreshes local history selection', async () => {
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
-    mock.profiles.mockResolvedValue([profile])
-    mock.sets.mockResolvedValue([makeSet('set-2', 2, '101'), makeSet('set-1', 1, '100')])
-    renderPage()
-    await chooseDropdownOption('Garment family', family.id)
-    await chooseDropdownOption('Variant', variant.id)
-    fireEvent.click((await screen.findAllByRole('button', { name: 'Delete version' }))[0])
-    await waitFor(() => expect(mock.deleteSet).toHaveBeenCalledWith('shop-1', client.id, { kind: 'client' }, profile.id, 'set-2'))
-    expect(confirm).toHaveBeenCalledWith('Delete Version 2 from active history? Its immutable audit records will be retained.')
-    expect(await screen.findByText('Version 2 was removed from active history.')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /^Version 2/ })).not.toBeInTheDocument()
-    confirm.mockRestore()
-  })
-
-  it('disables delete for the last active measurement version', async () => {
-    mock.profiles.mockResolvedValue([profile])
-    mock.sets.mockResolvedValue([makeSet('set-1', 1, '100')])
-    renderPage()
-    await chooseDropdownOption('Garment family', family.id)
-    await chooseDropdownOption('Variant', variant.id)
-    expect(await screen.findByRole('button', { name: 'The last active version cannot be deleted.' })).toBeDisabled()
-    expect(mock.deleteSet).not.toHaveBeenCalled()
-  })
-
   it('shows history, copies a previous set through the backend, and reports unit mismatch on compare', async () => {
     mock.profiles.mockResolvedValue([profile])
     mock.sets.mockResolvedValue([makeSet('set-2', 2, '42', 'INCH'), makeSet('set-1', 1, '100', 'CM')])
-    renderPage()
-    await chooseDropdownOption('Garment family', family.id)
-    await chooseDropdownOption('Variant', variant.id)
+    renderPage(`/clients/${client.id}/measurements?view=history&wearer=client&family=${family.id}&profile=${profile.id}`)
+
     expect(await screen.findByRole('heading', { name: 'Measurement history' })).toBeInTheDocument()
-    expect(screen.queryByText(/open existing profile/i)).not.toBeInTheDocument()
-    expect(mock.createProfile).not.toHaveBeenCalled()
-    fireEvent.click(screen.getAllByRole('button', { name: /Copy as a new immutable version/ })[0])
+    fireEvent.click((await screen.findAllByRole('button', { name: /Copy as a new immutable version/ }))[0])
     await waitFor(() => expect(mock.copySet).toHaveBeenCalledWith('shop-1', client.id, { kind: 'client' }, profile.id, 'set-2'))
     fireEvent.click(screen.getByRole('button', { name: 'Compare versions' }))
     expect(await screen.findByText('Unit mismatch')).toBeInTheDocument()
     expect(mock.compare).toHaveBeenCalledWith('shop-1', client.id, { kind: 'client' }, profile.id, 'set-1', 'set-2')
   })
 
-  it('denies STAFF without MEASUREMENT', async () => {
+  it('requires explicit Shop context for Main Supplier and denies STAFF without MEASUREMENT', async () => {
+    mock.user = { is_main_supplier_admin: true }
+    mock.context = { shopId: undefined, role: null, workFunctions: [], isLoading: false }
+    mock.shopsList.mockResolvedValue({ count: 1, next: null, previous: null, results: [{ id: 'shop-1', name: 'Test Shop', is_active: true }] })
+    const supplierView = renderPage('/backoffice/measurements')
+    expect(await screen.findByLabelText('Choose a Shop')).toBeInTheDocument()
+    expect(mock.definitions).not.toHaveBeenCalled()
+    await chooseDropdownOption('Choose a Shop', 'shop-1')
+    expect(await screen.findByPlaceholderText('Search clients by name or phone')).toBeInTheDocument()
+    supplierView.unmount()
+
     mock.user = { is_main_supplier_admin: false }
     mock.context = { shopId: 'shop-1', role: 'STAFF', workFunctions: [], isLoading: false }
     renderPage()
@@ -427,9 +390,25 @@ describe('Client Measurement workflow', () => {
   })
 
   it('shows a visible error instead of demo data when a real catalog request fails', async () => {
-    mock.getAllShopGarmentFamilies.mockRejectedValue(new Error('Catalog temporarily unavailable.'))
+    mock.getAllFamilies.mockRejectedValue(new Error('Catalog temporarily unavailable.'))
     renderPage()
     expect(await screen.findByRole('alert')).toHaveTextContent('Catalog temporarily unavailable.')
-    expect(screen.queryByRole('option', { name: "Men's Shirt" })).not.toBeInTheDocument()
+    expect(screen.queryByText('No variants found.')).not.toBeInTheDocument()
+  })
+
+  it('distinguishes a successful empty family catalog from a catalog request failure', async () => {
+    mock.getAllFamilies.mockResolvedValue([])
+    renderPage()
+
+    expect(await screen.findByRole('status')).toHaveTextContent('No garment families available.')
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('does not render a Variant selector after a successful catalog response', async () => {
+    renderPage()
+    await chooseDropdownOption('Garment family', family.id)
+
+    expect(screen.queryByRole('group', { name: 'Variant' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 })

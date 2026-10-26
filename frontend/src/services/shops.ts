@@ -32,7 +32,6 @@ export type CreateShopInput = {
   slug: string
   max_users: number
   first_admin: {
-    login_id: string
     first_name: string
     last_name?: string
     email: string
@@ -53,7 +52,6 @@ export type CreateShopInput = {
 
 export type CreatedShop = ShopDetail & {
   first_admin_user_code: string
-  first_admin_login_id?: string
   initial_password: string
 }
 
@@ -69,6 +67,7 @@ export type ShopRequestContext = {
   role: 'ADMIN' | 'STAFF' | 'VIEWER' | null
   is_main_supplier: boolean
   work_functions: string[]
+  billing_currency?: string | null
 }
 
 const basePath = '/api/v1/tenants/'

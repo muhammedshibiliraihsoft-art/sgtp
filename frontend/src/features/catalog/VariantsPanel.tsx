@@ -8,6 +8,7 @@ import { handleArrowKeyGrid } from '../../hooks/useArrowKeyGrid'
 import { ApiError } from '../../services/apiClient'
 import { createGlobalVariant, createShopVariant, getAllGlobalVariants, getAllShopVariants, getGlobalVariant, getGlobalVariantsPage, getShopVariant, getShopVariantsPage, setGlobalVariantDefault, setGlobalVariantStatus, setShopVariantStatus, updateGlobalVariant, updateShopVariant } from './api'
 import type { CatalogFamily, TranslationInput, Variant, VariantDetail, VariantSource, VariantStatus } from './types'
+import { ResponsiveChoice } from '../../components/CustomSelect'
 
 type Props = { shopId?: string; families: CatalogFamily[]; initialFamily?: string; embeddedFamilyId?: string; canManageVariants?: boolean }
 type Locale = TranslationInput['locale']
@@ -40,6 +41,7 @@ export function VariantsPanel({ shopId, families, initialFamily = '', embeddedFa
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selected, setSelected] = useState<VariantDetail | null>(null)
+  const [selectedSummaryOnly, setSelectedSummaryOnly] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
   const [editing, setEditing] = useState(false)
   const [code, setCode] = useState('')
@@ -127,6 +129,7 @@ export function VariantsPanel({ shopId, families, initialFamily = '', embeddedFa
 
   function startCreate() {
     setSelected(null)
+    setSelectedSummaryOnly(false)
     setCode('')
     setDraft(emptyDraft())
     setShowTranslations(false)
@@ -140,8 +143,24 @@ export function VariantsPanel({ shopId, families, initialFamily = '', embeddedFa
 
   async function openVariant(variant: Variant) {
     setError(null)
+    if (embedded) {
+      // The embedded family browser only needs list fields to show the variant
+      // and continue to its designs. Avoid a detail endpoint that is not
+      // available on every connected Shop API deployment.
+      setSelected({
+        ...variant,
+        description: '',
+        translations: [{ locale: 'en', name: variant.name, description: '' }],
+        created_at: '',
+        updated_at: '',
+      })
+      setSelectedSummaryOnly(true)
+      setEditing(false)
+      return
+    }
     try {
       setSelected(isMainSupplier ? await getGlobalVariant(variant.id) : await getShopVariant(shopId ?? '', variant.id))
+      setSelectedSummaryOnly(false)
       setEditing(false)
     } catch (detailError) {
       setError(messageFor(detailError))
@@ -238,7 +257,7 @@ export function VariantsPanel({ shopId, families, initialFamily = '', embeddedFa
   const localesToEdit = showTranslations ? locales.filter(locale => locale !== 'en') : []
   const createForm = <form className={`catalog-dialog variant-dialog${embedded ? ' variant-inline-form' : ''}`} role={embedded ? undefined : 'dialog'} aria-modal={embedded ? undefined : true} aria-labelledby="variant-create-title" onSubmit={event => void submit(event)}>
     <div className="catalog-dialog-heading"><h2 id="variant-create-title">{t('catalog.newVariant', 'New Variant')}</h2><button ref={closeSurfaceRef} type="button" className="catalog-icon-button" onClick={closeCreate} aria-label={t('catalog.close', 'Close')}><X size={18} /></button></div>
-    {embedded ? <p className="variant-fixed-family">{t('catalog.family', 'Garment family')}: <strong>{familyNames.get(embeddedFamilyId ?? '') ?? ''}</strong></p> : <label>{t('catalog.family', 'Garment family')}<select required value={family || families[0]?.id || ''} onChange={event => setFamily(event.target.value)}>{families.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
+    {embedded ? <p className="variant-fixed-family">{t('catalog.family', 'Garment family')}: <strong>{familyNames.get(embeddedFamilyId ?? '') ?? ''}</strong></p> : <label>{t('catalog.family', 'Garment family')}<ResponsiveChoice ariaLabel={t('catalog.family', 'Garment family')} required value={family || families[0]?.id || ''} onChange={setFamily} options={families.map(item => ({ value: item.id, label: item.name }))} /></label>}
     <label>{t('catalog.nameEnglish', 'Name (English)')}<input ref={createNameRef} required maxLength={120} value={draft.en.name} onChange={event => setDraft(value => ({ ...value, en: { ...value.en, name: event.target.value } }))} /></label>
     <label>{t('catalog.code', 'Code')}<input required maxLength={64} pattern="[a-zA-Z0-9_-]+" value={code} onChange={event => setCode(event.target.value)} /></label>
     <label>{t('catalog.description', 'Description (optional)')}<textarea rows={2} maxLength={500} value={draft.en.description} onChange={event => setDraft(value => ({ ...value, en: { ...value.en, description: event.target.value } }))} /></label>
@@ -252,7 +271,7 @@ export function VariantsPanel({ shopId, families, initialFamily = '', embeddedFa
     {selected?.is_global && !isMainSupplier && <p className="catalog-drawer-muted">{t('catalog.globalVariantReadOnly', 'Global variants are managed by Main Supplier.')}</p>}
     <div className="catalog-family-drawer-actions"><button ref={continueToDesignsRef} type="button" className="primary-button" onClick={() => selected && viewDesigns(selected)}>{embedded ? t('catalog.continueToDesigns', 'Continue to Designs') : t('catalog.viewDesigns', 'View Designs')}</button>
       {selected && isMainSupplier && selected.is_global && selected.is_active && !selected.is_default && <button type="button" className="secondary-button" disabled={saving} onClick={() => void setDefault()}>{t('catalog.setDefault', 'Set as Default')}</button>}
-      {selected && canManage && (isMainSupplier || !selected.is_global) && <><button type="button" className="secondary-button" disabled={saving} onClick={() => loadDraft(selected)}>{t('catalog.edit', 'Edit')}</button><button type="button" className="secondary-button" disabled={saving} onClick={() => void updateStatus(!selected.is_active)}>{selected.is_active ? t('catalog.archive', 'Archive') : t('catalog.reactivate', 'Reactivate')}</button></>}
+      {selected && !selectedSummaryOnly && canManage && (isMainSupplier || !selected.is_global) && <><button type="button" className="secondary-button" disabled={saving} onClick={() => loadDraft(selected)}>{t('catalog.edit', 'Edit')}</button><button type="button" className="secondary-button" disabled={saving} onClick={() => void updateStatus(!selected.is_active)}>{selected.is_active ? t('catalog.archive', 'Archive') : t('catalog.reactivate', 'Reactivate')}</button></>}
     </div>
   </>
 
@@ -260,7 +279,7 @@ export function VariantsPanel({ shopId, families, initialFamily = '', embeddedFa
     {embedded && <div className="variant-embedded-heading"><div><h3>{t('catalog.variants', 'Variants')}</h3><span>{t('catalog.variantCount', '{{count}} variants', { count })}</span></div>{canManage && <button ref={newVariantRef} className="primary-button variants-create-button" type="button" onClick={startCreate} disabled={!families.some(item => item.id === embeddedFamilyId)}><Plus size={16} />{t('catalog.newVariant', 'New Variant')}</button>}</div>}
     {!embedded && <div className="catalog-family-toolbar variants-toolbar">
       <label className="catalog-search"><Search size={17} aria-hidden="true" /><span className="sr-only">{t('catalog.searchVariants', 'Search variants')}</span><input type="search" value={searchInput} onChange={event => { setLoading(true); setSearchInput(event.target.value) }} placeholder={t('catalog.searchVariantsPlaceholder', 'Search variants...')} /></label>
-      <label className="variants-family-filter"><span>{t('catalog.family', 'Family')}</span><select value={family} onChange={event => changeFilter(() => setFamily(event.target.value))}><option value="">{t('catalog.allFamilies', 'All Families')}</option>{families.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+      <div className="variants-family-filter"><span>{t('catalog.family', 'Family')}</span><ResponsiveChoice ariaLabel={t('catalog.family', 'Family')} value={family} placeholder={t('catalog.allFamilies', 'All Families')} onChange={value => changeFilter(() => setFamily(value))} options={families.map(item => ({ value: item.id, label: item.name }))} /></div>
       {!isMainSupplier && <div className="global-family-status-filter" role="group" aria-label={t('catalog.source', 'Source')}>{(['all', 'global', 'shop'] as const).map(value => <button type="button" key={value} className={source === value ? 'active' : ''} aria-pressed={source === value} onClick={() => changeFilter(() => setSource(value))}>{value === 'all' ? t('catalog.all', 'All') : value === 'global' ? t('catalog.global', 'Global') : t('catalog.shop', 'Shop')}</button>)}</div>}
       <div className="variants-toolbar-tail">
         {canManage && <div className="global-family-status-filter" role="group" aria-label={t('catalog.status', 'Status')}>{(['ACTIVE', 'ARCHIVED', 'all'] as const).map(value => <button type="button" key={value} className={status === value ? 'active' : ''} aria-pressed={status === value} onClick={() => changeFilter(() => setStatus(value))}>{value === 'ACTIVE' ? t('catalog.active', 'Active') : value === 'ARCHIVED' ? t('catalog.archived', 'Archived') : t('catalog.all', 'All')}</button>)}</div>}
@@ -270,7 +289,7 @@ export function VariantsPanel({ shopId, families, initialFamily = '', embeddedFa
     </div>}
     {error && <div className="catalog-error" role="alert">{error}<button type="button" onClick={() => void load()} disabled={loading}>{t('catalog.retry', 'Retry')}</button></div>}
     {createOpen && embedded ? createForm : selected && embedded ? <section className="variant-inline-detail" aria-labelledby="variant-detail-title">
-      <div className="variant-inline-heading"><button type="button" className="secondary-button" onClick={() => { setSelected(null); setEditing(false); requestAnimationFrame(() => lastSelectedCardRef.current?.focus()) }}><ChevronLeft size={16} />{t('catalog.backToVariants', 'Back to variants')}</button><div><h4 id="variant-detail-title">{selected.name}</h4><small>{familyNames.get(selected.family) ?? selected.family} · {selected.code}</small></div></div>
+      <div className="variant-inline-heading"><button type="button" className="secondary-button" onClick={() => { setSelected(null); setSelectedSummaryOnly(false); setEditing(false); requestAnimationFrame(() => lastSelectedCardRef.current?.focus()) }}><ChevronLeft size={16} />{t('catalog.backToVariants', 'Back to variants')}</button><div><h4 id="variant-detail-title">{selected.name}</h4><small>{familyNames.get(selected.family) ?? selected.family} · {selected.code}</small></div></div>
       <div className="variant-detail-tags">{selected.is_global ? t('catalog.global', 'Global') : t('catalog.shop', 'Shop')} · {selected.is_active ? t('catalog.active', 'Active') : t('catalog.archived', 'Archived')}{selected.is_default ? ` · ${t('catalog.default', 'Default')}` : ''}</div>
       {detailContent}
     </section> : loading ? <div className="catalog-loading" role="status"><Loader2 className="animate-spin" /></div> : rows.length ? <div className="catalog-grid variants-grid" data-arrow-key-grid onKeyDown={handleArrowKeyGrid}>

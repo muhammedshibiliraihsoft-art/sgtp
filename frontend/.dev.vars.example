@@ -1,5 +1,4 @@
 # Copy to .dev.vars for `wrangler pages dev` only.
 # Use the exact origin of the local Pages dev server.
-# Runtime binding is selected by the Pages environment; this local example targets staging.
-API_ORIGIN=https://birky-staging-api.onrender.com
+STAGING_API_ORIGIN=https://birky-staging-api.onrender.com
 FRONTEND_ORIGIN=http://localhost:8788

@@ -4,11 +4,12 @@ import { useTranslation } from 'react-i18next'
 import { AlertCircle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ImagePlus, Loader2, ListTree, Plus, Search, Shirt, Trash2, X } from 'lucide-react'
 import { ApiError } from '../../services/apiClient'
 import { usePrivateImage } from '../../hooks/usePrivateImage'
-import { createGlobalFamily, createGlobalStyleOption, getAllFamilies, getAllGlobalStyleOptions, getFamilyDetail, getFamilies, getOptionGroups, removeGlobalFamilyImage, setGlobalFamilyStatus, updateGlobalFamily, uploadGlobalFamilyImage, uploadGlobalStyleOptionImages } from '../../features/catalog/api'
+import { handleArrowKeyGrid, handleArrowKeyTabs } from '../../hooks/useArrowKeyGrid'
+import { createGlobalFamily, createGlobalStyleOption, getAllGlobalStyleOptions, getFamilyDetail, getFamilies, getOptionGroups, removeGlobalFamilyImage, setGlobalFamilyStatus, updateFamilyOptionGroups, updateGlobalFamily, uploadGlobalFamilyImage, uploadGlobalStyleOptionImages } from '../../features/catalog/api'
 import type { CatalogFamily, CatalogFamilyDetail, CatalogFamilyPage, OptionGroup, ShopStyleOptionInputRequest, StyleOption, TranslationInput } from '../../features/catalog/types'
-import { VariantsPanel } from '../../features/catalog/VariantsPanel'
+import { ResponsiveChoice } from '../../components/CustomSelect'
 
-type Tab = 'families' | 'variants' | 'groups' | 'styles'
+type Tab = 'families' | 'groups' | 'styles'
 type Locale = TranslationInput['locale']
 const LOCALES: Locale[] = ['en', 'ar-KW', 'bn', 'ur']
 
@@ -24,7 +25,6 @@ export function GlobalCatalogPage() {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<Tab>('families')
   const [families, setFamilies] = useState<CatalogFamily[]>([])
-  const [activeVariantFamilies, setActiveVariantFamilies] = useState<CatalogFamily[]>([])
   const [familyCount, setFamilyCount] = useState(0)
   const [familyPage, setFamilyPage] = useState(1)
   const [familyHasNext, setFamilyHasNext] = useState(false)
@@ -56,6 +56,7 @@ export function GlobalCatalogPage() {
   const [styleImageBusyId, setStyleImageBusyId] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const closeSurfaceRef = useRef<HTMLButtonElement>(null)
+  const catalogRequestId = useRef(0)
   const familyImage = usePrivateImage(selectedFamily?.image_content_url)
 
   useEffect(() => {
@@ -64,30 +65,39 @@ export function GlobalCatalogPage() {
   }, [familySearchInput])
 
   const loadCatalog = useCallback(async () => {
+    const requestId = ++catalogRequestId.current
     try {
-      const [familyPageData, groupRows, styleRows, activeFamilyRows] = await Promise.all([
-        getFamilies(familyPage, familySearch, familyStatus), getOptionGroups(), getAllGlobalStyleOptions(), getAllFamilies(),
-      ])
-      setFamilies(rowsOf(familyPageData))
-      setActiveVariantFamilies(activeFamilyRows)
-      if (!Array.isArray(familyPageData)) {
-        setFamilyCount(familyPageData.count)
-        setFamilyHasNext(Boolean(familyPageData.next))
-        setFamilyHasPrevious(Boolean(familyPageData.previous))
+      if (activeTab === 'families') {
+        const [familyPageData, groupRows] = await Promise.all([getFamilies(familyPage, familySearch, familyStatus), getOptionGroups()])
+        if (requestId !== catalogRequestId.current) return
+        setFamilies(rowsOf(familyPageData))
+        setGroups(groupRows)
+        if (!Array.isArray(familyPageData)) {
+          setFamilyCount(familyPageData.count)
+          setFamilyHasNext(Boolean(familyPageData.next))
+          setFamilyHasPrevious(Boolean(familyPageData.previous))
+        } else {
+          setFamilyCount(familyPageData.length)
+          setFamilyHasNext(false)
+          setFamilyHasPrevious(false)
+        }
+      } else if (activeTab === 'groups') {
+        const groupRows = await getOptionGroups()
+        if (requestId !== catalogRequestId.current) return
+        setGroups(groupRows)
       } else {
-        setFamilyCount(familyPageData.length)
-        setFamilyHasNext(false)
-        setFamilyHasPrevious(false)
+        const [groupRows, styleRows] = await Promise.all([getOptionGroups(), getAllGlobalStyleOptions()])
+        if (requestId !== catalogRequestId.current) return
+        setGroups(groupRows)
+        setStyleOptions(styleRows)
       }
-      setGroups(groupRows)
-      setStyleOptions(styleRows)
       setError(null)
     } catch (loadError) {
-      setError(errorMessage(loadError))
+      if (requestId === catalogRequestId.current) setError(errorMessage(loadError))
     } finally {
-      setIsLoading(false)
+      if (requestId === catalogRequestId.current) setIsLoading(false)
     }
-  }, [familyPage, familySearch, familyStatus])
+  }, [activeTab, familyPage, familySearch, familyStatus])
 
   useEffect(() => {
     let active = true
@@ -163,12 +173,9 @@ export function GlobalCatalogPage() {
     setError(null)
     try {
       if (selectedFamily) {
-        const updated = await updateGlobalFamily(selectedFamily.id, {
-          translations: translationPayload(),
-          option_group_ids: selectedGroupIds,
-        })
-        setSelectedFamily(updated)
-        setSelectedGroupIds(updated.option_groups.map(group => group.id))
+        await updateGlobalFamily(selectedFamily.id, translationPayload())
+        await updateFamilyOptionGroups(selectedFamily.id, selectedGroupIds)
+        await openFamily(selectedFamily.id)
         setNotice(t('globalCatalog.saved', 'Family changes saved.'))
       } else {
         await createGlobalFamily({ code: code.trim(), translations: translationPayload() })
@@ -270,7 +277,7 @@ export function GlobalCatalogPage() {
   }
 
   async function uploadStyleImages(option: StyleOption, event: ChangeEvent<HTMLInputElement>) {
-    const files = event.target.files?.[0] ? [event.target.files[0]] : []
+    const files = Array.from(event.target.files ?? [])
     if (!files.length) return
     setStyleImageBusyId(option.id)
     setError(null)
@@ -306,15 +313,14 @@ export function GlobalCatalogPage() {
       <div className="catalog-info-note"><AlertCircle size={17} /> {t('globalCatalog.scopeNote', 'Global garment families, groups and templates are managed here by Main Supplier. Shops can browse the families assigned to them.')}</div>
       {notice && <div className="catalog-success" role="status">{notice}<button type="button" aria-label={t('globalCatalog.dismiss', 'Dismiss')} onClick={() => setNotice(null)}><X size={16} /></button></div>}
       {error && <div className="catalog-error" role="alert">{error}<button type="button" onClick={() => { setIsLoading(true); setError(null); void loadCatalog() }} disabled={isLoading}>{t('globalCatalog.retry', 'Retry')}</button></div>}
-      <div className="catalog-tabs" role="tablist" aria-label={t('globalCatalog.sections', 'Global catalog sections')}>
-        {(['families', 'variants', 'groups', 'styles'] as const).map(tab => <button key={tab} role="tab" aria-selected={activeTab === tab} className={activeTab === tab ? 'active' : ''} onClick={() => setActiveTab(tab)}>{tab === 'families' ? t('globalCatalog.families', 'Garment Families') : tab === 'variants' ? t('globalCatalog.variants', 'Variants') : tab === 'groups' ? t('globalCatalog.groups', 'Option Groups') : t('globalCatalog.styles', 'Style Options')}</button>)}
+      <div className="catalog-tabs" role="tablist" aria-label={t('globalCatalog.sections', 'Global catalog sections')} onKeyDown={handleArrowKeyTabs}>
+        {(['families', 'groups', 'styles'] as const).map(tab => <button key={tab} role="tab" tabIndex={activeTab === tab ? 0 : -1} aria-selected={activeTab === tab} className={activeTab === tab ? 'active' : ''} onClick={() => { if (tab !== activeTab) { setIsLoading(true); setActiveTab(tab) } }}>{tab === 'families' ? t('globalCatalog.families', 'Garment Families') : tab === 'groups' ? t('globalCatalog.groups', 'Option Groups') : t('globalCatalog.styles', 'Style Options')}</button>)}
       </div>
-      {activeTab === 'variants' && <VariantsPanel families={activeVariantFamilies} />}
       {activeTab === 'families' && <div className="catalog-family-toolbar"><label className="catalog-search"><Search size={17} aria-hidden="true" /><span className="sr-only">{t('globalCatalog.searchLabel', 'Search garment families')}</span><input type="search" value={familySearchInput} onChange={event => setFamilySearchInput(event.target.value)} placeholder={t('globalCatalog.searchPlaceholder', 'Search by family name or code')} /></label><div className="global-family-status-filter" role="group" aria-label={t('globalCatalog.status', 'Status')}>{(['ACTIVE', 'ARCHIVED', 'all'] as const).map(status => <button type="button" key={status} className={familyStatus === status ? 'active' : ''} aria-pressed={familyStatus === status} onClick={() => { setFamilyStatus(status); setFamilyPage(1); setIsLoading(true) }}>{status === 'ACTIVE' ? t('globalCatalog.active', 'Active') : status === 'ARCHIVED' ? t('globalCatalog.archivedFilter', 'Archived') : t('globalCatalog.allStatuses', 'All')}</button>)}</div><span className="catalog-family-count">{familyCount} {t('globalCatalog.familyCount', 'families')}</span></div>}
-      {isLoading ? <div className="catalog-loading"><Loader2 className="animate-spin" /></div> : <div className="catalog-grid">
-        {activeTab === 'families' && families.map(family => <button type="button" className="catalog-card catalog-family-card" key={family.id} onClick={() => void openFamily(family.id)}><Shirt size={20} aria-hidden="true" /><span><strong>{family.name}</strong><small>{family.code}</small></span><span className={`catalog-tag ${family.status === 'ARCHIVED' ? 'catalog-tag-muted' : ''}`}>{family.status === 'ARCHIVED' ? t('globalCatalog.archivedFilter', 'Archived') : t('globalCatalog.active', 'Active')}</span><ChevronRight size={16} aria-hidden="true" /></button>)}
+      {isLoading ? <div className="catalog-loading"><Loader2 className="animate-spin" /></div> : <div className="catalog-grid" data-arrow-key-grid={activeTab === 'families' ? '' : undefined} onKeyDown={activeTab === 'families' ? handleArrowKeyGrid : undefined}>
+        {activeTab === 'families' && families.map(family => <button data-arrow-grid-item type="button" className="catalog-card catalog-family-card" key={family.id} onClick={() => void openFamily(family.id)}><Shirt size={20} aria-hidden="true" /><span><strong>{family.name}</strong><small>{family.code}</small></span><span className={`catalog-tag ${family.status === 'ARCHIVED' ? 'catalog-tag-muted' : ''}`}>{family.status === 'ARCHIVED' ? t('globalCatalog.archivedFilter', 'Archived') : t('globalCatalog.active', 'Active')}</span><ChevronRight size={16} aria-hidden="true" /></button>)}
         {activeTab === 'groups' && groups.map(group => <article className="catalog-card" key={group.id}><ListTree size={20} /><div><strong>{group.name}</strong><small>{group.code}</small></div></article>)}
-        {activeTab === 'styles' && styleOptions.map(option => <article className="catalog-card" key={option.id}><Shirt size={20} /><div><strong>{option.name}</strong><small>{groupNames.get(option.option_group) ?? option.option_group} · {option.code}</small><small>{t('globalCatalog.referenceImageCount', '{{count}} current image', { count: option.reference_images?.length ?? 0 })}</small></div><span className="catalog-tag">{option.is_active ? t('globalCatalog.active', 'Active') : t('globalCatalog.inactive', 'Inactive')}</span><label className="secondary-button global-upload-button">{styleImageBusyId === option.id ? <Loader2 className="animate-spin" size={15} /> : <ImagePlus size={15} />}{t('globalCatalog.addImage', 'Add or replace image')}<input aria-label={t('globalCatalog.addImageFor', 'Add image for {{name}}', { name: option.name })} type="file" accept="image/jpeg,image/png,image/webp" hidden disabled={styleImageBusyId === option.id} onChange={event => void uploadStyleImages(option, event)} /></label></article>)}
+        {activeTab === 'styles' && styleOptions.map(option => <article className="catalog-card" key={option.id}><Shirt size={20} /><div><strong>{option.name}</strong><small>{groupNames.get(option.option_group) ?? option.option_group} · {option.code}</small><small>{t('globalCatalog.referenceImageCount', '{{count}} reference images', { count: option.reference_images?.length ?? 0 })}</small></div><span className="catalog-tag">{option.is_active ? t('globalCatalog.active', 'Active') : t('globalCatalog.inactive', 'Inactive')}</span><label className="secondary-button global-upload-button">{styleImageBusyId === option.id ? <Loader2 className="animate-spin" size={15} /> : <ImagePlus size={15} />}{t('globalCatalog.addImage', 'Add image')}<input aria-label={t('globalCatalog.addImageFor', 'Add image for {{name}}', { name: option.name })} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden disabled={styleImageBusyId === option.id} onChange={event => void uploadStyleImages(option, event)} /></label></article>)}
         {activeTab === 'families' && families.length === 0 && <p className="catalog-empty">{t('globalCatalog.noFamilies', 'No garment families found.')}</p>}
         {activeTab === 'groups' && groups.length === 0 && <p className="catalog-empty">{t('globalCatalog.noGroups', 'No option groups found.')}</p>}
         {activeTab === 'styles' && styleOptions.length === 0 && <p className="catalog-empty">{t('globalCatalog.noStyles', 'No global style options found.')}</p>}
@@ -333,14 +339,14 @@ export function GlobalCatalogPage() {
             {showExtraTranslations && LOCALES.filter(locale => locale !== 'en').map(locale => <label key={locale}>{locale}<input required={Boolean(selectedFamily?.translations.some(item => item.locale === locale))} maxLength={120} value={translations[locale].name} onChange={event => setTranslations(current => ({ ...current, [locale]: { ...current[locale], name: event.target.value } }))} /></label>)}
             <button className="global-disclosure" type="button" aria-expanded={showDescriptions} onClick={() => setShowDescriptions(value => !value)}><ChevronDown size={16} />{t('globalCatalog.descriptions', 'Descriptions (optional)')}</button>
             {showDescriptions && LOCALES.filter(locale => locale === 'en' || translations[locale].name.trim()).map(locale => <label key={locale}>{t('globalCatalog.descriptionLanguage', '{{locale}} description', { locale })}<textarea rows={2} maxLength={500} value={translations[locale].description} onChange={event => setTranslations(current => ({ ...current, [locale]: { ...current[locale], description: event.target.value } }))} /></label>)}
-            {selectedFamily && <fieldset className="global-family-groups-fieldset"><legend>{t('globalCatalog.applicableGroups', 'Applicable option groups')}</legend><small>{t('globalCatalog.groupsHint', 'Choose groups shown for this family in Shop catalog.')}</small>{selectedGroupIds.map((id, index) => { const group = groupsById.get(id); return group ? <div className="global-family-group-row" key={id}><span>{group.name}<small>{group.code}</small></span><button type="button" className="catalog-icon-button" aria-label={t('globalCatalog.moveUp', 'Move up')} disabled={index === 0} onClick={() => moveGroup(index, -1)}><ChevronUp size={16} /></button><button type="button" className="catalog-icon-button" aria-label={t('globalCatalog.moveDown', 'Move down')} disabled={index === selectedGroupIds.length - 1} onClick={() => moveGroup(index, 1)}><ChevronDown size={16} /></button><button type="button" className="catalog-icon-button" aria-label={t('globalCatalog.removeGroup', 'Remove group')} onClick={() => setSelectedGroupIds(ids => ids.filter(item => item !== id))}><X size={16} /></button></div> : null })}<label>{t('globalCatalog.addGroup', 'Add option group')}<select value="" onChange={event => { const id = event.target.value; if (id && !selectedGroupIds.includes(id)) setSelectedGroupIds(ids => [...ids, id]) }}><option value="">{t('globalCatalog.selectGroup', 'Select a group')}</option>{groups.filter(group => !selectedGroupIds.includes(group.id)).map(group => <option value={group.id} key={group.id}>{group.name} · {group.code}</option>)}</select></label></fieldset>}
+            {selectedFamily && <fieldset className="global-family-groups-fieldset"><legend>{t('globalCatalog.applicableGroups', 'Applicable option groups')}</legend><small>{t('globalCatalog.groupsHint', 'Choose groups shown for this family in Shop catalog.')}</small>{selectedGroupIds.map((id, index) => { const group = groupsById.get(id); return group ? <div className="global-family-group-row" key={id}><span>{group.name}<small>{group.code}</small></span><button type="button" className="catalog-icon-button" aria-label={t('globalCatalog.moveUp', 'Move up')} disabled={index === 0} onClick={() => moveGroup(index, -1)}><ChevronUp size={16} /></button><button type="button" className="catalog-icon-button" aria-label={t('globalCatalog.moveDown', 'Move down')} disabled={index === selectedGroupIds.length - 1} onClick={() => moveGroup(index, 1)}><ChevronDown size={16} /></button><button type="button" className="catalog-icon-button" aria-label={t('globalCatalog.removeGroup', 'Remove group')} onClick={() => setSelectedGroupIds(ids => ids.filter(item => item !== id))}><X size={16} /></button></div> : null })}<div><span>{t('globalCatalog.addGroup', 'Add option group')}</span><ResponsiveChoice ariaLabel={t('globalCatalog.addGroup', 'Add option group')} value="" placeholder={t('globalCatalog.selectGroup', 'Select a group')} onChange={id => { if (id && !selectedGroupIds.includes(id)) setSelectedGroupIds(ids => [...ids, id]) }} options={groups.filter(group => !selectedGroupIds.includes(group.id)).map(group => ({ value: group.id, label: `${group.name} · ${group.code}` }))} /></div></fieldset>}
             <div className="catalog-dialog-actions"><button type="button" className="secondary-button" onClick={() => { setSelectedFamily(null); setCreateOpen(false) }}>{t('globalCatalog.close', 'Close')}</button><button type="submit" className="primary-button" disabled={isSaving || !translations.en.name.trim()}>{isSaving ? <Loader2 size={16} className="animate-spin" /> : null} {selectedFamily ? t('globalCatalog.save', 'Save changes') : t('globalCatalog.createFamily', 'Create Family')}</button></div>
           </form>
           {selectedFamily && <div className="global-family-lifecycle"><span className={`catalog-tag ${selectedFamily.status === 'ARCHIVED' ? 'catalog-tag-muted' : ''}`}>{selectedFamily.status === 'ARCHIVED' ? t('globalCatalog.archivedFilter', 'Archived') : t('globalCatalog.active', 'Active')}</span><button type="button" className="secondary-button" disabled={isSaving} onClick={() => void changeStatus(selectedFamily.status === 'ARCHIVED')}>{selectedFamily.status === 'ARCHIVED' ? t('globalCatalog.reactivate', 'Reactivate') : t('globalCatalog.archive', 'Archive')}</button></div>}
         </>}
       </section></div>}
 
-      {createStyleOpen && <div className="catalog-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setCreateStyleOpen(false) }}><form className="catalog-dialog" role="dialog" aria-modal="true" onSubmit={event => void submitStyle(event)} aria-labelledby="global-style-create-title"><div className="catalog-dialog-heading"><h2 id="global-style-create-title">{t('globalCatalog.createStyleTitle', 'Create global style option')}</h2><button ref={closeSurfaceRef} type="button" className="catalog-icon-button" onClick={() => setCreateStyleOpen(false)} aria-label={t('globalCatalog.close', 'Close')}><X size={18} /></button></div><label>{t('globalCatalog.nameEnglish', 'Name (English)')}<input required maxLength={120} value={styleName} onChange={event => setStyleName(event.target.value)} /></label><label>{t('globalCatalog.code', 'Code')}<input required maxLength={64} pattern="[a-zA-Z0-9_-]+" value={styleCode} onChange={event => setStyleCode(event.target.value)} /></label><label>{t('globalCatalog.groups', 'Option group')}<select required value={styleGroupId} onChange={event => setStyleGroupId(event.target.value)}>{groups.map(group => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label><label>{t('globalCatalog.referenceImageOptional', 'Reference image (optional)')}<input type="file" accept="image/jpeg,image/png,image/webp" onChange={event => setNewStyleImages(event.target.files?.[0] ? [event.target.files[0]] : [])} /><small>{t('globalCatalog.referenceImagesR2Hint', 'One image uploads privately to R2 after the style option is created.')}</small></label><div className="catalog-dialog-actions"><button type="button" className="secondary-button" onClick={() => setCreateStyleOpen(false)}>{t('globalCatalog.cancel', 'Cancel')}</button><button className="primary-button" type="submit" disabled={isSaving || groups.length === 0}>{isSaving ? <Loader2 size={16} className="animate-spin" /> : null} {t('globalCatalog.create', 'Create')}</button></div></form></div>}
+      {createStyleOpen && <div className="catalog-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setCreateStyleOpen(false) }}><form className="catalog-dialog" role="dialog" aria-modal="true" onSubmit={event => void submitStyle(event)} aria-labelledby="global-style-create-title"><div className="catalog-dialog-heading"><h2 id="global-style-create-title">{t('globalCatalog.createStyleTitle', 'Create global style option')}</h2><button ref={closeSurfaceRef} type="button" className="catalog-icon-button" onClick={() => setCreateStyleOpen(false)} aria-label={t('globalCatalog.close', 'Close')}><X size={18} /></button></div><label>{t('globalCatalog.nameEnglish', 'Name (English)')}<input required maxLength={120} value={styleName} onChange={event => setStyleName(event.target.value)} /></label><label>{t('globalCatalog.code', 'Code')}<input required maxLength={64} pattern="[a-zA-Z0-9_-]+" value={styleCode} onChange={event => setStyleCode(event.target.value)} /></label><div><span>{t('globalCatalog.groups', 'Option group')}</span><ResponsiveChoice ariaLabel={t('globalCatalog.groups', 'Option group')} required value={styleGroupId} onChange={setStyleGroupId} options={groups.map(group => ({ value: group.id, label: group.name }))} /></div><label>{t('globalCatalog.referenceImagesOptional', 'Reference images (optional)')}<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={event => setNewStyleImages(Array.from(event.target.files ?? []))} /><small>{t('globalCatalog.referenceImagesR2Hint', 'Images upload privately to R2 after the style option is created.')}</small></label><div className="catalog-dialog-actions"><button type="button" className="secondary-button" onClick={() => setCreateStyleOpen(false)}>{t('globalCatalog.cancel', 'Cancel')}</button><button className="primary-button" type="submit" disabled={isSaving || groups.length === 0}>{isSaving ? <Loader2 size={16} className="animate-spin" /> : null} {t('globalCatalog.create', 'Create')}</button></div></form></div>}
     </div>
   )
 }

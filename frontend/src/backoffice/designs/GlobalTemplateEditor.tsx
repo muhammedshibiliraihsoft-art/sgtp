@@ -3,12 +3,12 @@ import type { FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { AlertCircle, ArrowLeft, Check, ImagePlus, Loader2, Upload, X } from 'lucide-react'
 import { usePrivateImage } from '../../hooks/usePrivateImage'
+import { ResponsiveChoice } from '../../components/CustomSelect'
 import { ApiError } from '../../services/apiClient'
 import { getAllGlobalStyleOptions, getOptionGroups, uploadGlobalStyleOptionImages } from '../../features/catalog/api'
 import type { OptionGroup, StyleOption } from '../../features/catalog/types'
 import type { Design, DesignReference } from '../../features/designs/types'
 import { addGlobalDesignSelection, getGlobalDesign, getGlobalDesignReferences, publishGlobalDesignVersion, uploadGlobalDesignReferences } from './api'
-import '../../features/designs/Designs.css'
 
 function PrivateImage({ url }: { url: string }) {
   const { objectUrl, isLoading, error } = usePrivateImage(url)
@@ -116,7 +116,7 @@ export function GlobalTemplateEditor() {
   }
 
   async function handleStyleOptionImageUpload(styleOptionId: string, event: React.ChangeEvent<HTMLInputElement>) {
-    const files = event.target.files?.[0] ? [event.target.files[0]] : []
+    const files = Array.from(event.target.files ?? [])
     if (!files.length) return
     setUploadingStyleOptionId(styleOptionId)
     setError(null)
@@ -142,7 +142,7 @@ export function GlobalTemplateEditor() {
         <div className="design-editor-main">
           <section className="design-panel">
             <div className="design-panel-heading"><h2>Selections</h2>{isDraft && <button className="secondary-button" onClick={() => setSelectionOpen(true)}><Check size={15} /> Add selection</button>}</div>
-            {latest.selections.length === 0 ? <p className="design-muted">No style selections yet.</p> : <ul className="design-selection-list">{latest.selections.map(selection => <li key={selection.id}><span>{groupNames.get(selection.option_group) ?? selection.option_group}</span><strong>{selection.style_option_name}</strong>{isDraft && <label className="secondary-button design-upload">{uploadingStyleOptionId === selection.style_option ? <Loader2 className="animate-spin" size={15} /> : <ImagePlus size={15} />} Add or replace reusable image<input aria-label={`Add or replace reusable image for ${selection.style_option_name}`} type="file" accept="image/jpeg,image/png,image/webp" hidden disabled={uploadingStyleOptionId === selection.style_option} onChange={event => void handleStyleOptionImageUpload(selection.style_option, event)} /></label>}</li>)}</ul>}
+            {latest.selections.length === 0 ? <p className="design-muted">No style selections yet.</p> : <ul className="design-selection-list">{latest.selections.map(selection => <li key={selection.id}><span>{groupNames.get(selection.option_group) ?? selection.option_group}</span><strong>{selection.style_option_name}</strong>{isDraft && <label className="secondary-button design-upload">{uploadingStyleOptionId === selection.style_option ? <Loader2 className="animate-spin" size={15} /> : <ImagePlus size={15} />} Add reusable image<input aria-label={`Add reusable image for ${selection.style_option_name}`} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden disabled={uploadingStyleOptionId === selection.style_option} onChange={event => void handleStyleOptionImageUpload(selection.style_option, event)} /></label>}</li>)}</ul>}
           </section>
           <section className="design-panel">
             <div className="design-panel-heading"><h2>Reference images</h2>{isDraft && <label className="secondary-button design-upload">{isUploading ? <Loader2 className="animate-spin" size={16} /> : <Upload size={16} />} Upload<input type="file" accept="image/jpeg,image/png,image/webp" multiple hidden disabled={isUploading} onChange={event => void handleUpload(event)} /></label>}</div>
@@ -154,7 +154,7 @@ export function GlobalTemplateEditor() {
       {selectionOpen && <div className="design-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setSelectionOpen(false) }}>
         <form className="design-dialog" onSubmit={event => void handleAddSelection(event)} aria-labelledby="global-selection-title">
           <div className="design-dialog-heading"><h2 id="global-selection-title">Add style selection</h2><button type="button" className="icon-button" onClick={() => setSelectionOpen(false)} aria-label="Close"><X size={18} /></button></div>
-          <label>Global style option<select required value={selectedStyleId} onChange={event => setSelectedStyleId(event.target.value)}><option value="">Choose an option</option>{selectableOptions.map(option => <option key={option.id} value={option.id}>{groupNames.get(option.option_group) ?? option.option_group} · {option.name}</option>)}</select></label>
+          <label>Global style option<ResponsiveChoice ariaLabel="Global style option" required value={selectedStyleId} placeholder="Choose an option" onChange={setSelectedStyleId} options={selectableOptions.map(option => ({ value: option.id, label: `${groupNames.get(option.option_group) ?? option.option_group} · ${option.name}` }))} /></label>
           <div className="design-dialog-actions"><button type="button" className="secondary-button" onClick={() => setSelectionOpen(false)}>Cancel</button><button type="submit" className="primary-button" disabled={isAdding || !selectableOptions.length}>{isAdding ? <Loader2 className="animate-spin" size={16} /> : null} Add</button></div>
         </form>
       </div>}

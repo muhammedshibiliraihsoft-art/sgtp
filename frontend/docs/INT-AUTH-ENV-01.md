@@ -4,7 +4,7 @@
 
 - The browser always calls relative `/api/...` paths. The backend URL is not embedded in frontend assets or `VITE_*` variables. The CSRF client validates the expected JSON shape and shows a clear proxy-configuration error if Pages serves the SPA HTML fallback.
 - Local Vite development proxies `/api` to the HTTPS API origin supplied by the server-only `AUTH_API_PROXY_TARGET` variable in ignored `frontend/.env`.
-- Cloudflare Pages uses `functions/api/[[path]].ts` as a same-origin `/api/*` proxy. It requires a complete HTTPS `API_ORIGIN` and an exact `FRONTEND_ORIGIN` variable matching the Pages request origin. These are runtime bindings, not `VITE_*` build variables.
+- Cloudflare Pages uses `functions/api/[[path]].ts` as a same-origin `/api/*` proxy. It requires a complete HTTPS `STAGING_API_ORIGIN` and an exact `FRONTEND_ORIGIN` variable matching the Pages request origin.
 - No direct cross-site browser requests are used. The Pages function checks unsafe request Origins, forwards Cookie and `X-CSRFToken`, rewrites the already-validated Origin to the API origin for Django CSRF validation, strips upstream cookie Domain attributes so cookies become host-only on the Pages hostname, and returns API responses as `private, no-store`.
 - Access-token memory handling, HttpOnly refresh cookie, CSRF bootstrap, bounded refresh retry, single-flight refresh, forced password change and logout clearing remain in the existing auth client.
 
@@ -20,12 +20,10 @@ No `VITE_API_BASE_URL` is needed. Restart Vite after changing `.env`. The dev pr
 
 ## Cloudflare Pages configuration
 
-The repository has no Pages or Wrangler config, so confirm the Cloudflare Pages project root includes `frontend/` (or move the function to the configured Pages root) before deploying. Set these non-secret runtime variables separately for each Pages environment (Preview/Staging and Production):
+The repository has no Pages or Wrangler config, so confirm the Cloudflare Pages project root includes `frontend/` (or move the function to the configured Pages root) before deploying. Configure these non-secret environment variables in the staging Pages project for each environment that should be reachable:
 
-- Staging: `API_ORIGIN=https://birky-staging-api.onrender.com`; `FRONTEND_ORIGIN=<exact staging Pages origin>`.
-- Production: `API_ORIGIN=<exact production API origin>`; `FRONTEND_ORIGIN=<exact production Pages/custom-domain origin>`.
-
-The production API origin is intentionally not supplied or defaulted here; production API/domain provisioning remains a separate deployment decision. A missing/invalid binding fails closed and never falls back to staging. Keep Cloudflare R2 credentials and all other secrets in the backend environment; do not expose them through frontend variables or browser code.
+- `STAGING_API_ORIGIN=https://birky-staging-api.onrender.com`
+- `FRONTEND_ORIGIN=https://birky-staging.pages.dev`
 
 Use this exact Pages origin; do not use a wildcard. For local `wrangler pages dev`, copy `.dev.vars.example` to `.dev.vars` and set `FRONTEND_ORIGIN` to the actual local Pages dev origin (normally `http://localhost:8788`). The Pages function fails closed if variables are missing or invalid. No deployment was performed.
 

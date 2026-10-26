@@ -199,12 +199,6 @@
 :root[lang="ml"] { font-family: var(--font-sans-ml); }
 
 * { box-sizing: border-box; }
-html {
-  scrollbar-width: none;
-}
-html::-webkit-scrollbar {
-  display: none;
-}
 body {
   min-width: 320px;
   min-height: 100vh;

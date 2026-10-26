@@ -3,8 +3,6 @@ export interface MembershipDTO {
   tenant: string
   tenant_name: string
   user_code: string
-  user_id?: string
-  login_id?: string | null
   display_name: string
   user_email: string | null
   role: 'ADMIN' | 'STAFF' | 'VIEWER'
@@ -23,10 +21,9 @@ export interface CreateShopUserResult {
   role: 'ADMIN' | 'STAFF' | 'VIEWER'
   initial_password?: string
   user_code?: string
-  login_id?: string
 }
 
-export type WorkFunctionCode = 'SALES' | 'MEASUREMENT' | 'CUTTING' | 'STITCHING' | 'FINISHING' | 'QC' | 'CASHIER'
+export type WorkFunctionCode = 'SALES' | 'MEASUREMENT' | 'CUTTING' | 'STITCHING' | 'CHECK' | 'FINISHING' | 'QC' | 'CASHIER'
 
 export interface WorkFunctionSetResponse {
   membership_id: string
@@ -41,7 +38,6 @@ export interface ShopStats {
 }
 
 export interface CreateShopUserRequest {
-  login_id?: string
   first_name: string
   last_name?: string
   email?: string
