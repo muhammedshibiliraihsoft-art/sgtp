@@ -1,4 +1,5 @@
 from io import BytesIO
+from decimal import Decimal
 from pathlib import Path
 from unittest.mock import patch
 
@@ -28,6 +29,7 @@ from apps.catalog.models import (
     StyleOption,
     StyleOptionImage,
     StyleOptionTranslation,
+    ShopDesignPrice,
 )
 from apps.catalog.views import FamilyImageView
 from apps.catalog.storage import PrivateReferenceStorage
@@ -131,7 +133,6 @@ class CatalogDesignApiTests(APITestCase):
             self.shop_url(shop, "designs/"),
             {
                 "family_id": str(self.family.pk),
-                "variant_id": str(self.variant.pk),
                 "name": name,
             },
             format="json",
@@ -164,6 +165,30 @@ class CatalogDesignApiTests(APITestCase):
             },
         )
         self.assertNotIn("french-cuff", cuff_codes)
+
+    def test_measurement_family_list_excludes_shop_copy_of_global_template(self):
+        from apps.catalog.services import initialize_shop_default_catalog
+
+        initialize_shop_default_catalog(shop=self.shop_a, actor=self.admin)
+        local_copy = GarmentFamily.objects.get(
+            tenant=self.shop_a, template_source=self.family
+        )
+        self.assertEqual(local_copy.code, self.family.code)
+        self.assertEqual(
+            local_copy.translations.get(locale="en").name,
+            self.family.translations.get(locale="en").name,
+        )
+
+        self.client.force_authenticate(self.admin)
+        response = self.client.get("/api/v1/catalog/families/?locale=en")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        returned_ids = {row["id"] for row in response.data["results"]}
+        self.assertIn(str(self.family.pk), returned_ids)
+        self.assertNotIn(str(local_copy.pk), returned_ids)
+        self.assertTrue(
+            Design.objects.filter(family=local_copy, variant__isnull=True).exists()
+        )
 
     def test_main_supplier_can_create_global_family_with_translations(self):
         payload = {
@@ -221,6 +246,12 @@ class CatalogDesignApiTests(APITestCase):
         self.assertEqual(family_response.status_code, status.HTTP_201_CREATED)
         family = GarmentFamily.objects.get(pk=family_response.data["id"])
         self.assertEqual(family.tenant_id, self.shop_a.pk)
+        family_list = self.client.get(f"{root}garment-families/?locale=en")
+        self.assertEqual(family_list.status_code, status.HTTP_200_OK)
+        self.assertIn(
+            str(family.pk),
+            {item["id"] for item in family_list.data["results"]},
+        )
 
         group_response = self.client.post(
             f"{root}option-groups/",
@@ -284,6 +315,63 @@ class CatalogDesignApiTests(APITestCase):
         self.assertEqual(selected.status_code, status.HTTP_201_CREATED, selected.data)
         published = self.client.post(publish_url, {}, format="json")
         self.assertEqual(published.status_code, status.HTTP_200_OK, published.data)
+
+        second_design = self.client.post(
+            self.shop_url(self.shop_a, "designs/"),
+            {"family_id": str(family.pk), "name": "Ceremonial Coat"},
+            format="json",
+        )
+        self.assertEqual(second_design.status_code, status.HTTP_201_CREATED)
+        self.assertIsNone(second_design.data["variant"])
+        self.assertNotEqual(second_design.data["id"], design_response.data["id"])
+        self.assertEqual(
+            Design.objects.filter(tenant=self.shop_a, family=family).count(), 2
+        )
+
+    def test_shop_family_creation_uses_authorized_shop_and_preserves_existing_staff_access(self):
+        path = self.shop_url(self.shop_a, "catalog/garment-families/")
+        payload = {
+            "tenant": str(self.shop_b.pk),
+            "code": "shop-owned-coat",
+            "translations": [{"locale": "en", "name": "Shop-owned Coat"}],
+        }
+
+        created_codes = []
+        for actor, code in (
+            (self.admin, "shop-owned-coat-admin"),
+            (self.staff, "shop-owned-coat-staff"),
+        ):
+            self.client.force_authenticate(actor)
+            response = self.client.post(
+                path,
+                {**payload, "code": code},
+                format="json",
+            )
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+            created = GarmentFamily.objects.get(pk=response.data["id"])
+            self.assertEqual(created.tenant_id, self.shop_a.pk)
+            self.assertNotEqual(created.tenant_id, self.shop_b.pk)
+            created_codes.append(created.code)
+
+        self.client.force_authenticate(self.other_admin)
+        other_shop_rows = self.client.get(
+            self.shop_url(self.shop_b, "catalog/garment-families/")
+        )
+        self.assertEqual(other_shop_rows.status_code, status.HTTP_200_OK)
+        self.assertTrue(set(created_codes).isdisjoint(
+            {row["code"] for row in other_shop_rows.data["results"]}
+        ))
+
+        self.client.force_authenticate(self.viewer)
+        denied = self.client.post(
+            self.shop_url(self.shop_a, "catalog/garment-families/"),
+            {"code": "viewer-garment", "translations": [{"locale": "en", "name": "Viewer Garment"}]},
+            format="json",
+        )
+        self.assertEqual(denied.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertFalse(
+            GarmentFamily.objects.filter(tenant=self.shop_a, code="viewer-garment").exists()
+        )
 
     def test_shop_local_group_can_be_created_and_attached_to_one_owned_family_atomically(self):
         self.client.force_authenticate(self.admin)
@@ -434,7 +522,9 @@ class CatalogDesignApiTests(APITestCase):
         design.refresh_from_db()
         latest = design.versions.order_by("-number").first()
         self.assertEqual(design.status, Design.Status.ACTIVE)
-        self.assertEqual(latest.number, 2)
+        # Default materialization now keeps published version 1 and creates
+        # draft 2; restoring replaces that draft without reusing its number.
+        self.assertEqual(latest.number, 3)
         self.assertEqual(latest.translations.get(locale="en").name, latest_name)
 
     def test_shop_garment_system_endpoints_do_not_expose_another_shop_records(self):
@@ -711,7 +801,7 @@ class CatalogDesignApiTests(APITestCase):
             },
             format="json",
         )
-        self.assertEqual(variant.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(variant.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
         design = self.create_design(name="Rejected archived-family design")
         self.assertEqual(design.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(
@@ -727,7 +817,7 @@ class CatalogDesignApiTests(APITestCase):
             },
             format="json",
         )
-        self.assertEqual(global_variant.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(global_variant.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
         global_design = self.client.post(
             "/api/v1/catalog/design-templates/",
             {
@@ -880,9 +970,11 @@ class CatalogDesignApiTests(APITestCase):
             },
             format="json",
         )
-        self.assertEqual(custom_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(
+            custom_response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED
+        )
         rows = self.client.get("/api/v1/catalog/variants/").data["results"]
-        self.assertFalse(any(row["id"] == custom_response.data["id"] for row in rows))
+        self.assertFalse(any(row["code"] == "global-list-test-custom" for row in rows))
 
     def test_global_design_template_detail_hides_drafts_from_shop_members(self):
         self.client.force_authenticate(self.main)
@@ -1251,7 +1343,7 @@ class CatalogDesignApiTests(APITestCase):
             ],
         )
 
-    def test_shop_custom_variants_are_shop_owned_and_viewer_cannot_create(self):
+    def test_shop_variant_writes_are_retired_and_legacy_rows_remain_shop_scoped(self):
         payload = {
             "family_id": str(self.family.pk),
             "code": "relaxed-shirt",
@@ -1264,16 +1356,15 @@ class CatalogDesignApiTests(APITestCase):
         denied = self.client.post(
             self.shop_url(self.shop_a, "catalog/variants/"), payload, format="json"
         )
-        self.assertEqual(denied.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(denied.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
         self.client.force_authenticate(self.admin)
         created = self.client.post(
             self.shop_url(self.shop_a, "catalog/variants/"), payload, format="json"
         )
-        self.assertEqual(created.status_code, status.HTTP_201_CREATED)
-        variant = GarmentVariant.objects.get(pk=created.data["id"])
-        self.assertEqual(variant.tenant_id, self.shop_a.pk)
-        self.assertFalse(variant.is_default)
-        self.assertEqual(variant.translations.get(locale="ar-KW").name, "قميص مريح")
+        self.assertEqual(created.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        variant = GarmentVariant.objects.create(
+            tenant=self.shop_a, family=self.family, code="legacy-relaxed-shirt"
+        )
         self.assertEqual(
             self.client.get(
                 self.shop_url(self.shop_a, "catalog/variants/")
@@ -1290,7 +1381,7 @@ class CatalogDesignApiTests(APITestCase):
         duplicate = self.client.post(
             self.shop_url(self.shop_a, "catalog/variants/"), payload, format="json"
         )
-        self.assertEqual(duplicate.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(duplicate.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
         self.client.force_authenticate(self.other_admin)
         foreign_design = self.create_design(shop=self.shop_b)
         self.assertEqual(foreign_design.status_code, status.HTTP_201_CREATED)
@@ -1506,6 +1597,64 @@ class CatalogDesignApiTests(APITestCase):
         version = design.versions.get()
         self.assertEqual(version.status, DesignVersion.Status.DRAFT)
         self.assertEqual(version.translations.get(locale="en").name, "Blue Shirt")
+
+    def test_design_create_can_set_shop_price_atomically_with_admin_or_cashier(self):
+        self.shop_a.default_currency = "KWD"
+        self.shop_a.save(update_fields=["default_currency"])
+        MembershipWorkFunction.objects.create(
+            membership=self.staff_membership, function_code="CASHIER"
+        )
+        self.client.force_authenticate(self.staff)
+        response = self.client.post(
+            self.shop_url(self.shop_a, "designs/"),
+            {
+                "family_id": str(self.family.pk),
+                "name": "Priced design",
+                "idempotency_key": "62345678-1234-5678-1234-567812345678",
+                "price": {"amount": "18.750"},
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        price = ShopDesignPrice.objects.get(
+            tenant=self.shop_a, design_id=response.data["id"]
+        )
+        self.assertEqual(price.amount, Decimal("18.750"))
+        self.assertEqual(price.currency, "KWD")
+
+        self.client.force_authenticate(self.staff)
+        MembershipWorkFunction.objects.filter(
+            membership=self.staff_membership, function_code="CASHIER"
+        ).delete()
+        denied = self.client.post(
+            self.shop_url(self.shop_a, "designs/"),
+            {
+                "family_id": str(self.family.pk),
+                "name": "No price access",
+                "price": {"amount": "20.000"},
+            },
+            format="json",
+        )
+        self.assertEqual(denied.status_code, status.HTTP_403_FORBIDDEN)
+
+        no_currency_shop = self.make_shop("No Currency Shop", "no-currency-shop")
+        no_currency_admin, _ = self.make_member(
+            "catalog-no-currency@example.test", no_currency_shop, ShopRole.ADMIN
+        )
+        self.client.force_authenticate(no_currency_admin)
+        before = Design.objects.filter(tenant=no_currency_shop).count()
+        blocked = self.client.post(
+            self.shop_url(no_currency_shop, "designs/"),
+            {
+                "family_id": str(self.family.pk),
+                "name": "Blocked price",
+                "price": {"amount": "20.000"},
+            },
+            format="json",
+        )
+        self.assertEqual(blocked.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Design.objects.filter(tenant=no_currency_shop).count(), before)
+        self.assertFalse(ShopDesignPrice.objects.filter(tenant=no_currency_shop).exists())
 
     def test_design_create_saves_selections_atomically_and_retry_is_idempotent(self):
         self.client.force_authenticate(self.admin)

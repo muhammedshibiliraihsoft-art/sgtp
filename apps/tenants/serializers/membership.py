@@ -14,6 +14,7 @@ class TenantMemberSerializer(serializers.ModelSerializer):
     user_id = serializers.UUIDField(source="user.id", read_only=True)
     display_name = serializers.SerializerMethodField()
     user_email = serializers.ReadOnlyField(source="user.email")
+    user_phone = serializers.ReadOnlyField(source="user.phone")
     tenant_name = serializers.ReadOnlyField(source="tenant.name")
     new_login_id = serializers.CharField(
         write_only=True, required=False, allow_blank=True, max_length=32
@@ -32,6 +33,7 @@ class TenantMemberSerializer(serializers.ModelSerializer):
             "user_id",
             "display_name",
             "user_email",
+            "user_phone",
             "role",
             "is_active",
             "created_at",

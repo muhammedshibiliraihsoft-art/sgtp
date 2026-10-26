@@ -61,7 +61,7 @@ class MembershipWorkFunctionModelTests(TestCase):
             )
             for code in CATALOG
         ]
-        self.assertEqual(len(rows), 7)
+        self.assertEqual(len(rows), 8)
         self.assertEqual(
             set(self.membership.work_functions.values_list("function_code", flat=True)),
             set(CATALOG),
@@ -84,7 +84,7 @@ class MembershipWorkFunctionModelTests(TestCase):
         with self.assertRaises(IntegrityError):
             with transaction.atomic():
                 MembershipWorkFunction.objects.create(
-                    membership=self.membership, function_code="CHECK"
+                    membership=self.membership, function_code="UNKNOWN"
                 )
 
     def test_assignment_history_row_cannot_be_reassigned_or_rewritten(self):
@@ -217,7 +217,7 @@ class MembershipWorkFunctionAPITests(APITestCase):
             [],
         )
         duplicate = self.client.put(url, {"functions": ["QC", "QC"]}, format="json")
-        unknown = self.client.put(url, {"functions": ["CHECK"]}, format="json")
+        unknown = self.client.put(url, {"functions": ["UNKNOWN"]}, format="json")
         self.assertEqual(duplicate.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(unknown.status_code, status.HTTP_400_BAD_REQUEST)
 

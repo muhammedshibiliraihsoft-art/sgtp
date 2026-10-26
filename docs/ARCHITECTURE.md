@@ -1,5 +1,18 @@
 # Architecture
 
+## T4-04 Work backend (local, unpublished)
+
+Runtime app `apps.works` owns the one-garment Work aggregate. Shop context is
+resolved before Work querysets, and linked IDs are checked against the same
+Shop. The Shop row serializes Work-number allocation; domain services own
+create, update, assignment, transition, and Request-only soft deletion.
+Create locks Shop → parent Family → selected Design and requires an ACTIVE
+Family and Design with an available published version. Archived parents block
+new Work, while existing Work remains readable with its protected references.
+Fixed stage mapping lives in `apps/works/constants.py`. Role and current-stage
+Work Function are both required for operational writes; assignment is cleared
+on transition. T4-05 will separately harden retries, race semantics and audit.
+
 ## Local Login ID and PIN transition (unpublished)
 
 The local account model retains UUID primary identity and immutable generated `user_code` as an internal system reference. The human-facing User ID is stored in nullable, globally unique `login_id`, preserving entered case (after trimming outer whitespace); the database and login matching remain case-insensitive. `user_code`, email, and phone remain supported aliases where present. The existing Django password hash field accepts legacy credentials and six-digit temporary PINs. Newly provisioned login-enabled accounts get a one-time six-digit PIN and must change it on first sign-in; every new credential change is exactly six digits, replaces the previous value, and increments token version/revokes sessions. Existing hashes are not bulk-converted. VIEWER records are not login-enabled. PostgreSQL-backed atomic attempt buckets limit login and reset abuse across workers. Shop ADMIN phone reset requests persist separately from credentials; only Main Supplier may approve/reject. Phone submission alone never changes a PIN. Email self-service reset is removed. This section describes unpublished local code and is not a staging/production claim.
@@ -23,6 +36,13 @@ Client → Design → Measurement → Fabric/Material → Production Workflow
 ## Parallel frontend foundation and ownership
 
 `main` remains the backend/current integration source of truth and the primary owner of canonical project and business documentation. Parallel visual and frontend-foundation work uses the same repository on `frontend/parallel-foundation` in the sibling worktree `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp-frontend`; frontend implementation lives under `/frontend` and must not be developed in the main worktree. Frontend-specific instructions and handoff belong under `frontend/`.
+
+For local Variant-retirement work, the supported pair is the canonical `sgtp`
+backend on `main` plus `sgtp-frontend/frontend` on
+`frontend/parallel-foundation`. `sgtp/frontend` and the sibling worktree's
+duplicate `apps/` backend are deprecated, runnable copies: the former retains
+Variant UI and the latter retains a Variant-required Design create contract.
+They are not valid product pairings; see `docs/ENVIRONMENTS.md`.
 
 This early Parallel Frontend Foundation Track is not Phase 7 completion. The approved `PHASE4-PARALLEL-UNBLOCK-01` sequence places Phases 4–6 before F7-01/F7-01A; the frontend foundation remains isolated and unmerged. It may establish tooling, application/layout shells, design tokens/components, accessibility/responsive/i18n/RTL/LTR/theme foundations, and mock-first API adapters. Unimplemented backend features remain interfaces/mocks, not live contracts. Backend/main is synchronized into the frontend branch through deliberate normal merges; unfinished frontend work is not routinely merged into main. Frontend navigation and role presentation are UX only; all authorization remains backend-enforced.
 
@@ -108,7 +128,7 @@ Docker        -> development/staging container path and historical production te
 - `common` owns shared model abstractions.
 - `clients` is the first Phase 4 business domain, implemented at runtime under `apps/clients` to match existing `INSTALLED_APPS`; it uses Shop context, tenant queryset scoping, role permissions, and transactional services. Do not create a shadow `backend/apps` tree or relocate existing apps as part of T4-01.
 - No background worker, event bus, or external integration layer exists.
-- T4-02 implements the runtime `apps/catalog` foundation: global defaults/templates, Shop-local variants/styles/designs, immutable version history, private reference images and Shop isolation. GARMENT-VARIANTS-01 extends Variant lifecycle, search/filtering, Global default management, and exact Variant design selection without introducing inventory semantics. T4-03 adds global and Shop-owned measurement definitions, person-owned immutable measurement history, explicit INCH/CM values, and a minimal Shop-owned Material reference catalog. `MEASUREMENT-R2-UI-01` adds private local/R2 upload-ticket support and authorized A4 worksheet export with Arabic/Urdu, Bangla, and Malayalam glyph support. No Work/Order, billing implementation, stored Design↔Measurement relation, jobs, or monitoring is introduced. Local samples remain unattached until an exact Shop/StyleOption is selected; the backend implementation is not yet published or deployed.
+- **Historical implementation record:** T4-02 added the runtime `apps/catalog` foundation, including the former Variant lifecycle/default/selection workflow. T4-03 added global and Shop-owned measurement definitions, person-owned immutable measurement history, explicit INCH/CM values, and a minimal Shop-owned Material reference catalog. `MEASUREMENT-R2-UI-01` added private upload-ticket support and authorized A4 worksheet export. No Work/Order, billing implementation, jobs, or monitoring was part of those historical tasks. The 2026-10-18 decision retires active Variant workflows; local implementation and migration dependencies remain incomplete, as documented below.
 - T4-03A is an additive, separately approved extension to the existing Material identity: explicit inventory category/unit, zero-start Shop balance, and immutable stock-movement ledger. Legacy Materials remain unclassified and receive no inferred unit or opening stock; inventory enablement is explicit. Balance writes and ledger append are atomic under Shop→Material→Balance locks. Work allocation/reservation/consumption, procurement, warehouse, lots, costing, and frontend remain out of scope until their authorized tasks.
 - `backend/` contains settings and shared model foundation code; `frontend/` is an empty placeholder. Django project wiring and apps remain at the repository root under `core/` and `apps/`.
 - Target boundaries are `accounts` for identity/auth, `shops` for supplier/shop/membership/workspace tenancy, `clients` for clients/related persons, `catalog` for designs/measurements/materials, `works` for orders and production workflow, `billing` for invoices/payments/accounts, `reports` for reports/history/PDFs, `ai_agents` for controlled AI services, `integrations` for external adapters/webhooks, and `core` for shared primitives only.
@@ -116,7 +136,7 @@ Docker        -> development/staging container path and historical production te
 ### Phase 4 T4-01 — Clients and Related Persons (implemented)
 
 - Runtime module: `apps/clients` (Django app label `clients`); the existing `BaseModel` supplies UUID identity, audit timestamps/users, and soft-delete history.
-- `Client` and `RelatedPerson` each require Shop ownership. Every RelatedPerson has exactly one same-Shop `primary_client`; this preserves future billing ownership. Phase 5 billing is not implemented.
+- `Client` and `RelatedPerson` each require Shop ownership. Every RelatedPerson has exactly one same-Shop `primary_client`; Billing uses that Primary Client as invoice owner and retains optional Related Person context. Local source now includes Shop-specific Design prices and Work snapshots, the supported sibling price/Billing/history UI, invoice/payment/credit/refund flows, idempotency/audit, and private localized PDFs. Billing migrations remain unapplied to application environments; authenticated integration, background jobs, backup/restore, and deployment parity remain incomplete.
 - Client operations require explicit trusted `/api/v1/shops/{shop_id}/...` context and Phase 3 scoping. Main Supplier/ADMIN have full CRUD including soft-delete; STAFF has read/create/update; VIEWER is read-only; inactive/removed membership is denied. Work Functions do not affect this authority.
 - Duplicate checks are informational only and Shop-local. Phone/email remain non-unique. A transaction locks the Shop before duplicate query/write, serializing same-Shop contact writes; warnings never merge/reject and expose only same-Shop IDs/names of the same record type.
 - Search uses canonical stored names with Unicode-aware containment, deterministic normalized phone prefix, and exact UUID matching; no accent-insensitive or Work-number search is claimed. Deleted rows are excluded from normal queries.
@@ -257,7 +277,9 @@ Catalog ownership remains nullable-tenant: `tenant=NULL` denotes immutable-by-Sh
 
 `FamilyOptionGroup` owns per-family selection policy (`SINGLE`/`MULTI`, required/optional). This is not an `OptionGroup` property because one reusable group may have different rules per garment. Existing links migrate to optional `MULTI`, preserving previous behavior. Publish enforces required groups, the single-selection maximum, and that every selection belongs to a configured group.
 
-Design is a reusable, versioned style specification and its `variant` is nullable for family-level scope. Measurement history remains a separate immutable aggregate; an optional `MeasurementSet.design_version` FK pins an exact published version without making measurement capture dependent on a Design. A family-level Design may attach to a matching-family profile of any variant; a variant-specific Design requires the same profile variant. FK deletion protection preserves provenance.
+Design is a reusable, versioned style specification scoped to a Family. Measurement history remains a separate immutable aggregate; an optional `MeasurementSet.design_version` FK pins an exact published version without making measurement capture dependent on a Design. Active matching is Family-level; retained nullable `Design.variant` and `MeasurementProfile.variant` fields are legacy/history only. Work validates the Design and MeasurementProfile by Family; legacy Variant IDs do not constrain new Work creation. FK deletion protection preserves provenance.
+
+Shop Catalog garment setup reuses `FamilyOptionGroup` for per-family style-group cardinality/required rules and the existing measurement-definition model. Current `MeasurementDefinitionMapping` is Family-only after local migration `0024`; active Variant-specific definition mapping is retired. Global/default definitions remain read-only and immutable to Shop users; no measurement history rows are changed by Catalog setup. In the canonical `main` backend, Variant mutation requests are rejected and Design/Work behavior is Family-based. Deprecated frontend and sibling-backend copies still contain stale Variant behavior as described below.
 
 ## Membership Lifecycle and Rules
 
@@ -275,3 +297,41 @@ The Shop Membership lifecycle follows these strict rules:
 The max_users limit is configured per-Shop (not hard-coded).
 - **ACTIVE** and **INACTIVE** memberships both consume a max_users slot.
 - **REMOVED** (soft-deleted) memberships do NOT consume a slot.
+# Garment Variant retirement (approved target; runtime/API implementation aligned, migration replay unverified)
+
+The approved active product graph is `GarmentFamily -> Design`; style groups
+and measurement applicability are Family-scoped. Global and Shop bootstrap
+must not require active Variant materialization. Existing Variant rows and
+nullable `Design.variant` / `MeasurementProfile.variant` references may remain
+only for compatibility, immutable history, or migration safety, and must not
+drive new active behavior.
+
+Verified from current local source, implementation status is:
+
+- `initialize_shop_default_catalog()` creates Shop Families and FamilyOptionGroup
+  mappings, then copies published Design content into Family-level Shop Designs;
+  it does not create/copy Variants. This Shop initialization path is aligned.
+- Global catalog seed migrations `0002`, `0012`, and `0018` retain their
+  historical Variant writes/references. New `catalog.0025` repairs missing
+  `0018` Family groups/options/published presets when an active Variant is
+  absent; historical migrations remain unchanged. Fresh/upgrade replay through
+  `0025` is not verified in this environment.
+- The canonical `main` backend exposes Variant list/detail GET compatibility;
+  Global/Shop mutation requests return 405 through read-only `http_method_names`
+  guards. Mutation handler/service code remains in source but is not reachable
+  through allowed HTTP methods. Family-only Design/Profile creation and
+  Family-compatible Work validation are implemented in this backend.
+- The `main/frontend` checkout still contains deprecated Variant management
+  UI/selectors and is not the supported frontend. The sibling
+  `frontend/parallel-foundation` backend copy still has a Variant-required
+  Design contract; its active frontend is Family-based. These copies are
+  unsupported/incompatible and have not been modified under worktree ownership
+  rules.
+- `MeasurementDefinitionMapping` is Family-only after `0024`. Legacy
+  `GarmentVariant`, `Design.variant`, and `MeasurementProfile.variant` remain
+  for compatibility/history, and model-level paths can still represent legacy
+  Variant-linked rows.
+
+These are local source findings, not deployment or database-state claims.
+Do not treat retained historical references or deprecated UI copies as
+authorization to restore active Variant behavior.

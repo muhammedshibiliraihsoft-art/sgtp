@@ -19,7 +19,7 @@ from apps.catalog.measurement_services import (
     create_measurement_set,
     deactivate_measurement_set,
 )
-from apps.catalog.models import GarmentFamily, GarmentVariant
+from apps.catalog.models import GarmentFamily
 from apps.clients.models import Client
 from apps.tenants.models import ShopRole, Supplier, Tenant, TenantMember
 
@@ -48,12 +48,6 @@ class MeasurementConcurrencyTests(TransactionTestCase):
         )
         self.client_record = Client.objects.create(tenant=self.shop, name="Race Client")
         self.family, _created = GarmentFamily.objects.get_or_create(code="mens-shirt")
-        self.variant, _created = GarmentVariant.objects.get_or_create(
-            family=self.family,
-            tenant=None,
-            code="standard-shirt",
-            defaults={"is_default": True},
-        )
         self.chest, _created = MeasurementDefinition.objects.get_or_create(
             tenant=None, code="chest", defaults={"sort_order": 0}
         )
@@ -61,7 +55,7 @@ class MeasurementConcurrencyTests(TransactionTestCase):
             definition=self.chest, locale="en", defaults={"name": "Chest"}
         )
         MeasurementDefinitionMapping.objects.get_or_create(
-            definition=self.chest, family=self.family, variant=None
+            definition=self.chest, family=self.family
         )
 
     def concurrently(self, operation):
@@ -93,7 +87,6 @@ class MeasurementConcurrencyTests(TransactionTestCase):
             person_model=Client,
             person_id=self.client_record.pk,
             family_id=self.family.pk,
-            variant_id=self.variant.pk,
         )
 
     def test_profile_creation_race_keeps_one_profile(self):

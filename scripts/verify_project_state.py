@@ -23,7 +23,8 @@ PHASE_STATUS_RE = re.compile(
     re.IGNORECASE,
 )
 TASK_RE = re.compile(
-    r"\b(?:PRE-P3-\d{2}(?:-[A-Z0-9]+)*|"
+    r"\b(?:PHASE-\d{1,2}(?:-[A-Z0-9]+)+|"
+    r"PRE-P3-\d{2}(?:-[A-Z0-9]+)*|"
     r"GARMENT-(?:FAMILIES|VARIANTS)-\d{2}|"
     r"MEASUREMENT-E2E-\d{2}|"
     r"[A-Z]\d{1,2}-\d{2}[A-Z]?(?:-[A-Z0-9]+)*)\b"
@@ -394,6 +395,84 @@ class ProjectStateValidator:
                 )
             ):
                 allowed.add("apps/catalog")
+            if (
+                state_task == handoff_task == "T4-04"
+                and re.search(
+                    r"\bCONFIRM\s+TASK\s+T4-04\b",
+                    self._current_section(self.read("docs/PROJECT_STATE.md"), "Status"),
+                    re.IGNORECASE,
+                )
+                and re.search(
+                    r"\bCONFIRM\s+TASK\s+T4-04\b",
+                    current_handoff_text,
+                    re.IGNORECASE,
+                )
+            ):
+                allowed.update({"apps/catalog", "apps/works"})
+            if (
+                state_task == handoff_task == "T4-06"
+                and re.search(
+                    r"\bCONFIRM\s+TASK\s+T4-06\b",
+                    self._current_section(self.read("docs/PROJECT_STATE.md"), "Status"),
+                    re.IGNORECASE,
+                )
+                and re.search(
+                    r"\bCONFIRM\s+TASK\s+T4-06\b",
+                    current_handoff_text,
+                    re.IGNORECASE,
+                )
+            ):
+                allowed.update({"apps/catalog", "apps/works"})
+            if (
+                state_task == handoff_task == "R5-01"
+                and re.search(
+                    r"\bCONFIRM\s+TASK\s+R5-01\b",
+                    self._current_section(self.read("docs/PROJECT_STATE.md"), "Status"),
+                    re.IGNORECASE,
+                )
+                and re.search(
+                    r"\bAPPROVE\s+R5-01\s+EXPANSION\s+PLAN\b",
+                    self._current_section(self.read("docs/PROJECT_STATE.md"), "Status"),
+                    re.IGNORECASE,
+                )
+                and re.search(
+                    r"\bCONFIRM\s+TASK\s+R5-01\b",
+                    current_handoff_text,
+                    re.IGNORECASE,
+                )
+                and re.search(
+                    r"\bAPPROVE\s+R5-01\s+EXPANSION\s+PLAN\b",
+                    current_handoff_text,
+                    re.IGNORECASE,
+                )
+            ):
+                allowed.update({"apps/catalog", "apps/works", "apps/billing"})
+            if (
+                state_task == handoff_task == "PHASE-5-INTEGRATED-CLOSURE-01"
+                and state.get(5) == "active"
+                and handoff.get(5) == "active"
+                and re.search(
+                    r"\bCONFIRM\s+PHASE\s+5\b",
+                    self._current_section(self.read("docs/PROJECT_STATE.md"), "Status"),
+                    re.IGNORECASE,
+                )
+                and re.search(
+                    r"\bCONFIRM\s+PHASE\s+5\b",
+                    current_handoff_text,
+                    re.IGNORECASE,
+                )
+                and re.search(
+                    r"\bCONFIRM\s+TASK\s+PHASE-5-INTEGRATED-CLOSURE-01\b",
+                    self._current_section(self.read("docs/PROJECT_STATE.md"), "Status"),
+                    re.IGNORECASE,
+                )
+                and re.search(
+                    r"\bCONFIRM\s+TASK\s+PHASE-5-INTEGRATED-CLOSURE-01\b",
+                    current_handoff_text,
+                    re.IGNORECASE,
+                )
+            ):
+                allowed.update({"apps/catalog", "apps/works", "apps/billing"})
             if (
                 state_task == handoff_task == "GARMENT-FAMILIES-01"
                 and re.search(

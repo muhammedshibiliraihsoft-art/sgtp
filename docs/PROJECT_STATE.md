@@ -1,10 +1,577 @@
 # Project State
 
+## Phase 5 local migration closure (2026-10-26; unpublished)
+
+The user authorized the local `devdb` migration after review of the exact plan.
+All 9 pending migrations (`catalog.0025`/`0026`, `works.0003`, and
+`billing.0001`–`0006`) applied successfully; `migrate --plan` reports no
+pending operations. Before migration, a backup was created, archive-validated,
+and restored into a disposable PostgreSQL database. Comparing that restored
+copy with current `devdb` found no row-count changes in pre-existing
+business/catalog/work tables. Only expected Django permission/content-type and
+migration-ledger counts increased; 12 new Phase 5 tables were added. The exact
+comparison DB was removed. The ignored local backup remains at
+`.test-private-assets/phase5-devdb-backup-20261026-d19f24a3726e/` for recovery.
+
+Fresh focused backend billing/pricing tests passed **21/21** on an isolated
+disposable test database, which was removed. Django system check and
+`makemigrations --check --dry-run` passed. Local frontend `/` and backend
+readiness returned HTTP 200. Prior frontend validation remains 13/13 focused
+tests, 233/233 full suite, typecheck and production build; prior authenticated
+synthetic billing E2E remains documented. No feature code changed in this
+refresh. Staging is deferred; no staging, commit, or deployment action occurred.
+
+Local Phase 5 database setup is complete. Overall Phase 5 remains **PARTIAL**
+for release because production backup/object-retention, monitoring, restore,
+deployed parity, and any applicable retention/anonymization policy remain
+unverified. Port 8001 did not return an HTTP health response; backend readiness
+on `8000` is healthy.
+
+The Project State Validator passed and discovered 593 backend tests; full-suite
+test discovery is not a claim that all 593 ran in this refresh. Remote
+verification was unavailable and the working tree remains dirty.
+
+## Current follow-up — Manual Super Admin financial purge (2026-10-25; local, unpublished)
+
+Current task: PHASE-5-INTEGRATED-CLOSURE-01 follow-up — approved manual Main
+Supplier Super Admin invoice-bundle purge, implemented and locally validated.
+
+Implemented the approved manual invoice-bundle purge in the canonical backend
+and supported sibling frontend. Only Main Supplier Super Admin can choose a
+Shop, review its invoice history, and purge an issued bundle after providing a
+reason and exact invoice-number confirmation. Purge deletes the invoice, lines,
+linked payments/credit notes/refunds, financial-document metadata, and private
+files; existing audit/idempotency records and Shop invoice/credit sequences
+remain. A tombstone and new audit event record the request/result. If private
+file deletion fails, financial DB rows remain and the same operation can be
+retried. Automatic deletion is not implemented.
+
+`billing.0006` is additive and unapplied to persistent `devdb`; no existing
+financial bundle or persistent R2 object was deleted. A unique synthetic R2
+object upload/read/checksum/delete probe passed through the app's
+`PrivateReferenceStorage` adapter and was absent afterward; it did not touch
+existing objects. A separate presigned PUT returned HTTP 200; object metadata,
+private read/checksum, deletion, and absence verification passed. This tests
+the configured provider URL, not the separate Catalog private-media
+upload-ticket/browser flow; Billing PDF generation does not call that Catalog
+endpoint. Headless Chrome device viewport emulation with mocked responses verified the Work Billing panel, Billing History (All and Outstanding), and Design Editor Shop-price panel at 320, 390, 600, 768, 1024, and 1280 CSS px; the Financial Purge page was checked at 320, 360, 390, 600, 768, 1024, and 1280 px. Document/body widths matched each viewport and overflow scans found no out-of-viewport elements. Main page screenshots at 320px and 1280px were visually reviewed; the New invoice disclosure was opened at 320px and the purge confirmation dialog was checked at all purge widths. The mocked responsive runs submitted no business mutation. Separately, authenticated headless Chrome browser-to-API E2E used only synthetic records on disposable PostgreSQL `sgtp_p5_ui_e2e_f8436c08`: the Main Supplier Super Admin purged synthetic `INV-000001` through the UI, which reported success; a DB check confirmed the invoice and linked payment/credit/refund/document rows absent, with a `COMPLETED` purge tombstone and one idempotency row retained. The disposable DB, test servers, Chrome profile, and temporary test folder were removed; `devdb` remained untouched. The first login attempt exposed a test-only password-hasher mismatch; only the synthetic user's hash was regenerated under the local `dev` settings before the successful E2E. Automated FinancialPurgePage tests cover Shop loading/disabled, Shop-list error/retry, invoice-history loading/error/retry/empty, draft exclusion, exact confirmation, storage-failure protection, and repeating a failed purge. Retry now repeats the failed Shop load, invoice-history load, or purge operation. The focused page suite passed 8/8 and the full supported frontend passed 233/233; typecheck/build also passed. Targeted lint exited 0 with two `react(set-state-in-effect)` warnings in this page. These automated checks do not replace exhaustive manual visual verification of every state at every viewport. A fresh focused backend purge rerun passed 3/3 on disposable PostgreSQL
+sgtp_p5_purge_gate_20261025_f0361ddd; the test runner destroyed it and a
+read-only PostgreSQL catalog check confirmed the database absent afterward; FinancialPurgePage focused tests passed 8/8; the full supported frontend
+suite passed 233/233, with typecheck/build passing. Targeted lint exited 0
+with two `react(set-state-in-effect)` warnings in this page. On 2026-10-25, the full Django suite passed 486/486 on a
+unique disposable PostgreSQL DB, the full pytest suite passed 593/593 (392
+warnings), the supported frontend passed 233/233; typecheck/build passed, and targeted
+lint exited 0 with two `react(set-state-in-effect)` warnings in FinancialPurgePage. Django system check and migration drift
+check passed. A fresh disposable migration + PostgreSQL dump/restore verified
+financial totals, Shop ownership, and one private A5 invoice PDF checksum;
+receipt/credit-note file restore was not verified. Exact test/restore DB names
+were absent after cleanup. Configured `devdb` remains unmigrated and untouched.
+The Project State Validator passed after this documentation update; test
+discovery was unavailable and it warned that the working tree is dirty. This
+follow-up does not close Phase 5:
+production backup/object-retention alignment,
+production restore/monitoring, and deployed parity remain open; manual purge
+does not define an automatic retention period or anonymization policy.
+
 ## Status
 
-### LOCAL-TO-STAGING-SYNC-01 (2026-10-12; candidate in progress)
+### PHASE-5-INTEGRATED-CLOSURE-01 (2026-10-22; local, unpublished; PARTIAL)
 
-The live Render API is on branch `staging`, auto-deploying commits, at `e1a4aafe85308b96d329d963c91e4ccac17a9c26`; the existing Free PostgreSQL staging resource is available, and no staging frontend service is present in Render. A separate `codex/local-to-staging-sync-01` release-candidate worktree now contains the verified local application snapshot; the original dirty `main` checkout and its separate frontend worktree are preserved. Using an isolated PostgreSQL 15 cluster named `staging_sync_test` on port 55432, the full backend suite passed 546/546 after repairing three stale test failures, and the deployed staging-branch migration baseline upgraded through catalog migrations 0017–0023 successfully. Migration drift reports no model changes. Candidate frontend tests pass 189/189; production build and lint pass (lint warnings remain). `npm audit --omit=dev` reports zero vulnerabilities. The staging database could not be queried through Render's read-only SQL connector because of external TLS/IP allow-list restrictions; its live migration ledger/data and a recoverable backup remain open gates. No candidate push, staging deploy, account creation, or staging/local application DB write has occurred. Cloudflare Pages frontend deployment and its exact origin remain unverified.
+Current verified status is refreshed in the 2026-10-25 follow-up above; the
+dated checkpoints below preserve their original test counts and limitations.
+
+Current task: PHASE-5-INTEGRATED-CLOSURE-01; CONFIRM TASK PHASE-5-INTEGRATED-CLOSURE-01.
+Phase 5 is active; activation was explicitly confirmed with `CONFIRM PHASE 5`.
+
+The confirmed local package includes per-Shop Design pricing and Work
+price/currency snapshots, the supported sibling price/Billing/history UI,
+approved invoice/discount/tax/number/void/credit/refund rules, financial
+authorization, audit/idempotency, private localized PDFs, and additive
+migrations through `billing.0005`. The latest API/frontend correction adds
+optional `billing_currency` to Shop context only for Shop ADMIN and active
+CASHIER STAFF; normal staff still receive no financial Shop setting. No
+migration was applied to the persistent application database.
+
+Latest local validation (2026-10-22): fresh disposable Django suite 483/483 and
+fresh disposable pytest suite 590/590 (389 warnings); the earlier backend
+587/587 and focused post-contract 54/54 results are historical checkpoints.
+`makemigrations --check --dry-run` and Project State Validator passed (590 tests
+discovered). The supported sibling frontend passed Vitest 225/225 and its
+production build/typecheck. OpenAPI validation passed with 0 errors / 29
+existing warnings and four generated backend/sibling schema artifacts matched.
+A focused schema-context privacy test confirms non-financial staff are
+unchanged.
+
+2026-10-25 revalidation: Django system check reported no issues; migration
+drift check found no changes; Project State Validator passed with 590 tests
+discovered. The supported sibling frontend was rechecked: Vitest 225/225,
+production build/typecheck passed, and lint exited 0 with existing warnings.
+The focused disposable Django Billing/Work API suite also passed 38/38. A
+repeat fresh migration plus PostgreSQL dump/restore and A5 invoice PDF v2
+checksum check passed against isolated databases; cleanup confirmed the new
+restore/test databases and temporary media absent. `devdb` still had no Billing
+migrations and was not written.
+
+Authenticated browser E2E used only synthetic Shop/user data in disposable
+PostgreSQL database `sgtp_p5_restore_source_9d3a61c542be`: AUTO and MANUAL
+invoice drafts, fixed and percentage discounts, optional tax, sequential issue
+numbers, partial payment, credit note, payment-linked refund, unpaid-invoice
+void, Billing History, and Outstanding were verified; Work remained at Request.
+The initial issue failure was invalid fixture setup (numbered seed records with
+no matching Shop sequence rows), corrected in the test helper, not in runtime
+numbering code.
+
+Fresh disposable migration replay and PostgreSQL dump/restore verified money
+totals, Shop ownership, and one private A5 invoice PDF v2 checksum/file across
+restore; the invoice/receipt/credit-note protected downloads and cross-Shop
+denial are separately covered by API tests. On 2026-10-25, read-only cleanup
+checks confirmed the exact 2026-10-22 and 2026-10-25 restore source/target DBs,
+the focused disposable test DB, dump, and temporary media absent; only `devdb`
+and the pre-existing `test_devdb` were listed. `devdb` has no Billing
+migrations and was not written or migrated.
+Local filesystem storage is verified. Required R2 setting assignments are
+non-empty in the ignored local `.env`; HeadBucket returned HTTP 200, and one
+unique synthetic object passed upload/read/checksum/delete with absence
+confirmed afterward. No existing object was touched. Application-generated
+presigned uploads and browser integration remain unverified. No
+Sentry/error-tracking SDK or DSN configuration was found in this checkout or
+local environment. Production alert delivery/monitoring remains unverified;
+retention/anonymization and production restore also remain open. The bounded
+synchronous PDF path has no worker; no
+retry/dead-letter worker behavior is claimed. No staging/production, commit,
+push, or deployment occurred. Phase 5 remains **PARTIAL** pending the remaining
+R5-04/production reliability gates and final cleanup/state verification.
+
+### Follow-up — Portrait A5 PDF exports (2026-10-22; local, unpublished)
+
+Measurement worksheets and newly generated invoice, receipt, and credit-note
+PDFs now use portrait A5. Financial PDF layout version 2 is additive;
+immutable A4 layout-version 1 files remain unchanged and downloadable. The
+`billing.0005` migration and all four backend/supported-sibling schema
+snapshots were validated. Five focused renderer/API tests passed on a fresh
+disposable `test_devdb`, which was removed afterward; Django checks and schema
+validation passed with 0 errors / 29 existing warnings. Representative A5
+PDFs were visually checked for legibility, wrapping, and page size. Persistent
+`devdb` was not migrated or written; Phase 5 remains **PARTIAL** and no commit,
+push, or deployment occurred.
+
+### Historical checkpoint — R5-01 Shop Design pricing and Billing backend (2026-10-21; local, unpublished)
+
+- Current task: R5-01 is complete locally; `CONFIRM TASK R5-01` and `APPROVE R5-01 EXPANSION PLAN` were provided.
+- Phase 5 is active; activation was explicitly confirmed with `CONFIRM PHASE 5`.
+
+Implemented the approved Shop-specific Design pricing and Billing backend:
+Shop ADMIN or CASHIER STAFF may set/read prices; Work stores price/currency
+snapshots; invoices support AUTO snapshot or MANUAL lines, multiple invoices
+per Work, draft edits, issue, invoice-bound partial payments, and outstanding
+reads. Drafts may be created at any Work stage; issue/payment never advances
+production. Related Person invoices belong to the Primary Client. A regression
+found and fixed an ordered-`distinct()` query that misclassified repeated
+same-currency invoices. Focused backend tests passed 30/30 on disposable
+PostgreSQL 15, including tenant/permission scope, currency precision, Work
+snapshot, stage isolation, issue immutability paths, and Primary Client billing.
+Django model check and migration-drift check passed; OpenAPI generation
+validated with 0 errors (existing warnings remain). Additive migrations were
+generated but not applied to the configured application `devdb` or any shared
+database. No frontend billing UI, catalog price-catalog, idempotency/audit,
+reports, commit, push, deployment, or browser E2E is included. Overpayment
+policy, refunds/cancellation, currency-change policy, and invoice numbering
+remain unresolved. Current API overpayment rejection is fail-closed, not an
+approved business rule.
+
+### Historical task — T4-06 Domain integration validation (2026-10-21; local, unpublished)
+
+`CONFIRM TASK T4-06` authorized the historical Phase 4 API integration validation.
+
+`CONFIRM TASK T4-06` authorized Phase 4 API integration validation. A new Work
+API regression creates a Work from its Client, published DesignVersion, and
+MeasurementSet; assigns and advances through every approved stage to
+`COMPLETED`; verifies those exact source IDs remain linked; and confirms a
+foreign-Shop ADMIN sees an empty list and receives 404 for Work detail.
+Existing tests separately reject foreign-Shop Client, wearer, DesignVersion,
+and MeasurementSet IDs. Backend Work tests passed 22/22 on fresh isolated
+PostgreSQL 15 after replaying migrations through `works.0002`. Django removed
+the test database `test_sgtp_t406`; persistent `devdb` and `testdb` were not
+used. Sibling Orders tests passed 36/36; frontend typecheck/build, Django model
+check, migration-drift check, and project-state validator tests (35/35) passed.
+The project-state validator passed with its existing dirty-tree warning and a
+test-discovery warning because `pytest` is not installed in this Python
+environment. Authenticated browser-to-API E2E,
+staging, and production were not tested. No application behavior, API
+contract, schema, or migration changed; no commit, push, or deployment
+occurred. At this checkpoint, Phase 5/R5-01 remained separately gated.
+
+### T4-05 Service layer and concurrency (2026-10-21; local, unpublished)
+
+`CONFIRM TASK T4-05` authorized Work service/concurrency hardening. All Work
+mutations now write an internal append-only `WorkEvent` atomically with the
+Work change; event state excludes note contents. Stage advancement requires the
+currently displayed `expected_status`; a stale or replayed stage returns 409
+without a second transition. The active sibling Orders caller sends this
+precondition and refreshes detail after a conflict. Backend Work API tests
+passed 21/21 on a fresh isolated PostgreSQL database, including concurrent
+same-stage requests (one 200, one 409), replay, event rollback scope, and
+notes-free audit snapshots. Frontend Orders API/page tests passed 33/33;
+typecheck, production build, Django model checks, migration drift check, and
+OpenAPI validation passed (0 errors, 29 existing warnings). Tests used a fresh
+disposable PostgreSQL database, which Django dropped afterward; `testdb` was
+not used. After read-only verification of configured `devdb` / `devuser` in
+Docker `django_app_db` and its existing `works.0001` ledger, additive migration
+`works.0002_workevent` was applied to that local development DB. Post-migration
+read-only checks found 4 existing Works and 0 events; no historical events
+were fabricated. Backend/frontend liveness returned HTTP 200. No commit, push,
+deployment, or authenticated browser-to-API E2E was performed.
+
+### ORDER-DUE-INDICATOR-API-UI-CLOSURE-01 (2026-10-21; verification complete)
+
+The focused backend due-indicator tests passed 3/3 against an explicitly named
+isolated PostgreSQL test database, including Shop-local cutoff boundaries and
+Work API list/detail serialization for OVERDUE, DUE_TODAY, DUE_SOON (+1/+2),
+UPCOMING, and null due dates. The test database was removed by Django after the
+run; persistent `devdb` and the existing `testdb` remained present and were not
+used for test writes. Active sibling Orders tests passed 35/35; frontend
+typecheck and production build passed; Django model checks passed. No product
+behavior, API contract, schema, or migration changed. No authenticated
+browser-to-API E2E harness is available, so that runtime presentation check
+remains unverified; frontend component rendering and backend API serialization
+are independently covered by tests.
+
+### ORDER-WORKFLOW-LOCAL-E2E-CLOSURE-01 (2026-10-21; local E2E completed)
+
+**Current result:** The user explicitly authorized local testing of existing
+functions and specified that `ORD-000002` must remain unchanged. Verified local
+pair: canonical backend `127.0.0.1:8000` and supported sibling frontend
+`127.0.0.1:5173`; backend liveness/readiness and frontend proxied readiness
+returned HTTP 200. The database is persistent user-data development state:
+`devdb` / `devuser` in Docker `django_app_db`, Compose project `devcontainer`,
+volume `devcontainer_pgdata`.
+
+One user-approved test Order, `ORD-000003`, was created with the selected
+Client, MeasurementSet, and published DesignVersion. It was assigned and
+advanced through Request → Cutting → Stitching → Check → Finishing → QC →
+Completed. Each transition cleared assignment, and assignment was repeated at
+each next stage. CHECK was exercised distinctly. An ineligible STAFF assignment
+at Stitching was rejected. After the run, the normal Orders list showed
+`ORD-000003` Completed and `ORD-000002` still Request / Normal / no due date;
+the latter was not modified.
+
+The user's authorization permitted temporarily granting all eight current Work
+Functions to the existing Admin membership for the test; its active function
+set was restored to its original empty state using the existing service. A
+current read-only DB check confirms the Admin remains empty and the other
+member's pre-existing CASHIER/QC/SALES assignments remain active. No role
+changed. Eight soft-deleted function-history rows remain. `ORD-000003` remains
+Completed and unassigned; it was not deleted as cleanup.
+
+Deleted Orders filtering was exercised in the UI read-only: the exact
+2026-10-18 date range returned existing `ORD-000001`, 2026-10-19 returned the
+empty state, and Clear restored the unfiltered record. The focused backend Work
+API suite passed 15/15 again on isolated PostgreSQL 15; its deleted-order
+coverage includes Shop scope, dates, validation, and access denial. The focused
+frontend Orders suite passed 25/25 again; typecheck/build passed earlier in
+this task. Django `check --tag models` passed. The due-indicator unit test
+passed for Shop-local overdue, today, two-day DUE_SOON, and upcoming cutoffs.
+The current `devdb` Orders both have no due date, so actual API-to-UI due badge
+rendering remains unverified. No application code, schema, API contract, or
+migration changed; no commit, push, or deployment occurred.
+
+The initial pre-authorization snapshot below is historical and superseded by
+this execution result.
+
+The supported frontend Order flow was revalidated: Orders, Orders API, and
+Deleted Orders tests pass 25/25; frontend typecheck and production build pass.
+Canonical backend model/system check passes, and the focused Work API suite
+passes 15/15 against an isolated PostgreSQL 15 test container. Tests cover
+Shop-scoped listing/deleted filtering, stage sequence/function requirements,
+assignment clearing after a transition, and completion. The inline stage action
+remains sequential: only the next stage is actionable, the existing advance API
+is called, pending requests disable repeat actions, and the displayed stage
+changes only from a successful response.
+
+On 2026-10-21, authenticated local UI read-only checks loaded the Dashboard,
+Orders list, and detail for `ORD-000002`; the list/detail agreed on the order.
+Its detail showed Request / Normal, no due date, the selected Client, a linked
+Measurement page, and a DesignVersion reference. This is a record in the
+persistent user-data development DB, not a disposable test Order. No Order
+fields or stages were changed. A read-only ORM check confirmed its MeasurementSet
+belongs to the same Client and Shop, and its published DesignVersion is Shop-
+available and matches the MeasurementSet's Abaya Family. The Order's Client,
+MeasurementSet, and DesignVersion IDs match the earlier user-opened New Order
+URL inputs. The Deleted Orders page also loaded its read-only history and date
+filters. A read-only eligibility query found active Shop function assignments
+for SALES, QC, and CASHIER only; CUTTING, STITCHING, CHECK, and FINISHING have
+no active eligible members in this Shop. The current Order is unassigned, so
+live UI stage progression/reassignment is blocked by the plan's existing-user
+eligibility gate. Memberships and Work Functions were not changed.
+
+On the latest 2026-10-21 runtime check, the canonical backend is running at
+`127.0.0.1:8000` and the active sibling frontend at `127.0.0.1:5173`. Backend
+liveness and readiness both return HTTP 200; the frontend `/api/health/ready/`
+proxy also returns HTTP 200. The listening Vite process runs from
+`sgtp-frontend/frontend`; its `.env.local` sets `AUTH_API_PROXY_TARGET` to
+`http://127.0.0.1:8000`. Although that checkout's `.env` contains the staging
+API origin, the active local Vite configuration uses the local `.env.local`
+override, corroborated by the proxied health response. `.env` identifies
+`devdb@localhost:5432`; the
+connection maps to `django_app_db` in the `devcontainer` Compose project,
+backed by persistent volume `devcontainer_pgdata`. A read-only query confirmed
+database `devdb` and role `devuser`. This is the configured development
+database, not a disposable test target. `.env.test` points to `testdb@db:5432`;
+it was not contacted. Backend tests used a separate PostgreSQL 15 container
+`codex_order_acceptance_test_20261021`, bound only to `127.0.0.1:55439`, with a
+new isolated Docker volume and test-only role/database. The test runner created
+and removed its own test database there; it did not connect to or alter `devdb`.
+The frontend Order tests pass 25/25, typecheck and production build pass, and
+`manage.py check --tag models` passes. Live UI stage progression and the
+Order-to-COMPLETED end-to-end flow remain **UNVERIFIED** because the only
+visible Order is in persistent `devdb`, not an explicitly designated disposable
+test environment.
+
+The four-block acceptance plan in
+[ORDER-WORKFLOW-LOCAL-E2E-CLOSURE-01](task-plans/ORDER-WORKFLOW-LOCAL-E2E-CLOSURE-01.md)
+is in progress. Runtime pairing, read-only Order list/detail/history, frontend
+regressions, and disposable-PostgreSQL Work API checks are verified. Live
+Order stage transitions/reassignment remain unverified because the current
+Order is in the persistent user-data DB.
+
+### Create Order final closure (2026-10-20; local, unpublished)
+
+New Work now requires an ACTIVE parent Family and Design plus an available
+published DesignVersion. Creation locks Shop → Family → Design, so the
+current Family state is checked in the same transaction as sequence allocation;
+archiving a parent blocks new Work but does not hide existing Work. Design
+list/detail responses include read-only `family_status`, which the Order picker
+uses to omit Designs beneath archived Families. A URL-preselected Material is
+not silently discarded when catalog lookup fails: creation remains blocked
+until the Material is verified, replaced, or explicitly cleared. When no
+Material was preselected, a lookup failure does not prevent a no-material order.
+No schema migration is required.
+
+Validation: disposable-PostgreSQL Work API tests 15/15; supported sibling
+Orders, Measurement Review and Client Measurements tests 34/34; frontend
+typecheck, Django system check and migration drift check passed. OpenAPI
+generation validates with 0 errors / 29 existing warnings. Browser E2E remains
+unverified; no shared development, staging or production database was used.
+No commit, push or deployment.
+
+### Create Order archive-eligibility closure (2026-10-19; local, unpublished)
+
+New Work creation now rejects a published DesignVersion when its parent Design
+is archived. The authoritative model validation is reached by the transactional
+creation service, which locks the Shop and then Design row to serialize against
+Design archival; existing Work and its protected source references remain
+readable. No schema change or migration is required. Archived-Family eligibility
+is not defined by approved rules and remains a business decision.
+
+Validation: archived Design creation was reproduced as a 201 before the fix;
+the focused disposable-PostgreSQL Work API suite now passes 12/12, including
+historical Work read, active/global Design, family/measurement compatibility,
+authorization, and cross-Shop wearer/Design/Measurement rejection. Focused
+supported-frontend order and Measurement Review suites pass 15/15 and typecheck
+passes. Both OpenAPI snapshots were regenerated: 0 errors, 29 existing
+warnings. Full Client Measurements page run remains 16/18 because two existing
+expectations conflict with current behavior/accessibility markup. Browser
+Create→detail→list E2E is unverified; no dev, staging, or production DB was
+changed. No commit, push, or deployment.
+
+### Variant retirement release-blocker correction (2026-10-19; local, unpublished)
+
+Repository verification confirmed that `0018_seed_remaining_family_design_defaults`
+skips all Family option-group/option/Design seeding for a family when it finds no
+active global Variant. Added forward-only data migration
+`catalog.0025_reconcile_family_design_defaults` after `0024`; it reuses the
+approved `0018` preset definitions, fills only missing global Family defaults,
+creates missing presets with `variant=NULL`, and leaves same-name Design rows,
+versions, selections and Shop-owned catalog data unchanged. Its reverse is a
+no-op to avoid deleting default data that may already be copied or referenced.
+
+The second reported blocker is already resolved in the current backend source:
+Global/Shop Variant list/detail views permit read methods only and lifecycle
+views permit OPTIONS only; existing API tests assert write attempts return 405.
+Mutation service functions and handler bodies remain in source, but the current
+HTTP method guards make them unreachable. One stale Measurement test that still
+expected Variant archive to return 200 now verifies 405, legacy Profile reads,
+and Family-level new records after an inactive legacy Variant is set up in the
+test.
+
+Validation (CATALOG-0025-DISPOSABLE-POSTGRES-REPLAY-AND-DB-VERIFICATION-01,
+2026-10-19): a new isolated PostgreSQL 15 instance was bound only to
+`127.0.0.1:55439`; Django's effective target was explicitly checked before DB
+commands. Fresh replay passed through `catalog.0025`, then `works.0001`; the
+exact `catalog.0017`–`0025` ledger was present. A second database reproduced
+the no-active-Variant `0018` skip (Abaya presets 0/3), then verified `0025`
+repaired Family groups/options/translations, published presets, selections and
+Family-only measurements. A third database upgraded representative Variant-era
+Design/version history, Family-level and Shop-owned records, and measurements;
+all snapshots remained intact. Reversing `0025` left data unchanged, and
+reapplying it was idempotent. `manage.py check` and
+`makemigrations --check --dry-run` passed.
+
+Selected DB-backed tests: 100/108 passed. The eight failures are confined to
+test setup/environment: one new reconciliation test calls nonexistent
+`SafeDeleteQueryset.hard_delete`; six Measurement tests still construct or
+filter the retired `MeasurementDefinitionMapping.variant` field; one Catalog
+image-upload test cannot resolve its Cloudflare R2 endpoint. These are test
+harness incompatibilities, not proven migration/runtime regressions; the
+manually replayed critical scenario passed.
+The broader backend suite was not run because focused tests did not all pass.
+All migration/test DB writes were confined to the disposable PostgreSQL
+instance; development, staging, and production databases were not touched. No
+application code, historical migration, commit, push, or deployment was
+changed.
+
+**Release verdict: FOUNDATION MIGRATION PARTIAL — fresh, Variant-absent and
+upgrade migration safety are verified; stale Measurement/reconciliation test
+fixtures and the external R2 test environment remain unresolved, so broader
+backend validation is pending.**
+
+### Variant-retirement staging release preflight (2026-10-18; read-only, local)
+
+Render identifies the staging API source as repository `sgtp`, branch `staging`,
+root Docker context / `./Dockerfile`, auto-deploy on commits, and live SHA
+`4db6d9fe14d389c89721707e44ed4526af6a5be3`. That SHA is present in the local
+Git object database and equals `origin/staging`; its source still contains
+Variant mutation methods and Variant-compatible Design/Profile create fields,
+and does not contain `catalog.0024_retire_variant_measurement_mappings`. Thus
+staging is not at the current Family-based retirement candidate. No Render
+frontend service was listed; Pages source/settings remain unverified. The
+current executor could not resolve the API hostname. The staging DB's empty IP
+allowlist blocked read-only SQL, leaving its migration ledger and Variant
+mapping count unknown; 0024's fail-closed startup precondition is therefore a
+release blocker. No code, provider config, staging/local app data, commit, push,
+or deployment was changed.
+
+Fresh migration replay including 0024 passed while creating disposable
+`test_devdb`, which the test runner removed. Backend suites ran 164 tests with
+2 failures (R2 network fixture and an old test expecting the now-retired Variant
+archive mutation); supported frontend tests ran 60 with 3 failures. Frontend
+typecheck, Django check, and `makemigrations --check --dry-run` passed. Full
+details are in the current handoff section below.
+
+### Variant middle-layer retirement implementation (2026-10-18; local, unpublished)
+
+The confirmed retirement is implemented in the canonical `main` backend and
+active sibling frontend within their assigned ownership areas. Global/Shop
+Variant endpoints now preserve authenticated legacy list/detail reads but reject
+mutations (405); Work Design/Profile compatibility checks use Family identity.
+The active sibling frontend resolves Order profiles by Family, prefers the
+Family-level profile, and starts a new Family-level Measurement profile rather
+than extending a legacy Variant-linked profile. Legacy Variant rows, nullable
+Design/Profile references, model relations, and historical seed migrations
+remain for compatibility. This task did not apply a migration or write to an
+application database. The dirty checkout already contains
+`catalog.0024_retire_variant_measurement_mappings`, which removes only the
+MeasurementDefinitionMapping Variant field after a fail-closed precondition;
+its application is documented for the local snapshot but was not re-queried in
+this task. Staging migration/data state remains unverified.
+
+The retirement is **PARTIAL across local checkouts**: the separate `main`
+frontend still contains Variant UI, and the sibling checkout's duplicate
+backend still contains stale Variant contracts. Ownership instructions prohibit
+changing those copies from this task's respective worktree; do not pair the
+stale copies with the canonical backend/active frontend. Deployment/runtime
+parity remains unverified. Focused backend checks passed (12/12 targeted tests,
+Django check, migration drift); active sibling frontend typecheck and focused
+tests passed. A broader backend test run was stopped when tests attempted remote
+R2 fixtures that could not resolve in this environment; broader frontend suites
+also have remaining failures. See `docs/HANDOFF.md` for details. No commit,
+push, or deployment occurred.
+
+### Variant cross-checkout support boundary (2026-10-18; local)
+
+The one supported local pair is `sgtp` backend on `main` with
+`sgtp-frontend/frontend` on `frontend/parallel-foundation`. Runtime evidence:
+the current Vite process on port 5173 is launched from that sibling frontend;
+Docker `django_app_web` is bind-mounted from the canonical `sgtp` main
+worktree; the sibling frontend local env file points its API proxy to
+`127.0.0.1:8000`.
+
+Two copies are intentionally deprecated, not supported or pairable: `sgtp/frontend`
+still mounts Variant UI; `sgtp-frontend/apps/` still has a Design create
+serializer requiring `variant_id`. Both remain technically runnable, but
+worktree ownership prevented implementation edits. `frontend/README.md` and
+`docs/ENVIRONMENTS.md` now mark the support boundary. No code, schema, migration,
+legacy data, or database was changed. There is no launcher-level block; do not
+mistake documentation status for technical prevention of manual startup.
+
+### Variant retirement dependency audit (2026-10-18; local, unpublished)
+
+The user resolved the business policy: active Variant selection, management,
+and materialization are retired; Global/Shop bootstrap must not require active
+Variant rows; retained rows/FKs are only for compatibility, immutable history,
+or migration safety. Current repository code is **incomplete retirement**:
+local `main` still has writable Variant APIs and management/Design-selection
+UI; its Work model compares Design/Profile Variant IDs; direct Profile model
+creation still permits a Variant; catalog seed migrations create/use active
+Variants. The sibling backend still requires Variant for Design creation, and
+its Orders UI matches Profiles by Variant. The `main` Design/Profile APIs are
+Family-level, and Shop catalog initialization copies no Variant rows.
+
+Aligned the approved rule and current-state docs. This task changed documents
+only; no code, migration, schema snapshot, database, runtime, or deployment was
+changed or queried. No tests were run. Migration application state and actual
+data reference counts remain **UNVERIFIED**. The safe correction sequence is
+recorded in `docs/architecture/03-DEPENDENCY-IMPACT-MAP.md`; implementation
+requires a separate task. `python scripts/verify_project_state.py` exited
+PASS with the existing dirty-tree and unavailable-test-discovery warnings;
+`git diff --check` exited PASS with existing line-ending notices. Product tests
+and runtime/database checks were intentionally not run.
+
+### Dependency map audit (2026-10-18; local, unpublished)
+
+Updated only §1 of `docs/architecture/03-DEPENDENCY-IMPACT-MAP.md` from current local backend and frontend code. The map now separates required Work references from optional Material/RelatedPerson/assignment links, distinguishes a MeasurementSet's optional published DesignVersion reference from MeasurementProfile ownership, and shows Shop access, action-level Work Functions, inventory movement/balance behavior, and frontend-to-API consumption. The Orders UI is in the sibling frontend checkout; Client and Measurement UIs are in this checkout.
+
+At that audit, the bootstrap/documentation mismatch was unresolved. The user has since resolved the Variant policy; this follow-up confirms bootstrap service behavior is aligned but identifies remaining active code/migration dependencies as incomplete retirement. No product code, APIs, schema/migrations, tests, or database were changed; no runtime/deployment check was performed in that earlier task. Its recorded validator/diff-check result is historical.
+
+### Deleted Orders archive (2026-10-18; local, unpublished)
+
+The existing Request-stage Work deletion remains a recoverable soft delete. An ADMIN-only, read-only `GET /api/v1/shops/{shop_id}/works/deleted/` archive now lists only the selected Shop's deleted orders, with search, pagination, and inclusive `deleted_from` / `deleted_to` filters interpreted in the Shop timezone. The separate frontend `/orders/deleted` page is linked from Orders for admins and offers date filters; no restore or permanent-delete action was added. No migration or application-data mutation was needed. Focused backend Work tests 8/8, Django check, migration drift, focused frontend Orders tests 10/10, typecheck and build passed. The local authenticated browser displayed the existing deleted order; matching and nonmatching date filters behaved correctly. No commit, push, or deployment.
+
+- Historical checkpoint: T4-04 Work backend/frontend were locally implemented under `CONFIRM TASK T4-04` and remained unpublished. The `ORDER-WORKFLOW-LOCAL-E2E-CLOSURE-01` revalidation was then partial; authenticated E2E was blocked until Docker, an explicitly isolated PostgreSQL target, and local app listeners were available. This checkpoint is superseded by the later T4-06 and local E2E evidence above.
+
+- Local Docker runtime update (2026-10-16): after explicit user approval, applied `tenants.0010` and `works.0001` to the existing `devdb` used by `django_app_web`. The Orders list now loads in the authenticated local browser and correctly shows an empty list (0 Work rows); the previous HTTP 500 was caused by the missing `works_workorder` table. User count remained 3 and Client count remained 1. No staging or production database was touched. Backend Work tests 6/6 and frontend Orders tests 6/6 passed; frontend typecheck and repository-state validator passed. No real Order creation was performed.
+
+### T4-04 Work aggregate and workflow state (2026-10-16; local, unpublished)
+
+Backend-only `apps/works` now persists one garment per Shop Work/Order with
+protected Client, DesignVersion, MeasurementSet and optional Material links,
+stable per-Shop Work number, Normal/Urgent/Very Urgent priority, optional due
+date, and fixed Request → Cutting → Stitching → Check → Finishing → QC →
+Completed transitions. New `CHECK` Work Function was explicitly approved.
+ADMIN or SALES/MEASUREMENT STAFF can create; every transition requires an
+applicable Work Function and clears the assigned worker for reassignment.
+Due soon begins two Shop-local calendar days before delivery. API supports
+Shop-scoped list/search/create/detail/update, assign, advance, and Request-only
+soft delete. Migrations `tenants.0010` and `works.0001` were initially files only; they were subsequently applied to the approved local Docker `devdb` as recorded above. Disposable PostgreSQL Work/Function tests 23/23
+PASS, Django check, migration drift, OpenAPI generation (0 errors),
+project-state validator and its 33/33 tests PASS. T4-05 concurrency/idempotency/audit,
+T4-06 integration, frontend and publication remain separate. No commit/push/deploy.
+
+### MEASUREMENT-HEADER-RESPONSIVE-STRUCTURE-01 (2026-10-16; local, unpublished)
+
+The Measurements page heading is structured as an icon/eyebrow, client-aware title, and supporting description in a background-free layout. The title wraps safely on narrow screens, and a subtle bottom divider separates the header from page content. No API, backend, or database changes.
+
+### CLIENT-MEASUREMENTS-DESKTOP-RESPONSIVE-01 (2026-10-16; local, unpublished)
+
+The embedded Client Measurements workspace is now capped at 1440px and centered on wide desktop screens. Desktop uses a compact two-column garment/design and fabric layout; the measurement form can place expanded saved history beside its inputs, while the closed form uses the full row. The review summary spans the content width. Tablet spacing is tighter in a single column; the phone wizard behavior is unchanged. Frontend production build and scoped `git diff --check` PASS. No backend, database, schema, or API changes; no commit, push, or deployment.
+
+### MEASUREMENT-REVIEW-SUMMARY-ROWS-01 (2026-10-16; local, unpublished)
+
+The Measurement final-review summary cards now render as compact label/value rows with subtle separators, reducing empty column space on mobile and desktop. Existing summary values, styling selections, and workflow are unchanged. Frontend typecheck and scoped `git diff --check` PASS; no backend, database, schema, or API changes. No commit, push, or deployment.
+
+### MEASUREMENT-HISTORY-ON-DEMAND-01 (2026-10-16; local, unpublished)
+
+Measurement history is now closed by default and removed from the mobile wizard's automatic step sequence. An explicit History button opens/closes the saved-version list on demand, including from final review after save. Opening a saved version from the Client page still seeds the measurement form without opening the history panel. Four focused frontend regressions and typecheck pass; no backend, database, schema, or API changes. No commit, push, or deployment.
+
+The active entry flow now places `Add measurement` and `Measurement history` side by side above the Body measurements form. `Add measurement` uses the normal secondary style; History is the black primary action. When expanded during entry, the history panel appears between the action row and the Body measurements form; in final review it remains available on demand. History version cards use a responsive fixed-width grid capped at two cards per row.
+
+### MEASUREMENT-REVIEW-DESIGN-GRID-01 (2026-10-16; local, unpublished)
+
+Design-section cards in Measurement final review now use a responsive grid: at least two cards per row on mobile and additional cards as viewport space permits. Group labels and selected design details remain unchanged. Frontend typecheck and scoped `git diff --check` PASS; no backend, database, schema, or API changes. No commit, push, or deployment.
+
+### GARMENT-SETUP-PARTS-AND-MEASUREMENTS-IMPLEMENT-01 (2026-10-13; local, unpublished)
+
+Shop Catalog garment setup now reuses the existing Family, Variant, OptionGroup, and FamilyOptionGroup models and APIs. The family detail flow configures its style groups/cardinality, maps existing Shop-owned measurement definitions at Family or Shop Variant scope, creates a new Shop-owned definition with its mapping, and offers a return path to the in-progress Design draft. No parallel GarmentPart model or migration was added. The mapping endpoint validates active Shop ownership and family/variant consistency; global definitions remain immutable and saved measurement history is untouched. Backend focused tests 4/4 PASS (including scope/permission and Shop isolation); frontend focused tests 32/32 PASS; typecheck/build, Django check, migration drift, and OpenAPI validation PASS (0 errors; 29 warnings / 13 unique). Validation used disposable `test_devdb`; configured app DB `devdb` was not written. Existing dirty worktrees were preserved. No commit, push, staging/production access, or deployment.
 
 ### MEASUREMENT-PROFILE-SAVE-AND-RECOVERY-01 (2026-10-12; local, unpublished)
 
@@ -110,7 +677,7 @@ AUTH-RESET-MODEL-CORRECTION-01 is the current policy: legacy passwords and newer
 - **Historical task: BACKOFFICE-01 backend implementation is published to `main` and live on Render staging.** Readiness and CSRF bootstrap endpoints returned 200 after deploy. Its frontend implementation reused the existing shell and live Shop APIs; the Work page mock content was not reused. At that task's completion its feature branch had not yet been published. Backend adds a derived read-only `is_main_supplier_admin` profile field and no migration. Exact deployment evidence is in the historical changelog and handoff entries.
 - Phase 1 and Phase 2 are complete.
 - Phase 3 is COMPLETE; it was activated with `CONFIRM PHASE 3` and the approved T3-05A staging foundation is complete (custom-domain DNS/TLS remains explicitly deferred).
-- Phase 4 is ACTIVE; Core Tailor Business activation was explicitly confirmed with `CONFIRM PHASE 4`. T4-01, T4-02, and T4-03 are COMPLETE, committed, published, and CI-verified. T4-03A — Inventory & Stock Foundation was explicitly confirmed with `CONFIRM TASK T4-03A` and is COMPLETE, COMMITTED, PUBLISHED, and exact-SHA CI-VERIFIED. Catalog/Design frontend integration is authorized as a separate integration task. T4-04 and Phase 5 remain unauthorized; this does not authorize other frontend business modules.
+- Phase 4 is ACTIVE; Core Tailor Business activation was explicitly confirmed with `CONFIRM PHASE 4`. T4-01, T4-02, and T4-03 are COMPLETE, committed, published, and CI-verified. T4-03A — Inventory & Stock Foundation is COMPLETE, COMMITTED, PUBLISHED, and exact-SHA CI-VERIFIED. T4-04, T4-05, and T4-06 are confirmed and complete locally, unpublished; Phase 5 remains separately gated.
 - T4-03A is an additive extension to completed T4-03. Focused T4-03A/T4-03 tests: 41 passed; full PostgreSQL-backed suite: 409 passed; validator: PASS with 409 tests discovered; validator tests: 32 passed; Django check: PASS; production deploy check: 0 errors with 12 warnings; migration drift: clean; OpenAPI: 0 errors, 28 warnings (12 unique); Black/Flake8/schema parity/diff check: PASS. GitHub Actions Project State Validation succeeded for the T4-03A implementation commit. Migrations were applied only to the disposable PostgreSQL test database. No deployment or shared/staging/production migration occurred.
 - Historical T4-02 baseline `1287d61a1406bbdd3edddc778b91f59c9cca52df` passed Project State Validation run `36970391503`.
 - T4-03 implementation checkpoint `d9ca27bbab8587c2da5ceb8c1f61f913087fdc48` passed Project State Validation run `37006408609`.
@@ -133,7 +700,7 @@ AUTH-RESET-MODEL-CORRECTION-01 is the current policy: legacy passwords and newer
 - Target status: SGTP V1 is explicitly defined in `docs/PRODUCT_DEFINITION.md`
 - Starter foundation: exists in the cloned SGTP repository.
 - Phase 1 implementation: **Historical - Complete.**
-- Confirmation status: Phase 4 and T4-01/T4-02/T4-03/T4-03A were explicitly authorized. T4-01/T4-02/T4-03/T4-03A are complete and published; T4-03A exact-SHA CI is green. Catalog/Design frontend integration, T4-02 API endpoints, and GARMENT-FAMILIES-01 are separately authorized. T4-04, Phase 5, and other frontend business modules remain unauthorized.
+- Historical confirmation snapshot (updated 2026-10-21): Phase 4 and T4-01/T4-02/T4-03/T4-03A/T4-04/T4-05 were authorized earlier. T4-06 is now confirmed and complete locally as recorded above; Phase 5 and other frontend business modules remain separately gated.
 - **Historical STARTUP-PRIVATE-IMAGE-01 follow-up (2026-10-05):** R2 reliability and existing image recovery were pending at that checkpoint. This dated handoff is not the current task status.
 - Detailed phase playbooks: 01-10 present.
 - Later-phase decisions: Tenant context is approved as URL-path based (`/shops/{shop_id}/...`), and Related Person billing is owned by the Primary Client.
@@ -385,3 +952,6 @@ AUTH-RESET-MODEL-CORRECTION-01 is the current policy: legacy passwords and newer
 - Shop ADMIN/STAFF can edit and archive/restore Shop-owned seeded families and restore seeded Designs. Family restore reads the latest Back Office default configuration; Design restore creates a new Shop-owned version from the latest published Back Office default while retaining history and source provenance. Global sources and other Shops are not mutated.
 - Local migrations `0020_tenant_default_template_sources.py`, `0021_default_seeded_designs.py`, and `0022_unique_tenant_template_variant.py` were created. The backend implementation and frontend lifecycle controls are local and uncommitted. No staging/production, commit, push, or deploy was performed.
 - Focused backend lifecycle/catalog/shop-creation PostgreSQL tests: 6 passed on a uniquely named disposable test database. Django system check and migration drift check passed. Frontend catalog/design focused tests: 36 passed; TypeScript typecheck and production build passed (recorded during this task). OpenAPI schema validation and broader test coverage remain to be completed before declaring the task fully closed.
+# Variant retirement status
+
+The active Catalog, Design creation, Design listing, and Client Measurement workflows are family-level. Historical Variant references remain readable. Physical removal of the legacy Variant table and historical foreign keys is deferred to a later cleanup after compatibility consumers are confirmed absent.

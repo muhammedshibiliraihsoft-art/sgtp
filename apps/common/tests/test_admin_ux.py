@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.admin.sites import AdminSite
-from django.test import RequestFactory, TestCase
+from django.conf import settings
+from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 
 from apps.accounts.admin import UserAdmin
@@ -147,7 +148,14 @@ class DjangoAdminUXTests(TestCase):
 
     def test_admin_index_is_available_to_main_supplier_and_groups_sections(self):
         self.client.force_login(self.main)
-        response = self.client.get(reverse("admin:index"))
+        test_storages = {
+            **settings.STORAGES,
+            "staticfiles": {
+                "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
+            },
+        }
+        with override_settings(STORAGES=test_storages):
+            response = self.client.get(reverse("admin:index"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "BiRKy Administration")
         self.assertContains(response, "Business")

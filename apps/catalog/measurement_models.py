@@ -107,7 +107,7 @@ class MeasurementDefinitionTranslation(BaseModel):
 
 
 class MeasurementDefinitionMapping(BaseModel):
-    """Family applicability, optionally restricted to one garment variant."""
+    """Family-level applicability for one measurement definition."""
 
     definition = models.ForeignKey(
         MeasurementDefinition, on_delete=models.PROTECT, related_name="mappings"
@@ -115,51 +115,19 @@ class MeasurementDefinitionMapping(BaseModel):
     family = models.ForeignKey(
         GarmentFamily, on_delete=models.PROTECT, related_name="measurement_mappings"
     )
-    variant = models.ForeignKey(
-        GarmentVariant,
-        null=True,
-        blank=True,
-        on_delete=models.PROTECT,
-        related_name="measurement_mappings",
-    )
     sort_order = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
                 fields=("definition", "family"),
-                condition=Q(variant__isnull=True, deleted__isnull=True),
+                condition=Q(deleted__isnull=True),
                 name="measure_map_family_uniq",
-            ),
-            models.UniqueConstraint(
-                fields=("definition", "family", "variant"),
-                condition=Q(variant__isnull=False, deleted__isnull=True),
-                name="measure_map_variant_uniq",
             ),
         ]
 
     def clean(self):
         super().clean()
-        if (
-            self.variant_id
-            and self.family_id
-            and self.variant.family_id != self.family_id
-        ):
-            raise ValidationError(
-                {"variant": "Variant must belong to the selected family."}
-            )
-        if self.definition_id and self.variant_id:
-            if self._state.adding and not self.variant.is_active:
-                raise ValidationError(
-                    {"variant": "New measurement mappings require an active variant."}
-                )
-            if (
-                self.definition.tenant_id != self.variant.tenant_id
-                and self.variant.tenant_id
-            ):
-                raise ValidationError(
-                    {"variant": "Variant must be global or belong to this Shop."}
-                )
         if self.definition_id and self.family_id:
             if self.family.tenant_id not in (
                 None,
@@ -364,12 +332,6 @@ class MeasurementSet(BaseModel):
                 raise ValidationError(
                     {
                         "design_version": "Design and measurement profile families must match."
-                    }
-                )
-            if design.variant_id and design.variant_id != profile.variant_id:
-                raise ValidationError(
-                    {
-                        "design_version": "Variant-specific designs require a matching profile variant."
                     }
                 )
             if design.tenant_id not in (None, profile.tenant_id):

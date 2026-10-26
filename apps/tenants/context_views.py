@@ -9,6 +9,7 @@ from rest_framework import serializers
 
 from apps.accounts.permissions import PasswordChangeGate
 from apps.tenants.context import resolve_shop_context
+from apps.tenants.financial_access import has_financial_access
 from apps.tenants.models import MembershipWorkFunction, ShopRole, WorkFunctionCode
 
 
@@ -56,6 +57,9 @@ class ShopContextView(ShopContextMixin, APIView):
                 "work_functions": serializers.ListField(
                     child=serializers.ChoiceField(choices=WorkFunctionCode.choices)
                 ),
+                "billing_currency": serializers.CharField(
+                    allow_null=True, required=False
+                ),
             },
         ),
     )
@@ -72,11 +76,14 @@ class ShopContextView(ShopContextMixin, APIView):
             work_functions = [
                 code for code, _label in WorkFunctionCode.choices if code in assigned
             ]
-        return Response(
-            {
-                "shop_id": str(context.shop.pk),
-                "role": context.role,
-                "is_main_supplier": context.is_main_supplier,
-                "work_functions": work_functions,
-            }
-        )
+        response_data = {
+            "shop_id": str(context.shop.pk),
+            "role": context.role,
+            "is_main_supplier": context.is_main_supplier,
+            "work_functions": work_functions,
+        }
+        if has_financial_access(context.membership):
+            # Billing users need the Shop currency, but the general Shop
+            # context contract deliberately omits other Shop settings.
+            response_data["billing_currency"] = context.shop.default_currency or None
+        return Response(response_data)

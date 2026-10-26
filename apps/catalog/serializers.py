@@ -151,7 +151,6 @@ class ShopVariantQuerySerializer(GlobalVariantQuerySerializer):
 
 class DesignListQuerySerializer(serializers.Serializer):
     family = serializers.UUIDField(required=False)
-    variant = serializers.UUIDField(required=False)
     status = serializers.ChoiceField(
         choices=("ACTIVE", "ARCHIVED", "all"), required=False, default="ACTIVE"
     )
@@ -567,7 +566,9 @@ class SelectionSerializer(serializers.ModelSerializer):
 
 class DesignSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
+    family_status = serializers.CharField(source="family.status", read_only=True)
     latest_version = serializers.SerializerMethodField()
+    latest_published_version = serializers.SerializerMethodField()
 
     class Meta:
         model = Design
@@ -575,21 +576,27 @@ class DesignSerializer(serializers.ModelSerializer):
             "id",
             "tenant",
             "family",
+            "family_status",
             "variant",
             "name",
             "status",
             "is_default_seeded",
             "latest_version",
+            "latest_published_version",
             "created_at",
             "updated_at",
         )
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_name(self, obj):
-        versions = obj.versions.all()
+        versions = list(obj.versions.all())
         if self.context.get("published_only"):
-            versions = versions.filter(status=DesignVersion.Status.PUBLISHED)
-        version = versions.order_by("-number").first()
+            versions = [
+                version
+                for version in versions
+                if version.status == DesignVersion.Status.PUBLISHED
+            ]
+        version = max(versions, key=lambda item: item.number, default=None)
         return (
             translated_name(version, self.context.get("locale", "en"))
             if version
@@ -598,10 +605,28 @@ class DesignSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(DesignVersionSerializer(allow_null=True))
     def get_latest_version(self, obj):
-        versions = obj.versions.all()
+        versions = list(obj.versions.all())
         if self.context.get("published_only"):
-            versions = versions.filter(status=DesignVersion.Status.PUBLISHED)
-        version = versions.order_by("-number").first()
+            versions = [
+                version
+                for version in versions
+                if version.status == DesignVersion.Status.PUBLISHED
+            ]
+        version = max(versions, key=lambda item: item.number, default=None)
+        return (
+            DesignVersionSerializer(version, context=self.context).data
+            if version
+            else None
+        )
+
+    @extend_schema_field(DesignVersionSerializer(allow_null=True))
+    def get_latest_published_version(self, obj):
+        versions = [
+            version
+            for version in obj.versions.all()
+            if version.status == DesignVersion.Status.PUBLISHED
+        ]
+        version = max(versions, key=lambda item: item.number, default=None)
         return (
             DesignVersionSerializer(version, context=self.context).data
             if version
@@ -609,9 +634,12 @@ class DesignSerializer(serializers.ModelSerializer):
         )
 
 
+class DesignPriceInputSerializer(serializers.Serializer):
+    amount = serializers.DecimalField(max_digits=18, decimal_places=4)
+
+
 class DesignCreateSerializer(serializers.Serializer):
     family_id = serializers.UUIDField()
-    variant_id = serializers.UUIDField(required=False, allow_null=True)
     name = serializers.CharField(max_length=160, trim_whitespace=True)
     translations = TranslationInputSerializer(many=True, required=False)
     source_design_id = serializers.UUIDField(required=False)
@@ -620,6 +648,7 @@ class DesignCreateSerializer(serializers.Serializer):
         child=serializers.UUIDField(), required=False, allow_empty=True
     )
     idempotency_key = serializers.UUIDField(required=False)
+    price = DesignPriceInputSerializer(required=False)
 
     def validate(self, attrs):
         if bool(attrs.get("source_design_id")) != bool(attrs.get("source_version_id")):
@@ -661,6 +690,13 @@ class DesignCreateSerializer(serializers.Serializer):
 class DesignDraftNameUpdateSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=160, trim_whitespace=True, required=False)
     translations = TranslationInputSerializer(many=True, required=False)
+
+
+class ShopDesignPriceSerializer(serializers.Serializer):
+    design_id = serializers.UUIDField(read_only=True)
+    amount = serializers.DecimalField(max_digits=18, decimal_places=4)
+    currency = serializers.CharField(read_only=True)
+    updated_at = serializers.DateTimeField(read_only=True)
 
 
 class SelectionCreateSerializer(serializers.Serializer):

@@ -13,6 +13,7 @@ class WorkFunctionCode(models.TextChoices):
     MEASUREMENT = "MEASUREMENT", _("Measurement")
     CUTTING = "CUTTING", _("Cutting")
     STITCHING = "STITCHING", _("Stitching")
+    CHECK = "CHECK", _("Check")
     FINISHING = "FINISHING", _("Finishing")
     QC = "QC", _("Quality control")
     CASHIER = "CASHIER", _("Cashier")
