@@ -5,10 +5,9 @@ import App from '../App'
 import i18n from '../i18n'
 import { authService } from '../services/auth'
 import { ApiError } from '../services/apiClient'
+import * as membershipsService from '../services/memberships'
 import { shopsService } from '../services/shops'
 import type { ShopDetail } from '../services/shops'
-import { usersApi } from '../features/users/api'
-import { clientsApi } from '../features/clients/api'
 
 const mainUser = {
   id: 'main-1', user_code: 'U-MAIN', email: 'main@example.test', first_name: 'Main', last_name: 'Supplier',
@@ -54,109 +53,33 @@ describe('Main Supplier Back Office', () => {
     expect(screen.queryByText('Modern Tailors')).not.toBeInTheDocument()
   })
 
-  it('removes the Back Office Measurement surface while preserving Catalog and exposes only basic selected-Shop Client contacts', async () => {
-    vi.spyOn(shopsService, 'detail').mockResolvedValue(shop)
-    vi.spyOn(clientsApi, 'list').mockResolvedValue({
-      count: 6, next: null, previous: null,
-      results: [
-        { id: 'client-1', name: 'Asha', phone: '+96550000001', phone_normalized: '+96550000001', email: 'asha@example.test', created_at: '', updated_at: '' },
-        { id: 'client-2', name: 'No Phone', phone: '', phone_normalized: '', email: 'no-phone@example.test', created_at: '', updated_at: '' },
-        { id: 'client-3', name: 'No Email', phone: '+96550000003', phone_normalized: '+96550000003', email: '', created_at: '', updated_at: '' },
-        { id: 'client-4', name: '', phone: '+96550000004', phone_normalized: '+96550000004', email: '', created_at: '', updated_at: '' },
-        { id: 'client-5', name: '', phone: '', phone_normalized: '', email: 'guest@example.test', created_at: '', updated_at: '' },
-        { id: 'client-6', name: '', phone: '', phone_normalized: '', email: '', created_at: '', updated_at: '' },
-      ],
-    })
-    await open('/backoffice/shops/shop-1/clients')
-    expect(await screen.findByRole('heading', { name: 'Clients' })).toBeInTheDocument()
-    const cards = await screen.findAllByRole('article')
-    expect(cards).toHaveLength(6)
-    expect(cards[0]).toHaveTextContent('Asha')
-    expect(cards[0]).toHaveTextContent('+96550000001')
-    expect(cards[0]).toHaveTextContent('asha@example.test')
-    expect(cards[1]).toHaveTextContent('No Phone')
-    expect(cards[1]).toHaveTextContent('no-phone@example.test')
-    expect(cards[1]).toHaveTextContent('—')
-    expect(cards[2]).toHaveTextContent('No Email')
-    expect(cards[2]).toHaveTextContent('+96550000003')
-    expect(cards[2]).toHaveTextContent('—')
-    expect(cards[3]).toHaveTextContent('Guest')
-    expect(cards[3]).toHaveTextContent('+96550000004')
-    expect(cards[4]).toHaveTextContent('Guest')
-    expect(cards[4]).toHaveTextContent('guest@example.test')
-    expect(cards[5]).toHaveTextContent('Guest')
-    expect(cards[5]).toHaveTextContent('—')
-    expect(clientsApi.list).toHaveBeenCalledWith('shop-1', '', 1)
-    expect(screen.queryByText(/measurement history|garment selected|variant selection|design selection|style selection/i)).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: /Measurements/ })).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Global Catalog/ })).toHaveAttribute('href', '/backoffice/catalog')
-  })
-
-  it('shows the exact Shop Admin entered User ID(s), not generated internal codes', async () => {
-    vi.spyOn(shopsService, 'detail').mockResolvedValue(shop)
-    const memberships = vi.spyOn(usersApi, 'memberships').mockResolvedValue({
-      count: 1,
-      next: null,
-      previous: null,
-      results: [{
-        id: 'membership-1', tenant: shop.id, tenant_name: shop.name, user_code: 'U-ADMIN-123',
-        user_id: 'user-1', login_id: 'ShopAdmin', display_name: 'Shop Admin', user_email: null,
-        role: 'ADMIN', is_active: true, created_at: '', updated_at: '',
-      }],
-    })
-    await open('/backoffice/shops/shop-1')
-    expect(memberships).not.toHaveBeenCalled()
-
-    fireEvent.click(await screen.findByRole('button', { name: 'Edit Shop' }))
-
-    expect(await screen.findByDisplayValue('ShopAdmin')).toHaveAttribute('readonly')
-    expect(screen.queryByDisplayValue('U-ADMIN-123')).not.toBeInTheDocument()
-    expect(memberships).toHaveBeenCalledWith('shop-1', { role: 'ADMIN', active: 'ALL' })
-  })
-
-  it('keeps the existing generated slug read-only while editing a Shop', async () => {
-    const detail = vi.spyOn(shopsService, 'detail').mockResolvedValue(shop)
-    const update = vi.spyOn(shopsService, 'update').mockResolvedValue(shop)
-    await open('/backoffice/shops/shop-1')
-    fireEvent.click(await screen.findByRole('button', { name: 'Edit Shop' }))
-    const slug = await screen.findByLabelText(/Slug/)
-    expect(slug).toHaveValue('demo-shop')
-    expect(slug).toHaveAttribute('readonly')
-    fireEvent.change(screen.getByLabelText(/^Shop name/), { target: { value: 'Renamed Shop' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
-    await waitFor(() => expect(update).toHaveBeenCalledWith('shop-1', expect.not.objectContaining({ slug: expect.anything() })))
-    expect(detail).toHaveBeenCalled()
-  })
-
   it('creates a Shop with required backend fields and keeps one-time credentials in component memory', async () => {
     const create = vi.spyOn(shopsService, 'create').mockResolvedValue({
-      ...shop, first_admin_user_code: 'U-FIRSTADMIN', first_admin_login_id: 'FirstAdmin', initial_password: '482731',
+      ...shop, first_admin_user_code: 'U-FIRSTADMIN', initial_password: 'temporary-secret',
     })
     vi.spyOn(shopsService, 'detail').mockResolvedValue(shop)
     await open('/backoffice/shops/new')
-    fireEvent.change(await screen.findByLabelText(/^Shop name/), { target: { value: 'Demo Shop' } })
-    expect(screen.getByLabelText(/Slug/)).toHaveValue('demo-shop')
-    expect(screen.getByLabelText(/Slug/)).toHaveAttribute('readonly')
+    fireEvent.change(await screen.findByLabelText(/Shop name/), { target: { value: 'Demo Shop' } })
+    fireEvent.change(screen.getByLabelText(/Slug/), { target: { value: 'demo-shop' } })
     fireEvent.change(screen.getByLabelText(/Maximum users/), { target: { value: '5' } })
     fireEvent.change(screen.getByLabelText(/First name/), { target: { value: 'First' } })
-    fireEvent.change(screen.getByLabelText(/First Admin User ID/), { target: { value: 'FirstAdmin' } })
     fireEvent.change(screen.getByLabelText(/^Email/), { target: { value: 'first@example.test' } })
     fireEvent.change(screen.getAllByLabelText(/^Phone/)[1], { target: { value: '+919000000000' } })
     fireEvent.click(screen.getByRole('button', { name: 'Create Shop' }))
     await waitFor(() => expect(create).toHaveBeenCalledWith(expect.objectContaining({
       name: 'Demo Shop', slug: 'demo-shop', max_users: 5,
-      first_admin: expect.objectContaining({ first_name: 'First', login_id: 'FirstAdmin', email: 'first@example.test', phone: '+919000000000' }),
+      first_admin: expect.objectContaining({ first_name: 'First', email: 'first@example.test', phone: '+919000000000' }),
     })))
-    expect(await screen.findByText('FirstAdmin')).toBeInTheDocument()
-    expect(screen.queryByText('482731')).not.toBeInTheDocument()
+    expect(await screen.findByText('U-FIRSTADMIN')).toBeInTheDocument()
+    expect(screen.queryByText('temporary-secret')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Show' }))
-    expect(screen.getByText('482731')).toBeInTheDocument()
+    expect(screen.getByText('temporary-secret')).toBeInTheDocument()
     const storedValues = (storage: Storage) => Array.from({ length: storage.length }, (_, index) => storage.getItem(storage.key(index) || ''))
-    expect(storedValues(localStorage).join(' ')).not.toContain('482731')
-    expect(storedValues(sessionStorage).join(' ')).not.toContain('482731')
+    expect(storedValues(localStorage).join(' ')).not.toContain('temporary-secret')
+    expect(storedValues(sessionStorage).join(' ')).not.toContain('temporary-secret')
     fireEvent.click(screen.getByRole('button', { name: /Done · Open Shop/ }))
     await waitFor(() => expect(window.location.pathname).toBe('/backoffice/shops/shop-1'))
-    expect(screen.queryByText('482731')).not.toBeInTheDocument()
+    expect(screen.queryByText('temporary-secret')).not.toBeInTheDocument()
   })
 
   it('shows nested backend validation errors by field', async () => {
@@ -164,10 +87,9 @@ describe('Main Supplier Back Office', () => {
       errors: { first_admin: { email: ['This email is already assigned.'] } },
     }))
     await open('/backoffice/shops/new')
-    fireEvent.change(screen.getByLabelText(/^Shop name/), { target: { value: 'Demo Shop' } })
-    expect(screen.getByLabelText(/Slug/)).toHaveValue('demo-shop')
+    fireEvent.change(screen.getByLabelText(/Shop name/), { target: { value: 'Demo Shop' } })
+    fireEvent.change(screen.getByLabelText(/Slug/), { target: { value: 'demo-shop' } })
     fireEvent.change(screen.getByLabelText(/First name/), { target: { value: 'First' } })
-    fireEvent.change(screen.getByLabelText(/First Admin User ID/), { target: { value: 'firstadmin' } })
     fireEvent.change(screen.getByLabelText(/^Email/), { target: { value: 'first@example.test' } })
     fireEvent.change(screen.getAllByLabelText(/^Phone/)[1], { target: { value: '+919000000000' } })
     fireEvent.click(screen.getByRole('button', { name: 'Create Shop' }))
@@ -176,6 +98,7 @@ describe('Main Supplier Back Office', () => {
 
   it('confirms lifecycle changes and still supports logout', async () => {
     const detail = vi.spyOn(shopsService, 'detail').mockResolvedValueOnce(shop).mockResolvedValueOnce({ ...shop, is_active: false })
+    vi.spyOn(membershipsService, 'getShopMembers').mockResolvedValue([])
     const setActive = vi.spyOn(shopsService, 'setActive').mockResolvedValue({ status: 'Shop deactivated', is_active: false })
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     const logout = vi.spyOn(authService, 'logout').mockResolvedValue()

@@ -1,5 +1,107 @@
 # Architectural Decisions
 
+## 2026-10-25 — Approve bounded manual Super Admin financial purge
+
+The user approved a Main Supplier Super Admin-only, manually initiated purge of
+a selected Shop's complete issued invoice bundle. Require a reason and exact
+invoice-number confirmation. Include the invoice, lines, linked payments,
+credit notes/refunds, document metadata, and private files. Do not schedule or
+automatically delete records. Keep all pre-existing financial audit and
+idempotency records (including saved response snapshots) and retain Shop
+invoice/credit-note sequence high-water values. Preserve a purge tombstone and
+append an audit event. Storage deletion failure must leave financial rows
+available and allow a safe retry. This is an explicit exception to normal
+issued-history immutability, not a general Shop deletion permission or a
+statutory retention/anonymization decision. Implementation and local test
+status are recorded in `docs/PROJECT_STATE.md`; the migration remains
+unapplied to the persistent application database.
+
+## 2026-10-21 — Approve Phase 5 pricing, billing, and documents
+
+The user approved the expanded one-task Phase 5 implementation plan and settled
+the following business rules:
+
+- Shop-specific Design price applies to global and Shop Designs. Price entry
+  requires Shop `default_currency`; Work snapshots the selected price/currency
+  at creation and later price edits do not change existing Work.
+- ADMIN and STAFF with CASHIER function may manage Shop Design prices and
+  financial records. A Work may have multiple invoices, with one currency per
+  invoice. Drafts may be created at any Work stage; issuing or paying never
+  advances production. Each payment is linked to one specified invoice, and
+  overpayment is rejected.
+- AUTO lines use a Work price snapshot when present. Manual lines contain
+  description, quantity and unit price. Invoice-level discount is optional,
+  fixed or percentage-based. Fixed discount is allocated proportionally across
+  lines; minor-unit rounding uses `ROUND_HALF_UP` with the residual assigned to
+  the final line. Optional invoice-level tax is applied after discount and
+  rounded per line with `ROUND_HALF_UP`.
+- Issue-time invoice numbers are sequential per Shop (`INV-000001`) and never
+  reused after void. An unpaid issued invoice may be voided with a reason. A
+  paid invoice is corrected with a linked partial/full credit note (`CN-000001`,
+  sequential per Shop); record only refunds already transferred externally,
+  linked to an actual payment. The app never transfers money.
+- Currency freezes once a Shop Design price or financial history exists; a
+  change needs an explicit reviewed migration. Amounts beyond currency
+  minor-unit precision are rejected without implicit rounding.
+- An explicit document-language override is allowed; the default is User
+  preference, then authorized Shop locale, then English. Rendering locale does
+  not alter canonical money.
+
+Implementation and runtime status are maintained in `docs/PROJECT_STATE.md` and
+the Phase 5 task plan. This approval records policy only; it does not assert
+that migrations were applied to an application or shared database.
+
+## 2026-10-22 — Standardize generated PDFs on portrait A5
+
+All current PDF exports (Measurement worksheet, invoice, receipt, and credit
+note) use portrait A5 pages. A compact layout is acceptable, but content must
+wrap and continue onto additional A5 pages rather than clip or omit values.
+Measurement worksheets are regenerated on request. Financial PDFs are
+immutable: retain existing A4 renditions and generate the new A5 format as a
+new layout version; do not rewrite historical files or financial source data.
+
+## 2026-10-18 — Retire the active Garment Variant workflow
+
+The user resolved the Variant business decision: active Variant selection,
+management, and materialization are retired. Global and Shop bootstrap must
+not require active Variant rows. Any retained Variant records/foreign keys are
+temporary legacy support only for compatibility, immutable history, or safe
+migration; they must not drive new active product behavior. Existing Variant
+rules below are superseded where they authorize active Variant workflows.
+
+Repository audit on local `main` and the sibling
+`frontend/parallel-foundation` checkout found retirement incomplete: Variant
+CRUD routes/services and a Variant management UI remain in `main`; Design
+creation is family-level in the `main` backend but the `main` frontend still
+exposes Variant selectors; the sibling backend still requires Variant for new
+Designs and its Orders UI matches profiles by Variant; `WorkOrder.clean()` in
+`main` still requires exact Design/Profile Variant equality; and catalog seed
+migrations still materialize/use active Variants. No runtime database rows,
+applied migration state, or deployed environment was queried. See the current
+status and correction sequence in `docs/architecture/03-DEPENDENCY-IMPACT-MAP.md`.
+
+**Implementation verification correction (2026-10-19):** the current dirty
+`main` backend restricts Global/Shop Variant list/detail views to GET/HEAD/
+OPTIONS and lifecycle views to OPTIONS; focused API tests assert mutation
+requests return 405 while legacy reads remain available. Variant mutation
+service functions and handler bodies still exist in source, but references are
+confined to those method-restricted handlers and direct legacy service tests;
+they are not reachable through the current HTTP contract. The separate
+`main/frontend` Variant management UI remains stale/deprecated and is not the
+supported frontend pairing. Migration `catalog.0025` repairs missing
+Family-level baseline defaults without editing historical migrations; database
+replay is not yet verified. The preceding audit text is historical, not a
+statement that current local HTTP writes succeed.
+
+## 2026-10-16 — T4-04 Work/Order cardinality and operating rules
+
+User confirmed one garment per Work; two Shop-local calendar days for due
+soon; a new `CHECK` Work Function; reassignment at every stage; and ADMIN or
+SALES/MEASUREMENT STAFF creation. The local backend contract follows these
+choices. Assignment and metadata changes are ADMIN-managed; an assigned stage
+is advanced only by its eligible assignee. No billing, inventory consumption,
+frontend or publication is included in this backend task.
+
 ## 2026-10-02 — Approve T4-03A Shop-scoped inventory foundation
 
 The user approved `T4-03A — Inventory & Stock Foundation` as an additive Phase 4 task following the completed T4-03. The existing Material UUID remains canonical. Inventory category/unit are explicit, legacy Materials are not inferred or given opening stock, and all stock mutations require immutable ledger provenance plus atomic balance maintenance. Supported V1 categories are FABRIC/BUTTON/ZIP/THREAD/HOOK/INTERLINING/OTHER; units are METRE/YARD/PIECE/ROLL with no conversion. Work-linked allocation/reservation/consumption and financial costing remain deferred until their authorized domain tasks. See `docs/BUSINESS_RULES.md`, `docs/DATABASE.md`, and `docs/API.md` for exact contracts.

@@ -7,6 +7,7 @@ export function DialogKeyboardManager() {
   useEffect(() => {
     let activeDialog: HTMLElement | null = null
     let returnFocus: HTMLElement | null = null
+    let pendingCloseFrame = 0
 
     const focusables = (dialog: HTMLElement) => [...dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)]
       .filter(element => !element.closest('[hidden], [inert]')
@@ -16,14 +17,44 @@ export function DialogKeyboardManager() {
     const syncDialog = () => {
       const dialogs = [...document.querySelectorAll<HTMLElement>(DIALOG_SELECTOR)]
       const next = dialogs.at(-1) ?? null
+      if (next && pendingCloseFrame) {
+        cancelAnimationFrame(pendingCloseFrame)
+        pendingCloseFrame = 0
+      }
       if (next === activeDialog) return
-      if (activeDialog && returnFocus?.isConnected) returnFocus.focus()
+      // Catalog temporarily removes aria-modal from its drawer while a
+      // body-portaled choice dialog is active. Keep the drawer as the current
+      // modal through that brief gap so its original opener is not restored.
+      if (!next && activeDialog?.isConnected && activeDialog.getAttribute('aria-modal') === 'false') return
+      // A nested dialog can be portaled to document.body, so DOM containment
+      // cannot tell whether this is a dialog transition or the modal closing.
+      // Keep the current focus during transitions; the dialog itself restores
+      // focus to its trigger. Restore the original opener only when all modals
+      // have closed.
+      if (activeDialog && !next) {
+        // Focus can return from a body portal before React restores the
+        // underlying drawer's aria-modal attribute. Wait one frame so that
+        // transition is not mistaken for the final dialog closing.
+        if (!pendingCloseFrame) pendingCloseFrame = requestAnimationFrame(() => {
+          pendingCloseFrame = 0
+          const current = [...document.querySelectorAll<HTMLElement>(DIALOG_SELECTOR)].at(-1) ?? null
+          if (current) {
+            syncDialog()
+            return
+          }
+          if (returnFocus?.isConnected) returnFocus.focus({ preventScroll: true })
+          activeDialog = null
+          returnFocus = null
+        })
+        return
+      }
+      const openingFirstDialog = !activeDialog && Boolean(next)
       activeDialog = next
-      returnFocus = next && document.activeElement instanceof HTMLElement ? document.activeElement : null
-      if (next) {
+      if (openingFirstDialog) returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
+      if (next && openingFirstDialog) {
         const target = focusables(next)[0] ?? next
         if (target === next && !next.hasAttribute('tabindex')) next.tabIndex = -1
-        requestAnimationFrame(() => target.isConnected && target.focus())
+        requestAnimationFrame(() => target.isConnected && target.focus({ preventScroll: true }))
       }
     }
 
@@ -61,8 +92,12 @@ export function DialogKeyboardManager() {
 
     const onFocusIn = (event: FocusEvent) => {
       syncDialog()
+      // A browser may briefly move focus to body as a portaled dialog closes.
+      // Let the picker restore focus after its React update instead of
+      // redirecting that transient focus to the drawer header.
+      if (event.target === document.body || event.target === document.documentElement) return
       if (activeDialog && event.target instanceof Node && !activeDialog.contains(event.target)) {
-        ;(focusables(activeDialog)[0] ?? activeDialog).focus()
+        ;(focusables(activeDialog)[0] ?? activeDialog).focus({ preventScroll: true })
       }
     }
 
@@ -78,9 +113,10 @@ export function DialogKeyboardManager() {
     syncDialog()
     return () => {
       observer.disconnect()
+      if (pendingCloseFrame) cancelAnimationFrame(pendingCloseFrame)
       document.removeEventListener('keydown', onKeyDown, true)
       document.removeEventListener('focusin', onFocusIn, true)
-      if (returnFocus?.isConnected) returnFocus.focus()
+      if (returnFocus?.isConnected) returnFocus.focus({ preventScroll: true })
     }
   }, [])
   return null

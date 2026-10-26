@@ -20,7 +20,12 @@ class MeasurementTranslationSerializer(serializers.Serializer):
 
 class MeasurementMappingInputSerializer(serializers.Serializer):
     family_id = serializers.UUIDField()
-    variant_id = serializers.UUIDField(required=False, allow_null=True)
+
+
+class MeasurementDefinitionMappingCreateSerializer(
+    MeasurementMappingInputSerializer
+):
+    sort_order = serializers.IntegerField(min_value=0, max_value=32767, required=False)
 
 
 class MeasurementDefinitionCreateSerializer(serializers.Serializer):
@@ -39,7 +44,7 @@ class MeasurementDefinitionCreateSerializer(serializers.Serializer):
         return value
 
     def validate_mappings(self, value):
-        keys = [(item["family_id"], item.get("variant_id")) for item in value]
+        keys = [item["family_id"] for item in value]
         if len(keys) != len(set(keys)):
             raise serializers.ValidationError("Mappings must be unique.")
         return value
@@ -97,18 +102,16 @@ class MeasurementDefinitionReadSerializer(serializers.ModelSerializer):
         return [
             {
                 "family_id": str(item.family_id),
-                "variant_id": str(item.variant_id) if item.variant_id else None,
                 "sort_order": item.sort_order,
             }
             for item in obj.mappings.filter(deleted__isnull=True).order_by(
-                "family__code", "sort_order", "variant_id"
+                "family__code", "sort_order"
             )
         ]
 
 
 class MeasurementProfileCreateSerializer(serializers.Serializer):
     family_id = serializers.UUIDField()
-    variant_id = serializers.UUIDField(required=False, allow_null=True)
 
 
 class MeasurementProfileSerializer(serializers.ModelSerializer):

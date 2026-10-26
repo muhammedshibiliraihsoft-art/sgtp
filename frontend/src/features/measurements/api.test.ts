@@ -13,26 +13,44 @@ describe('Measurement API contract adapter', () => {
       .mockResolvedValueOnce({ count: 2, next: '/api/v1/shops/shop-1/measurement-definitions/?page=2', previous: null, results: [{ id: 'definition-1' }] })
       .mockResolvedValueOnce({ count: 2, next: null, previous: '/api/v1/shops/shop-1/measurement-definitions/?page=1', results: [{ id: 'definition-2' }] })
 
-    const result = await measurementApi.definitions('shop-1', 'family-1', 'variant-1', 'ar-KW')
+    const result = await measurementApi.definitions('shop-1', 'family-1', 'ar-KW')
 
     expect(result.map(item => item.id)).toEqual(['definition-1', 'definition-2'])
     expect(api.apiRequest.mock.calls.map(([path]) => path)).toEqual([
-      '/api/v1/shops/shop-1/measurement-definitions/?family_id=family-1&locale=ar-KW&variant_id=variant-1',
+      '/api/v1/shops/shop-1/measurement-definitions/?family_id=family-1&locale=ar-KW',
       '/api/v1/shops/shop-1/measurement-definitions/?page=2',
     ])
   })
 
-  it('creates a Shop measurement definition mapped to the selected garment', async () => {
-    api.apiRequest.mockResolvedValueOnce({ id: 'definition-custom', code: 'sleeve-length' })
+  it('lists reusable definitions and attaches an existing Shop definition to a family', async () => {
+    api.apiRequest
+      .mockResolvedValueOnce({ count: 1, next: null, previous: null, results: [{ id: 'definition-1' }] })
+      .mockResolvedValueOnce({ id: 'definition-1', mappings: [] })
+
+    await measurementApi.allDefinitions('shop-1')
+    await measurementApi.attachDefinitionMapping('shop-1', 'definition-1', 'family-1', 7)
+
+    expect(api.apiRequest.mock.calls.map(([path, options]) => [path, options])).toEqual([
+      ['/api/v1/shops/shop-1/measurement-definitions/?locale=en', undefined],
+      ['/api/v1/shops/shop-1/measurement-definitions/definition-1/mappings/', {
+        method: 'POST', body: { family_id: 'family-1', sort_order: 7 },
+      }],
+    ])
+  })
+
+  it('creates a Shop-owned definition already mapped to the selected family', async () => {
+    api.apiRequest.mockResolvedValueOnce({ id: 'definition-new' })
     const payload = {
-      code: 'sleeve-length', group_code: 'BODY', sort_order: 2,
-      translations: [{ locale: 'en' as const, name: 'Sleeve Length' }],
-      mappings: [{ family_id: 'family-1', variant_id: 'variant-1' }],
+      code: 'custom-length',
+      translations: [{ locale: 'en' as const, name: 'Custom Length' }],
+      mappings: [{ family_id: 'family-1' }],
     }
 
     await measurementApi.createDefinition('shop-1', payload)
 
-    expect(api.apiRequest).toHaveBeenCalledWith('/api/v1/shops/shop-1/measurement-definitions/', { method: 'POST', body: payload })
+    expect(api.apiRequest).toHaveBeenCalledWith('/api/v1/shops/shop-1/measurement-definitions/', {
+      method: 'POST', body: payload,
+    })
   })
 
   it('keeps body-value units explicit and saves through the owner-specific immutable-set path', async () => {
@@ -45,18 +63,6 @@ describe('Measurement API contract adapter', () => {
     expect(api.apiRequest).toHaveBeenCalledWith(
       '/api/v1/shops/shop-1/clients/client-1/related-persons/person-1/measurement-profiles/profile-1/sets/',
       { method: 'POST', body: { values: [{ definition_id: 'definition-1', value: '61.2500', unit: 'INCH' }] } },
-    )
-  })
-
-  it('links the selected published design version to the measurement snapshot when provided', async () => {
-    api.apiRequest.mockResolvedValueOnce({ id: 'set-2', version: 2, design_version: 'design-version-1' })
-    await measurementApi.saveSet('shop-1', 'client-1', { kind: 'client' }, 'profile-1', [
-      { definition_id: 'definition-1', value: '39', unit: 'INCH' },
-    ], 'design-version-1')
-
-    expect(api.apiRequest).toHaveBeenCalledWith(
-      '/api/v1/shops/shop-1/clients/client-1/measurement-profiles/profile-1/sets/',
-      { method: 'POST', body: { values: [{ definition_id: 'definition-1', value: '39', unit: 'INCH' }], design_version_id: 'design-version-1' } },
     )
   })
 
@@ -75,31 +81,6 @@ describe('Measurement API contract adapter', () => {
       '/api/v1/shops/shop-1/clients/client-1/measurement-profiles/profile-1/compare/?from_set_id=set-1&to_set_id=set-2',
       '/api/v1/shops/shop-1/inventory/items/?category=FABRIC',
     ])
-  })
-
-  it('loads measurement history one backend page at a time and opens exact saved set detail', async () => {
-    api.apiRequest
-      .mockResolvedValueOnce({ count: 21, next: '/api/v1/shops/shop-1/clients/client-1/measurement-profiles/profile-1/sets/?page=2', previous: null, results: [{ id: 'set-1' }] })
-      .mockResolvedValueOnce({ id: 'set-1', profile: 'profile-1', version: 1, values: [] })
-
-    const first = await measurementApi.setsPage('shop-1', 'client-1', { kind: 'client' }, 'profile-1')
-    const detail = await measurementApi.setDetail('shop-1', 'client-1', { kind: 'client' }, 'profile-1', 'set-1')
-
-    expect(first.next).toContain('page=2')
-    expect(detail.id).toBe('set-1')
-    expect(api.apiRequest.mock.calls.map(([path]) => path)).toEqual([
-      '/api/v1/shops/shop-1/clients/client-1/measurement-profiles/profile-1/sets/?page=1',
-      '/api/v1/shops/shop-1/clients/client-1/measurement-profiles/profile-1/sets/set-1/',
-    ])
-  })
-
-  it('deletes a version through its owner-scoped detail endpoint', async () => {
-    api.apiRequest.mockResolvedValueOnce(undefined)
-    await measurementApi.deleteSet('shop-1', 'client-1', { kind: 'client' }, 'profile-1', 'set-1')
-    expect(api.apiRequest).toHaveBeenCalledWith(
-      '/api/v1/shops/shop-1/clients/client-1/measurement-profiles/profile-1/sets/set-1/',
-      { method: 'DELETE' },
-    )
   })
 
   it('requests a secured worksheet for the chosen version and optional design', async () => {

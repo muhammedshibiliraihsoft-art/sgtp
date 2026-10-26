@@ -10,24 +10,24 @@ type CurrentShop = {
   workFunctions: string[]
   isLoading: boolean
 }
-type ShopState = Omit<CurrentShop, 'shopId'> & { userId: string | null }
 
 const CurrentShopContext = createContext<CurrentShop | null>(null)
 
 export function CurrentShopProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
-  const userId = user?.id ?? null
-  const isMainSupplier = Boolean(user?.is_main_supplier_admin)
-  const [state, setState] = useState<ShopState>({
-    userId: null,
-    shop: null,
-    role: null,
-    workFunctions: [],
-    isLoading: true,
-  })
+  const [shop, setShop] = useState<ShopSummary | null>(null)
+  const [role, setRole] = useState<'ADMIN' | 'STAFF' | 'VIEWER' | null>(null)
+  const [workFunctions, setWorkFunctions] = useState<string[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    if (!userId || isMainSupplier) return
+    if (!user || user.is_main_supplier_admin) {
+      setShop(null)
+      setRole(null)
+      setWorkFunctions([])
+      setIsLoading(false)
+      return
+    }
 
     let isMounted = true
     shopsService.list()
@@ -37,26 +37,23 @@ export function CurrentShopProvider({ children }: { children: ReactNode }) {
           const current = page.results[0]
           const context = await shopsService.context(current.id)
           if (!isMounted) return
-          setState({ userId, shop: current, role: context.role, workFunctions: context.work_functions ?? [], isLoading: false })
-        } else {
-          setState({ userId, shop: null, role: null, workFunctions: [], isLoading: false })
+          const canManageBilling = context.role === 'ADMIN'
+            || (context.role === 'STAFF' && context.work_functions?.includes('CASHIER'))
+          setShop({ ...current, default_currency: canManageBilling ? context.billing_currency ?? null : null })
+          setRole(context.role)
+          setWorkFunctions(context.work_functions ?? [])
         }
+        setIsLoading(false)
       })
       .catch(() => {
-        if (isMounted) setState({ userId, shop: null, role: null, workFunctions: [], isLoading: false })
+        if (isMounted) setIsLoading(false)
       })
 
     return () => { isMounted = false }
-  }, [userId, isMainSupplier])
-
-  const currentShop = !userId || isMainSupplier
-    ? { shop: null, shopId: undefined, role: null, workFunctions: [], isLoading: false }
-    : state.userId !== userId
-      ? { shop: null, shopId: undefined, role: null, workFunctions: [], isLoading: true }
-      : { ...state, shopId: state.shop?.id }
+  }, [user])
 
   return createElement(CurrentShopContext.Provider, {
-    value: currentShop,
+    value: { shop, shopId: shop?.id, role, workFunctions, isLoading },
   }, children)
 }
 

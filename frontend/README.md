@@ -8,7 +8,7 @@ This React/Vite application is not Phase 7 completion. The approved `BACKOFFICE-
 This Cloudflare deployment is a temporary client-preview environment intended solely for UX and visual design reviews (themes, navigation, layout).
 
 **B. SOURCE BRANCH**
-`main` is the canonical development/integration branch. The existing Cloudflare Pages preview's configured source branch is an external setting and was not verified here; do not treat this document as evidence that Pages has been remapped.
+The preview is deployed *exclusively* from `frontend/parallel-foundation`.
 
 **C. BUILD SETTINGS**
 - **Root Directory:** `frontend`
@@ -26,13 +26,11 @@ The Work page and unfinished business views remain behind mock adapters. The Mai
 Never place secrets, database credentials, or private API keys in `VITE_*` values. Browser frontend environment values are inherently public.
 
 **G. CANONICAL OWNERSHIP**
-`main` is the canonical frontend/backend integration branch. `frontend/parallel-foundation` is a legacy source worktree and must remain intact until its local changes are reconciled and verified.
+`main` remains the canonical backend/integration branch. The preview branch is strictly isolated.
 
 **H. DEPLOYMENT FLOW**
-Reconcile frontend work on `main` → typecheck/lint/tests/build → review → publish only with explicit authorization. Cloudflare preview behavior depends on its external branch mapping and is not confirmed by this repository documentation.
-
-**I. ENVIRONMENT ISOLATION**
-The same frontend build is used for every Pages environment. The Pages Function reads runtime-only `API_ORIGIN` and exact `FRONTEND_ORIGIN` bindings; configure them independently for staging and production. Staging currently targets `https://birky-staging-api.onrender.com`. Production has no configured API origin in this repository and must be supplied only after its API/domain is provisioned. Missing bindings fail closed; there is no cross-environment fallback. Never put API credentials, R2 credentials, or other secrets in `VITE_*` values.
+Frontend branch → Validation (typecheck/lint/test/build) → Reviewed commit → Push to origin → Cloudflare client preview deployment triggers automatically.
+(Do not merge to `main` for preview updates. A branch push publishes a preview deployment.)
 
 ## SGTP foundation scope
 
@@ -45,11 +43,11 @@ The same frontend build is used for every Pages environment. The Pages Function 
 
 ## Catalog and Designs integration status
 
-- Shop Catalog and Main Supplier Global Catalog read live catalog APIs. Shop users can browse/search paginated active garment families; the responsive Family drawer contains that family's variants and assigned style groups, with variant details/actions and the next Designs step in the same flow. Main Supplier manages global variants within a Family rather than a bulk Variants tab. Family images and lifecycle actions use the existing protected APIs.
+- Shop Catalog and Main Supplier Global Catalog read live catalog APIs. Shop users can browse/search paginated active garment families; opening a family shows only its variants and assigned style groups in the same wide responsive drawer. Main Supplier manages global variants from each active Family drawer rather than a separate bulk Variants tab. Variant details, permitted create/edit/archive/reactivate actions, and the next Designs step stay integrated in the existing flow.
 - Shop style options are grouped under their backend Option Groups (for example, Collar and Cuff); each group card expands to show its options and provides a group-specific add action.
 - Shop Designs and Global Design Templates use the backend design APIs for listing, archiving, draft selections, version publishing, and private reference-image uploads. Shop users can create a draft design from an existing family and Shop/global variant.
 - API responses and uploads follow the backend serializer contract. Catalog and design screens do not fall back to invented mock records when the service request fails.
-- The current UI does not offer Option Group or Global Template creation forms. Those controls need their own reviewed frontend slice even though the backend has the corresponding protected API contracts.
+- Option Group creation remains unavailable because there is no approved backend create API. Global template creation is not offered because no API lists global variants independently of an explicitly selected Shop.
 - Clients and Shop Users use their accepted live integrations. The Measurement workspace uses real Client, catalog/design, inventory-read, and immutable Measurement APIs. Work and other unfinished business views remain mock-backed until their individual integrations are accepted. Inventory management has no dedicated frontend screen in this branch yet.
 
 ## Measurement workflow integration
@@ -63,21 +61,17 @@ The same frontend build is used for every Pages environment. The Pages Function 
 
 - Main Supplier Global Catalog → Style Options supports private reference-image uploads for existing global Style Options. New global options can select optional images at creation; after the option is created, the files are uploaded through the existing private media API to R2.
 - Shop Catalog → Style Options allows an optional private reference-image upload while creating a Shop-owned Style Option.
-- Selecting a Shop-owned option opens a responsive preview/editor: its English name can be updated through the existing Shop-context PATCH API, and one private reference image can be added or replaced with upload progress. Global options remain read-only in the Shop editor. Each style option displays one current image; historical Design snapshots retain their original references. A failed post-create upload can be retried without creating the option again.
+- Selecting a Shop-owned option opens a responsive preview/editor: its English name can be updated through the existing Shop-context PATCH API, and additional private reference images can be uploaded with progress feedback. Global options remain read-only in the Shop editor; existing references are preserved. A failed post-create upload can be retried without creating the option again.
 - The Global Design Template editor also supports adding a reusable image to a selected Style Option. This is distinct from the existing Design Version `Reference images` upload, which remains attached only to that design version.
 - Measurements read `StyleOption.reference_images` from the backend; uploaded images therefore appear on the matching option card without listing R2 folders or exposing public object URLs. This display path introduces no additional permission behavior.
+- Shop Style Option thumbnails retry only transient read failures; terminal missing/invalid image responses are shown with a manual retry. The frontend cannot make an object durable if the connected staging backend stores it on an ephemeral filesystem; verify staging R2 configuration and the uploaded record/object separately.
 
 ## Local loading characteristics
 
 - Frontend routes are loaded on demand; the login illustration uses a responsive `<picture>` so only the matching viewport asset is requested. Catalog Style Options load their required option groups and options concurrently without fetching unrelated garment families.
 - Identical concurrent default GET requests share one in-flight request. There is no persistent response cache, and mutations and auth changes invalidate in-flight sharing.
 - Local Vite `/api` currently proxies to the Render staging backend. This preserves the existing Shop data and login workflow but makes local API latency dependent on the remote service/network; the local database is not an equivalent replacement without Shop data.
-- The local performance pass shares Shop context across route navigation, limits Main Supplier Catalog requests to the active tab, filters already-loaded Measurement designs on variant changes, and debounces Back Office Shop/Inventory searches. These reduce avoidable requests but do not guarantee zero remote latency; authenticated browser timing remains unverified.
-
-## Keyboard accessibility
-
-- `ACCESSIBILITY.md` documents the shared keyboard interaction expectations. Components use native control behavior where possible; custom listboxes, card grids, tabs, and modal focus handling have focused tests.
-- Responsive/authenticated manual checks are still required at desktop and phone sizes before production readiness.
+- The current local performance pass keeps Shop context shared across route navigation, limits Main Supplier Catalog requests to the active tab, filters already-loaded Measurement designs on variant changes, and debounces Back Office Shop/Inventory searches. Inventory search reuses the loaded materials list; Refresh and writes still refetch it. These are request-count improvements, not a claim of zero remote latency. Authenticated browser timing remains unverified until a user-owned login session is available.
 
 ## Local handoff — Catalog style grouping (2026-10-03)
 
@@ -100,5 +94,14 @@ The same frontend build is used for every Pages environment. The Pages Function 
 - Kept the existing app shell, design tokens, mobile drawer layout, and en/ar-KW/bn/ur locale resources. The API remains authoritative for authorization and archived Family restrictions.
 - Validation: `npm run typecheck`, `npm test` (59 tests), and `npm run build` PASS; `git diff --check` PASS (Git printed expected CRLF/LF working-copy notices). `npm run lint` exits 0 with six existing warnings in unchanged shared files (`App.tsx`, `useCurrentShop.ts`, `usePrivateImage.ts`, `ClientForm.tsx`, and `UsersPage.tsx`).
 - Responsive layout uses fluid card columns (250px minimum), one-column phone layout, a full-height phone sheet, semantic layout tokens, and logical inline positioning for RTL. Automated component/API tests cover list, search, count/pagination, browse-only detail, family-filtered Variants/Design navigation, Main Supplier create/edit/mapping/lifecycle/image controls. Authenticated visual checks at the requested desktop/tablet/phone sizes were not performed because the open localhost tab is at `/login`; credentials remain for the user to enter.
+- Local only. No commit, push, merge, or deployment was performed.
+
+## Local handoff — Family-scoped Variants UX (2026-10-05)
+
+- Shop and Main Supplier Catalog no longer expose a bulk Variants tab. Active Family details now embed only that Family's variants; Main Supplier global variants and Shop-visible global/Shop variants use the existing family-filtered endpoints. Managers can include archived variants for reactivation.
+- Variant details and create/edit forms stay within the Family drawer, without nested drawers/dialogs. The drawer is wider on desktop and full-screen on smaller screens. Arrow keys move between variant cards; Enter opens details and focuses “Continue to Designs”; the next Enter activates the existing Shop Designs or Global Designs route. Back restores focus to the chosen card.
+- Existing APIs already support Family filtering and lifecycle permissions; no backend endpoint, schema, migration, or deployment change was necessary. Variant lists are fetched only while a Family drawer is open; navigating cards does not trigger more list calls, and variant detail is requested only after selection.
+- Validation: `npm test -- --run` PASS (125 tests across 28 files); `npm run typecheck` PASS; `npm run build` PASS; `npm run lint` exits 0 with React `set-state-in-effect` warnings in existing application modules; `git diff --check` PASS; `python scripts/verify_project_state.py` PASS with dirty-worktree/test-discovery warnings. Authenticated visual browser verification was not performed because the localhost session is unauthenticated.
+- Local only. No commit, push, merge, or deployment was performed.
 
 Run `npm ci`, `npm run dev`, `npm run typecheck`, `npm run lint`, `npm test`, and `npm run build`. Ordinary Users have one backend-resolved owning Shop. Do not add a normal-user Shop selector. Read repository and frontend `AGENTS.md` before continuing.

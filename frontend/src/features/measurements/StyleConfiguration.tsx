@@ -1,11 +1,10 @@
 import { ChevronDown, ChevronRight, Check } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import type { FamilyOptionGroupConfig, OptionGroup, StyleOption } from '../catalog/types'
+import type { OptionGroup, StyleOption } from '../catalog/types'
 import { PrivateReferenceGallery } from './PrivateReferenceImage'
 
 interface Props {
   groups: OptionGroup[]
-  groupConfigs?: FamilyOptionGroupConfig[]
   selected: Record<string, StyleOption[]>
   activeGroupId: string | null
   optionsByGroup: Record<string, StyleOption[]>
@@ -18,7 +17,7 @@ interface Props {
 }
 
 export function StyleConfiguration({
-  groups, groupConfigs = [], selected, activeGroupId, optionsByGroup, loadingGroupId, groupErrorId,
+  groups, selected, activeGroupId, optionsByGroup, loadingGroupId, groupErrorId,
   onOpenGroup, onSelectOption, onRetryGroup, canWrite,
 }: Props) {
   const { t } = useTranslation()
@@ -30,12 +29,11 @@ export function StyleConfiguration({
     {groups.map(group => {
       const isOpen = activeGroupId === group.id
       const current = selected[group.id] ?? []
-      const config = groupConfigs.find(item => item.option_group.id === group.id)
       return <section className={`measurement-style-group${isOpen ? ' is-open' : ''}`} key={group.id}>
         <button type="button" className="measurement-style-group-toggle" aria-expanded={isOpen} onClick={() => onOpenGroup(group.id)}>
           <span className="measurement-style-group-copy">
             <strong>{group.name}</strong>
-            <small>{current.length ? `${current[0].name}${current.length > 1 ? ` +${current.length - 1}` : ''}` : t('measurements.noOptionSelected')}{config?.is_required ? ` · ${t('measurements.required', 'Required')}` : ''}{config?.selection_mode === 'MULTI' ? ` · ${t('measurements.multipleSelection', 'Multiple')}` : ''}</small>
+            <small>{current.length ? `${current[0].name}${current.length > 1 ? ` +${current.length - 1}` : ''}` : t('measurements.noOptionSelected')}</small>
           </span>
           {current.length > 0 && <Check size={18} aria-label="Selected" />}
           {isOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}

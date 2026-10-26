@@ -1,5 +1,81 @@
 # Business Rules
 
+## Approved T4-04 Work decisions (2026-10-16)
+
+- One garment creates one Work; several garments create separate Work records.
+- Work stages are fixed: Request, Cutting, Stitching, Check, Finishing, QC,
+  Completed. `CHECK` is a distinct Work Function.
+- Delivery indicators are derived from the Shop-local date: overdue after
+  the due date, due today on that date, due soon starting two days earlier.
+  None is a production stage.
+- The worker is assigned again for each stage; a stage transition clears the
+  previous assignment.
+- ADMIN may create Work; STAFF may create only with SALES or MEASUREMENT.
+  Work Function never substitutes for Shop membership and role authority.
+
+## Approved Phase 5 financial and document decisions (2026-10-21)
+
+- Shop Design prices are per-Shop, including prices attached to a global Design.
+  Entering a price requires a valid configured Shop `default_currency`; never
+  infer currency from locale, country, or browser.
+- A Work captures its selected Design's current Shop price and currency at
+  creation. Later Design price edits do not change an existing Work snapshot.
+- Shop ADMIN and STAFF with the CASHIER Work Function may view/edit Shop Design
+  prices and use invoice/payment actions. CASHIER does not grant Shop access by
+  itself.
+- A Work may have multiple invoices. Draft invoices may be created at any Work
+  stage; issue and advance/partial payment are allowed before Work completion.
+  Financial state never skips or advances a production stage.
+- AUTO invoice lines use the Work's Design-price snapshot when present. MANUAL
+  lines use description, quantity, and unit price; totals are decimal-derived.
+  Draft lines may be added, edited, or removed; issued invoices and lines are
+  immutable.
+- A payment belongs to one specific issued invoice. Currency values must fit
+  the currency's minor-unit precision; excess decimals are rejected, never
+  rounded. Related Person Work is billed to its Primary Client.
+- One Work may have multiple invoices, each with one immutable currency. Draft
+  invoices are allowed at any Work stage; issue and payment do not advance
+  production. An unpaid issued invoice may be voided with a reason. A paid
+  invoice is corrected with a linked partial/full credit note; record a refund
+  only after money has actually been transferred, link it to the actual payment,
+  and never let the app initiate the transfer.
+- Invoice numbers (`INV-000001`) and credit-note numbers (`CN-000001`) are
+  sequential per Shop and allocated on issue. A voided invoice number is never
+  reused. Overpayment is rejected. Currency changes are frozen after a Shop
+  Design price or financial history exists; changing it requires an explicit,
+  reviewed migration.
+- Invoice discount may be absent, fixed, or percentage-based. A fixed discount
+  is allocated proportionally across pre-discount line amounts; round to the
+  currency minor unit using `ROUND_HALF_UP` and assign the residual to the final
+  line while keeping each line non-negative. Discount cannot exceed subtotal.
+- Tax is optional. When provided, one invoice-level rate applies after discount
+  to each line; round each line's tax to the currency minor unit using
+  `ROUND_HALF_UP`. This is not a claim of jurisdiction-specific tax compliance.
+- An authorized document-language choice affects only that generated document.
+  Without an explicit choice, use User preference, then authorized Shop default,
+  then English. Invoice, receipt, and credit-note PDFs are derived from saved
+  financial snapshots; existing money is never recalculated from current prices.
+- These business decisions are approved. Implementation, migration, and release
+  evidence are tracked separately in `docs/PROJECT_STATE.md`; local source and
+  tests do not establish that an application database has been migrated or that
+  a deployed environment is current.
+
+### Approved manual financial purge exception (2026-10-25)
+
+- Main Supplier Super Admin may manually purge a selected Shop's issued invoice
+  bundle only after providing a nonblank reason and the exact invoice number.
+- The purge removes that invoice, its lines, linked payments, credit notes,
+  refunds, financial-document metadata, and the corresponding private files.
+  It does not run automatically.
+- Existing audit and idempotency records, including historical response
+  snapshots, remain; Shop invoice/credit-note sequence high-water values are
+  not reduced or reused. A purge tombstone and a new purge audit event preserve
+  the deletion request/result and reason.
+- This explicit Main Supplier operation is the only approved exception to the
+  normal immutable issued-financial-history rule above. It does not authorize
+  ordinary Shop members to delete issued records, nor does it resolve statutory
+  retention periods or anonymization requirements.
+
 ## 1. Purpose
 This file is the repository-level source of truth for approved business rules. Each business rule has a unique rule code, a clear name/title, its status, and its exact business meaning. Business rules must be strictly separated from technical implementation details. This document is not an implementation specification.
 
@@ -181,13 +257,41 @@ New business rules require:
 **Status:** CONFIRMED
 **Rule:** V1 Work priorities are Normal, Urgent, and Very Urgent. Upcoming, due soon, due today, and overdue are derived date indicators, not workflow states. Exact due-soon threshold and date-cutoff semantics remain **BUSINESS DECISION REQUIRED** before implementation.
 
+### BR-WORK-002 — New Work Requires an Active Family and Design
+**Status:** CONFIRMED — CREATE-ORDER-FINAL-CLOSURE-01
+**Rule:** New Work must reference a published DesignVersion whose parent Family and Design are both ACTIVE when the Work is created. An archived Family or Design is not eligible for new Work even when the Design retains a published version. Archiving a Family or Design does not delete or make existing Work references unreadable.
+
 ### BR-BILL-001 — Related Person Billing Owner
 **Status:** CONFIRMED
 **Rule:** The Primary Client owns billing for work belonging to a Related Person. Financial calculations use exact decimal-safe values; presentation locale cannot change stored monetary values.
 
+### BR-BILL-002 — Shop Design Price and Work Snapshot
+**Status:** CONFIRMED
+**Rule:** Design prices are specific to a Shop, including for a global Design. A valid Shop default currency is required to enter a price. At Work creation, snapshot the selected Design's current Shop price and currency when available; later price edits do not affect existing Work.
+
+### BR-BILL-003 — Invoice and Payment Ownership
+**Status:** CONFIRMED
+**Rule:** One Work may have multiple invoices; each invoice has one currency. Drafts may be created at any Work stage. A payment belongs to one specified issued invoice, cannot exceed its outstanding balance, and never advances production. Amounts with precision beyond the currency's standard minor unit are rejected without implicit rounding.
+
+### BR-BILL-004 — Invoice Lines, Discount, and Optional Tax
+**Status:** CONFIRMED
+**Rule:** AUTO invoice lines use the Work price snapshot when present. MANUAL lines contain description, quantity, and unit price. Invoice discount may be none, fixed, or percentage-based. A fixed discount is allocated proportionally by pre-discount line value, rounded per currency minor unit with `ROUND_HALF_UP`, with residual assigned to the final line; discount cannot exceed subtotal. Tax is optional; when provided, the invoice-level rate applies after discount and each line's tax rounds to the currency minor unit with `ROUND_HALF_UP`. This rule does not imply jurisdiction-specific compliance.
+
+### BR-BILL-005 — Sequential Invoice and Credit Note Numbers
+**Status:** CONFIRMED
+**Rule:** Each Shop issues sequential `INV-000001` invoice numbers and `CN-000001` credit-note numbers at issue time. Numbers are not reused after voiding.
+
+### BR-BILL-006 — Void, Credit Note, and Manual Refund
+**Status:** CONFIRMED
+**Rule:** A draft invoice may be deleted. An unpaid issued invoice may be voided with a reason. A paid invoice is corrected using a linked partial/full credit note. A refund record must represent money already returned outside the application, link to the actual payment and credit note, and cannot exceed the actual eligible payment. The application does not transfer money; ordinary financial history is corrected by additive records, not by editing issued records or payments. **Approved exception:** Main Supplier Super Admin may manually purge a selected Shop's complete invoice bundle (invoice, lines, linked payments, credit notes/refunds, document metadata and private files) with a reason and exact invoice-number confirmation. Existing audit/idempotency records and Shop sequence high-water values are retained; automatic deletion and Shop-member purge are not allowed. This exception does not establish a legal retention period.
+
+### BR-BILL-007 — Currency Lock After Financial History
+**Status:** CONFIRMED
+**Rule:** A Shop's currency cannot be changed after a Shop Design price or financial history exists unless an explicit, reviewed migration safely preserves historical monetary meaning.
+
 ### BR-DOC-001 — Document Language Override
 **Status:** CONFIRMED
-**Rule:** Invoice, receipt, or report language defaults to User preference, then authorized Shop default, then English. A user may select a per-document language override where authorized; this does not mutate canonical records or financial values.
+**Rule:** Invoice, receipt, credit-note, or report language defaults to User preference, then authorized Shop default, then English. A user may select a per-document language override where authorized; this does not mutate canonical records or financial values.
 
 ### BR-GOV-003 — V1 Completion Gates Post-V1
 **Status:** CONFIRMED
@@ -239,7 +343,7 @@ New business rules require:
 
 ### BR-SHOP-006 — Explicit Shop Currency
 **Status:** CONFIRMED
-**Rule:** Each Shop has an explicit currency setting. Do not infer it from server/Shop country, locale, or browser. Do not invent an initial currency. Display currency must not alter canonical financial values. Currency changes after financial records exist remain BUSINESS DECISION REQUIRED.
+**Rule:** Each Shop has an explicit currency setting. Do not infer it from server/Shop country, locale, or browser. Do not invent an initial currency. Display currency must not alter canonical financial values. After a Shop Design price or financial history exists, currency is frozen; any change requires an explicit, reviewed migration that preserves the meaning of existing prices and invoices.
 
 ### BR-SHOP-007 — Shop Settings Authority
 **Status:** CONFIRMED
@@ -344,31 +448,49 @@ Undo is valid only within the exact 5-second window. Current Shop capacity must 
 
 ## T4-03 implemented measurement and material contract
 
-## T4-02 GARMENT-VARIANTS-01 approved Variant rules
+## Variant retirement — current rule (2026-10-18)
+
+### BR-CAT-VAR-RETIRE-001 — Family-level active garment workflow
+**Status:** CONFIRMED — user-resolved business decision
+**Rule:** Active product workflows are Family-level and must not select,
+create, manage, or require a Garment Variant. Global and Shop bootstrap must
+complete without materializing an active Variant. Existing Variant rows and
+Design/Measurement foreign keys may remain only for compatibility, immutable
+history, or migration safety; they must not determine new active behavior.
+
+## T4-02 GARMENT-VARIANTS-01 historical rules (superseded for active workflows)
+
+The following rules record the earlier approved Variant workflow. They are
+retained for history only and do not authorize active Variant management,
+defaults, selection, or reactivation after the 2026-10-18 retirement decision.
 
 ### BR-CAT-VAR-001 — Reversible Variant lifecycle
-**Status:** CONFIRMED
+**Status:** SUPERSEDED — 2026-10-18 Variant retirement
 **Rule:** Variants have ACTIVE and ARCHIVED states. Archiving never hard-deletes or changes historical Design/Measurement references. Normal browse defaults to ACTIVE; management may discover archived records. New business records cannot select an archived Variant. Reactivation is permitted only when the parent Family is active.
 
 ### BR-CAT-VAR-002 — Global default selection
-**Status:** CONFIRMED
+**Status:** SUPERSEDED — 2026-10-18 Variant retirement
 **Rule:** A Family may have zero or one Global default Variant; exactly one is not required. Only an active Global Variant under an active Family may be explicitly selected as default. Selecting it clears any previous Family default atomically. Archiving the current default clears its default flag; reactivation never restores that flag automatically. Shop Variants are never Global defaults.
 
 ### BR-CAT-VAR-003 — Ownership and mutation
-**Status:** CONFIRMED
+**Status:** SUPERSEDED — 2026-10-18 Variant retirement
 **Rule:** Global Variants have no Shop owner; Shop Variants belong to exactly one Shop. Main Supplier manages Global Variants. In an explicit Shop context, existing Shop ADMIN/STAFF write policy may manage same-Shop Variants; VIEWER is read-only. Global Variants are read-only through Shop routes, and foreign-Shop records are non-disclosing. Variant code, Family, and owner are immutable after creation; translations remain editable.
 
 ### BR-CAT-VAR-004 — No Variant costing or stock semantics
-**Status:** CONFIRMED
-**Rule:** Variant records do not own inventory, pricing, costs, supplier, warehouse, BOM, or quantity semantics. Inventory remains a separate Material-owned domain.
+**Status:** RETAINED AS A LEGACY DATA BOUNDARY
+**Rule:** Any retained legacy Variant record has no inventory, pricing, cost, supplier, warehouse, BOM, or quantity semantics. Inventory remains a separate Material-owned domain; this does not authorize active Variant workflows.
 
-## T4-03 implemented measurement and material contract
+## T4-03 historical measurement and material contract
+
+This records the T4-03 implementation-era contract. Variant-specific statements
+below are superseded by `BR-CAT-VAR-RETIRE-001`; immutable measurement history
+and the non-Variant measurement rules remain in force.
 
 T4-03 implementation preserves these approved boundaries:
 
-- A measurement profile belongs to exactly one Shop-owned Client or Related Person. A Related Person remains linked to its existing Primary Client, which remains the future billing owner; this task adds no billing model or behavior.
-- Only the approved Men's Shirt and Kuwaiti Dishdasha system templates are seeded. Abaya and Darraa have no guessed complete mappings. Shop-created definitions are reusable only in their owning Shop and configured family/optional variant; they require an English canonical label, while English, ar-KW, Bangla, and Urdu labels may be stored. Stable codes identify definitions; labels are not identity.
-- Men’s Shirt has one active global Standard Shirt variant with the ordered style sections Sleeve, Collar, Cuff, Pocket, Placket, Embroidery, and Color. The deterministic default templates Classic Formal Shirt, Smart Casual Shirt, and Modern Evening Shirt are published Global Designs whose selections belong only to those mapped groups. They are reusable configuration defaults, not Work, stock, or material allocations.
+- A measurement profile belongs to exactly one Shop-owned Client or Related Person. A Related Person remains linked to its existing Primary Client, which is the R5-01 invoice owner; this measurement rule adds no billing behavior.
+- Only the approved Men's Shirt and Kuwaiti Dishdasha system templates were originally seeded. Abaya and Darraa had no guessed complete mappings. The former optional-Variant mapping rule is retired; current active measurement applicability is Family-level. Definition translation, stable-code, and Shop-ownership rules remain.
+- The earlier Men’s Shirt active Standard Shirt Variant and its default templates are retained as historical seed behavior only. They do not authorize active Variant selection/materialization under the current decision.
 - Measurement values and label snapshots remain immutable history. Corrections create a new version. An authorized delete action deactivates a whole version without hard-deleting its set, values, audit fields, or copy provenance; at least one active version per profile must remain. Deactivated versions cannot be read, copied, compared, or exported, and version numbering never reuses their numbers. Copies create independent values and retain source-set provenance. Values are partial, Decimal-based, and require an explicit `INCH` or `CM` unit in the persisted API payload. The Body Measurement entry UI defaults new fields to `INCH`; changing the main unit applies it to every field, and each field remains independently editable afterward. No unit conversion occurs. A comparison difference is returned only for matching units.
 - Shop operational measurement access requires an active selected-Shop membership and role; STAFF additionally require `MEASUREMENT`. The function alone never authorizes access. Main Supplier Back Office may manage measurement-definition configuration only in an explicitly selected Shop, but cannot read or operate Client/Related Person measurement profiles, values, versions/history, worksheets, or comparisons. VIEWER and unassigned STAFF cannot read measurements.
 - In its original T4-03 scope, Material is an active/archived Shop-owned reference record only; T4-03A later adds inventory additively without changing Measurement ownership/history.
@@ -407,11 +529,11 @@ T4-03 implementation preserves these approved boundaries:
 
 ### BR-CAT-SYS-001 — Shop-owned garment systems and design scope
 **Status:** CONFIRMED — GARMENT-SYSTEM-BACKEND-01
-**Rule:** Shops may create their own garment families and style-option groups without mutating global defaults. A Shop family can reuse global groups or its own groups; cross-Shop use is forbidden. Each family/group mapping explicitly defines whether one or multiple options may be selected and whether at least one is required. Existing mappings remain optional and multi-select by default. A Design is a reusable, versioned style specification; its Variant is optional, allowing family-level designs. Measurement history is independent and may optionally pin an exact published DesignVersion, only when its family and any variant-specific scope match the profile. Design publishing requires all configured required groups and respects single-selection limits.
+**Rule:** Shops may create their own garment families and style-option groups without mutating global defaults. A Shop family can reuse global groups or its own groups; cross-Shop use is forbidden. Each family/group mapping explicitly defines whether one or multiple options may be selected and whether at least one is required. Existing mappings remain optional and multi-select by default. A Design is a reusable, versioned style specification scoped to a Family. Measurement history is independent and may optionally pin an exact published DesignVersion when its Family matches the profile. Variant-specific applicability, selection, and matching are retired; retained Variant references are legacy-only under `BR-CAT-VAR-RETIRE-001`. Design publishing requires all configured required groups and respects single-selection limits.
 
 ### BR-CAT-TEMPLATE-001 — New-Shop default catalog snapshot
 **Status:** CONFIRMED — CATALOG-TENANT-DEFAULT-TEMPLATE-LIFECYCLE-CORRECTION-01
-**Rule:** On Shop creation, copy the then-current active Back Office default garment families, translations, family-to-option-group configuration, variants, and each active published default Design version into Shop-owned records in the same transaction as first-admin creation. These copies retain source provenance. Future Back Office default changes apply only to Shops created afterward; existing Shops are never silently bulk-updated. Existing Shops are not backfilled by this lifecycle change, but an ADMIN/STAFF may explicitly choose **Edit in this Shop** on one visible global family; that action materializes only that family and its associated default configuration as a Shop-owned working copy.
+**Rule:** On Shop creation, copy the then-current active Back Office default garment families, translations, family-to-option-group configuration, and eligible published default Design content into Shop-owned records in the same transaction as first-admin creation. These copies retain source provenance. Variant rows are never copied or required; resulting Shop Designs are Family-level. Bootstrap must succeed when no active Global Variant exists. Future Back Office default changes apply only to Shops created afterward; existing Shops are never silently bulk-updated. Existing Shops are not backfilled by this lifecycle change, but an ADMIN/STAFF may explicitly choose **Edit in this Shop** on one visible global family; that action materializes only that family and its associated non-Variant default configuration as a Shop-owned working copy.
 
 ### BR-CAT-TEMPLATE-002 — Shop-local lifecycle and restore semantics
 **Status:** CONFIRMED — CATALOG-TENANT-DEFAULT-TEMPLATE-LIFECYCLE-CORRECTION-01

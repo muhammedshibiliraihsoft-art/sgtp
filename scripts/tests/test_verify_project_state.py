@@ -334,6 +334,153 @@ MEASUREMENT-E2E-01 is in progress.
         result = self.validator(root).run()
         self.assertTrue(any("apps/catalog" in error for error in result.errors))
 
+    def test_phase4_t404_allows_works_only_with_matching_confirmation(self):
+        state = PHASE4_STATE.replace("T4-01", "T4-04").replace(
+            "Current task: T4-04 is in progress.",
+            "Current task: T4-04 is in progress; CONFIRM TASK T4-04.",
+        )
+        handoff = (
+            "## Current handoff — T4-04\n"
+            "CONFIRM TASK T4-04\n" + PHASE4_HANDOFF.replace("T4-01", "T4-04")
+        )
+        root = make_repo(state, handoff)
+        (root / "apps/catalog").mkdir(parents=True)
+        (root / "apps/works").mkdir(parents=True)
+        result = self.validator(root).run()
+        self.assertTrue(result.ok, result.errors)
+
+    def test_phase4_t404_without_both_confirmations_rejects_works(self):
+        state = PHASE4_STATE.replace("T4-01", "T4-04")
+        handoff = "## Current handoff — T4-04\n" + PHASE4_HANDOFF.replace(
+            "T4-01", "T4-04"
+        )
+        root = make_repo(state, handoff)
+        (root / "apps/works").mkdir(parents=True)
+        result = self.validator(root).run()
+        self.assertTrue(any("apps/works" in error for error in result.errors))
+
+    def test_phase4_t406_allows_existing_work_modules_with_matching_confirmation(self):
+        state = PHASE4_STATE.replace(
+            "Current task: T4-01 is in progress.",
+            "Current task: T4-06 is complete locally; CONFIRM TASK T4-06.",
+        )
+        handoff = (
+            "## Current handoff — T4-06\n"
+            "CONFIRM TASK T4-06\n"
+            + PHASE4_HANDOFF.replace("T4-01", "T4-06")
+        )
+        root = make_repo(state, handoff)
+        (root / "apps/catalog").mkdir(parents=True)
+        (root / "apps/works").mkdir(parents=True)
+        result = self.validator(root).run()
+        self.assertTrue(result.ok, result.errors)
+        self.assertEqual(result.facts["current_task"], "T4-06")
+
+    def test_phase4_t406_without_both_confirmations_rejects_work_modules(self):
+        state = PHASE4_STATE.replace(
+            "Current task: T4-01 is in progress.", "Current task: T4-06 is in progress."
+        )
+        handoff = (
+            "## Current handoff — T4-06\n"
+            + PHASE4_HANDOFF.replace("T4-01", "T4-06")
+        )
+        root = make_repo(state, handoff)
+        (root / "apps/works").mkdir(parents=True)
+        result = self.validator(root).run()
+        self.assertTrue(any("apps/works" in error for error in result.errors))
+
+    def test_r501_expansion_allows_pricing_billing_modules_with_both_approvals(self):
+        state = PHASE4_STATE.replace(
+            "Current task: T4-01 is in progress.",
+            "Current task: R5-01 is complete locally; CONFIRM TASK R5-01; "
+            "APPROVE R5-01 EXPANSION PLAN.",
+        )
+        handoff = (
+            "## Current handoff — R5-01\n"
+            "CONFIRM TASK R5-01; APPROVE R5-01 EXPANSION PLAN.\n"
+            + PHASE4_HANDOFF.replace("T4-01", "R5-01")
+        )
+        root = make_repo(state, handoff)
+        for path in ("apps/catalog", "apps/works", "apps/billing"):
+            (root / path).mkdir(parents=True)
+        result = self.validator(root).run()
+        self.assertTrue(result.ok, result.errors)
+        self.assertEqual(result.facts["current_task"], "R5-01")
+
+    def test_r501_without_expansion_approval_rejects_billing_module(self):
+        state = PHASE4_STATE.replace(
+            "Current task: T4-01 is in progress.",
+            "Current task: R5-01 is in progress; CONFIRM TASK R5-01.",
+        )
+        handoff = (
+            "## Current handoff — R5-01\n"
+            "CONFIRM TASK R5-01\n"
+            + PHASE4_HANDOFF.replace("T4-01", "R5-01")
+        )
+        root = make_repo(state, handoff)
+        (root / "apps/billing").mkdir(parents=True)
+        result = self.validator(root).run()
+        self.assertTrue(any("apps/billing" in error for error in result.errors))
+
+    def test_r501_missing_confirmation_in_project_state_rejects_modules(self):
+        state = PHASE4_STATE.replace(
+            "Current task: T4-01 is in progress.",
+            "Current task: R5-01 is complete locally; CONFIRM TASK R5-01.",
+        )
+        handoff = (
+            "## Current handoff — R5-01\n"
+            "CONFIRM TASK R5-01; APPROVE R5-01 EXPANSION PLAN.\n"
+            + PHASE4_HANDOFF.replace("T4-01", "R5-01")
+        )
+        root = make_repo(state, handoff)
+        (root / "apps/billing").mkdir(parents=True)
+        result = self.validator(root).run()
+        self.assertTrue(any("apps/billing" in error for error in result.errors))
+
+    def test_phase5_integrated_closure_allows_confirmed_phase5_modules(self):
+        task = "PHASE-5-INTEGRATED-CLOSURE-01"
+        state = PHASE4_STATE.replace(
+            "Current task: T4-01 is in progress.",
+            f"Phase 5 is active; activation: CONFIRM PHASE 5.\n"
+            f"Current task: {task}; CONFIRM TASK {task}.",
+        )
+        handoff = (
+            f"## Current handoff — {task}\n"
+            f"Current task: {task}; CONFIRM TASK {task}.\n"
+            "Phase 5 is active; activation: CONFIRM PHASE 5.\n"
+            + PHASE4_HANDOFF.replace("T4-01", task).replace(
+                "Phase 4 is active; activation: CONFIRM PHASE 4.",
+                "Phase 4 is active; activation: CONFIRM PHASE 4. "
+                "Phase 5 is active; activation: CONFIRM PHASE 5.",
+            )
+        )
+        root = make_repo(state, handoff)
+        for path in ("apps/catalog", "apps/works", "apps/billing"):
+            (root / path).mkdir(parents=True)
+        result = self.validator(root).run()
+        self.assertTrue(result.ok, result.errors)
+        self.assertEqual(result.facts["current_task"], task)
+
+    def test_phase5_integrated_closure_without_both_confirmations_rejects_modules(self):
+        task = "PHASE-5-INTEGRATED-CLOSURE-01"
+        state = PHASE4_STATE.replace(
+            "Current task: T4-01 is in progress.",
+            f"Phase 5 is active; activation: CONFIRM PHASE 5.\nCurrent task: {task}.",
+        )
+        handoff = (
+            f"## Current handoff — {task}\n"
+            "Phase 5 is active; activation: CONFIRM PHASE 5.\n"
+            + PHASE4_HANDOFF.replace("T4-01", task).replace(
+                "Phase 4 is active; activation: CONFIRM PHASE 4.",
+                "Phase 4 is active; activation: CONFIRM PHASE 4. "
+                "Phase 5 is active; activation: CONFIRM PHASE 5.",
+            )
+        )
+        root = make_repo(state, handoff)
+        (root / "apps/billing").mkdir(parents=True)
+        result = self.validator(root).run()
+        self.assertTrue(any("apps/billing" in error for error in result.errors))
+
     def test_contradictory_task_state_is_blocking(self):
         handoff = VALID_HANDOFF.replace("B2-05 is complete", "B2-06 is complete")
         result = self.validator(make_repo(VALID_STATE, handoff)).run()

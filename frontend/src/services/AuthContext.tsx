@@ -40,6 +40,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await authService.changePassword(current, next, confirm)
       setSession(null)
     },
+    confirmPasswordReset: async (uid, token, next, confirm) => {
+      await authService.confirmPasswordReset(uid, token, next, confirm)
+      setSession(null)
+    },
+    requestPasswordReset: (email) => authService.requestPasswordReset(email),
     signOut: async () => {
       try { await authService.logout() } finally { setSession(null) }
     },

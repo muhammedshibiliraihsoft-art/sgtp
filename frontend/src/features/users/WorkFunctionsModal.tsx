@@ -15,6 +15,7 @@ const FUNCTIONS: { code: WorkFunctionCode, label: string, icon: React.ReactNode 
   { code: 'MEASUREMENT', label: 'Measurement', icon: <Ruler size={16} /> },
   { code: 'CUTTING', label: 'Cutting', icon: <Scissors size={16} /> },
   { code: 'STITCHING', label: 'Stitching', icon: <Layers size={16} /> },
+  { code: 'CHECK', label: 'Check', icon: <ClipboardCheck size={16} /> },
   { code: 'FINISHING', label: 'Finishing', icon: <Sparkles size={16} /> },
   { code: 'QC', label: 'Quality control', icon: <ClipboardCheck size={16} /> },
   { code: 'CASHIER', label: 'Cashier', icon: <Calculator size={16} /> }

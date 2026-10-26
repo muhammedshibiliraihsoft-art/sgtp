@@ -77,6 +77,14 @@ def update_family_translations(*, family_id, translations, actor):
     return family
 
 
+def remove_unmapped_draft_selections(*, family, mapped_option_group_ids):
+    """Drop draft selections that no longer belong to this family's configuration."""
+    return DesignSelection.objects.filter(
+        version__status=DesignVersion.Status.DRAFT,
+        version__design__family=family,
+    ).exclude(option_group_id__in=mapped_option_group_ids).delete()
+
+
 def replace_global_family_option_groups(*, family, option_group_mappings, actor):
     """Replace one global family's ordered group mappings; caller owns transaction/lock."""
     mappings = list(option_group_mappings)
@@ -86,6 +94,9 @@ def replace_global_family_option_groups(*, family, option_group_mappings, actor)
     if len(groups_by_id) != len(ids):
         raise ValidationError({"option_groups": "Unknown global option group."})
 
+    remove_unmapped_draft_selections(
+        family=family, mapped_option_group_ids=ids
+    )
     FamilyOptionGroup.objects.filter(family=family).delete()
     FamilyOptionGroup.objects.bulk_create(
         [
@@ -613,7 +624,6 @@ def create_design(
     shop_id,
     actor,
     family,
-    variant=None,
     name,
     source=None,
     translations=None,
@@ -631,19 +641,6 @@ def create_design(
         ) from None
     if family.tenant_id not in (None, shop.pk):
         raise ValidationError({"family_id": "Family is not available to this Shop."})
-    if variant is not None:
-        variant = (
-            GarmentVariant.objects.select_for_update()
-            .filter(pk=variant.pk, family=family, is_active=True)
-            .filter(Q(tenant__isnull=True) | Q(tenant=shop))
-            .first()
-        )
-        if variant is None:
-            raise ValidationError(
-                {
-                    "variant_id": "Select an active variant available to this Shop and family."
-                }
-            )
     if idempotency_key:
         existing = (
             Design.objects.select_for_update()
@@ -667,7 +664,6 @@ def create_design(
             requested_options = {option.pk for option in selection_options}
             if (
                 existing.family_id != family.pk
-                or existing.variant_id != getattr(variant, "pk", None)
                 or existing_name != name.strip()
                 or existing_options != requested_options
             ):
@@ -680,7 +676,6 @@ def create_design(
     design = Design.objects.create(
         tenant=shop,
         family=family,
-        variant=variant,
         source_design=source,
         client_request_id=idempotency_key,
         created_by=actor,
@@ -742,37 +737,6 @@ def initialize_shop_default_catalog(*, shop, actor, family_ids=None):
         )
         family_map[source.pk] = family
 
-    variant_map = {}
-    for source in GarmentVariant.objects.filter(
-        tenant__isnull=True,
-        is_active=True,
-        family_id__in=family_map,
-    ).select_related("family").prefetch_related("translations"):
-        variant = GarmentVariant.objects.create(
-            tenant=shop,
-            family=family_map[source.family_id],
-            template_source=source,
-            code=source.code,
-            is_default=source.is_default,
-            is_active=source.is_active,
-            created_by=actor,
-            updated_by=actor,
-        )
-        GarmentVariantTranslation.objects.bulk_create(
-            [
-                GarmentVariantTranslation(
-                    variant=variant,
-                    locale=item.locale,
-                    name=item.name,
-                    description=item.description,
-                    created_by=actor,
-                    updated_by=actor,
-                )
-                for item in source.translations.all()
-            ]
-        )
-        variant_map[source.pk] = variant
-
     FamilyOptionGroup.objects.bulk_create(
         [
             FamilyOptionGroup(
@@ -811,14 +775,10 @@ def initialize_shop_default_catalog(*, shop, actor, family_ids=None):
         )
         if source_version is None:
             continue
-        target_variant = (
-            variant_map.get(source.variant_id) if source.variant_id else None
-        )
-        copy_design_version(
+        copied = copy_design_version(
             shop_id=shop.pk,
             actor=actor,
             family=family_map[source.family_id],
-            variant=target_variant,
             name=(
                 source_version.translations.filter(locale="en")
                 .values_list("name", flat=True)
@@ -829,6 +789,11 @@ def initialize_shop_default_catalog(*, shop, actor, family_ids=None):
             source_version=source_version,
             is_default_seeded=True,
         )
+        # Global defaults are already published catalog records. Preserve that
+        # usable state in the Shop snapshot, while leaving a fresh editable draft
+        # for Shop-specific changes.
+        copied_draft = copied.versions.get(status=DesignVersion.Status.DRAFT)
+        _publish_version_and_create_next_draft(version=copied_draft, actor=actor)
     return len(family_map)
 
 
@@ -936,64 +901,6 @@ def set_shop_default_family_status(*, shop_id, actor, family_id, is_active):
         ]
     )
 
-    source_variants = {
-        row.pk: row
-        for row in GarmentVariant.objects.filter(family=source, tenant__isnull=True)
-    }
-    local_variants = {
-        row.template_source_id: row
-        for row in GarmentVariant.objects.filter(
-            family=family, tenant=shop, template_source__isnull=False
-        ).prefetch_related("translations")
-    }
-    for source_id, source_variant in source_variants.items():
-        local = local_variants.pop(source_id, None)
-        if not source_variant.is_active:
-            if local:
-                local.is_active = False
-                local.updated_by = actor
-                local.save(update_fields=("is_active", "updated_by", "updated_at"))
-            continue
-        if local is None:
-            local = GarmentVariant.objects.create(
-                tenant=shop,
-                family=family,
-                template_source=source_variant,
-                code=source_variant.code,
-                is_default=source_variant.is_default,
-                is_active=True,
-                created_by=actor,
-                updated_by=actor,
-            )
-        else:
-            local.is_active = True
-            local.is_default = source_variant.is_default
-            local.updated_by = actor
-            local.save(update_fields=("is_active", "is_default", "updated_by", "updated_at"))
-        current = {row.locale: row for row in local.translations.all()}
-        for row in source_variant.translations.all():
-            translation = current.pop(row.locale, None)
-            if translation:
-                translation.name = row.name
-                translation.description = row.description
-                translation.updated_by = actor
-                translation.save(update_fields=("name", "description", "updated_by", "updated_at"))
-            else:
-                GarmentVariantTranslation.objects.create(
-                    variant=local,
-                    locale=row.locale,
-                    name=row.name,
-                    description=row.description,
-                    created_by=actor,
-                    updated_by=actor,
-                )
-        for obsolete in current.values():
-            obsolete.delete()
-    for obsolete in local_variants.values():
-        obsolete.is_active = False
-        obsolete.updated_by = actor
-        obsolete.save(update_fields=("is_active", "updated_by", "updated_at"))
-
     family.status = GarmentFamily.Status.ACTIVE
     family.updated_by = actor
     family.save(update_fields=("status", "updated_by", "updated_at"))
@@ -1005,7 +912,6 @@ def copy_design_version(
     shop_id,
     actor,
     family,
-    variant,
     name,
     source,
     source_version,
@@ -1014,25 +920,12 @@ def copy_design_version(
     target_design=None,
 ):
     shop, _membership = _shop_actor(shop_id=shop_id, actor=actor, write=True)
-    if variant is not None:
-        variant = (
-            GarmentVariant.objects.select_for_update()
-            .filter(pk=variant.pk, family=family, is_active=True)
-            .filter(Q(tenant__isnull=True) | Q(tenant=shop))
-            .first()
-        )
     family_matches = source.family_id == family.pk or (
         family.tenant_id == shop.pk and family.template_source_id == source.family_id
     )
-    variant_matches = source.variant_id == getattr(variant, "pk", None) or (
-        source.variant_id is not None
-        and variant is not None
-        and variant.tenant_id == shop.pk
-        and variant.template_source_id == source.variant_id
-    )
-    if not family_matches or not variant_matches:
+    if not family_matches:
         raise ValidationError(
-            {"variant_id": "Copying must retain the source design's garment scope."}
+            {"family_id": "Copying must retain the source design's garment family."}
         )
     if (
         source_version.design_id != source.pk
@@ -1045,7 +938,6 @@ def copy_design_version(
         design = Design.objects.create(
             tenant=shop,
             family=family,
-            variant=variant,
             source_design=source,
             is_default_seeded=is_default_seeded,
             created_by=actor,
@@ -1378,6 +1270,40 @@ def update_selection(*, shop_id, actor, version_id, selection_id, option):
     return selection
 
 
+@transaction.atomic
+def remove_unmapped_draft_selection(*, shop_id, actor, version_id, selection_id):
+    """Soft-delete one stale selection from a Shop-owned Draft version."""
+    shop, _membership = _shop_actor(shop_id=shop_id, actor=actor, write=True)
+    try:
+        version = (
+            DesignVersion.objects.select_for_update()
+            .select_related("design")
+            .get(
+                pk=version_id,
+                design__tenant=shop,
+                design__status=Design.Status.ACTIVE,
+            )
+        )
+        selection = DesignSelection.objects.select_for_update().get(
+            pk=selection_id, version=version
+        )
+    except (DesignVersion.DoesNotExist, DesignSelection.DoesNotExist, ValueError):
+        raise NotFound() from None
+    if version.status != DesignVersion.Status.DRAFT:
+        raise ValidationError({"version": "Published versions are immutable."})
+    if FamilyOptionGroup.objects.filter(
+        family=version.design.family, option_group_id=selection.option_group_id
+    ).exists():
+        raise ValidationError(
+            {"selection": "Only selections from unmapped garment parts can be removed here."}
+        )
+    # SafeDelete saves the row with keep_deleted=True, which re-runs model
+    # validation. Permit only this scoped cleanup to retain its stale mapping.
+    selection._allow_unmapped_cleanup = True
+    selection.delete()
+    return selection
+
+
 def _validate_design_version_configuration(version):
     mappings = list(
         FamilyOptionGroup.objects.filter(family=version.design.family)
@@ -1416,6 +1342,24 @@ def _validate_design_version_configuration(version):
             )
 
 
+def _publish_version_and_create_next_draft(*, version, actor):
+    """Publish a validated draft and preserve the existing edit-next workflow."""
+    _validate_design_version_configuration(version)
+    version.status = DesignVersion.Status.PUBLISHED
+    version.published_at = timezone.now()
+    version.published_by = actor
+    version.updated_by = actor
+    version.save()
+    draft = DesignVersion.objects.create(
+        design=version.design,
+        number=version.number + 1,
+        created_by=actor,
+        updated_by=actor,
+    )
+    _clone_version_content(version, draft, actor, clone_options=False)
+    return version, draft
+
+
 @transaction.atomic
 def publish_version(*, shop_id, actor, version_id):
     shop, membership = _shop_actor(shop_id=shop_id, actor=actor, write=True)
@@ -1435,24 +1379,11 @@ def publish_version(*, shop_id, actor, version_id):
         raise NotFound() from None
     if version.status != DesignVersion.Status.DRAFT:
         raise ValidationError({"version": "Only a Draft version can be published."})
-    _validate_design_version_configuration(version)
-    version.status = DesignVersion.Status.PUBLISHED
-    version.published_at = timezone.now()
-    version.published_by = actor
-    version.updated_by = actor
-    version.save()
-    draft = DesignVersion.objects.create(
-        design=version.design,
-        number=version.number + 1,
-        created_by=actor,
-        updated_by=actor,
-    )
-    _clone_version_content(version, draft, actor, clone_options=False)
-    return version, draft
+    return _publish_version_and_create_next_draft(version=version, actor=actor)
 
 
 @transaction.atomic
-def create_global_design(*, actor, family, variant=None, name, translations=None):
+def create_global_design(*, actor, family, name, translations=None):
     _main_supplier(actor)
     try:
         family = GarmentFamily.objects.select_for_update().get(
@@ -1462,25 +1393,9 @@ def create_global_design(*, actor, family, variant=None, name, translations=None
         raise ValidationError(
             {"family_id": "Select an active garment family."}
         ) from None
-    if variant is not None:
-        variant = (
-            GarmentVariant.objects.select_for_update()
-            .filter(
-                pk=variant.pk,
-                tenant__isnull=True,
-                family=family,
-                is_active=True,
-            )
-            .first()
-        )
-        if variant is None:
-            raise ValidationError(
-                {"variant": "Select a global variant for this family."}
-            )
     design = Design.objects.create(
         tenant=None,
         family=family,
-        variant=variant,
         created_by=actor,
         updated_by=actor,
     )
@@ -1568,8 +1483,6 @@ def restore_shop_default_design(*, shop_id, actor, design_id):
         source_version = None
     if source_version is None or design.source_design.status != Design.Status.ACTIVE:
         raise ValidationError({"design": "The current Back Office default is unavailable."})
-    if design.variant_id and not design.variant.is_active:
-        raise ValidationError({"variant": "Restore the garment variant first."})
     design.status = Design.Status.ACTIVE
     design.updated_by = actor
     design.save(update_fields=("status", "updated_by", "updated_at"))
@@ -1582,7 +1495,6 @@ def restore_shop_default_design(*, shop_id, actor, design_id):
         shop_id=shop.pk,
         actor=actor,
         family=design.family,
-        variant=design.variant,
         name=source_version.translations.filter(locale="en").values_list("name", flat=True).first() or design.family.code,
         source=design.source_design,
         source_version=source_version,

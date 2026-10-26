@@ -19,7 +19,7 @@ from apps.catalog.measurement_models import (
     MeasurementValueTranslationSnapshot,
 )
 from apps.catalog.inventory_models import InventoryBalance
-from apps.catalog.models import DesignVersion, GarmentFamily, GarmentVariant
+from apps.catalog.models import DesignVersion, GarmentFamily
 from apps.clients.models import Client
 from apps.tenants.models import MembershipWorkFunction, Tenant, TenantMember
 from apps.tenants.policy import ShopRolePolicy
@@ -77,7 +77,7 @@ def require_material_access(shop_id, actor, *, write=False, lock=False):
     return shop, membership
 
 
-def _valid_profile_relations(*, shop, person_model, person_id, family_id, variant_id):
+def _valid_profile_relations(*, shop, person_model, person_id, family_id):
     person_qs = person_model.objects.select_for_update()
     person = person_qs.filter(pk=person_id, tenant=shop).first()
     if person is None:
@@ -90,40 +90,25 @@ def _valid_profile_relations(*, shop, person_model, person_id, family_id, varian
         .filter(Q(tenant__isnull=True) | Q(tenant=shop)),
         pk=family_id,
     )
-    variant = None
-    if variant_id:
-        variant = (
-            GarmentVariant.objects.select_for_update()
-            .filter(pk=variant_id, family=family, is_active=True)
-            .filter(Q(tenant__isnull=True) | Q(tenant=shop))
-            .first()
-        )
-        if variant is None:
-            raise ValidationError(
-                {"variant_id": "Variant is unavailable for this Shop and family."}
-            )
-    return person, family, variant
+    return person, family
 
 
 @transaction.atomic
-def create_measurement_profile(
-    *, shop_id, actor, person_model, person_id, family_id, variant_id=None
-):
+def create_measurement_profile(*, shop_id, actor, person_model, person_id, family_id):
     shop, _membership = require_measurement_access(
         shop_id, actor, write=True, lock=True
     )
-    person, family, variant = _valid_profile_relations(
+    person, family = _valid_profile_relations(
         shop=shop,
         person_model=person_model,
         person_id=person_id,
         family_id=family_id,
-        variant_id=variant_id,
     )
     owner_field = "client" if person_model is Client else "related_person"
     profile_identity = {
         "tenant": shop,
         "family": family,
-        "variant": variant,
+        "variant__isnull": True,
         f"{owner_field}_id": person.pk,
         "deleted__isnull": True,
     }
@@ -136,7 +121,6 @@ def create_measurement_profile(
             profile = MeasurementProfile.objects.create(
                 tenant=shop,
                 family=family,
-                variant=variant,
                 **{owner_field: person},
                 created_by=actor,
                 updated_by=actor,
@@ -164,7 +148,7 @@ def _allowed_definitions(*, shop, profile, definition_ids):
     definitions = list(
         MeasurementDefinition.objects.filter(pk__in=definition_ids, is_active=True)
         .filter(Q(tenant__isnull=True) | Q(tenant=shop))
-        .prefetch_related("translations", "mappings__variant")
+        .prefetch_related("translations", "mappings")
     )
     if len(definitions) != len(definition_ids):
         raise NotFound()
@@ -172,19 +156,12 @@ def _allowed_definitions(*, shop, profile, definition_ids):
     family_ids = {profile.family_id}
     if profile.family.template_source_id:
         family_ids.add(profile.family.template_source_id)
-    variant_ids = {profile.variant_id} if profile.variant_id else set()
-    if profile.variant and profile.variant.template_source_id:
-        variant_ids.add(profile.variant.template_source_id)
     for definition_id in definition_ids:
         definition = by_id[definition_id]
         mappings = definition.mappings.filter(
             family_id__in=family_ids, deleted__isnull=True
         )
-        applicable = mappings.filter(variant__isnull=True).exists()
-        if variant_ids:
-            applicable = (
-                applicable or mappings.filter(variant_id__in=variant_ids).exists()
-            )
+        applicable = mappings.exists()
         if not applicable:
             raise ValidationError(
                 {"values": "Definition is not available for this garment."}
@@ -269,10 +246,6 @@ def create_measurement_set(
                 {
                     "design_version_id": "Design and measurement profile families must match."
                 }
-            )
-        if design.variant_id and design.variant_id != profile.variant_id:
-            raise ValidationError(
-                {"design_version_id": "Select a design matching this profile variant."}
             )
     measurement_set = MeasurementSet.objects.create(
         profile=profile,
@@ -425,26 +398,13 @@ def create_measurement_definition(
         )
         if family is None:
             raise ValidationError({"mappings": "Unknown garment family."})
-        variant = None
-        if item.get("variant_id"):
-            variant = (
-                GarmentVariant.objects.select_for_update()
-                .filter(pk=item["variant_id"], family=family, is_active=True)
-                .filter(Q(tenant__isnull=True) | Q(tenant=shop))
-                .first()
-            )
-            if variant is None:
-                raise ValidationError(
-                    {"mappings": "Variant is unavailable for this Shop and family."}
-                )
-        key = (family.pk, variant.pk if variant else None)
+        key = family.pk
         if key in seen_mappings:
             raise ValidationError({"mappings": "Mappings must be unique."})
         seen_mappings.add(key)
         MeasurementDefinitionMapping.objects.create(
             definition=definition,
             family=family,
-            variant=variant,
             sort_order=definition.sort_order,
             created_by=actor,
             updated_by=actor,
@@ -468,6 +428,59 @@ def archive_measurement_definition(*, shop_id, actor, definition_id):
     definition.updated_by = actor
     definition.save(update_fields=("is_active", "updated_by", "updated_at"))
     return definition
+
+
+@transaction.atomic
+def attach_measurement_definition_mapping(
+    *, shop_id, actor, definition_id, family_id, sort_order=None
+):
+    shop, _membership = require_measurement_access(
+        shop_id, actor, write=True, lock=True
+    )
+    definition = (
+        MeasurementDefinition.objects.select_for_update()
+        .filter(
+            pk=definition_id,
+            tenant=shop,
+            is_active=True,
+            deleted__isnull=True,
+        )
+        .first()
+    )
+    if definition is None:
+        raise NotFound()
+
+    family = (
+        GarmentFamily.objects.select_for_update()
+        .filter(pk=family_id, tenant=shop, status=GarmentFamily.Status.ACTIVE)
+        .first()
+    )
+    if family is None:
+        raise NotFound()
+
+    mapping = (
+        MeasurementDefinitionMapping.objects.select_for_update()
+        .filter(
+            definition=definition,
+            family=family,
+            deleted__isnull=True,
+        )
+        .first()
+    )
+    if mapping is None:
+        mapping = MeasurementDefinitionMapping(
+            definition=definition,
+            family=family,
+            sort_order=sort_order if sort_order is not None else definition.sort_order,
+            created_by=actor,
+            updated_by=actor,
+        )
+        mapping.save()
+    elif sort_order is not None and mapping.sort_order != sort_order:
+        mapping.sort_order = sort_order
+        mapping.updated_by = actor
+        mapping.save(update_fields=("sort_order", "updated_by", "updated_at"))
+    return mapping
 
 
 @transaction.atomic

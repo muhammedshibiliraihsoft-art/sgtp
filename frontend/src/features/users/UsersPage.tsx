@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 import { Plus, Search, ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react'
 import { usersApi } from './api'
 import { useCurrentShop } from '../../hooks/useCurrentShop'
-import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import type { MembershipDTO, ShopStats } from './types'
 import { UserForm } from './UserForm'
 import { WorkFunctionsModal } from './WorkFunctionsModal'
@@ -17,81 +16,85 @@ export function UsersPage() {
   const { shopId, role, isLoading: isShopLoading } = useCurrentShop()
   
   const [memberships, setMemberships] = useState<MembershipDTO[]>([])
-  const [stats, setStats] = useState<{ shopId: string; revision: number; data: ShopStats } | null>(null)
-  const [statsError, setStatsError] = useState<{ shopId: string; revision: number; message: string } | null>(null)
-  const [statsReload, setStatsReload] = useState(0)
+  const [stats, setStats] = useState<ShopStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [count, setCount] = useState(0)
   
   const [searchQuery, setSearchQuery] = useState('')
-  const debouncedSearchQuery = useDebouncedValue(searchQuery)
-  const requestId = useRef(0)
-  const statsRequestId = useRef(0)
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [statsReload, setStatsReload] = useState(0)
   const [roleFilter, setRoleFilter] = useState<'ALL' | 'ADMIN' | 'STAFF' | 'VIEWER'>('ALL')
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL')
   
   const [page, setPage] = useState(1)
   const pageSize = 20
+  const membershipRequestId = useRef(0)
+  const statsRequestId = useRef(0)
+  const searchDebounceTimer = useRef<number | null>(null)
 
   const [isFormOpen, setIsFormOpen] = useState(false)
-  const [credentialsReveal, setCredentialsReveal] = useState<{ login_id: string, initial_password: string, secondary_error?: string } | null>(null)
-  const [createNotice, setCreateNotice] = useState('')
-  const [resetMember, setResetMember] = useState<MembershipDTO | null>(null)
-  const [resetBusy, setResetBusy] = useState(false)
-  const [resetError, setResetError] = useState('')
-  const [resetResult, setResetResult] = useState<{ login_id: string | null; temporary_password: string } | null>(null)
+  const [credentialsReveal, setCredentialsReveal] = useState<{ user_code: string, initial_password: string } | null>(null)
   
   const [manageWorkFunctions, setManageWorkFunctions] = useState<MembershipDTO | null>(null)
   const [activeMemberMenu, setActiveMemberMenu] = useState<MembershipDTO | null>(null)
   const [actionMember, setActionMember] = useState<{ member: MembershipDTO, action: 'DEACTIVATE' | 'REACTIVATE' | 'REMOVE' | 'PROMOTE_STAFF' | 'DEMOTE_VIEWER' } | null>(null)
   const canManage = role === 'ADMIN'
-  const visibleStats = canManage && stats && stats.shopId === shopId && stats.revision === statsReload ? stats.data : null
-  const visibleStatsError = canManage && statsError && statsError.shopId === shopId && statsError.revision === statsReload ? statsError.message : ''
+
+  useEffect(() => () => {
+    if (searchDebounceTimer.current !== null) window.clearTimeout(searchDebounceTimer.current)
+  }, [])
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value)
+    setPage(1)
+    if (searchDebounceTimer.current !== null) window.clearTimeout(searchDebounceTimer.current)
+    searchDebounceTimer.current = window.setTimeout(() => {
+      searchDebounceTimer.current = null
+      setDebouncedSearch(value.trim())
+    }, 250)
+  }
+
   const loadData = useCallback(async () => {
-    if (searchQuery !== debouncedSearchQuery) return
     if (!shopId || isShopLoading) { setIsLoading(isShopLoading); return }
-    if (!canManage) { setMemberships([]); setCount(0); setIsLoading(false); return }
-    const currentRequestId = ++requestId.current
+    if (!canManage) { setMemberships([]); setCount(0); setStats(null); setIsLoading(false); return }
+    const requestId = ++membershipRequestId.current
+    if (searchQuery.trim() !== debouncedSearch) return
     setIsLoading(true)
     setError('')
     try {
-      const pageData = await usersApi.memberships(shopId, { search: debouncedSearchQuery, role: roleFilter, active: statusFilter, page })
-      if (currentRequestId !== requestId.current) return
+      const pageData = await usersApi.memberships(shopId, { search: debouncedSearch, role: roleFilter, active: statusFilter, page })
+      if (membershipRequestId.current !== requestId) return
       setMemberships(pageData.results); setCount(pageData.count)
     } catch (cause) {
-      if (currentRequestId !== requestId.current) return
-      setError(cause instanceof Error ? cause.message : 'Unable to load team members.')
+      if (membershipRequestId.current === requestId) setError(cause instanceof Error ? cause.message : 'Unable to load team members.')
     } finally {
-      if (currentRequestId === requestId.current) setIsLoading(false)
+      if (membershipRequestId.current === requestId) setIsLoading(false)
     }
-  }, [shopId, isShopLoading, searchQuery, debouncedSearchQuery, roleFilter, statusFilter, page, canManage])
+  }, [shopId, isShopLoading, searchQuery, debouncedSearch, roleFilter, statusFilter, page, canManage])
 
   useEffect(() => {
     void loadData()
-    return () => { requestId.current += 1 }
   }, [loadData])
 
   useEffect(() => {
-    const currentRequestId = ++statsRequestId.current
-    if (!shopId || isShopLoading || !canManage) return () => { statsRequestId.current += 1 }
-    void usersApi.stats(shopId).then(result => {
-      if (currentRequestId === statsRequestId.current) {
-        setStats({ shopId, revision: statsReload, data: result })
-        setStatsError(null)
-      }
+    const requestId = ++statsRequestId.current
+    if (!shopId || isShopLoading || !canManage) {
+      setStats(null)
+      return
+    }
+    usersApi.stats(shopId).then(value => {
+      if (statsRequestId.current === requestId) setStats(value)
     }).catch(cause => {
-      if (currentRequestId === statsRequestId.current) {
-        setStatsError({ shopId, revision: statsReload, message: cause instanceof Error ? cause.message : 'Unable to load Shop capacity.' })
-      }
+      if (statsRequestId.current === requestId) setError(cause instanceof Error ? cause.message : 'Unable to load team capacity.')
     })
-    return () => { statsRequestId.current += 1 }
+    return () => { if (statsRequestId.current === requestId) statsRequestId.current += 1 }
   }, [shopId, isShopLoading, canManage, statsReload])
 
   const paginatedMemberships = memberships
   const totalPages = Math.ceil(count / pageSize)
 
-  const handleActionConfirm = async (loginId?: string) => {
+  const handleActionConfirm = async () => {
     if (!actionMember) return
     const { member, action } = actionMember
     
@@ -103,17 +106,12 @@ export function UsersPage() {
       } else if (action === 'REMOVE') {
         await usersApi.remove(member.id)
       } else if (action === 'PROMOTE_STAFF') {
-        const result = await usersApi.setRole(member.id, 'STAFF', loginId)
-        if (result.temporary_password && result.login_id) {
-          setCredentialsReveal({ login_id: result.login_id, initial_password: result.temporary_password })
-        }
+        await usersApi.setRole(member.id, 'STAFF')
       } else if (action === 'DEMOTE_VIEWER') {
         await usersApi.setRole(member.id, 'VIEWER')
       }
-      if (action === 'DEACTIVATE' || action === 'REACTIVATE' || action === 'REMOVE') {
-        setStatsReload(value => value + 1)
-      }
       await loadData()
+      setStatsReload(value => value + 1)
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Unable to update membership.')
     } finally {
@@ -121,38 +119,26 @@ export function UsersPage() {
     }
   }
 
-  const confirmResetPin = async () => {
-    if (!resetMember?.user_id || resetBusy) return
-    setResetBusy(true); setResetError('')
-    try {
-      setResetResult(await usersApi.resetPin(resetMember.user_id))
-      setResetMember(null)
-    } catch (cause) {
-      setResetError(cause instanceof Error ? cause.message : 'Unable to reset PIN.')
-    } finally { setResetBusy(false) }
-  }
-
   return (
     <div className="users-page">
       <div className="users-header">
         <div className="users-title-area">
           <h1>{t('users.title', 'Team')}</h1>
-          {visibleStats && (
+          {stats && (
             <p className="users-capacity">
-              Users: {visibleStats.user_count} / {visibleStats.max_users}
+              Users: {stats.user_count} / {stats.max_users}
             </p>
           )}
         </div>
         {canManage && <button
           className="btn-primary" 
-          disabled={visibleStats?.is_at_user_limit || isLoading}
+          disabled={stats?.is_at_user_limit || isLoading}
           onClick={() => setIsFormOpen(true)}
           style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
         >
           <Plus size={16} /> {t('users.addUser', 'Add user')}
         </button>}
       </div>
-      {visibleStatsError && <div className="users-capacity-error" role="alert"><span>{visibleStatsError}</span><button type="button" onClick={() => setStatsReload(value => value + 1)}>Retry</button></div>}
 
       <div className="users-controls">
         <div className="users-search">
@@ -160,7 +146,7 @@ export function UsersPage() {
           <input 
             placeholder={t('users.searchPlaceholder', 'Search by name or User ID')}
             value={searchQuery}
-            onChange={e => { requestId.current += 1; setSearchQuery(e.target.value); setPage(1); }}
+            onChange={e => handleSearchChange(e.target.value)}
           />
         </div>
         <div className="users-filters">
@@ -215,7 +201,7 @@ export function UsersPage() {
                 {paginatedMemberships.map(m => (
                   <tr key={m.id} className={!m.is_active ? 'inactive-row' : ''}>
                     <td className="col-user"><strong>{m.display_name}</strong></td>
-                    <td className="col-userid"><span className="code-badge">{m.login_id || '—'}</span></td>
+                    <td className="col-userid"><span className="code-badge">{m.user_code}</span></td>
                     <td className="col-email">{m.user_email || '—'}</td>
                     <td className="col-role">
                       <span className={`role-badge role-${m.role.toLowerCase()}`}>{m.role}</span>
@@ -253,7 +239,7 @@ export function UsersPage() {
                   <span className={`role-badge role-${m.role.toLowerCase()}`}>{m.role}</span>
                 </div>
                 <div className="uc-body">
-                  <div><span className="code-badge">{m.login_id || '—'}</span></div>
+                  <div><span className="code-badge">{m.user_code}</span></div>
                   {m.user_email && <div className="text-muted">{m.user_email}</div>}
                   <div className={`status-text ${m.is_active ? 'active' : 'inactive'}`}>
                     {m.is_active ? 'Active' : 'Inactive'}
@@ -290,22 +276,14 @@ export function UsersPage() {
         <UserForm
           shopId={shopId}
           onClose={() => setIsFormOpen(false)} 
-          onSecondaryError={message => setCredentialsReveal(current => current ? { ...current, secondary_error: message } : current)}
           onSuccess={(creds) => {
             setIsFormOpen(false)
-            setCreateNotice('')
-            if (creds.login_id && creds.initial_password) {
-              setCreateNotice('')
-              setCredentialsReveal({ login_id: creds.login_id, initial_password: creds.initial_password })
-            } else {
-              setCreateNotice('Viewer record created. It has no sign-in credentials.')
-            }
-            setStatsReload(value => value + 1)
+            setCredentialsReveal({ user_code: creds.user_code!, initial_password: creds.initial_password! })
             void loadData()
+            setStatsReload(value => value + 1)
           }} 
         />
       )}
-      {createNotice && <p role="status" className="form-hint">{createNotice}</p>}
 
       {credentialsReveal && (
         <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="credentials-title" tabIndex={-1}>
@@ -313,19 +291,18 @@ export function UsersPage() {
             <h2 id="credentials-title">User Created Successfully</h2>
             <p className="warning-text">
               Please copy these generated credentials securely. 
-              <strong> You will not be able to see this PIN again.</strong>
+              <strong> You will not be able to see this password again.</strong>
             </p>
             <div className="credentials-box">
               <div className="cred-row">
                 <label>User ID</label>
-                <code>{credentialsReveal.login_id}</code>
+                <code>{credentialsReveal.user_code}</code>
               </div>
               <div className="cred-row">
-                <label>Temporary PIN</label>
+                <label>Initial Password</label>
                 <code className="password">{credentialsReveal.initial_password}</code>
               </div>
             </div>
-            {credentialsReveal.secondary_error && <div className="form-error" role="alert">{credentialsReveal.secondary_error}</div>}
             <div className="modal-actions">
               <button data-dialog-close className="btn-primary" onClick={() => setCredentialsReveal(null)}>I have saved them</button>
             </div>
@@ -341,8 +318,6 @@ export function UsersPage() {
             setActiveMemberMenu(null)
             if (action === 'WORK_FUNCTIONS') {
               setManageWorkFunctions(activeMemberMenu)
-            } else if (action === 'RESET_PIN') {
-              setResetMember(activeMemberMenu)
             } else {
               setActionMember({ member: activeMemberMenu, action })
             }
@@ -357,21 +332,6 @@ export function UsersPage() {
           onClose={() => setManageWorkFunctions(null)} 
         />
       )}
-
-      {resetMember && <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="reset-pin-title"><div className="modal-content">
-        <h2 id="reset-pin-title">Reset PIN for {resetMember.display_name}?</h2><p>This revokes existing sessions and issues a one-time temporary PIN.</p>
-        {resetError && <div className="form-error" role="alert">{resetError}</div>}
-        <div className="modal-actions"><button type="button" className="btn-secondary" disabled={resetBusy} onClick={() => setResetMember(null)}>Cancel</button>
-          <button type="button" className="btn-primary" disabled={resetBusy} onClick={() => void confirmResetPin()}>{resetBusy ? 'Resetting...' : 'Reset PIN'}</button></div>
-      </div></div>}
-      {resetResult && <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="reset-pin-result-title"><div className="modal-content credentials-modal">
-        <h2 id="reset-pin-result-title">Temporary PIN</h2><p>User must set a new PIN on next login. Save this PIN now; it cannot be retrieved later.</p>
-        {resetError && <div className="form-error" role="alert">{resetError}</div>}
-        <div className="credentials-box"><div className="cred-row"><label>User ID</label><code>{resetResult.login_id || 'Use legacy login'}</code></div>
-          <div className="cred-row"><label>Temporary PIN</label><code>{resetResult.temporary_password}</code></div></div>
-        <div className="modal-actions"><button type="button" className="btn-secondary" onClick={() => void navigator.clipboard.writeText(`${resetResult.login_id || ''}\n${resetResult.temporary_password}`).catch(() => setResetError('Copy failed.'))}>Copy credentials</button>
-          <button type="button" className="btn-primary" onClick={() => setResetResult(null)}>I have saved the PIN</button></div>
-      </div></div>}
 
       {actionMember && (
         <ConfirmActionModal 

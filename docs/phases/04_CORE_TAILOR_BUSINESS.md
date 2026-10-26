@@ -62,6 +62,18 @@ Objective: enforce domain rules outside views. Dependencies: T4-04. Steps: trans
 ### T4-06 Domain integration validation
 Objective: verify the complete shop workflow before billing. Dependencies: T4-05. Steps: API integration scenario from request to completed; verify data links and isolation. DoD: documented evidence.
 
+**Verified complete (2026-10-21; local, unpublished):** Added and ran a focused
+API regression that creates a Work with its Client, published DesignVersion,
+and MeasurementSet, assigns/advances through every approved stage to Completed,
+verifies source links remain stable, and checks foreign-Shop list/detail
+isolation. Existing Work tests also reject cross-Shop linked source IDs.
+Backend Work suite: 22/22 passed on isolated PostgreSQL 15 after fresh migration
+replay through `works.0002`; sibling Orders tests: 36/36; frontend typecheck and
+build passed; Django model check and migration drift check passed. Persistent
+`devdb`/`testdb`, staging, and production were not used. No application
+behavior/API/schema/migration changed. Browser-level combined E2E remains
+unverified. Phase 5 remains separately gated.
+
 ## T4-03A — Inventory & Stock Foundation (separately approved)
 
 Objective: extend canonical Shop-owned Material records with explicit inventory classification, safe balance, and immutable stock ledger. Existing Materials keep UUID and receive no inferred category/unit or opening stock; inventory enablement is explicit and initializes zero balance. Categories: FABRIC/BUTTON/ZIP/THREAD/HOOK/INTERLINING/OTHER. Units: METRE/YARD/PIECE/ROLL; no conversions, fractional PIECE/ROLL, or negative stock. Main Supplier must select a Shop; ADMIN manages and adjusts; STAFF/VIEWER read active inventory only. Opening, stock-in, and reasoned adjustments append ledger entries atomically with balance changes. Archive requires zero on-hand and reserved and preserves readable history. No measurement-history change, Work, reservation/consumption API, procurement, costing, frontend, or deployment.

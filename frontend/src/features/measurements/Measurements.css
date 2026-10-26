@@ -3,6 +3,9 @@
   gap: 18px;
   width: min(100%, 1320px);
 }
+.measurement-review-order-action { display: flex; justify-content: flex-end; padding-top: 16px; }
+.measurement-review-order-action .btn-primary { min-height: 44px; min-width: 180px; background: #000; border-color: #000; color: #fff; }
+@media (max-width: 600px) { .measurement-review-order-action .btn-primary { width: 100%; } }
 
 .measurement-page-heading,
 .measurement-section-heading,
@@ -19,6 +22,7 @@
 
 .measurement-page-heading { align-items: flex-start; }
 .measurement-page-heading h1 { margin: 6px 0; font-size: clamp(26px, 4vw, 34px); }
+.measurement-page-client-name::before { content: ' · '; }
 .measurement-page-heading p,
 .measurement-section-heading p { margin: 4px 0 0; color: var(--color-text-muted); }
 .measurement-workspace .info-card {
@@ -29,36 +33,19 @@
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
 }
-.measurement-workspace .measurement-unified-card { display: grid; gap: 16px; padding: 0; overflow: visible; }
+.measurement-workspace .measurement-unified-card { display: grid; gap: 4px; padding: 12px 24px; overflow: visible; }
 .measurement-unified-card .measurement-workflow-card.info-card,
 .measurement-unified-card .measurement-review.info-card {
-  min-width: 0;
-  padding: 18px;
-  border: 1px solid var(--color-border);
-  border-radius: 14px;
-  background: var(--color-surface);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, .04);
-}
-.measurement-unified-card .measurement-step-number { border-radius: 10px; }
-.measurement-context-pair {
-  display: grid;
-  min-width: 0;
-  overflow: visible;
-  border: 1px solid var(--color-border);
-  border-radius: 14px;
-  background: var(--color-surface);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, .04);
-}
-.measurement-context-pair > .measurement-workflow-card.info-card {
-  min-width: 0;
-  padding: 18px;
+  padding: 20px 4px;
   border: 0;
+  border-bottom: 1px solid var(--color-border);
   border-radius: 0;
   background: transparent;
   box-shadow: none;
 }
-.measurement-context-pair > :nth-child(2) { border-top: 1px solid var(--color-border); }
-.measurement-context-pair-loading { display: grid; min-height: 120px; place-items: center; padding: 18px; color: var(--color-text-muted); }
+.measurement-unified-card .measurement-workflow-card:last-child,
+.measurement-unified-card .measurement-review.info-card { border-bottom: 0; }
+.measurement-unified-card .measurement-step-number { display: none; }
 .measurement-sticky-context {
   position: sticky;
   z-index: 3;
@@ -71,7 +58,7 @@
   padding: 10px 14px;
   border: 1px solid var(--color-border);
   border-radius: 10px;
-  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+  background: var(--color-surface);
   box-shadow: var(--shadow-sm);
   color: var(--color-text-muted);
   font-size: 12px;
@@ -82,6 +69,8 @@
 .measurement-context-card { display: grid; gap: 8px; max-width: 680px; }
 .measurement-context-card label,
 .measurement-garment-selectors label,
+.measurement-profile-controls label,
+.measurement-design-persistence label,
 .measurement-compare-controls label,
 .measurement-wearer-select {
   display: grid;
@@ -90,6 +79,7 @@
   font-size: 13px;
   font-weight: 600;
 }
+.measurement-design-persistence input,
 .measurement-client-picker input {
   width: 100%;
   min-height: 44px;
@@ -101,7 +91,7 @@
   font: inherit;
 }
 .measurement-select { display: block; width: 100%; min-width: 0; }
-.measurement-select .custom-select-trigger {
+.measurement-select .responsive-choice-tile {
   min-height: 44px;
   height: auto;
   padding: 10px 12px;
@@ -111,8 +101,9 @@
   font: inherit;
   text-align: start;
 }
-.measurement-select .custom-select-trigger:hover:not(:disabled) { border-color: var(--color-primary); }
+.measurement-select .responsive-choice-tile:hover:not(:disabled) { border-color: var(--color-primary); }
 .measurement-context-card small,
+.measurement-design-persistence small,
 .measurement-workflow-card > small { color: var(--color-text-muted); }
 
 .measurement-workflow-card { display: grid; gap: 18px; }
@@ -162,30 +153,23 @@
 .measurement-client-selected small { color: var(--color-text-muted); }
 .measurement-wearer-select { max-width: 560px; }
 
-.measurement-garment-selectors {
+.measurement-garment-selectors,
+.measurement-profile-controls {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: end;
   gap: 14px;
 }
-.measurement-design-library { display: grid; min-width: 0; gap: 12px; }
-.measurement-design-library-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.measurement-design-library-heading h3,
-.measurement-style-configuration h3 { margin: 0; font-size: 16px; }
-.measurement-design-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 9px; }
-.measurement-design-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; min-height: 62px; padding: 11px 13px; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-canvas); color: var(--color-text); text-align: start; cursor: pointer; }
-.measurement-design-card:hover,
-.measurement-design-card.is-selected { border-color: var(--color-primary); background: var(--color-primary-soft); }
-.measurement-design-card > span:first-child { display: grid; min-width: 0; gap: 4px; }
-.measurement-design-card strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.measurement-design-card small { color: var(--color-text-muted); }
-.measurement-design-source { flex: none; padding: 5px 8px; border-radius: 999px; background: var(--color-surface); color: var(--color-text-muted); font-size: 11px; }
-.measurement-design-create-form { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-surface-subtle); }
-.measurement-design-create-form label { display: grid; gap: 8px; font-size: 13px; font-weight: 600; }
-.measurement-design-create-form input { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-surface); color: var(--color-text); font: inherit; }
-.measurement-design-create-form button { justify-self: start; min-height: 42px; }
-.measurement-design-create-form small { color: var(--color-text-muted); }
-.measurement-style-configuration { display: grid; gap: 12px; padding-top: 18px; border-top: 1px solid var(--color-border); }
+.measurement-profile-controls { grid-template-columns: minmax(0, 1fr) auto; }
+.measurement-profile-controls .btn-secondary { min-height: 44px; }
+.measurement-profile-prompt { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+.measurement-profile-prompt .btn-secondary { min-height: 40px; }
+.measurement-profile-prompt small { color: var(--color-text-muted); }
+.measurement-design-persistence { display: grid; gap: 12px; padding-top: 18px; border-top: 1px solid var(--color-border); }
+.measurement-design-picker-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 12px; }
+.measurement-design-picker-row button { min-height: 44px; white-space: nowrap; }
+.measurement-design-save { display: grid; justify-items: start; gap: 8px; }
+.measurement-design-save button { min-height: 44px; }
 
 .measurement-style-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .measurement-style-group { min-width: 0; overflow: hidden; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-canvas); }
@@ -245,11 +229,10 @@
 .measurement-option-source { justify-self: start; padding: 3px 7px; border-radius: 20px; background: var(--color-surface-subtle); }
 .measurement-error-inline { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--color-danger); }
 
-.measurement-entry { display: grid; gap: 14px; }
-.measurement-entry-header { align-items: flex-start; }
+.measurement-entry { display: grid; gap: 10px; }
 .measurement-entry-header h3,
 .measurement-review h3 { margin: 0; }
-.measurement-entry-header p { margin: 6px 0 0; color: var(--color-text-muted); font-size: 13px; }
+.measurement-entry-header p { margin: 0; color: var(--color-text-muted); font-size: 13px; }
 .measurement-field-group h4 { margin: 0 0 10px; text-transform: capitalize; }
 .measurement-entry-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 10px 0 12px; border-bottom: 1px solid var(--color-border); }
 .measurement-global-unit-hint { margin: 0; color: var(--color-text-muted); font-size: 12px; }
@@ -290,7 +273,6 @@
 .measurement-history-values > div,
 .measurement-review-values-grid > div { display: flex; justify-content: space-between; gap: 10px; padding: 9px 10px; border-radius: 8px; background: var(--color-surface); font-size: 12px; }
 .measurement-history-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.measurement-delete-version { color: var(--color-danger); }
 .measurement-compare-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) auto; align-items: end; gap: 10px; padding-top: 16px; border-top: 1px solid var(--color-border); }
 .measurement-compare-controls .btn-secondary { min-height: 44px; }
 .measurement-comparison { display: grid; gap: 12px; }
@@ -325,189 +307,105 @@
 .measurement-review-groups li > span { display: grid; gap: 4px; min-width: 0; }
 .measurement-review-groups li small { color: var(--color-text-muted); }
 
-.measurement-add-definition { flex: none; }
-.measurement-definition-create { display: grid; min-width: 0; width: 100%; box-sizing: border-box; gap: 12px; margin: 0 0 16px; padding: 16px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-surface-subtle); }
-.measurement-definition-create > p { margin: -6px 0 0; color: var(--color-text-muted); font-size: 13px; }
-.measurement-definition-fields { display: grid; min-width: 0; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-.measurement-definition-fields label { display: grid; gap: 6px; min-width: 0; font-size: 13px; font-weight: 600; }
-.measurement-definition-fields input { width: 100%; min-width: 0; min-height: 42px; box-sizing: border-box; padding: 9px 11px; border: 1px solid var(--color-border); border-radius: 9px; background: var(--color-surface); color: var(--color-text); font: inherit; font-weight: 400; }
-.measurement-definition-fields small { color: var(--color-text-muted); font-weight: 400; overflow-wrap: anywhere; }
-.measurement-definition-actions { display: flex; min-width: 0; flex-wrap: wrap; justify-content: flex-end; gap: 9px; }
-.measurement-definition-actions > button { max-width: 100%; white-space: normal; }
-
-@media (min-width: 761px) and (max-width: 1100px) {
-  .measurement-field-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; }
-  .measurement-workspace .info-card { padding: 17px; }
-  .measurement-definition-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (min-width: 1101px) {
+  .measurement-workspace { gap: 12px; }
+  .measurement-page-heading { align-items: center; }
+  .measurement-page-heading h1 { margin: 2px 0; font-size: 30px; }
+  .measurement-page-heading p { margin-top: 2px; }
+  .measurement-workspace .measurement-unified-card { gap: 0; padding: 10px 20px; }
+  .measurement-unified-card .measurement-workflow-card.info-card,
+  .measurement-unified-card .measurement-review.info-card { padding: 14px 4px; }
+  .measurement-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(310px, .9fr);
+    align-items: start;
+    gap: 0 28px;
+  }
+  .measurement-primary-column,
+  .measurement-secondary-column { display: grid; align-content: start; min-width: 0; }
+  .measurement-secondary-column { min-width: 0; }
+  .measurement-columns > .measurement-review { grid-column: 1 / -1; }
+  .measurement-section-heading { gap: 12px; }
 }
 
-@media (min-width: 900px) {
-  .measurement-context-pair { grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); }
-  .measurement-context-pair > :nth-child(2) { border-top: 0; border-inline-start: 1px solid var(--color-border); }
+@media (min-width: 761px) and (max-width: 1100px) {
+  .measurement-workspace { gap: 14px; }
+  .measurement-page-heading h1 { font-size: clamp(25px, 3vw, 31px); }
+  .measurement-workspace .measurement-unified-card { gap: 0; padding: 8px 18px; }
+  .measurement-unified-card .measurement-workflow-card.info-card,
+  .measurement-unified-card .measurement-review.info-card { padding: 16px 4px; }
+  .measurement-columns { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .measurement-primary-column,
+  .measurement-secondary-column { display: grid; align-content: start; min-width: 0; }
+  .measurement-secondary-column { border-top: 1px solid var(--color-border); }
+  .measurement-field-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; }
+  .measurement-workspace .info-card { padding: 17px; }
 }
 
 @media (max-width: 760px) {
+  .measurement-columns { display: contents; }
   .measurement-workspace .info-card { padding: 15px; }
-  .measurement-workspace .measurement-unified-card { gap: 12px; padding: 0; }
-  .measurement-context-pair { gap: 12px; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
-  .measurement-context-pair > .measurement-workflow-card.info-card { border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-surface); box-shadow: var(--shadow-card); }
-  .measurement-context-pair > :nth-child(2) { border-top: 0; }
+  .measurement-workspace .measurement-unified-card { gap: 0; padding: 8px; }
   .measurement-unified-card .measurement-workflow-card.info-card,
-  .measurement-unified-card .measurement-review.info-card { padding: 15px; }
+  .measurement-unified-card .measurement-review.info-card { padding: 12px 0; }
+  .measurement-unified-card .measurement-workflow-card[aria-labelledby="measurement-entry-heading"] { gap: 10px; }
   .measurement-garment-selectors,
   .measurement-field-grid,
   .measurement-style-groups,
   .measurement-review-grid,
   .measurement-review-groups { grid-template-columns: 1fr; }
+  .measurement-profile-controls,
+  .measurement-design-picker-row,
   .measurement-compare-controls { grid-template-columns: 1fr; }
+  .measurement-profile-controls .btn-secondary,
+  .measurement-design-picker-row button,
   .measurement-compare-controls .btn-secondary { width: 100%; }
-  .measurement-entry-header { align-items: stretch; flex-direction: column; }
-  .measurement-entry-header .btn-primary { width: 100%; min-height: 46px; }
-  .measurement-entry-header .btn-primary { position: sticky; z-index: 4; bottom: calc(68px + env(safe-area-inset-bottom)); box-shadow: var(--shadow-card); }
-  .measurement-sticky-context { top: 56px; align-items: flex-start; flex-direction: column; gap: 3px; }
+  .measurement-design-save button { width: 100%; justify-content: center; }
+  .measurement-entry-header { align-items: center; gap: 8px; }
+  .measurement-entry-header .btn-primary { flex: 0 0 auto; min-height: 40px; padding: 8px 12px; }
+  .measurement-sticky-context { top: calc(var(--topbar-height, 64px) + 8px); align-items: flex-start; flex-direction: column; gap: 3px; }
   .measurement-sticky-context span { text-align: start; }
   .measurement-entry-tools { align-items: flex-start; flex-direction: column; }
-  .measurement-page-heading { flex-direction: column; }
-  .measurement-option-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .measurement-page-heading { align-items: center; flex-direction: row; gap: 8px; }
+  .measurement-page-heading > div:first-child { flex: 1; min-width: 0; }
+  .measurement-page-heading .backoffice-eyebrow,
+  .measurement-page-heading p { display: none; }
+  .measurement-page-heading h1 { margin: 0; font-size: clamp(21px, 5.5vw, 25px); line-height: 1.2; }
+  .measurement-page-client-name { display: block; margin-top: 2px; color: var(--color-text-muted); font-size: 13px; font-weight: 500; line-height: 1.25; }
+  .measurement-page-client-name::before { content: ''; }
+  .measurement-page-heading > .btn-secondary { flex: 0 0 auto; min-height: 40px; padding: 8px 11px; font-size: 13px; }
+  .measurement-design-persistence { gap: 8px; padding-top: 8px; border-top: 0; }
+  .measurement-option-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .measurement-option-card { grid-template-rows: auto auto; gap: 2px; padding: 5px; }
+  .measurement-option-card .measurement-image-frame { height: auto; aspect-ratio: 1; }
+  .measurement-option-card .measurement-reference-gallery { height: auto; aspect-ratio: 1; grid-auto-rows: minmax(0, 1fr); }
+  .measurement-option-card .measurement-reference-gallery .measurement-option-image,
+  .measurement-option-card .measurement-reference-gallery .measurement-image-fallback { height: 100%; }
+  .measurement-option-copy { gap: 2px; padding: 5px 1px 2px; font-size: 12px; line-height: 1.25; }
+  .measurement-option-copy small,
+  .measurement-option-source { font-size: 10px; line-height: 1.2; }
+  .measurement-option-source { max-width: 100%; padding: 2px 5px; }
   .measurement-review-heading { flex-direction: column; }
-  .measurement-definition-fields { grid-template-columns: 1fr; }
-  .measurement-definition-actions { display: grid; grid-template-columns: 1fr; }
-  .measurement-definition-actions > button { width: 100%; min-height: 44px; }
-  .measurement-section-heading:has(.measurement-add-definition) { flex-wrap: wrap; }
-  .measurement-add-definition { width: 100%; justify-content: center; }
 }
 
 @media (max-width: 420px) {
-  .measurement-definition-create { padding: 12px; }
   .measurement-field-grid { gap: 12px; }
   .measurement-field-inputs { grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
   .measurement-unit-options { grid-template-columns: repeat(2, minmax(48px, 1fr)); }
   .measurement-unit-options button { min-width: 46px; padding-inline: 6px; }
-  .measurement-option-grid { grid-template-columns: 1fr; }
+  .measurement-option-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .measurement-history-actions { display: grid; grid-template-columns: 1fr; }
 }
 
-/* Phone-only, stage-based measurement flow. The same controls and state stay in
-   place; only which stage is visible changes at narrow viewports. */
-.measurement-mobile-nav { display: none; }
-.measurement-mobile-review { display: contents; }
-
-@media (max-width: 760px) {
-  .client-workspace-embedded-measurements .measurement-page-heading { display: none; }
-  .measurement-workspace { scroll-margin-top: 64px; padding-bottom: calc(92px + env(safe-area-inset-bottom)); }
-  .measurement-workspace .measurement-unified-card { gap: 10px; }
-  .measurement-unified-card [data-mobile-step] { display: none; }
-  .measurement-unified-card [data-mobile-step][data-mobile-active="true"] {
-    display: grid;
-    gap: 12px;
-    min-width: 0;
-    animation: measurement-stage-enter 180ms ease-out both;
-  }
-  .measurement-unified-card > .measurement-context-pair[data-mobile-active="true"] {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 10px;
-    overflow: visible;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
-  }
-  .measurement-context-pair > .measurement-workflow-card.info-card {
-    padding: 13px;
-    border: 1px solid var(--color-border);
-    border-radius: 13px;
-    background: var(--color-surface);
-    box-shadow: var(--shadow-card);
-  }
-  .measurement-context-pair > :nth-child(2) { border-top: 1px solid var(--color-border); }
-  .client-workspace-embedded-measurements .measurement-context-pair > .measurement-workflow-card:first-child > .measurement-section-heading,
-  .client-workspace-embedded-measurements .measurement-client-selected { display: none; }
-  .measurement-workflow-card[data-mobile-step="design"]:has([data-mobile-step="configuration"][data-mobile-active="true"]) > .measurement-section-heading,
-  .measurement-workflow-card[data-mobile-step="design"]:has([data-mobile-step="configuration"][data-mobile-active="true"]) > .measurement-design-library { display: none; }
-  .measurement-unified-card .measurement-workflow-card.info-card,
-  .measurement-unified-card .measurement-review.info-card { padding: 13px; border-radius: 13px; }
-  .measurement-unified-card { touch-action: pan-y; }
-  .measurement-section-heading { align-items: flex-start; gap: 10px; }
-  .measurement-section-heading h2 { font-size: 18px; }
-  .measurement-section-heading p { font-size: 13px; }
-  .measurement-step-number { width: 32px; height: 32px; flex-basis: 32px; border-radius: 9px; }
-  .measurement-garment-selectors { grid-template-columns: minmax(0, 1fr); gap: 10px; }
-  .measurement-client-selected { align-items: flex-start; }
-  .measurement-client-selected > div { margin-inline-end: 0; }
-  .measurement-wearer-select { max-width: none; }
-  .measurement-design-library { gap: 9px; }
-  .measurement-design-library-heading { align-items: center; }
-  .measurement-design-library-heading h3,
-  .measurement-style-configuration h3 { font-size: 15px; }
-  .measurement-design-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
-  .measurement-design-card { display: grid; align-content: start; justify-content: stretch; gap: 5px; min-height: 74px; padding: 9px; border-radius: 10px; }
-  .measurement-design-card strong { overflow-wrap: anywhere; white-space: normal; font-size: 13px; line-height: 1.25; }
-  .measurement-design-card small { font-size: 11px; }
-  .measurement-design-source { justify-self: start; padding: 3px 7px; font-size: 10px; }
-  .measurement-design-create-form { padding: 11px; }
-  .measurement-style-configuration { gap: 9px; padding-top: 0; border-top: 0; }
-  .measurement-style-groups { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
-  .measurement-style-group.is-open { grid-column: 1 / -1; }
-  .measurement-style-group-toggle { min-height: 54px; gap: 7px; padding: 9px; }
-  .measurement-style-group-copy strong { font-size: 13px; line-height: 1.2; }
-  .measurement-style-group-copy small { font-size: 10px; }
-  .measurement-style-group-body { padding: 8px; }
-  .measurement-option-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
-  .measurement-option-card { grid-template-rows: 78px auto; gap: 5px; padding: 6px; border-radius: 10px; }
-  .measurement-option-image,
-  .measurement-image-fallback,
-  .measurement-image-frame,
-  .measurement-reference-gallery { height: 78px; }
-  .measurement-option-image,
-  .measurement-image-fallback,
-  .measurement-reference-gallery .measurement-option-image,
-  .measurement-reference-gallery .measurement-image-fallback { object-fit: contain; background: var(--color-surface-subtle); }
-  .measurement-reference-gallery .measurement-option-image,
-  .measurement-reference-gallery .measurement-image-fallback { height: 78px; }
-  .measurement-option-select { min-height: 44px; gap: 3px; font-size: 12px; line-height: 1.25; }
-  .measurement-option-select strong { overflow-wrap: anywhere; }
-  .measurement-option-select small { overflow-wrap: anywhere; font-size: 10px; }
-  .measurement-entry { gap: 10px; }
-  .measurement-entry-header { gap: 8px; }
-  .measurement-entry-tools { gap: 7px; padding-block: 7px; }
-  .measurement-field-grid { grid-template-columns: minmax(0, 1fr); gap: 9px; }
-  .measurement-field { gap: 5px; }
-  .measurement-history-card { gap: 9px; padding: 11px; }
-  .measurement-review-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
-  .measurement-review-grid article { padding: 10px; }
-  .measurement-review-groups { grid-template-columns: minmax(0, 1fr); }
-  .measurement-fabric-option { align-items: flex-start; gap: 8px; min-height: 54px; padding: 10px; }
-  .measurement-fabric-option > span { min-width: 0; }
-  .measurement-fabric-option b { text-align: end; font-size: 12px; }
-  .measurement-mobile-nav {
-    position: sticky;
-    z-index: 6;
-    bottom: calc(62px + env(safe-area-inset-bottom));
-    display: grid;
-    gap: 8px;
-    margin: 0;
-    padding: 10px;
-    border: 1px solid var(--color-border);
-    border-radius: 13px;
-    background: color-mix(in srgb, var(--color-surface) 96%, transparent);
-    box-shadow: var(--shadow-card);
-    backdrop-filter: blur(10px);
-  }
-  .measurement-mobile-progress-copy { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--color-text); font-size: 13px; }
-  .measurement-mobile-progress-copy span { overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-  .measurement-mobile-progress-copy strong { flex: none; color: var(--color-text-muted); font-size: 12px; }
-  .measurement-mobile-progress-track { height: 4px; overflow: hidden; border-radius: 99px; background: var(--color-primary-soft); }
-  .measurement-mobile-progress-track span { display: block; height: 100%; border-radius: inherit; background: var(--color-primary); transition: width 180ms ease; }
-  .measurement-mobile-nav-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 8px; }
-  .measurement-mobile-nav-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; min-height: 44px; padding: 8px 12px; white-space: nowrap; }
-  .measurement-mobile-nav-actions button:only-child { grid-column: 1 / -1; }
-}
-
-@media (min-width: 370px) and (max-width: 760px) {
-  .measurement-garment-selectors { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-}
-
-@keyframes measurement-stage-enter {
-  from { opacity: .6; transform: translateX(12px); }
-  to { opacity: 1; transform: translateX(0); }
+@media (max-width: 520px) {
+  .measurement-review { gap: 12px; }
+  .measurement-review-heading { align-items: center; flex-direction: row; gap: 10px; }
+  .measurement-review-heading h2 { font-size: 17px; }
+  .measurement-review-count { flex: none; padding: 4px 8px; font-size: 11px; }
+  .measurement-review-summary-list { gap: 0; }
+  .measurement-review-summary-list article { display: grid; grid-template-columns: minmax(88px, .8fr) minmax(0, 1.2fr); align-items: baseline; gap: 3px 10px; padding: 9px 0; border: 0; border-bottom: 1px solid var(--color-border); border-radius: 0; background: transparent; }
+  .measurement-review-summary-list article:last-child { border-bottom: 0; }
+  .measurement-review-summary-list article h3 { grid-column: 1; grid-row: 1 / span 2; align-self: start; color: var(--color-text-muted); font-size: 12px; font-weight: 500; }
+  .measurement-review-summary-list article p { grid-column: 2; margin: 0; font-size: 13px; text-align: end; }
+  .measurement-review-summary-list article small { grid-column: 2; color: var(--color-text-muted); font-size: 11px; text-align: end; overflow-wrap: anywhere; }
 }

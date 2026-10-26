@@ -5,6 +5,7 @@ from apps.catalog.views import (
     DesignDetailView,
     DesignListCreateView,
     ShopDefaultDesignRestoreView,
+    ShopDesignPriceView,
     GlobalDesignTemplateDetailView,
     DesignReferenceImageView,
     DesignReferenceView,
@@ -55,6 +56,7 @@ from apps.catalog.measurement_views import (
     MeasurementCompareView,
     MeasurementDefinitionArchiveView,
     MeasurementDefinitionDetailView,
+    MeasurementDefinitionMappingCreateView,
     MeasurementDefinitionListCreateView,
     MeasurementProfileDetailView,
     MeasurementSetCopyView,
@@ -134,6 +136,11 @@ urlpatterns = [
         "shops/<uuid:shop_id>/measurement-definitions/<uuid:definition_id>/",
         MeasurementDefinitionDetailView.as_view(),
         name="measurement-definition-detail",
+    ),
+    path(
+        "shops/<uuid:shop_id>/measurement-definitions/<uuid:definition_id>/mappings/",
+        MeasurementDefinitionMappingCreateView.as_view(),
+        name="measurement-definition-mapping-create",
     ),
     path(
         "shops/<uuid:shop_id>/measurement-definitions/<uuid:definition_id>/archive/",
@@ -432,6 +439,11 @@ urlpatterns = [
         "shops/<uuid:shop_id>/designs/<uuid:design_id>/",
         DesignDetailView.as_view(),
         name="shop-design-detail",
+    ),
+    path(
+        "shops/<uuid:shop_id>/design-prices/<uuid:design_id>/",
+        ShopDesignPriceView.as_view(),
+        name="shop-design-price",
     ),
     path(
         "shops/<uuid:shop_id>/designs/<uuid:design_id>/restore-default/",

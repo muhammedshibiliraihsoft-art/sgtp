@@ -547,11 +547,6 @@ paths:
           * `ACTIVE` - ACTIVE
           * `ARCHIVED` - ARCHIVED
           * `all` - all
-      - in: query
-        name: variant
-        schema:
-          type: string
-          format: uuid
       tags:
       - api
       security:
@@ -1310,128 +1305,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/GlobalVariantPage'
           description: ''
-    post:
-      operationId: catalog_global_variant_create
-      tags:
-      - api
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/GlobalVariantInputRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/GlobalVariantInputRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/GlobalVariantInputRequest'
-        required: true
-      security:
-      - jwtAuth: []
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VariantDetail'
-          description: ''
   /api/v1/catalog/variants/{variant_id}/:
     get:
       operationId: catalog_global_variant_retrieve
-      parameters:
-      - in: path
-        name: variant_id
-        schema:
-          type: string
-          format: uuid
-        required: true
-      tags:
-      - api
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VariantDetail'
-          description: ''
-    patch:
-      operationId: catalog_global_variant_update
-      parameters:
-      - in: path
-        name: variant_id
-        schema:
-          type: string
-          format: uuid
-        required: true
-      tags:
-      - api
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PatchedVariantUpdateRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/PatchedVariantUpdateRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/PatchedVariantUpdateRequest'
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VariantDetail'
-          description: ''
-  /api/v1/catalog/variants/{variant_id}/archive/:
-    post:
-      operationId: api_v1_catalog_variants_archive_create
-      parameters:
-      - in: path
-        name: variant_id
-        schema:
-          type: string
-          format: uuid
-        required: true
-      tags:
-      - api
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VariantDetail'
-          description: ''
-  /api/v1/catalog/variants/{variant_id}/reactivate/:
-    post:
-      operationId: api_v1_catalog_variants_reactivate_create
-      parameters:
-      - in: path
-        name: variant_id
-        schema:
-          type: string
-          format: uuid
-        required: true
-      tags:
-      - api
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VariantDetail'
-          description: ''
-  /api/v1/catalog/variants/{variant_id}/set-default/:
-    post:
-      operationId: api_v1_catalog_variants_set_default_create
       parameters:
       - in: path
         name: variant_id
@@ -1745,6 +1621,56 @@ paths:
               schema:
                 $ref: '#/components/schemas/TenantMember'
           description: ''
+  /api/v1/shops/{shop_id}/billing/invoices/:
+    get:
+      operationId: billing_invoice_history
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Invoice'
+          description: ''
+  /api/v1/shops/{shop_id}/billing/outstanding/:
+    get:
+      operationId: billing_outstanding_list
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Invoice'
+          description: ''
   /api/v1/shops/{shop_id}/catalog/garment-families/:
     get:
       operationId: shop_garment_families_list
@@ -1943,6 +1869,47 @@ paths:
         '403':
           description: Global family mappings are read-only through the Shop Catalog
             route.
+  /api/v1/shops/{shop_id}/catalog/garment-families/{family_id}/option-groups/create/:
+    post:
+      operationId: shop_family_option_group_create
+      description: Create a Shop-owned option group and attach it to one Shop family
+        atomically.
+      parameters:
+      - in: path
+        name: family_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShopFamilyOptionGroupCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ShopFamilyOptionGroupCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ShopFamilyOptionGroupCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FamilyOptionGroup'
+          description: ''
   /api/v1/shops/{shop_id}/catalog/media/uploads/:
     post:
       operationId: shop_private_media_upload
@@ -2298,140 +2265,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/ShopVariantPage'
           description: ''
-    post:
-      operationId: shop_variant_create
-      description: Resolve and attach Shop context after DRF authentication, before
-        permissions.
-      parameters:
-      - in: path
-        name: shop_id
-        schema:
-          type: string
-          format: uuid
-        required: true
-      tags:
-      - api
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ShopVariantInputRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/ShopVariantInputRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/ShopVariantInputRequest'
-        required: true
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Variant'
-          description: ''
   /api/v1/shops/{shop_id}/catalog/variants/{variant_id}/:
     get:
       operationId: shop_variant_retrieve
-      description: Resolve and attach Shop context after DRF authentication, before
-        permissions.
-      parameters:
-      - in: path
-        name: shop_id
-        schema:
-          type: string
-          format: uuid
-        required: true
-      - in: path
-        name: variant_id
-        schema:
-          type: string
-          format: uuid
-        required: true
-      tags:
-      - api
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VariantDetail'
-          description: ''
-    patch:
-      operationId: shop_variant_update
-      description: Resolve and attach Shop context after DRF authentication, before
-        permissions.
-      parameters:
-      - in: path
-        name: shop_id
-        schema:
-          type: string
-          format: uuid
-        required: true
-      - in: path
-        name: variant_id
-        schema:
-          type: string
-          format: uuid
-        required: true
-      tags:
-      - api
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PatchedVariantUpdateRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/PatchedVariantUpdateRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/PatchedVariantUpdateRequest'
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VariantDetail'
-          description: ''
-  /api/v1/shops/{shop_id}/catalog/variants/{variant_id}/archive/:
-    post:
-      operationId: api_v1_shops_catalog_variants_archive_create
-      description: Resolve and attach Shop context after DRF authentication, before
-        permissions.
-      parameters:
-      - in: path
-        name: shop_id
-        schema:
-          type: string
-          format: uuid
-        required: true
-      - in: path
-        name: variant_id
-        schema:
-          type: string
-          format: uuid
-        required: true
-      tags:
-      - api
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VariantDetail'
-          description: ''
-  /api/v1/shops/{shop_id}/catalog/variants/{variant_id}/reactivate/:
-    post:
-      operationId: api_v1_shops_catalog_variants_reactivate_create
       description: Resolve and attach Shop context after DRF authentication, before
         permissions.
       parameters:
@@ -2881,9 +2717,9 @@ paths:
   /api/v1/shops/{shop_id}/clients/{client_id}/measurement-profiles/{profile_id}/worksheet.pdf:
     get:
       operationId: api_v1_shops_clients_measurement_profiles_worksheet.pdf_retrieve
-      description: Returns a private A4 Measurement / Design worksheet. It is a preview/export,
-        not an invoice. The selected Design is resolved for this request only; no
-        Design-to-Measurement relationship is persisted.
+      description: Returns a private A5 portrait Measurement / Design worksheet. It
+        is a preview/export, not an invoice. The selected Design is resolved for this
+        request only; no Design-to-Measurement relationship is persisted.
       parameters:
       - in: path
         name: client_id
@@ -3569,9 +3405,9 @@ paths:
   ? /api/v1/shops/{shop_id}/clients/{client_id}/related-persons/{related_person_id}/measurement-profiles/{profile_id}/worksheet.pdf
   : get:
       operationId: api_v1_shops_clients_related_persons_measurement_profiles_worksheet.pdf_retrieve
-      description: Returns a private A4 Measurement / Design worksheet. It is a preview/export,
-        not an invoice. The selected Design is resolved for this request only; no
-        Design-to-Measurement relationship is persisted.
+      description: Returns a private A5 portrait Measurement / Design worksheet. It
+        is a preview/export, not an invoice. The selected Design is resolved for this
+        request only; no Design-to-Measurement relationship is persisted.
       parameters:
       - in: path
         name: client_id
@@ -3770,6 +3606,210 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ShopRequestContext'
+          description: ''
+  /api/v1/shops/{shop_id}/credit-notes/{credit_note_id}/:
+    delete:
+      operationId: credit_note_draft_delete
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: credit_note_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/shops/{shop_id}/credit-notes/{credit_note_id}/documents/:
+    post:
+      operationId: api_v1_shops_credit_notes_documents_create
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: credit_note_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FinancialDocumentRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/FinancialDocumentRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FinancialDocumentRequestRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinancialDocument'
+          description: ''
+  /api/v1/shops/{shop_id}/credit-notes/{credit_note_id}/issue/:
+    post:
+      operationId: api_v1_shops_credit_notes_issue_create
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: credit_note_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditNote'
+          description: ''
+  /api/v1/shops/{shop_id}/credit-notes/{credit_note_id}/refunds/:
+    post:
+      operationId: api_v1_shops_credit_notes_refunds_create
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: credit_note_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoiceRefundInputRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/InvoiceRefundInputRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/InvoiceRefundInputRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceRefund'
+          description: ''
+  /api/v1/shops/{shop_id}/design-prices/{design_id}/:
+    get:
+      operationId: shop_design_price_retrieve
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: design_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShopDesignPrice'
+          description: ''
+    put:
+      operationId: shop_design_price_set
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: design_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShopDesignPriceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ShopDesignPriceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ShopDesignPriceRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShopDesignPrice'
           description: ''
   /api/v1/shops/{shop_id}/design-references/{reference_id}/:
     get:
@@ -3974,14 +4014,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SelectionCreateRequest'
+              $ref: '#/components/schemas/PatchedSelectionCreateRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/SelectionCreateRequest'
+              $ref: '#/components/schemas/PatchedSelectionCreateRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/SelectionCreateRequest'
-        required: true
+              $ref: '#/components/schemas/PatchedSelectionCreateRequest'
       security:
       - jwtAuth: []
       responses:
@@ -3991,6 +4030,36 @@ paths:
               schema:
                 $ref: '#/components/schemas/Selection'
           description: ''
+    delete:
+      operationId: shop_design_selection_remove_unmapped_draft
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: selection_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: version_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: Stale Draft selection removed.
   /api/v1/shops/{shop_id}/designs/:
     get:
       operationId: shop_design_list
@@ -4022,11 +4091,6 @@ paths:
           * `ACTIVE` - ACTIVE
           * `ARCHIVED` - ARCHIVED
           * `all` - all
-      - in: query
-        name: variant
-        schema:
-          type: string
-          format: uuid
       tags:
       - api
       security:
@@ -4192,6 +4256,36 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Design'
+          description: ''
+  /api/v1/shops/{shop_id}/financial-documents/{document_id}/download/:
+    get:
+      operationId: financial_document_download
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: document_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: string
+                format: binary
           description: ''
   /api/v1/shops/{shop_id}/inventory/items/:
     get:
@@ -4519,6 +4613,531 @@ paths:
               schema:
                 $ref: '#/components/schemas/InventoryBalance'
           description: ''
+  /api/v1/shops/{shop_id}/invoices/{invoice_id}/:
+    get:
+      operationId: invoice_retrieve
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: invoice_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+          description: ''
+    delete:
+      operationId: invoice_draft_delete
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: invoice_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/shops/{shop_id}/invoices/{invoice_id}/adjustments/:
+    patch:
+      operationId: api_v1_shops_invoices_adjustments_partial_update
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: invoice_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedInvoiceAdjustmentsRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedInvoiceAdjustmentsRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedInvoiceAdjustmentsRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+          description: ''
+  /api/v1/shops/{shop_id}/invoices/{invoice_id}/credit-notes/:
+    get:
+      operationId: api_v1_shops_invoices_credit_notes_list
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: invoice_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CreditNote'
+          description: ''
+    post:
+      operationId: api_v1_shops_invoices_credit_notes_create
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: invoice_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreditNoteCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreditNoteCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreditNoteCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditNote'
+          description: ''
+  /api/v1/shops/{shop_id}/invoices/{invoice_id}/documents/:
+    post:
+      operationId: api_v1_shops_invoices_documents_create
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: invoice_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FinancialDocumentRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/FinancialDocumentRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FinancialDocumentRequestRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinancialDocument'
+          description: ''
+  /api/v1/shops/{shop_id}/invoices/{invoice_id}/issue/:
+    post:
+      operationId: api_v1_shops_invoices_issue_create
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: invoice_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+          description: ''
+  /api/v1/shops/{shop_id}/invoices/{invoice_id}/items/:
+    post:
+      operationId: api_v1_shops_invoices_items_create
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: invoice_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoiceLineInputRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/InvoiceLineInputRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/InvoiceLineInputRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceLine'
+          description: ''
+  /api/v1/shops/{shop_id}/invoices/{invoice_id}/items/{item_id}/:
+    patch:
+      operationId: api_v1_shops_invoices_items_partial_update
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: invoice_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: item_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedInvoiceLineInputRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedInvoiceLineInputRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedInvoiceLineInputRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceLine'
+          description: ''
+    delete:
+      operationId: api_v1_shops_invoices_items_destroy
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: invoice_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: item_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/shops/{shop_id}/invoices/{invoice_id}/payments/:
+    post:
+      operationId: api_v1_shops_invoices_payments_create
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: invoice_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoicePaymentInputRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/InvoicePaymentInputRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/InvoicePaymentInputRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoicePayment'
+          description: ''
+  /api/v1/shops/{shop_id}/invoices/{invoice_id}/payments/{payment_id}/receipt/:
+    post:
+      operationId: api_v1_shops_invoices_payments_receipt_create
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: invoice_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: payment_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FinancialDocumentRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/FinancialDocumentRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FinancialDocumentRequestRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinancialDocument'
+          description: ''
+  /api/v1/shops/{shop_id}/invoices/{invoice_id}/purge/:
+    post:
+      operationId: api_v1_shops_invoices_purge_create
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: invoice_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoicePurgeRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/InvoicePurgeRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/InvoicePurgeRequestRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinancialPurgeRequest'
+          description: ''
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinancialPurgeRequest'
+          description: ''
+  /api/v1/shops/{shop_id}/invoices/{invoice_id}/void/:
+    post:
+      operationId: api_v1_shops_invoices_void_create
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: invoice_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VoidInvoiceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VoidInvoiceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VoidInvoiceRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+          description: ''
   /api/v1/shops/{shop_id}/materials/:
     get:
       operationId: materials_list
@@ -4733,12 +5352,6 @@ paths:
           type: string
           format: uuid
         required: true
-      - in: query
-        name: variant_id
-        schema:
-          type: string
-          format: uuid
-        description: Optional variant filter; requires family_id.
       tags:
       - api
       security:
@@ -4881,6 +5494,48 @@ paths:
               schema:
                 $ref: '#/components/schemas/MeasurementDefinitionRead'
           description: ''
+  /api/v1/shops/{shop_id}/measurement-definitions/{definition_id}/mappings/:
+    post:
+      operationId: measurement_definition_mapping_create
+      description: Attach an active Shop-owned measurement definition to an active
+        Garment Family. Global definitions remain immutable and cannot be remapped
+        through this endpoint.
+      parameters:
+      - in: path
+        name: definition_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MeasurementDefinitionMappingCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MeasurementDefinitionMappingCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MeasurementDefinitionMappingCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeasurementDefinitionRead'
+          description: ''
   /api/v1/shops/{shop_id}/memberships/{membership_id}/functions/:
     get:
       operationId: api_v1_shops_memberships_functions_retrieve
@@ -4981,6 +5636,381 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ShopUserCreated'
+          description: ''
+  /api/v1/shops/{shop_id}/works/:
+    get:
+      operationId: api_v1_shops_works_list
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedWorkList'
+          description: ''
+    post:
+      operationId: api_v1_shops_works_create
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Work'
+          description: ''
+  /api/v1/shops/{shop_id}/works/{id}/:
+    get:
+      operationId: api_v1_shops_works_retrieve
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Work'
+          description: ''
+    patch:
+      operationId: api_v1_shops_works_partial_update
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedWorkUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedWorkUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedWorkUpdateRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Work'
+          description: ''
+    delete:
+      operationId: api_v1_shops_works_destroy
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/shops/{shop_id}/works/{id}/advance/:
+    post:
+      operationId: api_v1_shops_works_advance_create
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkAdvanceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkAdvanceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkAdvanceRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Work'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/shops/{shop_id}/works/{id}/assign/:
+    post:
+      operationId: api_v1_shops_works_assign_create
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkAssignmentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkAssignmentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkAssignmentRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Work'
+          description: ''
+  /api/v1/shops/{shop_id}/works/{work_id}/invoices/:
+    get:
+      operationId: work_invoice_list
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: work_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Invoice'
+          description: ''
+    post:
+      operationId: api_v1_shops_works_invoices_create
+      description: Resolve and attach Shop context after DRF authentication, before
+        permissions.
+      parameters:
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: work_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoiceCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/InvoiceCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/InvoiceCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+          description: ''
+  /api/v1/shops/{shop_id}/works/deleted/:
+    get:
+      operationId: api_v1_shops_works_deleted_list
+      description: Read-only Shop archive; ordinary Work queries remain active-only.
+      parameters:
+      - in: query
+        name: deleted_from
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: deleted_to
+        schema:
+          type: string
+          format: date
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: search
+        schema:
+          type: string
+      - in: path
+        name: shop_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDeletedWorkList'
           description: ''
   /api/v1/tenants/:
     get:
@@ -5420,6 +6450,79 @@ components:
       - phone_normalized
       - updated_at
       - warnings
+    CreditNote:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        invoice_id:
+          type: string
+          format: uuid
+          readOnly: true
+        credit_number:
+          type: string
+          readOnly: true
+          nullable: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/CreditNoteStatusEnum'
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,16}(?:\.\d{0,4})?$
+          readOnly: true
+        issued_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        issued_by_id:
+          type: string
+          format: uuid
+          nullable: true
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - amount
+      - created_at
+      - credit_number
+      - id
+      - invoice_id
+      - issued_at
+      - issued_by_id
+      - reason
+      - status
+    CreditNoteCreateRequest:
+      type: object
+      properties:
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,16}(?:\.\d{0,4})?$
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+      required:
+      - amount
+      - reason
+    CreditNoteStatusEnum:
+      enum:
+      - DRAFT
+      - ISSUED
+      type: string
+      description: |-
+        * `DRAFT` - Draft
+        * `ISSUED` - Issued
     CsrfBootstrapResponse:
       type: object
       properties:
@@ -5427,6 +6530,56 @@ components:
           type: string
       required:
       - csrf_token
+    DeletedWork:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        work_number:
+          type: string
+          readOnly: true
+        client_name:
+          type: string
+          readOnly: true
+        design_name:
+          type: string
+          readOnly: true
+        status:
+          type: string
+          readOnly: true
+        priority:
+          type: string
+          readOnly: true
+        due_date:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        deleted:
+          type: string
+          format: date-time
+          readOnly: true
+        deleted_date:
+          type: string
+          format: date
+          readOnly: true
+      required:
+      - client_name
+      - created_at
+      - deleted
+      - deleted_date
+      - design_name
+      - due_date
+      - id
+      - priority
+      - status
+      - work_number
     Design:
       type: object
       properties:
@@ -5441,6 +6594,9 @@ components:
         family:
           type: string
           format: uuid
+        family_status:
+          type: string
+          readOnly: true
         variant:
           type: string
           format: uuid
@@ -5457,6 +6613,11 @@ components:
           - $ref: '#/components/schemas/DesignVersion'
           nullable: true
           readOnly: true
+        latest_published_version:
+          allOf:
+          - $ref: '#/components/schemas/DesignVersion'
+          nullable: true
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -5468,7 +6629,9 @@ components:
       required:
       - created_at
       - family
+      - family_status
       - id
+      - latest_published_version
       - latest_version
       - name
       - updated_at
@@ -5478,10 +6641,6 @@ components:
         family_id:
           type: string
           format: uuid
-        variant_id:
-          type: string
-          format: uuid
-          nullable: true
         name:
           type: string
           minLength: 1
@@ -5504,9 +6663,20 @@ components:
         idempotency_key:
           type: string
           format: uuid
+        price:
+          $ref: '#/components/schemas/DesignPriceInputRequest'
       required:
       - family_id
       - name
+    DesignPriceInputRequest:
+      type: object
+      properties:
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+      required:
+      - amount
     DesignReference:
       type: object
       properties:
@@ -5553,7 +6723,7 @@ components:
           type: string
           format: uuid
         source:
-          $ref: '#/components/schemas/SourceEnum'
+          $ref: '#/components/schemas/DesignReferenceGallerySourceEnum'
         mime_type:
           type: string
         byte_size:
@@ -5581,6 +6751,14 @@ components:
       - mime_type
       - source
       - width
+    DesignReferenceGallerySourceEnum:
+      enum:
+      - design
+      - style_option
+      type: string
+      description: |-
+        * `design` - design
+        * `style_option` - style_option
     DesignVersion:
       type: object
       properties:
@@ -5642,6 +6820,16 @@ components:
       description: |-
         * `IN` - IN
         * `OUT` - OUT
+    DiscountTypeEnum:
+      enum:
+      - NONE
+      - FIXED
+      - PERCENT
+      type: string
+      description: |-
+        * `NONE` - None
+        * `FIXED` - Fixed amount
+        * `PERCENT` - Percentage
     DuplicateMatch:
       type: object
       properties:
@@ -5686,6 +6874,24 @@ components:
           maxLength: 256
       required:
       - password
+    ExpectedStatusEnum:
+      enum:
+      - REQUEST
+      - CUTTING
+      - STITCHING
+      - CHECK
+      - FINISHING
+      - QC
+      - COMPLETED
+      type: string
+      description: |-
+        * `REQUEST` - Request
+        * `CUTTING` - Cutting
+        * `STITCHING` - Stitching
+        * `CHECK` - Check
+        * `FINISHING` - Finishing
+        * `QC` - Quality control
+        * `COMPLETED` - Completed
     Family:
       type: object
       properties:
@@ -5868,6 +7074,84 @@ components:
       description: |-
         * `phone` - phone
         * `email` - email
+    FinancialDocument:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        kind:
+          type: string
+          readOnly: true
+        locale:
+          type: string
+          readOnly: true
+        sha256:
+          type: string
+          readOnly: true
+        generated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - generated_at
+      - id
+      - kind
+      - locale
+      - sha256
+    FinancialDocumentRequestRequest:
+      type: object
+      properties:
+        locale:
+          $ref: '#/components/schemas/LocaleEnum'
+    FinancialPurgeRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        invoice_id:
+          type: string
+          format: uuid
+          readOnly: true
+        invoice_number:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/FinancialPurgeStatusEnum'
+          readOnly: true
+        attempt_count:
+          type: integer
+          readOnly: true
+        failure_code:
+          type: string
+          readOnly: true
+        completed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - attempt_count
+      - completed_at
+      - failure_code
+      - id
+      - invoice_id
+      - invoice_number
+      - status
+    FinancialPurgeStatusEnum:
+      enum:
+      - PENDING
+      - FAILED
+      - COMPLETED
+      type: string
+      description: |-
+        * `PENDING` - Pending
+        * `FAILED` - Failed
+        * `COMPLETED` - Completed
     FirstShopAdmin:
       type: object
       properties:
@@ -5922,6 +7206,7 @@ components:
       - MEASUREMENT
       - CUTTING
       - STITCHING
+      - CHECK
       - FINISHING
       - QC
       - CASHIER
@@ -5931,6 +7216,7 @@ components:
         * `MEASUREMENT` - Measurement
         * `CUTTING` - Cutting
         * `STITCHING` - Stitching
+        * `CHECK` - Check
         * `FINISHING` - Finishing
         * `QC` - Quality control
         * `CASHIER` - Cashier
@@ -5994,25 +7280,6 @@ components:
       - next
       - previous
       - results
-    GlobalVariantInputRequest:
-      type: object
-      properties:
-        family_id:
-          type: string
-          format: uuid
-        code:
-          type: string
-          minLength: 1
-          maxLength: 64
-          pattern: ^[-a-zA-Z0-9_]+$
-        translations:
-          type: array
-          items:
-            $ref: '#/components/schemas/TranslationInputRequest'
-      required:
-      - code
-      - family_id
-      - translations
     GlobalVariantPage:
       type: object
       properties:
@@ -6183,6 +7450,385 @@ components:
       - next
       - previous
       - results
+    Invoice:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        work_id:
+          type: string
+          format: uuid
+          readOnly: true
+        client_id:
+          type: string
+          format: uuid
+          readOnly: true
+        related_person_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        currency:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/InvoiceStatusEnum'
+          readOnly: true
+        invoice_number:
+          type: string
+          readOnly: true
+          nullable: true
+        subtotal:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,16}(?:\.\d{0,4})?$
+          readOnly: true
+        discount_type:
+          allOf:
+          - $ref: '#/components/schemas/DiscountTypeEnum'
+          readOnly: true
+        discount_value:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,6})?$
+          readOnly: true
+        discount_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,16}(?:\.\d{0,4})?$
+          readOnly: true
+        tax_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          readOnly: true
+          nullable: true
+        tax_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,16}(?:\.\d{0,4})?$
+          readOnly: true
+        total_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,16}(?:\.\d{0,4})?$
+          readOnly: true
+        amount_paid:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,16}(?:\.\d{0,4})?$
+          readOnly: true
+        amount_refunded:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,16}(?:\.\d{0,4})?$
+          readOnly: true
+        credited_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,16}(?:\.\d{0,4})?$
+          readOnly: true
+        balance:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,16}(?:\.\d{0,4})?$
+          readOnly: true
+        refund_due:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,16}(?:\.\d{0,4})?$
+          readOnly: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvoiceLine'
+          readOnly: true
+        payments:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvoicePayment'
+          readOnly: true
+        credit_notes:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreditNote'
+          readOnly: true
+        issued_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        issued_by_id:
+          type: string
+          format: uuid
+          nullable: true
+          readOnly: true
+        voided_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        voided_by_id:
+          type: string
+          format: uuid
+          nullable: true
+          readOnly: true
+        void_reason:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - amount_paid
+      - amount_refunded
+      - balance
+      - client_id
+      - created_at
+      - credit_notes
+      - credited_total
+      - currency
+      - discount_total
+      - discount_type
+      - discount_value
+      - id
+      - invoice_number
+      - issued_at
+      - issued_by_id
+      - items
+      - payments
+      - refund_due
+      - related_person_id
+      - status
+      - subtotal
+      - tax_rate
+      - tax_total
+      - total_amount
+      - updated_at
+      - void_reason
+      - voided_at
+      - voided_by_id
+      - work_id
+    InvoiceCreateRequest:
+      type: object
+      properties:
+        mode:
+          $ref: '#/components/schemas/ModeEnum'
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvoiceLineInputRequest'
+        discount_type:
+          allOf:
+          - $ref: '#/components/schemas/DiscountTypeEnum'
+          default: NONE
+        discount_value:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,6})?$
+          default: '0.000000'
+        tax_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          nullable: true
+      required:
+      - mode
+    InvoiceLine:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        source:
+          allOf:
+          - $ref: '#/components/schemas/InvoiceLineSourceEnum'
+          readOnly: true
+        description:
+          type: string
+          readOnly: true
+        quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,9}(?:\.\d{0,3})?$
+          readOnly: true
+        unit_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+          readOnly: true
+        line_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,16}(?:\.\d{0,4})?$
+          readOnly: true
+        discount_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,16}(?:\.\d{0,4})?$
+          readOnly: true
+        tax_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,16}(?:\.\d{0,4})?$
+          readOnly: true
+      required:
+      - description
+      - discount_amount
+      - id
+      - line_total
+      - quantity
+      - source
+      - tax_amount
+      - unit_price
+    InvoiceLineInputRequest:
+      type: object
+      properties:
+        description:
+          type: string
+          minLength: 1
+          maxLength: 240
+        quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,9}(?:\.\d{0,3})?$
+          default: '1.000'
+        unit_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+      required:
+      - description
+      - unit_price
+    InvoiceLineSourceEnum:
+      enum:
+      - DESIGN_SNAPSHOT
+      - MANUAL
+      type: string
+      description: |-
+        * `DESIGN_SNAPSHOT` - Design price snapshot
+        * `MANUAL` - Manual
+    InvoicePayment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+          readOnly: true
+        received_at:
+          type: string
+          format: date-time
+          readOnly: true
+        recorded_by_id:
+          type: string
+          format: uuid
+          readOnly: true
+        refunds:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvoiceRefund'
+          readOnly: true
+      required:
+      - amount
+      - id
+      - received_at
+      - recorded_by_id
+      - refunds
+    InvoicePaymentInputRequest:
+      type: object
+      properties:
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+      required:
+      - amount
+    InvoicePurgeRequestRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+        confirm_invoice_number:
+          type: string
+          minLength: 1
+          maxLength: 32
+      required:
+      - confirm_invoice_number
+      - reason
+    InvoiceRefund:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        payment_id:
+          type: string
+          format: uuid
+          readOnly: true
+        credit_note_id:
+          type: string
+          format: uuid
+          readOnly: true
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+          readOnly: true
+        refunded_at:
+          type: string
+          format: date-time
+          readOnly: true
+        recorded_by_id:
+          type: string
+          format: uuid
+          readOnly: true
+      required:
+      - amount
+      - credit_note_id
+      - id
+      - payment_id
+      - recorded_by_id
+      - refunded_at
+    InvoiceRefundInputRequest:
+      type: object
+      properties:
+        payment_id:
+          type: string
+          format: uuid
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+      required:
+      - amount
+      - payment_id
+    InvoiceStatusEnum:
+      enum:
+      - DRAFT
+      - ISSUED
+      - VOID
+      type: string
+      description: |-
+        * `DRAFT` - Draft
+        * `ISSUED` - Issued
+        * `VOID` - Void
     KindEnum:
       enum:
       - family
@@ -6389,6 +8035,18 @@ components:
       - code
       - mappings
       - translations
+    MeasurementDefinitionMappingCreateRequest:
+      type: object
+      properties:
+        family_id:
+          type: string
+          format: uuid
+        sort_order:
+          type: integer
+          maximum: 32767
+          minimum: 0
+      required:
+      - family_id
     MeasurementDefinitionPage:
       type: object
       properties:
@@ -6427,8 +8085,7 @@ components:
           maxLength: 48
         sort_order:
           type: integer
-          maximum: 32767
-          minimum: 0
+          readOnly: true
         is_active:
           type: boolean
         is_global:
@@ -6450,6 +8107,7 @@ components:
       - id
       - is_global
       - mappings
+      - sort_order
       - translations
     MeasurementDefinitionTranslationRead:
       type: object
@@ -6470,10 +8128,6 @@ components:
         family_id:
           type: string
           format: uuid
-        variant_id:
-          type: string
-          format: uuid
-          nullable: true
       required:
       - family_id
     MeasurementProfile:
@@ -6519,10 +8173,6 @@ components:
         family_id:
           type: string
           format: uuid
-        variant_id:
-          type: string
-          format: uuid
-          nullable: true
       required:
       - family_id
     MeasurementProfilePage:
@@ -6697,7 +8347,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/FunctionsEnum'
-          maxItems: 7
+          maxItems: 8
       required:
       - functions
     MembershipWorkFunctionSetResponse:
@@ -6720,6 +8370,14 @@ components:
       - functions
       - membership_id
       - shop_id
+    ModeEnum:
+      enum:
+      - AUTO
+      - MANUAL
+      type: string
+      description: |-
+        * `AUTO` - AUTO
+        * `MANUAL` - MANUAL
     MovementTypeEnum:
       enum:
       - OPENING
@@ -6800,6 +8458,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Client'
+    PaginatedDeletedWorkList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeletedWork'
     PaginatedRelatedPersonList:
       type: object
       required:
@@ -6892,6 +8573,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/User'
+    PaginatedWorkList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Work'
     PatchedClientRequest:
       type: object
       properties:
@@ -6946,6 +8650,37 @@ components:
           $ref: '#/components/schemas/CategoryEnum'
         stock_unit:
           $ref: '#/components/schemas/StockUnit'
+    PatchedInvoiceAdjustmentsRequest:
+      type: object
+      properties:
+        discount_type:
+          $ref: '#/components/schemas/DiscountTypeEnum'
+        discount_value:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,6})?$
+          default: '0.000000'
+        tax_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          nullable: true
+    PatchedInvoiceLineInputRequest:
+      type: object
+      properties:
+        description:
+          type: string
+          minLength: 1
+          maxLength: 240
+        quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,9}(?:\.\d{0,3})?$
+          default: '1.000'
+        unit_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
     PatchedMaterialPatchRequest:
       type: object
       properties:
@@ -6987,6 +8722,12 @@ components:
           type: string
           format: email
           maxLength: 254
+    PatchedSelectionCreateRequest:
+      type: object
+      properties:
+        style_option_id:
+          type: string
+          format: uuid
     PatchedStyleOptionActiveUpdateRequest:
       type: object
       properties:
@@ -7048,13 +8789,18 @@ components:
           - $ref: '#/components/schemas/NullEnum'
         appearance_preference:
           $ref: '#/components/schemas/AppearancePreferenceEnum'
-    PatchedVariantUpdateRequest:
+    PatchedWorkUpdateRequest:
       type: object
       properties:
-        translations:
-          type: array
-          items:
-            $ref: '#/components/schemas/TranslationInputRequest'
+        priority:
+          $ref: '#/components/schemas/PriorityEnum'
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        notes:
+          type: string
+          maxLength: 5000
     PendingShopAdminPinReset:
       type: object
       properties:
@@ -7087,6 +8833,16 @@ components:
       - shop
       - shop_id
       - status
+    PriorityEnum:
+      enum:
+      - NORMAL
+      - URGENT
+      - VERY_URGENT
+      type: string
+      description: |-
+        * `NORMAL` - Normal
+        * `URGENT` - Urgent
+        * `VERY_URGENT` - Very urgent
     PrivateMediaUploadInputRequest:
       type: object
       properties:
@@ -7359,6 +9115,61 @@ components:
       - next
       - previous
       - results
+    ShopDesignPrice:
+      type: object
+      properties:
+        design_id:
+          type: string
+          format: uuid
+          readOnly: true
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+        currency:
+          type: string
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - amount
+      - currency
+      - design_id
+      - updated_at
+    ShopDesignPriceRequest:
+      type: object
+      properties:
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+      required:
+      - amount
+    ShopFamilyOptionGroupCreateRequest:
+      type: object
+      description: A Shop-owned family or option-group definition with localized names.
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 48
+          pattern: ^[-a-zA-Z0-9_]+$
+        translations:
+          type: array
+          items:
+            $ref: '#/components/schemas/TranslationInputRequest'
+        selection_mode:
+          allOf:
+          - $ref: '#/components/schemas/SelectionModeEnum'
+          default: MULTI
+        is_required:
+          type: boolean
+          default: false
+      required:
+      - code
+      - translations
     ShopGarmentFamilyPage:
       type: object
       properties:
@@ -7436,6 +9247,9 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WorkFunctionsEnum'
+        billing_currency:
+          type: string
+          nullable: true
       required:
       - is_main_supplier
       - role
@@ -7570,25 +9384,6 @@ components:
       - login_id
       - must_change_password
       - user_code
-    ShopVariantInputRequest:
-      type: object
-      properties:
-        family_id:
-          type: string
-          format: uuid
-        code:
-          type: string
-          minLength: 1
-          maxLength: 64
-          pattern: ^[-a-zA-Z0-9_]+$
-        translations:
-          type: array
-          items:
-            $ref: '#/components/schemas/TranslationInputRequest'
-      required:
-      - code
-      - family_id
-      - translations
     ShopVariantPage:
       type: object
       properties:
@@ -7611,14 +9406,6 @@ components:
       - next
       - previous
       - results
-    SourceEnum:
-      enum:
-      - design
-      - style_option
-      type: string
-      description: |-
-        * `design` - design
-        * `style_option` - style_option
     StatusF58Enum:
       enum:
       - ACTIVE
@@ -8023,6 +9810,10 @@ components:
           format: email
           nullable: true
           readOnly: true
+        user_phone:
+          type: string
+          nullable: true
+          readOnly: true
         role:
           allOf:
           - $ref: '#/components/schemas/Role80eEnum'
@@ -8056,6 +9847,7 @@ components:
       - user_code
       - user_email
       - user_id
+      - user_phone
     TenantMemberProfile:
       type: object
       description: Minimal profile visible to a member of that Shop.
@@ -8419,12 +10211,150 @@ components:
       required:
       - locale
       - name
+    VoidInvoiceRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+      required:
+      - reason
+    Work:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        work_number:
+          type: string
+          readOnly: true
+        client_id:
+          type: string
+          format: uuid
+          readOnly: true
+        related_person_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        design_version_id:
+          type: string
+          format: uuid
+          readOnly: true
+        measurement_set_id:
+          type: string
+          format: uuid
+          readOnly: true
+        material_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        assigned_membership_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        status:
+          type: string
+          readOnly: true
+        priority:
+          type: string
+          readOnly: true
+        due_date:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        due_indicator:
+          type: string
+          nullable: true
+          readOnly: true
+        notes:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - assigned_membership_id
+      - client_id
+      - created_at
+      - design_version_id
+      - due_date
+      - due_indicator
+      - id
+      - material_id
+      - measurement_set_id
+      - notes
+      - priority
+      - related_person_id
+      - status
+      - updated_at
+      - work_number
+    WorkAdvanceRequest:
+      type: object
+      properties:
+        expected_status:
+          $ref: '#/components/schemas/ExpectedStatusEnum'
+      required:
+      - expected_status
+    WorkAssignmentRequest:
+      type: object
+      properties:
+        membership_id:
+          type: string
+          format: uuid
+          nullable: true
+      required:
+      - membership_id
+    WorkCreateRequest:
+      type: object
+      properties:
+        client_id:
+          type: string
+          format: uuid
+        related_person_id:
+          type: string
+          format: uuid
+          nullable: true
+        design_version_id:
+          type: string
+          format: uuid
+        measurement_set_id:
+          type: string
+          format: uuid
+        material_id:
+          type: string
+          format: uuid
+          nullable: true
+        priority:
+          $ref: '#/components/schemas/PriorityEnum'
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        notes:
+          type: string
+          maxLength: 5000
+      required:
+      - client_id
+      - design_version_id
+      - measurement_set_id
     WorkFunctionsEnum:
       enum:
       - SALES
       - MEASUREMENT
       - CUTTING
       - STITCHING
+      - CHECK
       - FINISHING
       - QC
       - CASHIER
@@ -8434,6 +10364,7 @@ components:
         * `MEASUREMENT` - Measurement
         * `CUTTING` - Cutting
         * `STITCHING` - Stitching
+        * `CHECK` - Check
         * `FINISHING` - Finishing
         * `QC` - Quality control
         * `CASHIER` - Cashier

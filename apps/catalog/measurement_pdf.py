@@ -9,7 +9,6 @@ from bidi.algorithm import get_display
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
-from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
@@ -23,6 +22,8 @@ from reportlab.platypus import (
     Table,
     TableStyle,
 )
+
+from apps.common.pdf_layout import PDF_EXPORT_PAGE_SIZE
 
 
 INK = colors.HexColor("#17243a")
@@ -86,14 +87,14 @@ def _localized_name(instance, locale, related_name="translations", field="name")
 def build_measurement_worksheet_pdf(
     *, shop, profile, measurement_set, locale="en", design=None, design_version=None
 ):
-    """Build a private A4 worksheet from already-authorized ORM objects."""
+    """Build a private A5 worksheet from already-authorized ORM objects."""
     output = BytesIO()
     document = SimpleDocTemplate(
         output,
-        pagesize=A4,
-        rightMargin=15 * mm,
-        leftMargin=15 * mm,
-        topMargin=16 * mm,
+        pagesize=PDF_EXPORT_PAGE_SIZE,
+        rightMargin=8 * mm,
+        leftMargin=8 * mm,
+        topMargin=10 * mm,
         bottomMargin=18 * mm,
         title=f"Measurement Worksheet - Version {measurement_set.version}",
         author="SGTP",
@@ -104,8 +105,8 @@ def build_measurement_worksheet_pdf(
         "title": ParagraphStyle(
             "WorksheetTitle",
             fontName="Helvetica-Bold",
-            fontSize=19,
-            leading=23,
+            fontSize=15,
+            leading=18,
             textColor=INK,
             alignment=TA_LEFT,
             spaceAfter=3 * mm,
@@ -113,53 +114,53 @@ def build_measurement_worksheet_pdf(
         "subtitle": ParagraphStyle(
             "WorksheetSubtitle",
             fontName="Helvetica",
-            fontSize=9,
-            leading=12,
+            fontSize=8,
+            leading=10,
             textColor=MUTED,
-            spaceAfter=5 * mm,
+            spaceAfter=3 * mm,
         ),
         "section": ParagraphStyle(
             "WorksheetSection",
             fontName="Helvetica-Bold",
-            fontSize=11,
-            leading=14,
+            fontSize=9.5,
+            leading=11,
             textColor=INK,
-            spaceBefore=4 * mm,
-            spaceAfter=2 * mm,
+            spaceBefore=2.5 * mm,
+            spaceAfter=1.5 * mm,
         ),
         "body": ParagraphStyle(
             "WorksheetBody",
             fontName="Helvetica",
-            fontSize=9,
-            leading=12,
+            fontSize=8,
+            leading=10,
             textColor=INK,
         ),
         "muted": ParagraphStyle(
             "WorksheetMuted",
             fontName="Helvetica",
-            fontSize=8,
-            leading=11,
+            fontSize=7.5,
+            leading=9,
             textColor=MUTED,
         ),
         "table_header": ParagraphStyle(
             "WorksheetTableHeader",
             fontName="Helvetica-Bold",
-            fontSize=8.5,
-            leading=11,
+            fontSize=7.5,
+            leading=9,
             textColor=colors.white,
         ),
         "demo_title": ParagraphStyle(
             "WorksheetDemoTitle",
             fontName="Helvetica-Bold",
-            fontSize=10,
-            leading=13,
+            fontSize=9,
+            leading=11,
             textColor=ACCENT,
         ),
         "center": ParagraphStyle(
             "WorksheetCenter",
             fontName="Helvetica",
-            fontSize=8,
-            leading=11,
+        fontSize=7.5,
+        leading=9,
             textColor=MUTED,
             alignment=TA_CENTER,
         ),
@@ -213,15 +214,20 @@ def build_measurement_worksheet_pdf(
             ),
         ]
     )
-    identity = Table(identity_rows, colWidths=[43 * mm, 132 * mm], hAlign="LEFT")
+    content_width = document.width
+    identity = Table(
+        identity_rows,
+        colWidths=[content_width * 0.26, content_width * 0.74],
+        hAlign="LEFT",
+    )
     identity.setStyle(
         TableStyle(
             [
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("LEFTPADDING", (0, 0), (-1, -1), 3 * mm),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 3 * mm),
-                ("TOPPADDING", (0, 0), (-1, -1), 2 * mm),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 2 * mm),
+                ("LEFTPADDING", (0, 0), (-1, -1), 1.5 * mm),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 1.5 * mm),
+                ("TOPPADDING", (0, 0), (-1, -1), 1 * mm),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 1 * mm),
                 ("LINEBELOW", (0, 0), (-1, -1), 0.35, LINE),
             ]
         )
@@ -250,7 +256,7 @@ def build_measurement_worksheet_pdf(
         )
     measurement_table = LongTable(
         measurement_rows,
-        colWidths=[100 * mm, 39 * mm, 36 * mm],
+        colWidths=[content_width * 0.56, content_width * 0.25, content_width * 0.19],
         repeatRows=1,
         hAlign="LEFT",
     )
@@ -261,10 +267,10 @@ def build_measurement_worksheet_pdf(
                 ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, PALE]),
                 ("GRID", (0, 0), (-1, -1), 0.4, LINE),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("LEFTPADDING", (0, 0), (-1, -1), 3 * mm),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 3 * mm),
-                ("TOPPADDING", (0, 0), (-1, -1), 2.5 * mm),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 2.5 * mm),
+                ("LEFTPADDING", (0, 0), (-1, -1), 1.5 * mm),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 1.5 * mm),
+                ("TOPPADDING", (0, 0), (-1, -1), 1 * mm),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 1 * mm),
             ]
         )
     )
@@ -295,15 +301,19 @@ def build_measurement_worksheet_pdf(
                         paragraph(selection_name),
                     ]
                 )
-        design_table = Table(design_rows, colWidths=[43 * mm, 132 * mm], hAlign="LEFT")
+        design_table = Table(
+            design_rows,
+            colWidths=[content_width * 0.26, content_width * 0.74],
+            hAlign="LEFT",
+        )
         design_table.setStyle(
             TableStyle(
                 [
                     ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 3 * mm),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 3 * mm),
-                    ("TOPPADDING", (0, 0), (-1, -1), 2 * mm),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 2 * mm),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 1.5 * mm),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 1.5 * mm),
+                    ("TOPPADDING", (0, 0), (-1, -1), 1 * mm),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 1 * mm),
                     ("LINEBELOW", (0, 0), (-1, -1), 0.35, LINE),
                 ]
             )
@@ -316,7 +326,7 @@ def build_measurement_worksheet_pdf(
 
     story.extend(
         [
-            Spacer(1, 6 * mm),
+            Spacer(1, 3 * mm),
             KeepTogether(
                 [
                     paragraph("Bill / Estimate — DEMO ONLY", "demo_title"),
@@ -333,10 +343,17 @@ def build_measurement_worksheet_pdf(
         canvas.saveState()
         canvas.setStrokeColor(LINE)
         canvas.setLineWidth(0.5)
-        canvas.line(doc.leftMargin, 13 * mm, A4[0] - doc.rightMargin, 13 * mm)
+        canvas.line(
+            doc.leftMargin,
+            13 * mm,
+            PDF_EXPORT_PAGE_SIZE[0] - doc.rightMargin,
+            13 * mm,
+        )
         canvas.setFont("Helvetica", 7.5)
         canvas.setFillColor(MUTED)
-        canvas.drawRightString(A4[0] - doc.rightMargin, 8 * mm, f"Page {doc.page}")
+        canvas.drawRightString(
+            PDF_EXPORT_PAGE_SIZE[0] - doc.rightMargin, 8 * mm, f"Page {doc.page}"
+        )
         canvas.restoreState()
 
     document.build(story, onFirstPage=draw_footer, onLaterPages=draw_footer)

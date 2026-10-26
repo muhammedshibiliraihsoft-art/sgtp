@@ -2,13 +2,13 @@ import { apiRequest, multipartRequest } from '../../services/apiClient'
 import { uploadPrivateMediaBatch } from '../../services/privateMediaUpload'
 import type {
   ApiPage,
+  FamilyOptionGroupConfig,
   CatalogFamily,
   CatalogFamilyDetail,
   CatalogFamilyImageMetadata,
   CatalogFamilyInput,
   CatalogFamilyPage,
   CatalogOptionGroupPage,
-  FamilyOptionGroupConfig,
   OptionGroup,
   ShopStyleOptionInputRequest,
   ShopStyleOptionPage,
@@ -49,46 +49,16 @@ export function getAllFamilies(locale = 'en'): Promise<CatalogFamily[]> {
   return getAllPages<CatalogFamily>(url.pathname + url.search)
 }
 
-export function getAllShopGarmentFamilies(shopId: string, locale = 'en', status: 'ACTIVE' | 'ARCHIVED' | 'all' = 'ACTIVE'): Promise<CatalogFamily[]> {
+export function getAllShopFamilies(shopId: string, locale = 'en'): Promise<CatalogFamily[]> {
   const url = new URL(`/api/v1/shops/${shopId}/catalog/garment-families/`, window.location.origin)
   url.searchParams.set('locale', locale)
-  url.searchParams.set('status', status)
   return getAllPages<CatalogFamily>(url.pathname + url.search)
 }
 
-export function setShopDefaultFamilyStatus(shopId: string, familyId: string, active: boolean): Promise<CatalogFamily> {
-  return apiRequest<CatalogFamily>(`/api/v1/shops/${shopId}/catalog/garment-families/${familyId}/${active ? 'restore' : 'archive'}/`, { method: 'POST', body: {} })
-}
-
-export function materializeShopDefaultFamily(shopId: string, familyId: string): Promise<CatalogFamily> {
-  return apiRequest<CatalogFamily>(`/api/v1/shops/${shopId}/catalog/garment-families/${familyId}/materialize-default/`, { method: 'POST', body: {} })
-}
-
-export function createShopGarmentFamily(shopId: string, data: CatalogFamilyInput): Promise<CatalogFamily> {
-  return apiRequest<CatalogFamily>(`/api/v1/shops/${shopId}/catalog/garment-families/`, { method: 'POST', body: data })
-}
-
-export function getAllShopOptionGroups(shopId: string, locale = 'en'): Promise<OptionGroup[]> {
-  const url = new URL(`/api/v1/shops/${shopId}/catalog/option-groups/`, window.location.origin)
-  url.searchParams.set('locale', locale)
-  return getAllPages<OptionGroup>(url.pathname + url.search)
-}
-
-export function createShopOptionGroup(shopId: string, data: CatalogFamilyInput): Promise<OptionGroup> {
-  return apiRequest<OptionGroup>(`/api/v1/shops/${shopId}/catalog/option-groups/`, { method: 'POST', body: data })
-}
-
-export function createShopFamilyOptionGroup(shopId: string, familyId: string, data: CatalogFamilyInput): Promise<FamilyOptionGroupConfig> {
-  return apiRequest<FamilyOptionGroupConfig>(`/api/v1/shops/${shopId}/catalog/garment-families/${familyId}/option-groups/create/`, { method: 'POST', body: data })
-}
-
-export function getShopFamilyOptionGroups(shopId: string, familyId: string, locale = 'en'): Promise<FamilyOptionGroupConfig[]> {
-  return apiRequest<FamilyOptionGroupConfig[]>(`/api/v1/shops/${shopId}/catalog/garment-families/${familyId}/option-groups/?locale=${encodeURIComponent(locale)}`)
-}
-
-export function updateShopFamilyOptionGroups(shopId: string, familyId: string, optionGroups: Array<Pick<FamilyOptionGroupConfig, 'sort_order' | 'selection_mode' | 'is_required'> & { option_group_id: string }>): Promise<FamilyOptionGroupConfig[]> {
-  return apiRequest<FamilyOptionGroupConfig[]>(`/api/v1/shops/${shopId}/catalog/garment-families/${familyId}/option-groups/`, {
-    method: 'PUT', body: { option_groups: optionGroups },
+export function createShopFamily(shopId: string, data: CatalogFamilyInput): Promise<CatalogFamily> {
+  return apiRequest<CatalogFamily>(`/api/v1/shops/${shopId}/catalog/garment-families/`, {
+    method: 'POST',
+    body: data,
   })
 }
 
@@ -97,6 +67,40 @@ export async function getOptionGroups(familyId?: string, locale = 'en'): Promise
     return apiRequest<OptionGroup[]>(`/api/v1/catalog/families/${familyId}/option-groups/?locale=${encodeURIComponent(locale)}`)
   }
   return getAllPages<OptionGroup>(`/api/v1/catalog/option-groups/?locale=${encodeURIComponent(locale)}`)
+}
+
+export function getShopFamilyOptionGroups(shopId: string, familyId: string, locale = 'en'): Promise<FamilyOptionGroupConfig[]> {
+  return apiRequest<FamilyOptionGroupConfig[]>(`/api/v1/shops/${shopId}/catalog/garment-families/${familyId}/option-groups/?locale=${encodeURIComponent(locale)}`)
+}
+
+export function getAllShopOptionGroups(shopId: string, locale = 'en'): Promise<OptionGroup[]> {
+  return getAllPages<OptionGroup>(`/api/v1/shops/${shopId}/catalog/option-groups/?locale=${encodeURIComponent(locale)}`)
+}
+
+export function createShopFamilyOptionGroup(
+  shopId: string,
+  familyId: string,
+  data: { code: string; translations: TranslationInput[] },
+): Promise<FamilyOptionGroupConfig> {
+  return apiRequest<FamilyOptionGroupConfig>(`/api/v1/shops/${shopId}/catalog/garment-families/${familyId}/option-groups/create/`, {
+    method: 'POST', body: data,
+  })
+}
+
+export function updateShopFamilyOptionGroups(
+  shopId: string,
+  familyId: string,
+  optionGroups: Array<Pick<FamilyOptionGroupConfig, 'sort_order' | 'selection_mode' | 'is_required'> & { option_group_id: string }>,
+): Promise<FamilyOptionGroupConfig[]> {
+  return apiRequest<FamilyOptionGroupConfig[]>(`/api/v1/shops/${shopId}/catalog/garment-families/${familyId}/option-groups/`, {
+    method: 'PUT', body: { option_groups: optionGroups },
+  })
+}
+
+export function materializeShopDefaultFamily(shopId: string, familyId: string): Promise<CatalogFamily> {
+  return apiRequest<CatalogFamily>(`/api/v1/shops/${shopId}/catalog/garment-families/${familyId}/materialize-default/`, {
+    method: 'POST', body: {},
+  })
 }
 
 export async function getShopVariants(shopId: string, page = 1, familyId?: string): Promise<ShopVariantPage> {
@@ -215,7 +219,6 @@ export async function toggleShopStyleOptionActive(shopId: string, optionId: stri
 }
 
 export async function uploadShopStyleOptionImages(shopId: string, optionId: string, files: File[], onProgress?: (fileIndex: number, percent: number) => void): Promise<StyleImage[]> {
-  if (files.length !== 1) throw new Error('Upload exactly one image per style option.')
   const legacyPath = `/api/v1/shops/${shopId}/catalog/style-options/${optionId}/reference-images/`
   return uploadPrivateMediaBatch<StyleImage[]>({
     path: `/api/v1/shops/${shopId}/catalog/media/uploads/`, kind: 'style_option', targetId: optionId, files, onProgress,
@@ -243,7 +246,6 @@ export async function toggleGlobalStyleOptionActive(optionId: string, is_active:
 }
 
 export async function uploadGlobalStyleOptionImages(optionId: string, files: File[]): Promise<StyleImage[]> {
-  if (files.length !== 1) throw new Error('Upload exactly one image per style option.')
   const legacyPath = `/api/v1/catalog/style-options/${optionId}/reference-images/`
   return uploadPrivateMediaBatch<StyleImage[]>({
     path: '/api/v1/catalog/media/uploads/', kind: 'style_option', targetId: optionId, files,
@@ -266,21 +268,17 @@ export async function updateFamilyOptionGroups(familyId: string, optionGroupIds:
   })
 }
 
-export function getFamilyDetail(familyId: string, locale?: string): Promise<CatalogFamilyDetail> {
-  const query = locale ? `?locale=${encodeURIComponent(locale)}` : ''
-  return apiRequest<CatalogFamilyDetail>(`/api/v1/catalog/families/${familyId}/${query}`)
+export function getFamilyDetail(familyId: string): Promise<CatalogFamilyDetail> {
+  return apiRequest<CatalogFamilyDetail>(`/api/v1/catalog/families/${familyId}/`)
 }
 
 export function createGlobalFamily(data: CatalogFamilyInput): Promise<CatalogFamily> {
   return apiRequest<CatalogFamily>('/api/v1/catalog/families/', { method: 'POST', body: data })
 }
 
-export function updateGlobalFamily(
-  familyId: string,
-  data: TranslationInput[] | { translations: TranslationInput[]; option_group_ids: string[] },
-): Promise<CatalogFamilyDetail> {
+export function updateGlobalFamily(familyId: string, translations: TranslationInput[]): Promise<CatalogFamilyDetail> {
   return apiRequest<CatalogFamilyDetail>(`/api/v1/catalog/families/${familyId}/`, {
-    method: 'PATCH', body: Array.isArray(data) ? { translations: data } : data,
+    method: 'PATCH', body: { translations },
   })
 }
 

@@ -127,7 +127,6 @@ class CatalogConcurrencyTests(TransactionTestCase):
                 shop_id=self.shop.pk,
                 actor=actor,
                 family=self.family,
-                variant=self.variant_a,
                 name="Concurrent Retry Design",
                 selection_options=[self.option],
                 idempotency_key=request_id,

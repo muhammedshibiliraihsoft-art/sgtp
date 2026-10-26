@@ -26,6 +26,7 @@ from apps.catalog.measurement_serializers import (
     MaterialPatchSerializer,
     MaterialSerializer,
     MeasurementDefinitionCreateSerializer,
+    MeasurementDefinitionMappingCreateSerializer,
     MeasurementDefinitionPatchSerializer,
     MeasurementDefinitionReadSerializer,
     MeasurementProfileCreateSerializer,
@@ -36,6 +37,7 @@ from apps.catalog.measurement_serializers import (
 from apps.catalog.measurement_services import (
     archive_material,
     archive_measurement_definition,
+    attach_measurement_definition_mapping,
     copy_measurement_set,
     create_material,
     create_measurement_definition,
@@ -47,7 +49,7 @@ from apps.catalog.measurement_services import (
     update_material,
 )
 from apps.catalog.measurement_pdf import build_measurement_worksheet_pdf
-from apps.catalog.models import Design, DesignVersion, GarmentFamily, GarmentVariant
+from apps.catalog.models import Design, DesignVersion, GarmentFamily
 from apps.clients.models import Client, RelatedPerson
 from apps.common.views import TenantScopedMixin
 from apps.tenants.context_views import ShopContextMixin
@@ -157,12 +159,6 @@ class MeasurementDefinitionListCreateView(ShopContextMixin, TenantScopedMixin, A
                 OpenApiParameter.QUERY,
                 description="Optional garment-family filter.",
             ),
-            OpenApiParameter(
-                "variant_id",
-                OpenApiTypes.UUID,
-                OpenApiParameter.QUERY,
-                description="Optional variant filter; requires family_id.",
-            ),
         ],
         responses=_page_schema(
             "MeasurementDefinitionPage", MeasurementDefinitionReadSerializer
@@ -181,16 +177,8 @@ class MeasurementDefinitionListCreateView(ShopContextMixin, TenantScopedMixin, A
             .order_by("sort_order", "code", "id")
         )
         family_raw = request.query_params.get("family_id")
-        variant_raw = request.query_params.get("variant_id")
-        if variant_raw and not family_raw:
-            raise serializers.ValidationError(
-                {"family_id": "Required when variant_id is supplied."}
-            )
         family_id = (
             serializers.UUIDField().run_validation(family_raw) if family_raw else None
-        )
-        variant_id = (
-            serializers.UUIDField().run_validation(variant_raw) if variant_raw else None
         )
         if family_id:
             shop = request.shop_context.shop
@@ -211,33 +199,11 @@ class MeasurementDefinitionListCreateView(ShopContextMixin, TenantScopedMixin, A
             # copying measurement configuration into each Shop.
             source_family_id = family.template_source_id or family.pk
             applicable_family_ids = {family.pk, source_family_id}
-            source_variant_id = None
-            if variant_id:
-                variant = (
-                    GarmentVariant.objects.filter(
-                        pk=variant_id,
-                        family=family,
-                        is_active=True,
-                    )
-                    .filter(Q(tenant__isnull=True) | Q(tenant=shop))
-                    .select_related("template_source")
-                    .first()
-                )
-                if variant and variant.template_source_id:
-                    source_variant_id = variant.template_source_id
-
             applicable_mappings = MeasurementDefinitionMapping.objects.filter(
                 definition_id=OuterRef("pk"),
                 family_id__in=applicable_family_ids,
                 deleted__isnull=True,
             )
-            if variant_id:
-                variant_scope = Q(variant__isnull=True) | Q(variant_id=variant_id)
-                if source_variant_id:
-                    variant_scope |= Q(variant_id=source_variant_id)
-                applicable_mappings = applicable_mappings.filter(variant_scope)
-            else:
-                applicable_mappings = applicable_mappings.filter(variant__isnull=True)
             rows = (
                 rows.filter(Exists(applicable_mappings))
                 .annotate(
@@ -308,6 +274,7 @@ class MeasurementDefinitionDetailView(ShopContextMixin, TenantScopedMixin, APIVi
             raise NotFound()
         return Response(MeasurementDefinitionReadSerializer(definition).data)
 
+
     @extend_schema(
         operation_id="measurement_definition_update",
         request=MeasurementDefinitionPatchSerializer,
@@ -364,6 +331,41 @@ class MeasurementDefinitionDetailView(ShopContextMixin, TenantScopedMixin, APIVi
             "translations", "mappings"
         ).get(pk=definition.pk)
         return Response(MeasurementDefinitionReadSerializer(definition).data)
+
+
+class MeasurementDefinitionMappingCreateView(
+    ShopContextMixin, TenantScopedMixin, APIView
+):
+    permission_classes = (IsAuthenticated, PasswordChangeGate, MeasurementAccess)
+    main_supplier_configuration_access = True
+
+    @extend_schema(
+        operation_id="measurement_definition_mapping_create",
+        request=MeasurementDefinitionMappingCreateSerializer,
+        responses={201: MeasurementDefinitionReadSerializer},
+        description=(
+            "Attach an active Shop-owned measurement definition to an active "
+            "Garment Family. Global definitions "
+            "remain immutable and cannot be remapped through this endpoint."
+        ),
+    )
+    def post(self, request, shop_id, definition_id):
+        serializer = MeasurementDefinitionMappingCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        mapping = attach_measurement_definition_mapping(
+            shop_id=request.shop_context.shop.pk,
+            actor=request.user,
+            definition_id=definition_id,
+            family_id=serializer.validated_data["family_id"],
+            sort_order=serializer.validated_data.get("sort_order"),
+        )
+        definition = MeasurementDefinition.objects.prefetch_related(
+            "translations", "mappings"
+        ).get(pk=mapping.definition_id)
+        return Response(
+            MeasurementDefinitionReadSerializer(definition).data,
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class MeasurementDefinitionArchiveView(ShopContextMixin, TenantScopedMixin, APIView):
@@ -596,7 +598,7 @@ class MeasurementWorksheetPDFView(
         ],
         responses={("200", "application/pdf"): OpenApiTypes.BINARY},
         description=(
-            "Returns a private A4 Measurement / Design worksheet. It is a preview/export, "
+            "Returns a private A5 portrait Measurement / Design worksheet. It is a preview/export, "
             "not an invoice. The selected Design is resolved for this request only; no "
             "Design-to-Measurement relationship is persisted."
         ),

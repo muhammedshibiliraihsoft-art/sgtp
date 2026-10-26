@@ -7,6 +7,8 @@ export type AuthSessionState = {
   passwordChangeRequired: boolean
   signIn: (identifier: string, password: string) => Promise<boolean>
   changePassword: (current: string, next: string, confirm: string) => Promise<void>
+  confirmPasswordReset: (uid: string, token: string, next: string, confirm: string) => Promise<void>
+  requestPasswordReset: (email: string) => Promise<void>
   signOut: () => Promise<void>
 }
 

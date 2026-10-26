@@ -462,6 +462,27 @@ class Design(ShopScopedCatalogModel):
             )
 
 
+class ShopDesignPrice(TimeStampedUUIDModel):
+    """Mutable current price for a Design as offered by one Shop."""
+
+    tenant = models.ForeignKey(
+        "tenants.Tenant", on_delete=models.PROTECT, related_name="design_prices"
+    )
+    design = models.ForeignKey(
+        Design, on_delete=models.PROTECT, related_name="shop_prices"
+    )
+    amount = models.DecimalField(max_digits=18, decimal_places=4)
+    currency = models.CharField(max_length=3)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("tenant", "design"), name="catalog_shop_design_price_uniq"
+            ),
+            models.CheckConstraint(condition=Q(amount__gte=0), name="design_price_nonnegative"),
+        ]
+
+
 class DesignVersion(BaseModel):
     class Status(models.TextChoices):
         DRAFT = "DRAFT", "Draft"
@@ -595,6 +616,7 @@ class DesignSelection(BaseModel):
             )
         if (
             design
+            and not getattr(self, "_allow_unmapped_cleanup", False)
             and not FamilyOptionGroup.objects.filter(
                 family=design.family, option_group_id=self.option_group_id
             ).exists()

@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from django.conf import settings
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from apps.accounts.models import User
@@ -45,7 +45,14 @@ class ApiBrowserTests(TestCase):
 
     def test_main_supplier_sees_browser_and_non_supplier_gets_uniform_404(self):
         self.client.force_login(self.main_supplier)
-        response = self.client.get(reverse("api-browser"))
+        test_storages = {
+            **settings.STORAGES,
+            "staticfiles": {
+                "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
+            },
+        }
+        with override_settings(STORAGES=test_storages):
+            response = self.client.get(reverse("api-browser"))
         self.assertEqual(response.status_code, 200)
         self.assertIn("noindex", response["X-Robots-Tag"])
         self.assertContains(response, "SGTP API Browser")
