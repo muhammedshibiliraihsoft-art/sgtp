@@ -65,11 +65,13 @@ class ProjectStateValidator:
         *,
         git_runner: GitRunner | None = None,
         test_discoverer: Callable[[], int | None] | None = None,
+        baseline_ref: str | None = None,
     ) -> None:
         self.root = root.resolve()
         self.result = ValidationResult()
         self._git_runner = git_runner or self._run_git
         self._test_discoverer = test_discoverer or self.discover_tests
+        self.baseline_ref = baseline_ref
 
     def _run_git(self, args: Sequence[str]) -> str:
         completed = subprocess.run(
@@ -316,6 +318,57 @@ class ProjectStateValidator:
             self.result.facts["remote_relation"] = "REMOTE UNAVAILABLE"
             self.result.warning("Remote origin/main could not be verified.")
 
+    def _baseline_inherited_paths(self, paths: Sequence[str]) -> set[str]:
+        """Return module paths present and unchanged at an opt-in base ref."""
+        if not self.baseline_ref:
+            return set()
+        try:
+            baseline_commit = self._git_runner(
+                [
+                    "rev-parse",
+                    "--verify",
+                    "--end-of-options",
+                    f"{self.baseline_ref}^{{commit}}",
+                ]
+            )
+            self._git_runner(["merge-base", "--is-ancestor", baseline_commit, "HEAD"])
+        except (OSError, subprocess.SubprocessError):
+            self.result.error(
+                "Baseline ref must resolve to a commit that is an ancestor of HEAD."
+            )
+            return set()
+
+        try:
+            inherited = {
+                path
+                for path in paths
+                if path
+                in self._git_runner(
+                    ["ls-tree", "-d", "--name-only", baseline_commit, "--", path]
+                ).splitlines()
+            }
+            changed = self._git_runner(
+                ["diff", "--name-only", baseline_commit, "--", *paths]
+            ).splitlines()
+            changed.extend(
+                self._git_runner(
+                    ["ls-files", "--others", "--exclude-standard", "--", *paths]
+                ).splitlines()
+            )
+        except (OSError, subprocess.SubprocessError):
+            self.result.error(
+                "Unable to compare business-module paths to baseline ref."
+            )
+            return set()
+
+        changed_modules = {
+            module
+            for changed_path in changed
+            for module in paths
+            if changed_path == module or changed_path.startswith(f"{module}/")
+        }
+        return inherited - changed_modules
+
     def check_phase3_surface(self) -> None:
         forbidden = (
             "backend/apps/shops",
@@ -347,6 +400,8 @@ class ProjectStateValidator:
             )
         )
         if phase4_is_activated_consistently:
+            inherited_paths = self._baseline_inherited_paths(forbidden)
+            present = [path for path in present if path not in inherited_paths]
             current_handoff_text = self.current_handoff_section()
             # A task-specific confirmation is required before its business app
             # may appear; Phase activation alone never unlocks future modules.
@@ -624,8 +679,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument(
         "--root", type=Path, default=Path(__file__).resolve().parents[1]
     )
+    parser.add_argument(
+        "--baseline-ref",
+        help=(
+            "treat unchanged business-module directories already present in this "
+            "ancestor commit as inherited baseline"
+        ),
+    )
     args = parser.parse_args(argv)
-    result = ProjectStateValidator(args.root).run()
+    result = ProjectStateValidator(args.root, baseline_ref=args.baseline_ref).run()
     for key, value in result.facts.items():
         print(f"FACT {key}: {value}")
     for warning in result.warnings:

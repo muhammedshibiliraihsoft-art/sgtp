@@ -6,7 +6,6 @@ import hashlib
 from threading import Barrier
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
-from zoneinfo import ZoneInfo
 
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.files.base import ContentFile
@@ -32,7 +31,6 @@ from apps.catalog.storage import PrivateReferenceStorage
 from apps.catalog.serializers import DesignSerializer
 from apps.clients.models import Client, RelatedPerson
 from apps.billing.models import (
-    CreditNote,
     FinanceMutation,
     FinancialAuditEvent,
     FinancialDocument,
@@ -994,6 +992,24 @@ class WorkApiTests(APITestCase):
         self.assertEqual(wearer_response.status_code, 400, wearer_response.data)
         self.assertEqual(design_response.status_code, 400, design_response.data)
         self.assertEqual(measurement_response.status_code, 400, measurement_response.data)
+        self.assertFalse(WorkOrder.objects.filter(tenant=self.shop).exists())
+
+    def test_inactive_measurement_version_cannot_be_used_for_new_work(self):
+        MeasurementSet.objects.create(profile=self.profile, version=2)
+        measurement_sets_url = (
+            f"/api/v1/shops/{self.shop.pk}/clients/{self.client_record.pk}/"
+            f"measurement-profiles/{self.profile.pk}/sets/"
+        )
+        self.client.force_authenticate(self.admin)
+        deactivated = self.client.delete(
+            f"{measurement_sets_url}{self.measurement_set.pk}/"
+        )
+        self.assertEqual(deactivated.status_code, 204, deactivated.data)
+
+        response = self.create()
+
+        self.assertEqual(response.status_code, 400, response.data)
+        self.assertIn("measurement_set", response.data["errors"])
         self.assertFalse(WorkOrder.objects.filter(tenant=self.shop).exists())
 
     def test_request_only_delete_preserves_number_high_water_mark(self):

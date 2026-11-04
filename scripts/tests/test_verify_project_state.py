@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -8,16 +9,43 @@ from scripts.verify_project_state import ProjectStateValidator
 
 
 class FakeGit:
-    def __init__(self, *, status="", remote="head", counts="0 0", remote_error=False):
+    def __init__(
+        self,
+        *,
+        status="",
+        remote="head",
+        counts="0 0",
+        remote_error=False,
+        baseline_paths=(),
+        changed_paths=(),
+        untracked_paths=(),
+        baseline_is_ancestor=True,
+    ):
         self.status = status
         self.remote = remote
         self.counts = counts
         self.remote_error = remote_error
+        self.baseline_paths = set(baseline_paths)
+        self.changed_paths = tuple(changed_paths)
+        self.untracked_paths = tuple(untracked_paths)
+        self.baseline_is_ancestor = baseline_is_ancestor
 
     def __call__(self, args):
         command = " ".join(args)
         if args[:2] == ["rev-parse", "HEAD"]:
             return "head"
+        if args[:3] == ["rev-parse", "--verify", "--end-of-options"]:
+            return "baseline-sha"
+        if args[:2] == ["merge-base", "--is-ancestor"]:
+            if not self.baseline_is_ancestor:
+                raise subprocess.CalledProcessError(1, ["git", *args])
+            return ""
+        if args[:3] == ["ls-tree", "-d", "--name-only"]:
+            return args[-1] if args[-1] in self.baseline_paths else ""
+        if args[:2] == ["diff", "--name-only"]:
+            return "\n".join(self.changed_paths)
+        if args[:3] == ["ls-files", "--others", "--exclude-standard"]:
+            return "\n".join(self.untracked_paths)
         if args[:2] == ["branch", "--show-current"]:
             return "main"
         if args[:2] == ["status", "--porcelain"]:
@@ -94,11 +122,12 @@ T4-01 is in progress.
 
 
 class ValidatorTests(unittest.TestCase):
-    def validator(self, root, git=None, count=2):
+    def validator(self, root, git=None, count=2, baseline_ref=None):
         return ProjectStateValidator(
             root,
             git_runner=git or FakeGit(),
             test_discoverer=lambda: count,
+            baseline_ref=baseline_ref,
         )
 
     def test_matching_phase_and_task_state(self):
@@ -366,8 +395,7 @@ MEASUREMENT-E2E-01 is in progress.
         )
         handoff = (
             "## Current handoff — T4-06\n"
-            "CONFIRM TASK T4-06\n"
-            + PHASE4_HANDOFF.replace("T4-01", "T4-06")
+            "CONFIRM TASK T4-06\n" + PHASE4_HANDOFF.replace("T4-01", "T4-06")
         )
         root = make_repo(state, handoff)
         (root / "apps/catalog").mkdir(parents=True)
@@ -388,6 +416,90 @@ MEASUREMENT-E2E-01 is in progress.
         (root / "apps/works").mkdir(parents=True)
         result = self.validator(root).run()
         self.assertTrue(any("apps/works" in error for error in result.errors))
+
+    def test_opt_in_baseline_allows_unchanged_billing_module_from_ancestor(self):
+        state = PHASE4_STATE.replace(
+            "Current task: T4-01 is in progress.",
+            "Current task: T4-06 is complete locally; CONFIRM TASK T4-06.",
+        )
+        handoff = (
+            "## Current handoff — T4-06\n"
+            "CONFIRM TASK T4-06\n" + PHASE4_HANDOFF.replace("T4-01", "T4-06")
+        )
+        root = make_repo(state, handoff)
+        (root / "apps/catalog").mkdir(parents=True)
+        (root / "apps/works").mkdir(parents=True)
+        (root / "apps/billing").mkdir(parents=True)
+        result = self.validator(
+            root,
+            git=FakeGit(baseline_paths={"apps/billing"}),
+            baseline_ref="origin/staging",
+        ).run()
+        self.assertTrue(result.ok, result.errors)
+
+    def test_opt_in_baseline_still_rejects_changes_to_unapproved_module(self):
+        state = PHASE4_STATE.replace(
+            "Current task: T4-01 is in progress.",
+            "Current task: T4-06 is complete locally; CONFIRM TASK T4-06.",
+        )
+        handoff = (
+            "## Current handoff — T4-06\n"
+            "CONFIRM TASK T4-06\n" + PHASE4_HANDOFF.replace("T4-01", "T4-06")
+        )
+        root = make_repo(state, handoff)
+        for path in ("apps/catalog", "apps/works", "apps/billing"):
+            (root / path).mkdir(parents=True)
+        result = self.validator(
+            root,
+            git=FakeGit(
+                baseline_paths={"apps/billing"},
+                changed_paths={"apps/billing/models.py"},
+            ),
+            baseline_ref="origin/staging",
+        ).run()
+        self.assertTrue(any("apps/billing" in error for error in result.errors))
+
+    def test_opt_in_baseline_still_rejects_untracked_unapproved_module_content(self):
+        state = PHASE4_STATE.replace(
+            "Current task: T4-01 is in progress.",
+            "Current task: T4-06 is complete locally; CONFIRM TASK T4-06.",
+        )
+        handoff = (
+            "## Current handoff — T4-06\n"
+            "CONFIRM TASK T4-06\n" + PHASE4_HANDOFF.replace("T4-01", "T4-06")
+        )
+        root = make_repo(state, handoff)
+        for path in ("apps/catalog", "apps/works", "apps/billing"):
+            (root / path).mkdir(parents=True)
+        result = self.validator(
+            root,
+            git=FakeGit(
+                baseline_paths={"apps/billing"},
+                untracked_paths={"apps/billing/new_rule.py"},
+            ),
+            baseline_ref="origin/staging",
+        ).run()
+        self.assertTrue(any("apps/billing" in error for error in result.errors))
+
+    def test_opt_in_baseline_must_be_ancestor_of_head(self):
+        state = PHASE4_STATE.replace(
+            "Current task: T4-01 is in progress.",
+            "Current task: T4-06 is complete locally; CONFIRM TASK T4-06.",
+        )
+        handoff = (
+            "## Current handoff — T4-06\n"
+            "CONFIRM TASK T4-06\n" + PHASE4_HANDOFF.replace("T4-01", "T4-06")
+        )
+        root = make_repo(state, handoff)
+        (root / "apps/billing").mkdir(parents=True)
+        result = self.validator(
+            root,
+            git=FakeGit(baseline_is_ancestor=False),
+            baseline_ref="origin/staging",
+        ).run()
+        self.assertTrue(
+            any("ancestor of HEAD" in error for error in result.errors), result.errors
+        )
 
     def test_r501_expansion_allows_pricing_billing_modules_with_both_approvals(self):
         state = PHASE4_STATE.replace(
