@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-11-04 — Phase 4 staging-source audit candidate (local only)
+
+- Revalidated the T4-06 Client → Design → Measurement → Work → Completed
+  journey under the approved Phase 4 staging reconciliation plan. Corrected
+  stale Phase 4 and API documentation: the fetched
+  `origin/staging` source already contains T4-04–T4-06 Work workflow/API
+  behavior, alongside Phase 5 Billing. This does not claim a live deployment.
+- Added a Work API regression for rejecting a deactivated MeasurementSet and
+  removed two unused imports. No application, API, database schema, or
+  migration behavior changed.
+- Added an opt-in validator `--baseline-ref` check for this staging-based
+  audit. It accepts only unchanged module directories from a verified ancestor;
+  tests verify that changed and untracked content under an otherwise inherited
+  module still fails the phase gate. The default validator behavior is
+  unchanged.
+- Disposable PostgreSQL migration replay and local backend/script validation
+  are recorded in Project State and Handoff. No push, PR, merge, or deployment
+  occurred.
+
 ## 2026-10-26 — Phase 5 local migrations applied (unpublished)
 
 - User authorized local `devdb` migrations after inspecting the nine-operation

@@ -1,6 +1,6 @@
 # API
 
-## T4-04 Work/Order API (local, unpublished)
+## Work/Order API (present in `origin/staging`; deployed parity unverified)
 
 All routes are beneath `/api/v1/shops/{shop_id}/works/` and require an active
 authenticated Shop context. `GET /` is paginated and accepts `search` (Work
@@ -29,7 +29,7 @@ The source IDs cannot be replaced after creation. R5-01 later adds an optional
 Work-time Design price/currency snapshot and separate Shop-scoped Billing API;
 Work still has no stock reservation or inventory-consumption contract.
 
-## Phase 5 Shop Design pricing and Billing API (local, unpublished)
+## Phase 5 Shop Design pricing and Billing API (present in `origin/staging`; deployed parity unverified)
 
 Normal price and billing endpoints require authenticated active Shop context
 and Shop ADMIN or STAFF with active CASHIER Work Function. CASHIER alone does

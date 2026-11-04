@@ -1,5 +1,24 @@
 # Phase 4 — Core Tailor Business
 
+## Current repository status (2026-11-04)
+
+The current `origin/staging` source at `03518b97470cddb854d405b5cb9d601e63da41a6`
+contains the Phase 4 Work aggregate and workflow service/API implementation.
+Request-to-Completed flow, Shop isolation, permissions, assignment/function
+checks, stale/replay rejection, audit rollback, and concurrent transition
+coverage passed in the current source's PostgreSQL-backed tests. A fresh
+disposable PostgreSQL replay also applied its existing migration graph through
+Phase 5 Billing without changing migration files. Phase 5 price snapshots,
+invoice behavior, Billing API/models, and `works.0003` remain part of the
+staging source and were preserved.
+
+The local audit candidate adds one regression test for rejecting an inactive
+MeasurementSet when creating new Work. It makes no application, API, schema, or
+migration change. The current source/schema snapshots validate with zero
+OpenAPI errors and match the generated schema. This confirms repository source
+and local tests only; live staging deployment and database state remain
+unverified.
+
 ## 1. Phase Overview
 Implement the shop-scoped Tailor Management domain.
 ## 2. Phase Objective
@@ -13,7 +32,7 @@ Phase 3 T3-04A–T3-04C identity/membership/Work-Function prerequisites and T3-0
 ## 6. Dependencies
 Shop context/membership, permissions, shared models, PostgreSQL.
 ## 7. Current Repository Assumptions
-Accounts, Supplier/Shop (legacy Tenant), memberships, T3-03 Shop context, and T3-04 reusable isolation primitives exist. T3-04A identity/User-ID remediation, T3-04B membership/Admin safeguards, T3-04B-USER-SCOPE, and T3-04C Work Functions are published; exact-SHA CI passed for T3-04C. T4-01 Clients/Related Persons is the first Phase 4 module and is published; T4-02 and later Phase 4 business modules/services are not implemented and require their own task authorization.
+Accounts, Supplier/Shop (legacy Tenant), memberships, T3-03 Shop context, and T3-04 reusable isolation primitives exist. T3-04A identity/User-ID remediation, T3-04B membership/Admin safeguards, T3-04B-USER-SCOPE, and T3-04C Work Functions are published; exact-SHA CI passed for T3-04C. T4-01 Clients/Related Persons, T4-02 Catalog/Designs, T4-03 Measurements/Materials, and T4-03A Inventory are published. T4-04 through T4-06 are implemented in the current staging source as documented above. Phase 5 Billing is separately scoped and remains present on the staging branch; the Phase 4 scope itself still excludes billing behavior.
 ## 8. Exact Scope
 Clients, family/related persons, catalog/designs, measurements, materials, works/orders, workflow services, indexes, constraints, concurrency.
 ## 9. Out of Scope

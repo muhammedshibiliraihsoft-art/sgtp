@@ -1,5 +1,51 @@
 # Project State
 
+## Phase 4 staging-source audit candidate (2026-11-04; local only)
+
+Current task: T4-06 integration revalidation against fetched `origin/staging`,
+within the user-approved Phase 4 staging reconciliation plan. The plan includes
+the Client → Design → Measurement → Work → Completed API journey. This records
+source and local validation evidence; it does not verify live deployment.
+
+- **Verified from Git:** the candidate worktree is
+  `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp-phase4-staging-audit`,
+  branch `codex/phase4-staging-audit`, created from `origin/staging`
+  `03518b97470cddb854d405b5cb9d601e63da41a6`.
+- **Authorization:** T4-06 was previously confirmed as recorded in the project
+  history; the current staging reconciliation plan was explicitly approved by
+  the user's `PLEASE IMPLEMENT THIS PLAN` instruction.
+- **Verified from source:** staging already contains the Work aggregate,
+  Shop-scoped API and permissions, fixed Request-to-Completed workflow,
+  assignment/function checks, expected-status conflict handling, and
+  transactional Work audit events. The Phase 5 Design-price snapshot, invoice
+  behavior, Billing models/routes, and `works.0003` remain present. No Work
+  implementation or API contract change was needed. One regression test now
+  exercises rejection of an inactive MeasurementSet through the Work API; two
+  unused imports in that test module were removed.
+- **Verified from disposable PostgreSQL:** a fresh replay applied the current
+  staging migration graph, including `catalog.0024` before `works.0001`, then
+  `catalog.0025`/`0026`, `works.0003`, and Billing migrations. No migration file
+  was changed. The disposable database was `sgtp_audit` in the uniquely named
+  local test container; persistent application databases were not targeted.
+- **Verified from tests/checks:** Work API suite 34/34 passed; full backend
+  suite 598/598 passed (326 warnings); script tests 50/50 passed. The
+  project-state validator passed with
+  `python scripts/verify_project_state.py --baseline-ref origin/staging` and
+  discovered 598 backend tests. Its default gate remains unchanged; the opt-in
+  baseline only exempts business-module directories already present and
+  unchanged at the validated ancestor. Django system check reported no issues,
+  migration drift reported no changes, and OpenAPI validation reported 0 errors
+  with 29 warnings (13 unique). Generated root/docs schema snapshots match the
+  freshly generated schema byte-for-byte.
+- **Style baseline:** full-repository Black check reports 71 existing files
+  needing formatting; full Flake8 reports existing findings across the staging
+  source. The changed validator source passes Black, and all touched Python
+  files pass Flake8. The two changed test modules are already Black-noncompliant
+  at `origin/staging`; those baseline files were not broadly reformatted.
+- **Unverified / next gate:** provider auto-deploy state, deployed commit,
+  staging database migration state, and live staging audit remain unverified.
+  Push, PR, merge, and deployment were not performed.
+
 ## Phase 5 local migration closure (2026-10-26; unpublished)
 
 The user authorized the local `devdb` migration after review of the exact plan.

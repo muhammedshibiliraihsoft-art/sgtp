@@ -1,5 +1,39 @@
 # Handoff
 
+## Current handoff — T4-06 staging-source revalidation (2026-11-04; local only)
+
+Current task: Revalidate the T4-06 Client → Design → Measurement → Work →
+Completed journey against fetched `origin/staging` as part of the user's
+approved Phase 4 staging reconciliation plan. T4-06 was previously authorized
+with `CONFIRM TASK T4-06`; the current plan was approved with
+`PLEASE IMPLEMENT THIS PLAN`. Phase 5 Billing remains intact. This is a local
+source candidate; live provider deployment and migration state are unverified.
+
+- Worktree: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp-phase4-staging-audit`,
+  branch `codex/phase4-staging-audit`, based on
+  `origin/staging` `03518b97470cddb854d405b5cb9d601e63da41a6`.
+- Verified from source and disposable PostgreSQL: Work workflow, Shop isolation,
+  role/function/assignment checks, stale-transition handling and audit events
+  are present. Phase 5 Design-price snapshot, invoice behavior, Billing
+  models/routes, `works.0003`, and the existing migration chain are preserved.
+  A fresh disposable migration replay completed through Billing migrations;
+  no schema file changed.
+- Change in this candidate: one Work API regression test ensures a deactivated
+  measurement version cannot be used for new Work; two unused test imports were
+  removed. No application behavior, route, schema, or migration changed.
+- Validation: focused Work API 34/34, full backend 598/598 (326 warnings),
+  script tests 50/50; `python scripts/verify_project_state.py
+  --baseline-ref origin/staging` passed with 598 backend tests discovered;
+  Django check and migration drift passed; OpenAPI validation had 0 errors / 29
+  warnings and generated schema matched both committed snapshots. Touched
+  Python files pass Flake8 and the validator source passes Black. Full-repo
+  Black/Flake8 have existing staging-source findings; no broad reformat was
+  applied.
+- No push, PR, merge, deployment, or provider-side change occurred. Do not
+  infer live staging deployment from this branch-source audit.
+- Next safe step: review the two local commits and candidate diff; arrange any
+  live staging audit as a separately authorized step.
+
 ## Phase 5 local migration closure (2026-10-26; unpublished)
 
 - User authorized applying the exact pending local migration plan. Nine
