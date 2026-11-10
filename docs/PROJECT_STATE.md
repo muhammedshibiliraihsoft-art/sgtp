@@ -13,8 +13,8 @@ constitute release sign-off.
   `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp-phase4-staging-audit`,
   branch `codex/phase4-staging-audit`, based on `origin/staging`
   `03518b97470cddb854d405b5cb9d601e63da41a6`. The two reviewed candidate
-  commits and one local closeout commit are preserved; the worktree is clean.
-  The closeout commit is local only. No push, PR, merge, or deployment was
+  commits and one closeout commit are preserved; the clean branch is pushed to
+  `origin/codex/phase4-staging-audit`. No PR, merge, or deployment was
   performed. Generated validator fixtures and the generated `uv.lock` were
   moved intact to
   `C:\Users\Admin\AppData\Local\Temp\sgtp-phase4-generated-artifacts-20261110`;
@@ -22,8 +22,9 @@ constitute release sign-off.
   `.venv` is ignored.
 - **Authorization:** Phase 4 activation and T4-06 were confirmed earlier,
   and the staging reconciliation plan was explicitly approved. The user
-  separately authorized one local closeout commit and quarantine of the
-  verified generated artifacts, with no push.
+  separately authorized one local closeout commit, quarantine of the verified
+  generated artifacts, and a push of this feature branch. No PR or deployment
+  was authorized or performed.
 - **Verified from source:** staging contains the Work aggregate, Shop-scoped
   API and permissions, fixed Request-to-Completed workflow,
   assignment/function checks, expected-status conflict handling, and

@@ -9,10 +9,10 @@
   repositories. The 47 previously leaked fixture directories and generated
   `uv.lock` were moved intact to a named quarantine outside the worktree, with
   source paths and SHA-256 checksums recorded and verified.
-- Created one local closeout commit after review. The candidate remains based
-  on `origin/staging`; worktree is clean. No push, PR, merge, or deployment was
-  performed. Black remains unverified and live staging state remains outside
-  this local review.
+- Created a local closeout commit and pushed `codex/phase4-staging-audit` to
+  `origin`. The candidate remains based on `origin/staging`; worktree is clean.
+  No PR, merge, or deployment was performed. Black remains unverified and live
+  staging state remains outside this local review.
 
 ## 2026-11-06 — Phase 4 local closeout verification
 
