@@ -1,6 +1,6 @@
 # Architecture
 
-## T4-04 Work backend (local, unpublished)
+## T4-04–T4-06 Work backend (present in staging source; live deployment unverified)
 
 Runtime app `apps.works` owns the one-garment Work aggregate. Shop context is
 resolved before Work querysets, and linked IDs are checked against the same
@@ -11,7 +11,12 @@ Family and Design with an available published version. Archived parents block
 new Work, while existing Work remains readable with its protected references.
 Fixed stage mapping lives in `apps/works/constants.py`. Role and current-stage
 Work Function are both required for operational writes; assignment is cleared
-on transition. T4-05 will separately harden retries, race semantics and audit.
+on transition. T4-05 implements transactional services, expected-status
+conflict handling, append-only Work audit events, and rollback/concurrency
+coverage. T4-06 validates Client → Design → Measurement → Work → Completed and
+cross-Shop denial. The current `origin/staging` source and migrations were
+revalidated locally against disposable PostgreSQL on 2026-11-06; this does
+not establish the deployed staging commit or database state.
 
 ## Local Login ID and PIN transition (unpublished)
 

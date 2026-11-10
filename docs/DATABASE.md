@@ -23,7 +23,7 @@ database was changed for this task. `babel==2.18.0` is added for maintained
 currency-code validation and CLDR minor-unit precision; extra precision is
 rejected rather than rounded.
 
-## T4-04 Work additions (local files only)
+## T4-04 Work schema (current staging-source graph; disposable replay verified 2026-11-06)
 
 `tenants.0010_add_check_work_function` adds the approved `CHECK` code to the
 fixed Work Function catalog and database check. `works.0001_initial` adds a
@@ -32,8 +32,15 @@ published DesignVersion, MeasurementSet and optional Material references,
 per-Shop sequence/number uniqueness, status/priority checks, and Shop/status/
 due/priority indexes. Sequence allocation locks the Shop and includes
 soft-deleted Work numbers in the high-water mark. No data migration or
-backfill. Both migrations were exercised only in a disposable PostgreSQL
-test database; the existing application database was not migrated.
+backfill was added for Work. The current `origin/staging` migration graph was
+replayed through the Phase 5 Billing migrations on 2026-11-06 in the
+disposable PostgreSQL database `sgtp_phase4_audit_20261106_5f03c2` inside the
+`sgtp-phase4-audit-20261106-5f03c2` container. It used loopback networking and
+a tmpfs data directory, with no Docker volume. This verifies clean replay
+only; the disposable database was destroyed and the container was stopped and
+verified absent afterward.
+The configured application database and live staging database were not
+migrated or inspected, so deployed staging state remains unverified.
 
 ## GARMENT-FAMILIES-01 family catalog additions (implemented locally; not published or deployed)
 

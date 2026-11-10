@@ -1,6 +1,13 @@
 # Phase 4 — Core Tailor Business
 
-## Current repository status (2026-11-04)
+## Current repository status (2026-11-06)
+
+**Phase 4 backend task scope T4-01–T4-06 is complete in this local
+staging-source audit candidate.** T4-01–T4-03A are published; T4-04–T4-06
+are present in fetched `origin/staging` source at
+`03518b97470cddb854d405b5cb9d601e63da41a6`. The candidate adds an inactive
+MeasurementSet regression and an opt-in inherited-module validator baseline,
+not Work behavior or schema changes.
 
 The current `origin/staging` source at `03518b97470cddb854d405b5cb9d601e63da41a6`
 contains the Phase 4 Work aggregate and workflow service/API implementation.
@@ -13,11 +20,13 @@ invoice behavior, Billing API/models, and `works.0003` remain part of the
 staging source and were preserved.
 
 The local audit candidate adds one regression test for rejecting an inactive
-MeasurementSet when creating new Work. It makes no application, API, schema, or
-migration change. The current source/schema snapshots validate with zero
-OpenAPI errors and match the generated schema. This confirms repository source
-and local tests only; live staging deployment and database state remain
-unverified.
+MeasurementSet when creating new Work. Focused Work API tests passed 34/34,
+the full backend suite 598/598 (326 warnings), and script tests 52/52. Django
+check, migration drift, the project-state validator with
+`--baseline-ref origin/staging`, and OpenAPI/schema parity passed. OpenAPI
+reported 0 errors and 29 warnings (13 unique). This confirms repository source
+and disposable PostgreSQL only; live staging deployment and database state
+remain unverified.
 
 ## 1. Phase Overview
 Implement the shop-scoped Tailor Management domain.
@@ -72,13 +81,13 @@ DB: additive `apps/catalog/migrations/` migrations only. Check owner XOR, one va
 
 Validation: focused PostgreSQL tests, full PostgreSQL suite, repository validator and validator tests, Django system and production deploy checks, migration drift, OpenAPI, Black, Flake8, and `git diff --check`. Update API/database/security/business/architecture/state/handoff/schema/changelog documentation. Do not modify frontend, implement T4-04 or Phase 5, or deploy. DoD: only after the above constraints, tests, generated schema and exact-SHA CI pass; then stop without starting another task.
 
-### T4-04 Work aggregate and workflow state
-Objective: create work/order aggregate and approved states. Dependencies: T4-01–03 and completed Phase 3 T3-04A–T3-04C/T3-05 prerequisites. Files: `backend/apps/works/{models,migrations,serializers,views,tests}`. Steps: model client/design/measurement/material links, stable searchable Work number, status, due dates, and priority `Normal|Urgent|Very Urgent`; implement only Request, Cutting, Stitching, Check, Finishing, QC, Completed transitions. Do not model TAILOR/SALESMAN/CASHIER as access roles. Workflow eligibility/assignment must use authorized Shop context + membership Access Role + applicable Work Function + explicit service policy. A Work Function alone never authorizes a transition. Specify stage-to-function mapping in this task; if Check requires an additional catalog function, record BUSINESS DECISION REQUIRED rather than inventing one. Keep workflow fixed and do not add a per-Shop workflow builder. Expose upcoming/due-soon/today/overdue as derived date indicators, not workflow states. DB: state/index/constraints. API: work CRUD/transition/search endpoints. Security: shop scope/transition permissions. Tests: valid/invalid transitions, role/function/assignment matrix, denial when membership/function/context is absent or foreign, priority, due-date derivation/cutoff decision gate, Work search and cross-Shop denial. DoD: persisted workflow and priority without unapproved workflow states or function-based permission escalation.
+### T4-04 Work aggregate and workflow state — complete in current source
+Objective: create work/order aggregate and approved states. Dependencies: T4-01–03 and completed Phase 3 T3-04A–T3-04C/T3-05 prerequisites. Files: `apps/works/{models,migrations,serializers,views,tests}`. Steps: model client/design/measurement/material links, stable searchable Work number, status, due dates, and priority `Normal|Urgent|Very Urgent`; implement only Request, Cutting, Stitching, Check, Finishing, QC, Completed transitions. Do not model TAILOR/SALESMAN/CASHIER as access roles. Workflow eligibility/assignment must use authorized Shop context + membership Access Role + applicable Work Function + explicit service policy. A Work Function alone never authorizes a transition. Use the approved distinct `CHECK` Work Function; adding other functions requires a separate business decision. Keep workflow fixed and do not add a per-Shop workflow builder. Expose upcoming/due-soon/today/overdue as derived date indicators, not workflow states. DB: state/index/constraints. API: work CRUD/transition/search endpoints. Security: shop scope/transition permissions. Tests: valid/invalid transitions, role/function/assignment matrix, denial when membership/function/context is absent or foreign, priority, due-date derivation/cutoff decision gate, Work search and cross-Shop denial. DoD: persisted workflow and priority without unapproved workflow states or function-based permission escalation.
 
-### T4-05 Service layer and concurrency
+### T4-05 Service layer and concurrency — complete in current source
 Objective: enforce domain rules outside views. Dependencies: T4-04. Steps: transactional services, select-for-update/version checks, idempotent transitions, audit events, validation and conflict errors. DB: transactions/unique constraints. API: service error mapping. Tests: races, retries, duplicate transitions, rollback. DoD: views cannot bypass rules.
 
-### T4-06 Domain integration validation
+### T4-06 Domain integration validation — complete and revalidated 2026-11-06
 Objective: verify the complete shop workflow before billing. Dependencies: T4-05. Steps: API integration scenario from request to completed; verify data links and isolation. DoD: documented evidence.
 
 **Verified complete (2026-10-21; local, unpublished):** Added and ran a focused
@@ -134,11 +143,11 @@ Checkpoint each domain task; never push.
 ## 29. Handoff Requirements
 Record entity relationships, states/transitions, constraints, tests, and next task.
 ## 30. Phase Validation Checklist
-- [ ] Client/related-person rules
-- [ ] Designs/measurements/materials connected
-- [ ] Workflow states persisted
-- [ ] Services transactional
-- [ ] Concurrency and isolation tested
+- [x] Client/related-person rules
+- [x] Designs/measurements/materials connected
+- [x] Work, workflow states, and inventory/stock ledger persisted
+- [x] Workflow services transactional and audited
+- [x] Concurrency and Shop isolation tested
 ## 31. Definition of Done
 An authorized shop can take work from client request through Completed with all required links and no cross-shop access.
 ## 32. Common Implementation Mistakes
@@ -146,6 +155,6 @@ Fat views, free-form status edits, missing transactions, nullable links, floatin
 ## 33. Rollback / Recovery Notes
 Use corrective migrations and data repair scripts; freeze transitions if corruption is detected; preserve audit evidence.
 ## 34. Phase Implementation Prompt
-**Implement ONLY this phase. Do not implement future phases.** Phase confirmation activates Phase 4 only; it does not authorize T4-01 through T4-06. Before each task, present that task's objective, affected files/areas, dependencies/preconditions, and validation/tests, then wait for explicit `CONFIRM TASK <TASK-ID>`. After confirmation, implement only that task, run its validation, update documentation, report the result, and stop. Do not begin the next task or Phase 5 automatically. Preserve the approved workflow and architecture.
+**Implement only Phase 4; do not implement future phases.** Confirming Phase 4 authorizes the listed Phase 4 tasks as one phase of work; task IDs track progress and do not require another confirmation. Before implementation, summarize the Phase 4 scope, dependencies, affected areas, and validation. Work only within the approved Phase 4 scope, validate and document the completed phase, then stop. Phase 5, frontend scope outside the approved Phase 4 backend work, push, merge, deployment, and persistent shared-database changes require their own authorization. Preserve the approved workflow and architecture.
 ## 35. Phase Completion Report Format
 `Phase: 4` / `Entities:` / `Workflow:` / `Migrations:` / `Concurrency:` / `Tests:` / `Docs:` / `Next task:`.

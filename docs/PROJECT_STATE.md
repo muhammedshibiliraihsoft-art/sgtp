@@ -1,50 +1,66 @@
 # Project State
 
-## Phase 4 staging-source audit candidate (2026-11-04; local only)
+## Phase 4 staging-source audit candidate (2026-11-10; local closeout)
 
-Current task: T4-06 integration revalidation against fetched `origin/staging`,
-within the user-approved Phase 4 staging reconciliation plan. The plan includes
-the Client → Design → Measurement → Work → Completed API journey. This records
-source and local validation evidence; it does not verify live deployment.
+Current task: T4-06 integration revalidation and Phase 4 backend closeout in
+the local `origin/staging` audit candidate. Phase 4 backend task scope
+T4-01–T4-06 is complete in this candidate, including the Client → Design →
+Measurement → Work → Completed API journey. This records local source and
+disposable-database evidence only; it does not verify live deployment or
+constitute release sign-off.
 
-- **Verified from Git:** the candidate worktree is
+- **Verified from Git:** the worktree is
   `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp-phase4-staging-audit`,
-  branch `codex/phase4-staging-audit`, created from `origin/staging`
-  `03518b97470cddb854d405b5cb9d601e63da41a6`.
-- **Authorization:** T4-06 was previously confirmed as recorded in the project
-  history; the current staging reconciliation plan was explicitly approved by
-  the user's `PLEASE IMPLEMENT THIS PLAN` instruction.
-- **Verified from source:** staging already contains the Work aggregate,
-  Shop-scoped API and permissions, fixed Request-to-Completed workflow,
+  branch `codex/phase4-staging-audit`, based on `origin/staging`
+  `03518b97470cddb854d405b5cb9d601e63da41a6`. The two reviewed candidate
+  commits and one local closeout commit are preserved; the worktree is clean.
+  The closeout commit is local only. No push, PR, merge, or deployment was
+  performed. Generated validator fixtures and the generated `uv.lock` were
+  moved intact to
+  `C:\Users\Admin\AppData\Local\Temp\sgtp-phase4-generated-artifacts-20261110`;
+  the quarantine manifest records original paths and SHA-256 checksums. The
+  `.venv` is ignored.
+- **Authorization:** Phase 4 activation and T4-06 were confirmed earlier,
+  and the staging reconciliation plan was explicitly approved. The user
+  separately authorized one local closeout commit and quarantine of the
+  verified generated artifacts, with no push.
+- **Verified from source:** staging contains the Work aggregate, Shop-scoped
+  API and permissions, fixed Request-to-Completed workflow,
   assignment/function checks, expected-status conflict handling, and
-  transactional Work audit events. The Phase 5 Design-price snapshot, invoice
+  transactional Work audit events. Phase 5 Design-price snapshot, invoice
   behavior, Billing models/routes, and `works.0003` remain present. No Work
-  implementation or API contract change was needed. One regression test now
+  implementation or API contract change was needed. One regression test
   exercises rejection of an inactive MeasurementSet through the Work API; two
-  unused imports in that test module were removed.
+  unused imports were removed. The opt-in baseline validator accepts a
+  completed Phase 4 candidate only when Phase 4 and T4-06 are confirmed;
+  unchanged inherited modules remain the only baseline exemptions. Its
+  default gate is unchanged; tests cover the inherited-module case and changed
+  Billing rejection.
 - **Verified from disposable PostgreSQL:** a fresh replay applied the current
   staging migration graph, including `catalog.0024` before `works.0001`, then
-  `catalog.0025`/`0026`, `works.0003`, and Billing migrations. No migration file
-  was changed. The disposable database was `sgtp_audit` in the uniquely named
-  local test container; persistent application databases were not targeted.
-- **Verified from tests/checks:** Work API suite 34/34 passed; full backend
-  suite 598/598 passed (326 warnings); script tests 50/50 passed. The
-  project-state validator passed with
-  `python scripts/verify_project_state.py --baseline-ref origin/staging` and
-  discovered 598 backend tests. Its default gate remains unchanged; the opt-in
-  baseline only exempts business-module directories already present and
-  unchanged at the validated ancestor. Django system check reported no issues,
-  migration drift reported no changes, and OpenAPI validation reported 0 errors
-  with 29 warnings (13 unique). Generated root/docs schema snapshots match the
-  freshly generated schema byte-for-byte.
-- **Style baseline:** full-repository Black check reports 71 existing files
-  needing formatting; full Flake8 reports existing findings across the staging
-  source. The changed validator source passes Black, and all touched Python
-  files pass Flake8. The two changed test modules are already Black-noncompliant
-  at `origin/staging`; those baseline files were not broadly reformatted.
-- **Unverified / next gate:** provider auto-deploy state, deployed commit,
-  staging database migration state, and live staging audit remain unverified.
-  Push, PR, merge, and deployment were not performed.
+  `catalog.0025`/`0026`, `works.0003`, and Billing migrations. No migration
+  file changed. The disposable database was
+  `sgtp_phase4_audit_20261106_5f03c2` in PostgreSQL 15 container
+  `sgtp-phase4-audit-20261106-5f03c2`, bound to loopback with a tmpfs data
+  directory and no Docker volume. The database was destroyed and the
+  container was stopped and verified absent. The configured application
+  database and live staging database were not migrated or inspected.
+- **Verified from tests/checks:** Work API suite 34/34; full backend suite
+  598/598 (326 warnings); validator test module 46/46 after fixture cleanup;
+  project-state validator with `--baseline-ref origin/staging` passed and
+  discovered 598 backend tests. Django check and migration drift passed.
+  OpenAPI validation reported 0 errors and 29 warnings (13 unique), with
+  generated root/docs schema snapshots matching byte-for-byte. Scoped Flake8
+  passed for touched Python files. Black is **UNVERIFIED**: pinned Black
+  24.10.0 check/version processes stalled and were stopped; no formatting was
+  applied. Earlier repository-wide checks recorded existing Black and Flake8
+  findings.
+- **Generated artifact preservation:** the 47 validator fixture directories
+  and 52-byte generated `uv.lock` are outside Git in the named quarantine.
+  Their file checksums were verified after the move; no artifact was deleted.
+- **Unverified:** provider auto-deploy state, deployed commit, staging database
+  migration state, and live staging audit remain unverified. The candidate is
+  prepared for local review only.
 
 ## Phase 5 local migration closure (2026-10-26; unpublished)
 
@@ -120,6 +136,15 @@ production restore/monitoring, and deployed parity remain open; manual purge
 does not define an automatic retention period or anonymization policy.
 
 ## Status
+
+Phase 4 is COMPLETE in the current local staging-source audit candidate; its
+activation was explicitly confirmed with `CONFIRM PHASE 4`. This means the
+Phase 4 backend task scope is implemented and verified in repository source
+and disposable PostgreSQL; it does not claim that live staging is deployed or
+release-audited.
+The user also previously recorded `CONFIRM TASK T4-06`; retain that historical
+marker for the existing project-state validator, while the current Phase 4
+playbook uses one phase-level approval for its task sequence.
 
 ### PHASE-5-INTEGRATED-CLOSURE-01 (2026-10-22; local, unpublished; PARTIAL)
 
@@ -723,7 +748,7 @@ AUTH-RESET-MODEL-CORRECTION-01 is the current policy: legacy passwords and newer
 - **Historical task: BACKOFFICE-01 backend implementation is published to `main` and live on Render staging.** Readiness and CSRF bootstrap endpoints returned 200 after deploy. Its frontend implementation reused the existing shell and live Shop APIs; the Work page mock content was not reused. At that task's completion its feature branch had not yet been published. Backend adds a derived read-only `is_main_supplier_admin` profile field and no migration. Exact deployment evidence is in the historical changelog and handoff entries.
 - Phase 1 and Phase 2 are complete.
 - Phase 3 is COMPLETE; it was activated with `CONFIRM PHASE 3` and the approved T3-05A staging foundation is complete (custom-domain DNS/TLS remains explicitly deferred).
-- Phase 4 is ACTIVE; Core Tailor Business activation was explicitly confirmed with `CONFIRM PHASE 4`. T4-01, T4-02, and T4-03 are COMPLETE, committed, published, and CI-verified. T4-03A — Inventory & Stock Foundation is COMPLETE, COMMITTED, PUBLISHED, and exact-SHA CI-VERIFIED. T4-04, T4-05, and T4-06 are confirmed and complete locally, unpublished; Phase 5 remains separately gated.
+- **Historical Phase 4 status checkpoint (superseded by the 2026-11-06 audit above):** Phase 4 was ACTIVE after its explicit activation. T4-01 through T4-03A were published; T4-04 through T4-06 were then locally complete but unpublished. The current Phase 4 status is recorded at the top of this file.
 - T4-03A is an additive extension to completed T4-03. Focused T4-03A/T4-03 tests: 41 passed; full PostgreSQL-backed suite: 409 passed; validator: PASS with 409 tests discovered; validator tests: 32 passed; Django check: PASS; production deploy check: 0 errors with 12 warnings; migration drift: clean; OpenAPI: 0 errors, 28 warnings (12 unique); Black/Flake8/schema parity/diff check: PASS. GitHub Actions Project State Validation succeeded for the T4-03A implementation commit. Migrations were applied only to the disposable PostgreSQL test database. No deployment or shared/staging/production migration occurred.
 - Historical T4-02 baseline `1287d61a1406bbdd3edddc778b91f59c9cca52df` passed Project State Validation run `36970391503`.
 - T4-03 implementation checkpoint `d9ca27bbab8587c2da5ceb8c1f61f913087fdc48` passed Project State Validation run `37006408609`.
@@ -737,7 +762,7 @@ AUTH-RESET-MODEL-CORRECTION-01 is the current policy: legacy passwords and newer
 - Current staging state: T3-05A is COMPLETE, published, and exact-SHA CI-green. Live provider-hostname checks verified login/cookie behavior, refresh rotation/reuse rejection/logout clearing, membership/User-ID/stats/Work-Function/direct-object isolation in both Shop directions, and Main Supplier access to approved Shop surfaces. The synthetic fixture remains; temporary credential variables are blank and bootstrap/rotation flags are false. Final cleanup deploy `dep-dau9ptlg1s2s73c2foig` is live on the published implementation checkpoint and both health endpoints return 200. Reserved custom-domain DNS/TLS and real frontend browser integration remain deferred.
 - Historical T3-05A implementation checkpoint (not current HEAD): commit `9af6424116ebba12896d90d032c36bd25328a4d0`.
 - The Parallel Frontend Foundation Track is an approved pre-Phase-7 preparation lane, separate from Phase 7/F7-01 completion and its formal dependencies. Its frontend source belongs in an isolated frontend branch/worktree; `main` remains the canonical backend/integration branch and owner of cross-project documentation. Unimplemented APIs/business workflows must remain behind mock adapters.
-- The PHASE4-PARALLEL-UNBLOCK-01 roadmap correction makes backend Phase 4/5/6 delivery non-blocking with respect to frontend completion. Existing backend feature integration may continue independently on `frontend/parallel-foundation`; each new frontend domain slice remains contract-first and follows acceptance of its backend API. The UI Reference Gate and Dashboard Last Rule remain in force. Phase 4 activation and each task retain separate confirmation gates.
+- The PHASE4-PARALLEL-UNBLOCK-01 roadmap correction makes backend Phase 4/5/6 delivery non-blocking with respect to frontend completion. Existing backend feature integration may continue independently on `frontend/parallel-foundation`; each new frontend domain slice remains contract-first and follows acceptance of its backend API. The UI Reference Gate and Dashboard Last Rule remain in force. At that historical checkpoint, Phase 4 activation and each task retained separate confirmation gates; the current Phase 4 playbook records the later phase-only approval rule.
 
 - Project root: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp`
 - Remote: `https://github.com/muhammedshibiliraihsoft-art/sgtp.git`
@@ -867,7 +892,7 @@ AUTH-RESET-MODEL-CORRECTION-01 is the current policy: legacy passwords and newer
 - API schema/Swagger routes and DRF pagination/filter/search/order configuration.
 - PostgreSQL/Docker/devcontainer setup and production Gunicorn entrypoint.
 
-## Target alignment and contradictions
+## Historical target-alignment snapshot (superseded by the current audit above)
 
 - The project target is now a complete Supplier-Centric Garment & Tailor Platform, not merely a generic Django/DRF starter.
 - Tailor Management is the core V1 business module, with isolated shop workspaces under a supplier back office.
@@ -876,7 +901,7 @@ AUTH-RESET-MODEL-CORRECTION-01 is the current policy: legacy passwords and newer
 - The target requires a service layer, object-level permissions, persistent object storage, background jobs, audit logging, CI, monitoring, and automatic documentation; the starter does not implement these as complete capabilities.
 - T3-03 request-local active-Shop context and T3-04 reusable queryset/object isolation primitives are implemented. T4-01 is the first business-resource API and adopts/tests them; later endpoints must do likewise.
 
-## Phase 3+ Missing or incomplete business logic
+## Historical Phase 3+ implementation snapshot (superseded by the current audit above)
 
 - `BaseModelWithTenant.tenant` remains nullable, but T4-01 Client/RelatedPerson models use required Shop FKs and endpoint isolation tests. Other future Shop-owned models/endpoints must enforce and test their own scope.
 - Tenant-context resolution is implemented at `/api/v1/shops/{shop_id}/...`; T4-01 adopts T3-04 shared query/object primitives. Remaining endpoint-specific isolation work is future work.
@@ -917,7 +942,7 @@ AUTH-RESET-MODEL-CORRECTION-01 is the current policy: legacy passwords and newer
 - Django check: passes without issues.
 - Application tests: the then-current full project suite passed (historical; see Current Verification Results above for the present verified result).
 
-## Current root verification
+## Historical root and worktree snapshot (superseded by the current audit above)
 
 - Repository root: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp`
 - `AGENTS.md`: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp\AGENTS.md`
@@ -934,13 +959,15 @@ AUTH-RESET-MODEL-CORRECTION-01 is the current policy: legacy passwords and newer
 - Pre-publication local validation: focused account/membership/auth regressions 138 passed; PostgreSQL-backed full suite 192 passed, including four concurrency cases; validator tests 14 passed; Django and migration checks passed; OpenAPI passed with two nonfatal role-enum naming warnings; Black/Flake8 passed on new Python files. GitHub Actions Project State Validation passed for the published exact SHA. Shared/staging/production ownership preflight was NOT PERFORMED, and no shared/staging/production migration was applied.
 - At the T3-04B-USER-SCOPE checkpoint, T3-04C was awaiting its own authorization. It has since been completed and published. T3-05, T3-05A and Phase 4 have not been started by this task.
 
-## Phase playbook confirmation audit
+## Historical phase playbook confirmation audit
 
-- All ten phase implementation prompts use the mandatory phase-level activation plus task-level confirmation model.
-- Phase confirmation activates scope only; it does not authorize all tasks.
-- Each task requires a separate task brief and explicit `CONFIRM TASK <TASK-ID>` before implementation.
-- After one task, the agent must validate, document, report, and stop; next-task and next-phase activation are never automatic.
-- Phase playbooks 07-10 have now been added with task IDs, validation, handoff, rollback, Definition of Done, and implementation prompts.
+- An earlier audit recorded phase activation plus task-level confirmation.
+- The current Phase 4 playbook uses the user's phase-only approval rule:
+  confirming Phase 4 authorizes the listed Phase 4 backend tasks; task IDs
+  track progress and do not require another confirmation. Work stops at the
+  Phase 4 boundary. Push, deployment, and persistent shared-database changes
+  remain outside this local candidate.
+- Other phase playbooks were not changed by this Phase 4 closeout.
 
 ## Completed Implementation Record (Phase 2 Complete)
 

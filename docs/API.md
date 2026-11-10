@@ -243,7 +243,7 @@ All routes require authenticated, password-change-complete access and explicit a
 - `GET/POST /api/v1/shops/{shop_id}/clients/{client_uuid}/related-persons/`
 - `GET/PUT/PATCH/DELETE /api/v1/shops/{shop_id}/clients/{client_uuid}/related-persons/{related_person_uuid}/`
 
-UUIDs are immutable identities; no Client code is returned. Lists use page-number pagination (`count`, `next`, `previous`, `results`), page size 20, and deterministic name/UUID ordering. Optional `search` performs Unicode-aware name containment, normalized-phone prefix matching, and exact UUID matching. Deleted records are omitted. Work-number search is not implemented until T4-04.
+UUIDs are immutable identities; no Client code is returned. Lists use page-number pagination (`count`, `next`, `previous`, `results`), page size 20, and deterministic name/UUID ordering. Optional `search` performs Unicode-aware name containment, normalized-phone prefix matching, and exact UUID matching. Deleted records are omitted. Client search intentionally does not match Work numbers; Work-number search is provided by the Work list API.
 
 Create body: `{"name":"...","phone":"optional","email":"optional"}`. Updates accept the same fields; Shop/Primary Client ownership is server/path-derived. RelatedPerson responses also include `primary_client_id`; R5-01 Work billing stays owned by that Primary Client and may also identify the Related Person.
 

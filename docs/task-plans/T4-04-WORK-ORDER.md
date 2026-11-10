@@ -1,15 +1,15 @@
 # T4-04 — Work aggregate and workflow state
 
-Status: confirmed on 2026-10-16; backend implementation locally verified, not published.
+Status: Phase 4 was confirmed on 2026-10-16; T4-04–T4-06 are complete in the current staging-source audit candidate. Live staging deployment and database state are unverified.
 
 ## Objective
 
 Add Shop-scoped persisted Work/Order records linked to the existing Client,
 Design, Measurement, and Material domains. Support a stable searchable Work
 number, the approved priority values, due dates, and the fixed workflow from
-Request through Completed. This task owns the backend contract. The frontend
-slice, transactional workflow hardening in T4-05, integrated T4-06 acceptance,
-and Billing are separately gated.
+Request through Completed. This task owns the backend contract. Frontend and
+Billing remain outside Phase 4 backend scope; T4-05 transactional hardening
+and T4-06 integration validation are later tasks in the same Phase 4 scope.
 
 ## Implementation sequence
 
@@ -50,12 +50,28 @@ An assigned Work can be advanced only by that member, with the relevant current
 stage function; advancement clears assignment. Number high-water mark includes
 soft-deleted rows. `tenants.0010` adds CHECK; `works.0001` creates WorkOrder.
 
+### Historical T4-04 delivery validation (2026-10-16)
+
 Validation: disposable PostgreSQL `test_t404_validation_20261016` database,
 23/23 Work and Work Function tests PASS; Django check, migration drift,
 OpenAPI generation (0 errors, 29 existing warnings), project-state validator
 and its 33/33 tests PASS. The app DB was
-not migrated. Full suite, race/idempotency/audit (T4-05), integrated validation
-(T4-06), frontend and staging publication remain unverified/separately gated.
+not migrated. At this checkpoint, the full suite, T4-05 race/audit behavior,
+and T4-06 integration validation had not yet been completed.
+
+### Current staging-source revalidation (2026-11-06)
+
+The fetched `origin/staging` source contains the T4-04 aggregate/API and the
+T4-05 transactional workflow and audit behavior. T4-06's API journey verifies
+Client, DesignVersion, MeasurementSet, Request-to-Completed transitions, and
+cross-Shop denial. Focused Work API tests passed 34/34, the full backend suite
+passed 598/598 (326 warnings), and the script suite passed 52/52 before a
+validator-test cleanup-only change. After that test change, its validator
+module passed 46/46 with `unittest`. Fresh PostgreSQL migration replay passed
+through the Phase 5 Billing graph. No Work implementation,
+API, schema, or migration change was made in this local candidate. This is
+source and disposable-database evidence only; no live staging deployment or
+database inspection was performed.
 
 No existing local or staging application database is a migration target for
 this task without separate explicit authorization.

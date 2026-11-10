@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import shutil
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 
 from scripts.verify_project_state import ProjectStateValidator
+
+_TEST_REPOSITORIES: list[Path] = []
 
 
 class FakeGit:
@@ -63,6 +66,7 @@ class FakeGit:
 
 def make_repo(project_state: str, handoff: str, *, naming: str = "") -> Path:
     root = Path(tempfile.mkdtemp())
+    _TEST_REPOSITORIES.append(root)
     (root / "docs").mkdir()
     (root / "docs/PROJECT_STATE.md").write_text(project_state, encoding="utf-8")
     (root / "docs/HANDOFF.md").write_text(handoff, encoding="utf-8")
@@ -122,6 +126,11 @@ T4-01 is in progress.
 
 
 class ValidatorTests(unittest.TestCase):
+    def tearDown(self):
+        for root in reversed(_TEST_REPOSITORIES):
+            shutil.rmtree(root)
+        _TEST_REPOSITORIES.clear()
+
     def validator(self, root, git=None, count=2, baseline_ref=None):
         return ProjectStateValidator(
             root,
@@ -403,6 +412,60 @@ MEASUREMENT-E2E-01 is in progress.
         result = self.validator(root).run()
         self.assertTrue(result.ok, result.errors)
         self.assertEqual(result.facts["current_task"], "T4-06")
+
+    def test_completed_phase4_allows_confirmed_t406_candidate_with_baseline(self):
+        state = PHASE4_STATE.replace(
+            "Phase 4 is active;", "Phase 4 is complete;"
+        ).replace(
+            "Current task: T4-01 is in progress.",
+            "Current task: T4-06 is complete locally; CONFIRM TASK T4-06.",
+        )
+        handoff = (
+            "## Current handoff — T4-06\n"
+            "CONFIRM TASK T4-06\n"
+            + PHASE4_HANDOFF.replace(
+                "Phase 4 is active;", "Phase 4 is complete;"
+            ).replace("T4-01", "T4-06")
+        )
+        root = make_repo(state, handoff)
+        for path in ("apps/catalog", "apps/works", "apps/billing"):
+            (root / path).mkdir(parents=True)
+        result = self.validator(
+            root,
+            git=FakeGit(
+                baseline_paths={"apps/billing"},
+                changed_paths={"apps/works/tests/test_work_api.py"},
+            ),
+            baseline_ref="origin/staging",
+        ).run()
+        self.assertTrue(result.ok, result.errors)
+
+    def test_completed_phase4_baseline_still_rejects_changed_billing(self):
+        state = PHASE4_STATE.replace(
+            "Phase 4 is active;", "Phase 4 is complete;"
+        ).replace(
+            "Current task: T4-01 is in progress.",
+            "Current task: T4-06 is complete locally; CONFIRM TASK T4-06.",
+        )
+        handoff = (
+            "## Current handoff — T4-06\n"
+            "CONFIRM TASK T4-06\n"
+            + PHASE4_HANDOFF.replace(
+                "Phase 4 is active;", "Phase 4 is complete;"
+            ).replace("T4-01", "T4-06")
+        )
+        root = make_repo(state, handoff)
+        for path in ("apps/catalog", "apps/works", "apps/billing"):
+            (root / path).mkdir(parents=True)
+        result = self.validator(
+            root,
+            git=FakeGit(
+                baseline_paths={"apps/billing"},
+                changed_paths={"apps/billing/models.py"},
+            ),
+            baseline_ref="origin/staging",
+        ).run()
+        self.assertTrue(any("apps/billing" in error for error in result.errors))
 
     def test_phase4_t406_without_both_confirmations_rejects_work_modules(self):
         state = PHASE4_STATE.replace(

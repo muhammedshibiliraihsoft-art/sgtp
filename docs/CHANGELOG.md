@@ -1,5 +1,35 @@
 # Changelog
 
+## 2026-11-10 — Phase 4 local candidate clean closeout
+
+- Reconciled the Phase 4 status, validation evidence, and disposable database
+  identity in the current-state docs. Preserved Phase 5 Billing and the
+  existing migration/API contracts.
+- Fixed validator tests to clean up only their own generated temporary
+  repositories. The 47 previously leaked fixture directories and generated
+  `uv.lock` were moved intact to a named quarantine outside the worktree, with
+  source paths and SHA-256 checksums recorded and verified.
+- Created one local closeout commit after review. The candidate remains based
+  on `origin/staging`; worktree is clean. No push, PR, merge, or deployment was
+  performed. Black remains unverified and live staging state remains outside
+  this local review.
+
+## 2026-11-06 — Phase 4 local closeout verification
+
+- Revalidated the current `origin/staging` Phase 4 source and the local
+  `codex/phase4-staging-audit` candidate. T4-01–T4-06 backend task scope is
+  complete in this candidate; Phase 5 Billing and migration history remain
+  unchanged.
+- Fresh disposable PostgreSQL migration replay succeeded. Focused Work API
+  tests passed 34/34, the full backend suite passed 598/598, and script tests
+  passed 52/52. Django check, migration drift, project-state validation, and
+  OpenAPI/schema parity passed.
+- Corrected stale Phase 4 status, Work-number search, and Work schema/security
+  documentation. The opt-in validator now supports an explicitly confirmed
+  completed Phase 4 audit candidate while preserving the default and inherited
+  module restrictions. No application/API/schema/migration change, push, PR,
+  merge, or deployment occurred. Live staging state remains unverified.
+
 ## 2026-11-04 — Phase 4 staging-source audit candidate (local only)
 
 - Revalidated the T4-06 Client → Design → Measurement → Work → Completed

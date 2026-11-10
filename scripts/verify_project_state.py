@@ -385,9 +385,9 @@ class ProjectStateValidator:
         present = [path for path in forbidden if (self.root / path).exists()]
         state = self.phase_facts("docs/PROJECT_STATE.md")
         handoff = self.phase_facts("docs/HANDOFF.md")
-        phase4_is_activated_consistently = (
-            state.get(4) == "active"
-            and handoff.get(4) == "active"
+        phase4_status_is_consistent = (
+            state.get(4) in {"active", "complete"}
+            and handoff.get(4) == state.get(4)
             and re.search(
                 r"\bCONFIRM\s+PHASE\s+4\b",
                 self._current_section(self.read("docs/PROJECT_STATE.md"), "Status"),
@@ -399,12 +399,12 @@ class ProjectStateValidator:
                 re.IGNORECASE,
             )
         )
-        if phase4_is_activated_consistently:
+        if phase4_status_is_consistent:
             inherited_paths = self._baseline_inherited_paths(forbidden)
             present = [path for path in present if path not in inherited_paths]
             current_handoff_text = self.current_handoff_section()
             # A task-specific confirmation is required before its business app
-            # may appear; Phase activation alone never unlocks future modules.
+            # may appear; phase activation/completion alone never unlocks modules.
             allowed = {"apps/clients"}
             state_task = self.current_task("docs/PROJECT_STATE.md")
             handoff_task = self.current_task("docs/HANDOFF.md")

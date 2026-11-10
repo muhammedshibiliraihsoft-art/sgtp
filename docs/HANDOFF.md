@@ -1,38 +1,67 @@
 # Handoff
 
-## Current handoff — T4-06 staging-source revalidation (2026-11-04; local only)
+## Current handoff — Phase 4 staging-source candidate closeout (2026-11-10; local only)
 
-Current task: Revalidate the T4-06 Client → Design → Measurement → Work →
-Completed journey against fetched `origin/staging` as part of the user's
-approved Phase 4 staging reconciliation plan. T4-06 was previously authorized
-with `CONFIRM TASK T4-06`; the current plan was approved with
-`PLEASE IMPLEMENT THIS PLAN`. Phase 5 Billing remains intact. This is a local
-source candidate; live provider deployment and migration state are unverified.
+Current task: T4-06 integration revalidation and Phase 4 backend closeout
+against fetched `origin/staging`, within the user's approved local review
+scope. T4-06 was previously confirmed with `CONFIRM TASK T4-06`, and the
+reconciliation plan was approved. Phase 4 backend task scope T4-01–T4-06 is
+complete in this candidate. Phase 5 Billing remains intact. This is local
+source and disposable-database evidence; live provider deployment and migration
+state remain unverified. The user explicitly approved one local closeout commit and
+artifact quarantine, with no push.
 
 - Worktree: `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp-phase4-staging-audit`,
   branch `codex/phase4-staging-audit`, based on
-  `origin/staging` `03518b97470cddb854d405b5cb9d601e63da41a6`.
-- Verified from source and disposable PostgreSQL: Work workflow, Shop isolation,
-  role/function/assignment checks, stale-transition handling and audit events
-  are present. Phase 5 Design-price snapshot, invoice behavior, Billing
-  models/routes, `works.0003`, and the existing migration chain are preserved.
-  A fresh disposable migration replay completed through Billing migrations;
-  no schema file changed.
-- Change in this candidate: one Work API regression test ensures a deactivated
-  measurement version cannot be used for new Work; two unused test imports were
-  removed. No application behavior, route, schema, or migration changed.
-- Validation: focused Work API 34/34, full backend 598/598 (326 warnings),
-  script tests 50/50; `python scripts/verify_project_state.py
-  --baseline-ref origin/staging` passed with 598 backend tests discovered;
-  Django check and migration drift passed; OpenAPI validation had 0 errors / 29
-  warnings and generated schema matched both committed snapshots. Touched
-  Python files pass Flake8 and the validator source passes Black. Full-repo
-  Black/Flake8 have existing staging-source findings; no broad reformat was
-  applied.
-- No push, PR, merge, deployment, or provider-side change occurred. Do not
-  infer live staging deployment from this branch-source audit.
-- Next safe step: review the two local commits and candidate diff; arrange any
-  live staging audit as a separately authorized step.
+  `origin/staging` `03518b97470cddb854d405b5cb9d601e63da41a6`. The worktree is
+  clean after the local closeout commit; the candidate is three commits ahead
+  of the base. No push, PR, merge, or deployment was performed.
+- Verified from source and disposable PostgreSQL: Work workflow, Shop
+  isolation, role/function/assignment checks, stale-transition handling and
+  audit events are present. Phase 5 Design-price snapshot, invoice behavior,
+  Billing models/routes, `works.0003`, and the existing migration chain are
+  preserved. Fresh migration replay completed through Billing migrations in
+  disposable PostgreSQL database `sgtp_phase4_audit_20261106_5f03c2` in
+  container `sgtp-phase4-audit-20261106-5f03c2`, bound to loopback with a
+  tmpfs data directory and no Docker volume. The database was destroyed and
+  the container stopped and verified absent. No persistent application
+  database was targeted.
+- Candidate changes: one Work API regression test ensures an inactive
+  MeasurementSet cannot be used for new Work; two unused test imports were
+  removed. The opt-in baseline validator accepts a completed Phase 4 candidate
+  only with Phase 4 and T4-06 confirmation; unchanged inherited modules remain
+  the only baseline exemptions, and the default gate is unchanged. Its tests
+  cover this case and changed Billing rejection. No application behavior,
+  route, schema, or migration changed.
+- Validation evidence: focused Work API 34/34; full backend 598/598 (326
+  warnings); validator test module 46/46 after its generated fixture cleanup
+  fix; project-state validator with `--baseline-ref origin/staging` passed and
+  discovered 598 backend tests. Django check and migration drift passed;
+  OpenAPI validation had 0 errors / 29 warnings, and generated schema matched
+  both snapshots. Scoped Flake8 passed for touched Python files. Black is
+  **UNVERIFIED**: pinned 24.10.0 processes stalled and were stopped; no
+  formatting was applied. A later pytest invocation failed during Django
+  setup because `DJANGO_SECRET_KEY` was unset and collected no tests.
+- The 47 generated validator fixture directories and generated `uv.lock` were
+  moved intact from this worktree to
+  `C:\Users\Admin\AppData\Local\Temp\sgtp-phase4-generated-artifacts-20261110`.
+  A quarantine manifest records source paths and SHA-256 checksums; all
+  checksums were rechecked after the move. No generated artifact was deleted.
+- Current staging source and disposable replay do not prove provider
+  auto-deploy configuration, deployed commit, staging database migration
+  state, or live staging behavior. These remain unverified.
+- Exact next safe step: conduct a separately authorized live Staging audit if
+  requested. Do not push or deploy as part of this local closeout.
+
+## Current phase
+
+Phase 3 is COMPLETE; activation was confirmed with `CONFIRM PHASE 3`, and
+custom-domain DNS/TLS for T3-05A remains deferred. **Phase 4 is COMPLETE in
+the current local staging-source audit candidate**, following its
+`CONFIRM PHASE 4` activation: T4-01–T4-06 backend task scope is verified;
+live staging deployment and database state remain unverified. Phase 5 is
+ACTIVE under its separate `CONFIRM PHASE 5` authorization; its code remains
+present in the staging source and was preserved by this Phase 4 closeout.
 
 ## Phase 5 local migration closure (2026-10-26; unpublished)
 
@@ -256,7 +285,7 @@ unresolved; current above-balance rejection is a fail-closed implementation
 behavior, not an approved business rule. Next safe work is separately scoped
 frontend integration and R5-02 before retry-prone release use.
 
-## Current handoff — T4-06 Domain integration validation (2026-10-21; local, unpublished)
+## Historical handoff — T4-06 Domain integration validation (2026-10-21; local, unpublished)
 
 `CONFIRM TASK T4-06` was provided. A focused Work API integration regression
 creates a Work with its Client, published DesignVersion, and MeasurementSet;
@@ -666,7 +695,7 @@ Implemented an ADMIN-only, read-only Shop archive endpoint and `/orders/deleted`
 
 The user approved applying the pending Work migrations to the existing local Docker `devdb`. `tenants.0010_add_check_work_function` and `works.0001_initial` both applied successfully; `migrate --check` passed. Read-only counts before/after remained 3 Users and 1 Client; the new Work table has 0 rows. The authenticated browser's Orders list now loads without HTTP 500 and shows only the genuine empty state. The frontend worktree is served at `127.0.0.1:5173`, with API proxy to the local backend on port 8000. No Order was created from real Client data. Backend Work tests 6/6 on a disposable test DB, frontend Orders tests 6/6, typecheck, and project-state validator passed. The frontend worktree separately fixed the error/empty-state overlap. No commit, push, staging, or production change.
 
-## Current handoff — T4-04 Work backend (2026-10-16; local, unpublished)
+## Historical handoff — T4-04 Work backend (2026-10-16; local, unpublished)
 
 `CONFIRM TASK T4-04` was provided by the user. The one-garment Work backend
 is implemented locally; 23/23 focused PostgreSQL tests, OpenAPI generation
@@ -1074,7 +1103,7 @@ This task's frontend email recovery work was historical and was later removed by
 - The frontend branch is configured as the Cloudflare Pages client-preview source; a push automatically triggers a preview deployment. Current approval covers Render staging, not automatic Cloudflare preview publication. Prepare the frontend branch locally and request approval for that preview push after changes are reviewable.
 - Next: obtain the user's approval to push `frontend/parallel-foundation`, because that push triggers the Cloudflare Pages client-preview deployment. After approval, push and verify the preview; do not deploy Production.
 
-## Current phase
+## Historical phase status checkpoint (superseded by the current handoff above)
 
 Phase 3 is COMPLETE; it was activated with `CONFIRM PHASE 3`, and T3-05A is complete with custom-domain DNS/TLS explicitly deferred. Phase 4 is ACTIVE; Core Tailor Business activation was explicitly confirmed with `CONFIRM PHASE 4`. Phase 5 is ACTIVE; activation was explicitly confirmed with `CONFIRM PHASE 5`, and R5-01 was completed locally under its approved expansion plan.
 
@@ -1092,7 +1121,7 @@ T3-05A — Staging Backend Foundation — remains complete, committed, pushed, e
 
 Derive current `HEAD`/`main` from Git rather than storing a current SHA in this handoff. T4-05 and T4-06 are complete locally as noted above. Phase 5 was explicitly activated; any next R5 task or frontend business module still requires its own approval. Do not merge the frontend worktree. No deployment is allowed for these local tasks.
 
-## Current state and next gate
+## Historical state and next gate (superseded by the current handoff above)
 
 - Parallel development rule: `main` remains the backend/current integration source and canonical documentation owner. Frontend foundation work uses `frontend/parallel-foundation` in sibling worktree `C:\Users\Admin\Documents\ChatGPT\django 2\sgtp-frontend`, with application source only under `/frontend`. Do not edit frontend source in the main worktree or repeatedly edit canonical docs from the frontend branch.
 - The Parallel Frontend Foundation Track (`frontend/parallel-foundation`) remains isolated and does not mark Phase 7 complete. The active sibling Orders screens call the canonical Work API and are covered by current API/page tests; the combined authenticated browser-to-API E2E remains unverified. Other unimplemented business workflows remain mock-first.
