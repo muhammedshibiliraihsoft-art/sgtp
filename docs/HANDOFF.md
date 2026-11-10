@@ -15,8 +15,8 @@ artifact quarantine, and a push of this feature branch; no PR or deployment.
   branch `codex/phase4-staging-audit`, based on
   `origin/staging` `03518b97470cddb854d405b5cb9d601e63da41a6`. The worktree is
   clean and the branch is pushed to `origin/codex/phase4-staging-audit`; the
-  candidate is three commits ahead of the base. No PR, merge, or deployment
-  was performed.
+  candidate is ahead of the base; derive the exact count from Git. No PR,
+  merge, or deployment was performed.
 - Verified from source and disposable PostgreSQL: Work workflow, Shop
   isolation, role/function/assignment checks, stale-transition handling and
   audit events are present. Phase 5 Design-price snapshot, invoice behavior,
